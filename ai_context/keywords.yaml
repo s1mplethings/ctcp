@@ -1,0 +1,10 @@
+
+# 关键词/规则（给 AI 的“先读”文件）
+must_read:
+  - ai_context/problem_registry.md
+  - docs/02_workflow.md
+  - docs/03_quality_gates.md
+
+rules:
+  - "任何 contract 变更必须更新 schema + contract checks"
+  - "任何关系编辑只写 meta/pipeline_graph.json"

@@ -1,0 +1,227 @@
+{
+  "schema_version": "1.0.0",
+  "phases": [
+    {
+      "id": "Docs",
+      "label": "Docs",
+      "order": 5
+    },
+    {
+      "id": "Core",
+      "label": "Core",
+      "order": 10
+    },
+    {
+      "id": "UI",
+      "label": "UI",
+      "order": 20
+    },
+    {
+      "id": "Web",
+      "label": "Web",
+      "order": 30
+    },
+    {
+      "id": "Unassigned",
+      "label": "Unassigned",
+      "order": 999
+    }
+  ],
+  "modules": [
+    {
+      "id": "module.project_scanner",
+      "label": "ProjectScanner",
+      "path": "specs/modules/project_scanner/spec.md",
+      "phase": "Core",
+      "tier": "core",
+      "mutable": true,
+      "pinned": true,
+      "category": "Modules"
+    },
+    {
+      "id": "module.graph_builder",
+      "label": "GraphBuilder",
+      "path": "specs/modules/graph_builder/spec.md",
+      "phase": "Core",
+      "tier": "core",
+      "mutable": true,
+      "pinned": true,
+      "category": "Modules"
+    },
+    {
+      "id": "module.meta_store",
+      "label": "MetaStore",
+      "path": "specs/modules/meta_store/spec.md",
+      "phase": "Core",
+      "tier": "core",
+      "mutable": true,
+      "category": "Modules"
+    },
+    {
+      "id": "module.run_loader",
+      "label": "RunLoader",
+      "path": "specs/modules/run_loader/spec.md",
+      "phase": "Core",
+      "tier": "core",
+      "mutable": true,
+      "category": "Modules"
+    },
+    {
+      "id": "module.qwebchannel_bridge",
+      "label": "QWebChannel Bridge",
+      "path": "specs/modules/qwebchannel_bridge/spec.md",
+      "phase": "UI",
+      "tier": "core",
+      "mutable": true,
+      "category": "Modules"
+    },
+    {
+      "id": "module.web_renderer",
+      "label": "Web Renderer",
+      "path": "specs/modules/web_renderer/spec.md",
+      "phase": "Web",
+      "tier": "core",
+      "mutable": true,
+      "category": "Modules"
+    },
+    {
+      "id": "module.view_manager",
+      "label": "ViewManager",
+      "path": "specs/modules/view_manager/spec.md",
+      "phase": "UI",
+      "tier": "core",
+      "mutable": true,
+      "pinned": true,
+      "category": "Modules"
+    },
+    {
+      "id": "module.layout_engine",
+      "label": "LayoutEngine",
+      "path": "specs/modules/layout_engine/spec.md",
+      "phase": "Core",
+      "tier": "core",
+      "mutable": true,
+      "pinned": true,
+      "category": "Modules"
+    }
+  ],
+  "contracts": [
+    {
+      "id": "contract.graph_json",
+      "label": "Graph JSON",
+      "schema_path": "specs/contract_output/graph.schema.json",
+      "tier": "settings",
+      "mutable": false,
+      "pinned": false,
+      "category": "Contracts"
+    },
+    {
+      "id": "contract.meta_pipeline_graph",
+      "label": "Meta Pipeline Graph",
+      "schema_path": "specs/contract_output/meta_pipeline_graph.schema.json",
+      "tier": "settings",
+      "mutable": false,
+      "pinned": false,
+      "category": "Contracts"
+    },
+    {
+      "id": "contract.run_events",
+      "label": "Run Events JSONL",
+      "schema_path": "specs/contract_output/run_events.schema.json",
+      "tier": "settings",
+      "mutable": false,
+      "pinned": false,
+      "category": "Contracts"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e.produces.graph",
+      "source": "module.graph_builder",
+      "target": "contract.graph_json",
+      "type": "produces",
+      "label": "graph.json"
+    },
+    {
+      "id": "e.consumes.graph",
+      "source": "contract.graph_json",
+      "target": "module.web_renderer",
+      "type": "consumes",
+      "label": "graph.json"
+    },
+    {
+      "id": "e.produces.meta",
+      "source": "module.meta_store",
+      "target": "contract.meta_pipeline_graph",
+      "type": "produces",
+      "label": "pipeline_graph.json"
+    },
+    {
+      "id": "e.consumes.meta",
+      "source": "contract.meta_pipeline_graph",
+      "target": "module.graph_builder",
+      "type": "consumes",
+      "label": "pipeline_graph.json"
+    },
+    {
+      "id": "e.consumes.events",
+      "source": "module.run_loader",
+      "target": "contract.run_events",
+      "type": "consumes",
+      "label": "events.jsonl"
+    }
+  ],
+  "positions": {},
+  "ui": {
+    "default_view": "Summary",
+    "pipeline_type_order": [
+      "Doc",
+      "Module",
+      "Contract",
+      "Gate",
+      "Run"
+    ],
+    "phase_order": [
+      "Docs",
+      "Core",
+      "UI",
+      "Web",
+      "Contracts",
+      "Unassigned"
+    ],
+    "layout_config": {
+      "phase_gap_x": 700,
+      "block_padding": {
+        "x": 80,
+        "y": 80
+      },
+      "row_gap_y": 120,
+      "col_gap_x": 220,
+      "max_cols_per_row": 6
+    },
+    "summary": {
+      "categories": [
+        "Docs",
+        "Modules",
+        "Contracts",
+        "Meta",
+        "Runs",
+        "Gates"
+      ],
+      "pinned": [
+        "module.graph_builder",
+        "module.layout_engine",
+        "module.view_manager",
+        "module.project_scanner"
+      ],
+      "grid": {
+        "gap_x": 700,
+        "gap_y": 260,
+        "origin": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    }
+  }
+}

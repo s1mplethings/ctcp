@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Run Event (one line in events.jsonl)",
+  "type": "object",
+  "required": [
+    "run_id",
+    "event",
+    "step_id",
+    "ts"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string"
+    },
+    "event": {
+      "type": "string",
+      "enum": [
+        "step_enter",
+        "step_exit",
+        "log",
+        "artifact"
+      ]
+    },
+    "step_id": {
+      "type": "string"
+    },
+    "ts": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ok",
+        "fail",
+        "skip"
+      ]
+    },
+    "message": {
+      "type": "string"
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,9 @@
+
+<RCC>
+  <qresource prefix="/">
+    <file alias="web/index.html">../web/index.html</file>
+    <file alias="web/app.js">../web/app.js</file>
+    <file alias="web/cytoscape.min.js">../web/cytoscape.min.js</file>
+    <file alias="web/qwebchannel.js">../web/qwebchannel.js</file>
+  </qresource>
+</RCC>

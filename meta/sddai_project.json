@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0.0",
+  "project_type": "SDDAI_GUI",
+  "docs_root": "docs",
+  "specs_root": "specs",
+  "scripts_root": "scripts",
+  "ai_context_root": "ai_context",
+  "runs_root": "runs",
+  "notes": "Marker for the GUI repo itself. For target SDDAI repos, place a similar marker file to make detection deterministic."
+}

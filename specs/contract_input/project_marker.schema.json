@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SDDAI Project Marker",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "project_type"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "project_type": {
+      "type": "string",
+      "enum": [
+        "SDDAI",
+        "SDDAI_GUI"
+      ]
+    },
+    "docs_root": {
+      "type": "string"
+    },
+    "specs_root": {
+      "type": "string"
+    },
+    "scripts_root": {
+      "type": "string"
+    },
+    "ai_context_root": {
+      "type": "string"
+    },
+    "runs_root": {
+      "type": "string"
+    },
+    "doc_filenames": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": true
+}
