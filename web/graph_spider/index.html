@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>SDDAI Spider Graph</title>
+  <link rel="stylesheet" href="./spider.css"/>
+  <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+</head>
+<body>
+  <div id="topbar">
+    <div class="left">
+      <span class="badge">GRAPH</span>
+      <span class="title">Spider Web</span>
+      <span class="hint">拖拽节点 / 滚轮缩放 / 空白处拖动画布 / 点击节点打开</span>
+    </div>
+    <div class="right">
+      <input id="search" placeholder="搜索节点（名称/路径）…"/>
+      <button id="btnFit" title="自适应">Fit</button>
+      <button id="btnPause" title="暂停/继续仿真">Pause</button>
+      <button id="btnReheat" title="重新加热">Reheat</button>
+    </div>
+  </div>
+
+  <div id="container">
+    <canvas id="c"></canvas>
+    <div id="panel" class="panel hidden">
+      <div class="panel-title" id="pTitle">Node</div>
+      <div class="panel-sub" id="pSub"></div>
+      <div class="panel-actions">
+        <button id="btnOpen">Open</button>
+        <button id="btnPin">Pin</button>
+        <button id="btnClose">Close</button>
+      </div>
+      <div class="panel-meta" id="pMeta"></div>
+    </div>
+
+    <div id="results" class="results hidden"></div>
+    <div id="toast" class="toast hidden"></div>
+  </div>
+
+  <script src="./spider.js"></script>
+</body>
+</html>
