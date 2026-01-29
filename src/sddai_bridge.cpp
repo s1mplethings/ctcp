@@ -141,3 +141,29 @@ bool SddaiBridge::generateAidoc(const QString& targetPath) {
   const bool ok = copyAidocTemplate(abs);
   return ok;
 }
+
+
+QString SddaiBridge::getGraphJson() const {
+  // 优先复用核心桥接生成的 Summary 视图，如果为空则返回极简示例
+  if (core_) {
+    const QString json = core_->requestGraph(QStringLiteral("Summary"), QString());
+    if (!json.isEmpty()) return json;
+  }
+  return QString::fromUtf8(R"({
+    "nodes": [ { "id": "welcome", "label": "Welcome" } ],
+    "links": [ ]
+  })");
+}
+
+void SddaiBridge::openNode(const QString& nodeJson) {
+  QJsonParseError err{};
+  const QJsonDocument doc = QJsonDocument::fromJson(nodeJson.toUtf8(), &err);
+  if (err.error != QJsonParseError::NoError || !doc.isObject()) {
+    return;
+  }
+  const QJsonObject obj = doc.object();
+  const QString path = obj.value(QStringLiteral("path")).toString();
+  if (!path.isEmpty()) {
+    openPath(path);
+  }
+}

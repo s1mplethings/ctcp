@@ -1,0 +1,25 @@
+{
+  "id": "<your-recipe-id>",
+  "name": "<human-readable name>",
+  "version": 1,
+  "intent": "<what problem does this solve>",
+  "compat": {
+    "required": [],
+    "forbidden": []
+  },
+  "tokens": {
+    "WEB_ROOT": {
+      "default": "web",
+      "help": "where static web assets live"
+    },
+    "ENTRY_FILE": {
+      "default": "",
+      "help": "main entry file for integration (optional)"
+    }
+  },
+  "patches": [],
+  "verify": {
+    "commands": [],
+    "notes": "How to validate success"
+  }
+}
