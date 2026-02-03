@@ -1,0 +1,16 @@
+{
+  "id": "sample",
+  "cmd": "python tools/checks/case_echo.py {input} {artifacts}/sample_output.json",
+  "input": "tests/fixtures/sample_input.json",
+  "outputs": [
+    {
+      "path": "sample_output.json",
+      "type": "json",
+      "normalize": {
+        "ignore_keys": [],
+        "sort_lists": true
+      }
+    }
+  ],
+  "mode": "golden"
+}

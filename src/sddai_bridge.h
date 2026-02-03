@@ -30,6 +30,17 @@ public:
   Q_INVOKABLE QString getGraphJson() const;
   Q_INVOKABLE void openNode(const QString& nodeJson);
 
+  // selection/command sync with details dock
+  Q_INVOKABLE void setSelectedNode(const QString& nodeId);
+  Q_INVOKABLE void sendCommand(const QString& cmd, const QString& arg);
+  Q_INVOKABLE QString requestNodeDetailJson(const QString& nodeId) const;
+
+signals:
+  void graphChanged(const QJsonObject& graph);
+  void toast(const QString& message);
+  void selectedNodeChanged(const QString& nodeId);
+  void commandRequested(const QString& cmd, const QString& arg);
+
 private:
   QString resolveSafePath(const QString& relativePath) const;
   bool copyAidocTemplate(const QString& targetDir) const;
@@ -37,4 +48,5 @@ private:
   Bridge* core_{nullptr};
   QString projectRoot_;
   mutable PreviewWindow* preview_{nullptr};
+  QString selectedNodeId_;
 };

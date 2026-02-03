@@ -21,6 +21,7 @@
 5. **最小改动原则**：
    - 每个 patch 只解决一个主题；避免同时大改结构 + 大改逻辑。
    - 新依赖必须写入 `third_party/THIRD_PARTY.md` 并说明引入原因、版本、license。
+6. **文件输入必落地用例**：只要用户提供了测试输入文件，必须把它放进 `tests/fixtures/`，并新增/更新 `tests/cases/*.case.json`；如无明确 oracle，先用 `python tools/checks/case_runner.py --record --case <id>` 生成 golden，再把 golden 纳入回归测试。
 
 ## 1. 目录责任边界（你必须按边界做事）
 - `src/`：Qt/C++ 主程序、WebEngine 宿主、文件索引/解析、与 JS 的桥接（QWebChannel / IPC）。

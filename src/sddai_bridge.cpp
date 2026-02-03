@@ -14,7 +14,12 @@
 #include <QUrl>
 
 SddaiBridge::SddaiBridge(Bridge* core, QObject* parent)
-    : QObject(parent), core_(core) {}
+    : QObject(parent), core_(core) {
+  if (core_) {
+    connect(core_, &Bridge::graphChanged, this, &SddaiBridge::graphChanged);
+    connect(core_, &Bridge::toast, this, &SddaiBridge::toast);
+  }
+}
 
 void SddaiBridge::setProjectRoot(const QString& projectRoot) { projectRoot_ = QDir(projectRoot).absolutePath(); }
 
@@ -162,12 +167,34 @@ QString SddaiBridge::getGraphJson() const {
 void SddaiBridge::openNode(const QString& nodeJson) {
   QJsonParseError err{};
   const QJsonDocument doc = QJsonDocument::fromJson(nodeJson.toUtf8(), &err);
-  if (err.error != QJsonParseError::NoError || !doc.isObject()) {
-    return;
+  if (err.error == QJsonParseError::NoError && doc.isObject()) {
+    const QJsonObject obj = doc.object();
+    const QString path = obj.value(QStringLiteral("path")).toString();
+    if (!path.isEmpty()) {
+      openPath(path);
+      return;
+    }
   }
-  const QJsonObject obj = doc.object();
-  const QString path = obj.value(QStringLiteral("path")).toString();
-  if (!path.isEmpty()) {
-    openPath(path);
+  // Fallback: treat as nodeId string
+  const QString nodeId = nodeJson.trimmed();
+  if (core_) {
+    const QJsonObject detail = core_->requestNodeDetail(nodeId);
+    const QString path = detail.value(QStringLiteral("path")).toString();
+    if (!path.isEmpty()) {
+      openPath(path);
+    }
   }
+}
+
+void SddaiBridge::setSelectedNode(const QString& nodeId) {
+  selectedNodeId_ = nodeId;
+  emit selectedNodeChanged(nodeId);
+}
+
+void SddaiBridge::sendCommand(const QString& cmd, const QString& arg) { emit commandRequested(cmd, arg); }
+
+QString SddaiBridge::requestNodeDetailJson(const QString& nodeId) const {
+  if (!core_) return QString();
+  const QJsonObject detail = core_->requestNodeDetail(nodeId);
+  return QString::fromUtf8(QJsonDocument(detail).toJson(QJsonDocument::Compact));
 }

@@ -1,0 +1,10 @@
+{
+  "id": "file_cases",
+  "checks": [
+    {
+      "name": "file cases runner",
+      "cmd": "python tools/checks/case_runner.py",
+      "timeout_sec": 300
+    }
+  ]
+}

@@ -25,6 +25,7 @@
 - 验收闭环：每次改动后运行 verify 脚本并记录结果/失败原因。
 
 ## 新增工具
+- **Clean Zip**：`python tools/make_clean_zip.py` 生成 dist/clean_repo.zip，给 agent/AI 用 clean zip，避免 build/ 干扰。
 - **蛛网布局 & LOD**：前端提供同心/放射布局 fallback，大图自动抽稀标签；控制台打印 `renderGraph.total` 便于性能观察。
 - **AI Doc 生成**：
   - UI：运行应用，菜单 File -> `Generate AI Doc...` 选择目标目录，生成 `docs/aidoc/*`（已有文件备份为 .bak）。

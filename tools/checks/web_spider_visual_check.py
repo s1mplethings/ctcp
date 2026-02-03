@@ -24,15 +24,13 @@ def find_repo_root(start: Path) -> Path:
     return start.resolve()
 
 def choose_entry(repo: Path) -> Path:
-    candidates = [
-        repo / "web" / "graph_spider" / "index.html",
-        repo / "web" / "graph_spider_v2" / "index.html",
-        repo / "web" / "graph_spider_v4" / "index.html",
-    ]
-    for p in candidates:
-        if p.exists():
-            return p
-    raise FileNotFoundError("No graph spider entry found (tried web/graph_spider*, web/graph_spider_v2, web/graph_spider_v4).")
+    entry = repo / "web" / "graph_spider" / "index.html"
+    fallback = repo / "web" / "index.html"
+    if entry.exists():
+        return entry
+    if fallback.exists():
+        return fallback
+    raise FileNotFoundError("No graph spider entry found (expected web/graph_spider/index.html).")
 
 def hist_std_and_bright(img_gray: Image.Image):
     hist = img_gray.histogram()

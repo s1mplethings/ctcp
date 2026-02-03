@@ -1,23 +1,20 @@
 <RCC>
   <qresource prefix="/">
+    <!-- Main entry points -->
     <file alias="web/index.html">../web/index.html</file>
-    <file alias="web/app.js">../web/app.js</file>
-    <file alias="web/cytoscape.min.js">../web/cytoscape.min.js</file>
-    <file alias="web/qwebchannel.js">../web/qwebchannel.js</file>
-    <file alias="web/graph_force/index.html">../web/graph_force/index.html</file>
-    <file alias="web/graph_force/README.md">../web/graph_force/README.md</file>
+    
+    <!-- Graph Spider (唯一实现) -->
     <file alias="web/graph_spider/index.html">../web/graph_spider/index.html</file>
-    <file alias="web/graph_spider/spider.css">../web/graph_spider/spider.css</file>
-    <file alias="web/graph_spider/bootstrap_graph.js">../web/graph_spider/bootstrap_graph.js</file>
     <file alias="web/graph_spider/spider.js">../web/graph_spider/spider.js</file>
+    <file alias="web/graph_spider/spider.css">../web/graph_spider/spider.css</file>
+    <file alias="web/graph_spider/details.html">../web/graph_spider/details.html</file>
+    <file alias="web/graph_spider/details.js">../web/graph_spider/details.js</file>
     <file alias="web/graph_spider/demo_graph.json">../web/graph_spider/demo_graph.json</file>
-    <file alias="web/graph_spider/spider_v4.css">../web/graph_spider/spider_v4.css</file>
-    <file alias="web/graph_spider/spider_v4.js">../web/graph_spider/spider_v4.js</file>
-    <file alias="web/graph_spider/spider_v5.css">../web/graph_spider/spider_v5.css</file>
-    <file alias="web/graph_spider/spider_v5.js">../web/graph_spider/spider_v5.js</file>
+    <file alias="web/graph_spider/README.md">../web/graph_spider/README.md</file>
+    <file alias="qt_style.qss">../resources/qt_style.qss</file>
+    
+    <!-- Redirect shells (兼容入口，无实现) -->
+    <file alias="web/graph_force/index.html">../web/graph_force/index.html</file>
     <file alias="web/graph_spider_v2/index.html">../web/graph_spider_v2/index.html</file>
-    <file alias="web/graph_spider_v2/graph.css">../web/graph_spider_v2/graph.css</file>
-    <file alias="web/graph_spider_v2/spider.js">../web/graph_spider_v2/spider.js</file>
-    <file alias="web/graph_spider_v2/sample_graph.json">../web/graph_spider_v2/sample_graph.json</file>
   </qresource>
 </RCC>
