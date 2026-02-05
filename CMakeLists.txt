@@ -30,7 +30,6 @@ set(SRC
     src/DocPreviewer.cpp
     src/sddai_bridge.cpp
     src/preview_window.cpp
-    src/details_window.cpp
 )
 
 set(HDR
@@ -48,7 +47,6 @@ set(HDR
     include/DocPreviewer.h
     src/sddai_bridge.h
     src/preview_window.h
-    src/details_window.h
 )
 
 if(QT_PREFIX STREQUAL "Qt6")

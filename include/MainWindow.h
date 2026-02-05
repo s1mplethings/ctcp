@@ -11,9 +11,6 @@ class QFileSystemModel;
 class QTreeView;
 class QWebEngineView;
 class QLabel;
-class QDockWidget;
-class DetailsWindow;
-
 class MainWindow : public QMainWindow {
     Q_OBJECT
 public:
@@ -23,7 +20,6 @@ public:
 private slots:
     void chooseProject();
     void handleToast(const QString &msg);
-    void openDetailsWindow();
 
 private:
     void createUi();
@@ -35,8 +31,5 @@ private:
     QFileSystemModel *fsModel_{nullptr};
     QTreeView *tree_{nullptr};
     QWebEngineView *webView_{nullptr};
-    QDockWidget *detailsDock_{nullptr};
-    QWebEngineView *detailsView_{nullptr};
-    DetailsWindow *detailsWindow_{nullptr};
     QLabel *projectLabel_{nullptr};
 };

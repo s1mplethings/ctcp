@@ -21,17 +21,61 @@
         <option value="Docs">Docs</option>
         <option value="Summary">Summary</option>
       </select>
-      <label><input id="collapseToggle" type="checkbox" checked title="Collapse directories"/>Collapse Dirs</label>
-      <label>Depth: <input id="depth" type="number" min="1" max="6" value="2" style="width:50px" title="Focus expand depth"/></label>
       <input id="search" placeholder="Search node / path..." autocomplete="off" />
+
+      <details class="controls" title="Advanced controls">
+        <summary>Controls</summary>
+        <div class="controls-menu">
+          <div class="controls-row">
+            <label for="collapseToggle">Collapse Dirs</label>
+            <div class="right"><input id="collapseToggle" type="checkbox" checked title="Collapse directories"/></div>
+          </div>
+          <div class="controls-row">
+            <label for="depth">Focus Depth</label>
+            <div class="right"><input id="depth" type="number" min="1" max="6" value="2" title="Focus expand depth"/></div>
+          </div>
+          <div class="controls-row">
+            <label for="edgeMode">Edges</label>
+            <div class="right">
+              <select id="edgeMode" title="Edge rendering mode">
+                <option value="smart">Smart</option>
+                <option value="all">All</option>
+                <option value="tree">Tree</option>
+                <option value="neighbors">Neighbors</option>
+              </select>
+            </div>
+          </div>
+          <div class="controls-row">
+            <label for="edgeMax">Edge Budget</label>
+            <div class="right"><input id="edgeMax" type="number" min="500" max="20000" value="4000" title="When too many edges, Smart mode falls back to tree"/></div>
+          </div>
+          <div class="controls-row">
+            <label for="containsEdges">Show Dir Edges</label>
+            <div class="right"><input id="containsEdges" type="checkbox" title="Show directory contains edges"/></div>
+          </div>
+          <div class="controls-row">
+            <label for="pathOnly">Path-only on select</label>
+            <div class="right"><input id="pathOnly" type="checkbox" checked title="When a node is selected (not root), only draw root→node path edges"/></div>
+          </div>
+          <div class="controls-row">
+            <label>Physics</label>
+            <div class="right">
+              <button id="btnPause" title="Pause physics (Space)">Pause</button>
+              <button id="btnReheat" title="Reheat layout (R)">Reheat</button>
+            </div>
+          </div>
+          <div class="controls-help">
+            Tip: use <b>Tree</b> or <b>Neighbors</b> when the graph is too dense.
+          </div>
+        </div>
+      </details>
+
       <button id="btnOverview" title="Overview (全局图)">Overview</button>
       <button id="btnFocus" title="Focus on Selected">Focus</button>
       <button id="btnBack" title="Back (Alt+← / Backspace)">Back</button>
       <button id="btnForward" title="Forward (Alt+→)">Forward</button>
       <button id="btnUp" title="Up (parent)">Up</button>
       <button id="btnFit" title="Fit (Home)">Fit</button>
-      <button id="btnPause" title="Pause physics (Space)">Pause</button>
-      <button id="btnReheat" title="Reheat layout (R)">Reheat</button>
       <button id="btnTogglePanel" title="Toggle Details (Ctrl+\\)">Details</button>
     </div>
   </div>

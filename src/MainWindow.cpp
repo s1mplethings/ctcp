@@ -2,21 +2,18 @@
 
 #include "Bridge.h"
 #include "sddai_bridge.h"
-#include "details_window.h"
 
 #include <QAction>
 #include <QDir>
 #include <QCoreApplication>
 #include <QFileDialog>
 #include <QFileSystemModel>
-#include <QDockWidget>
 #include <QKeySequence>
 #include <QLabel>
 #include <QMenuBar>
 #include <QSplitter>
 #include <QStatusBar>
 #include <QTreeView>
-#include <QTimer>
 #include <QWebChannel>
 #include <QWebEngineView>
 #include <QFile>
@@ -67,27 +64,6 @@ void MainWindow::createUi() {
     webView_->page()->setWebChannel(channel);
     webView_->setUrl(QUrl(QStringLiteral("qrc:/web/graph_spider/index.html")));
 
-    // Details dock with independent WebView
-    // NOTE: QWebEngineView can go blank when a QDockWidget is floated (re-parented to a new top-level window).
-    // Provide a stable dedicated window instead (see View -> Open Details Window).
-    detailsDock_ = new QDockWidget(tr("Details"), this);
-    detailsDock_->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetClosable);
-    detailsDock_->setMinimumWidth(320);
-    detailsView_ = new QWebEngineView(detailsDock_);
-    auto channel2 = new QWebChannel(detailsView_->page());
-    channel2->registerObject(QStringLiteral("bridge"), exposedBridge_);
-    detailsView_->page()->setWebChannel(channel2);
-    detailsView_->setUrl(QUrl(QStringLiteral("qrc:/web/graph_spider/details.html")));
-    detailsDock_->setWidget(detailsView_);
-    addDockWidget(Qt::RightDockWidgetArea, detailsDock_);
-    detailsDock_->resize(380, 720);
-    detailsDock_->show();
-
-    // Defensive reload hooks (keeps details view alive when layout changes)
-    connect(detailsDock_, &QDockWidget::visibilityChanged, this, [this](bool vis) {
-        if (vis && detailsView_) QTimer::singleShot(0, detailsView_, [this]() { detailsView_->reload(); });
-    });
-
     statusBar()->showMessage(QStringLiteral("Ready"));
     projectLabel_ = new QLabel(tr("No project loaded"), this);
     statusBar()->addPermanentWidget(projectLabel_);
@@ -121,29 +97,7 @@ void MainWindow::createMenu() {
     quitAct->setShortcut(QKeySequence::Quit);
     connect(quitAct, &QAction::triggered, this, &QWidget::close);
 
-    auto viewMenu = menuBar()->addMenu(tr("&View"));
-    auto toggleDetails = viewMenu->addAction(tr("Toggle Details"));
-    toggleDetails->setCheckable(true);
-    toggleDetails->setChecked(true);
-    connect(toggleDetails, &QAction::triggered, [this, toggleDetails]() {
-        if (!detailsDock_) return;
-        detailsDock_->setVisible(!detailsDock_->isVisible());
-        toggleDetails->setChecked(detailsDock_->isVisible());
-    });
-
-    auto openDetailsWin = viewMenu->addAction(tr("Open Details Window"));
-    connect(openDetailsWin, &QAction::triggered, this, &MainWindow::openDetailsWindow);
-}
-
-void MainWindow::openDetailsWindow() {
-    if (!detailsWindow_) {
-        detailsWindow_ = new DetailsWindow(exposedBridge_, this);
-        detailsWindow_->setAttribute(Qt::WA_DeleteOnClose, false);
-    }
-    detailsWindow_->show();
-    detailsWindow_->raise();
-    detailsWindow_->activateWindow();
-    detailsWindow_->reloadPage();
+    // Details window removed per request.
 }
 
 void MainWindow::chooseProject() {
