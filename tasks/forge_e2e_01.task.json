@@ -1,0 +1,40 @@
+{
+  "id": "Forge-E2E-01",
+  "title": "E2E: duration compound + CLI error discipline",
+  "target": { "type": "local_path", "path": "tests/fixtures/adlc_forge_full_bundle/fixtures/toy_py" },
+  "constraints": { "network": "deny", "install_deps": "deny", "time_budget_sec": 900 },
+  "prompt": "Fix parse_duration compound parsing and CLI duration invalid exit code. Only modify src/toybox/timeparse.py and src/toybox/cli.py. Produce ADLC artifacts under artifacts/Forge-E2E-01/{doc,analysis,find,plan,build,merge}. build/patch.diff must be minimal. Max 2 build⇄verify iterations.",
+  "acceptance": [
+    "parse_duration('1h30m') == 5400",
+    "parse_duration(' 1H30m ') == 5400",
+    "python -m toybox duration abc returns non-zero and writes message to stderr",
+    "after verify commands all succeed",
+    "6 artifacts exist and are not placeholders"
+  ],
+  "verify": {
+    "baseline_commands": [
+      "python -m pytest -q tests/test_timeparse.py::test_parse_duration_compound"
+    ],
+    "change_commands": [
+      "python -m pytest -q tests/test_timeparse.py::test_parse_duration_compound",
+      "python -m pytest -q tests_hidden/test_hidden_regressions.py::test_parse_duration_spaces_and_case",
+      "python -m pytest -q tests/test_io_cli.py::test_cli_duration_invalid_nonzero"
+    ],
+    "extra_regression_commands": [
+      "python -m toybox duration abc"
+    ]
+  },
+  "checks": [
+    { "type": "require_files", "files": [
+      "doc/doc_delta.md",
+      "analysis/analysis.md",
+      "find/evidence.json",
+      "plan/plan.md",
+      "build/patch.diff",
+      "merge/merge_pack.md"
+    ]},
+    { "type": "min_lines", "file": "doc/doc_delta.md", "min": 10 },
+    { "type": "min_lines", "file": "analysis/analysis.md", "min": 12 },
+    { "type": "regex_in_file", "file": "plan/plan.md", "pattern": "(verify|pytest)" }
+  ]
+}
