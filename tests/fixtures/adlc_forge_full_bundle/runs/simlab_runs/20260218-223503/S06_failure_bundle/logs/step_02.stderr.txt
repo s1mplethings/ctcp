@@ -1,0 +1,10 @@
+CMake Error: The current CMakeCache.txt directory D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223503/S06_failure_bundle/sandbox/build_lite/CMakeCache.txt is different than the directory d:/.c_projects/adc/ctcp/build_lite where CMakeCache.txt was created. This may result in binaries being created in the wrong place. If you are not sure, reedit the CMakeCache.txt
+CMake Error: The source "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223503/S06_failure_bundle/sandbox/CMakeLists.txt" does not match the source "D:/.c_projects/adc/ctcp/CMakeLists.txt" used to generate cache.  Re-run cmake with a different source directory.
+Invoke-ExternalChecked : [verify_repo] FAILED: cmake configure (headless lite) (exit=1)
+At D:\.c_projects\adc\ctcp\tests\fixtures\adlc_forge_full_bundle\runs\simlab_runs\20260218-223503\S06_failure_bundle\sa
+ndbox\scripts\verify_repo.ps1:69 char:5
++     Invoke-ExternalChecked -Label "cmake configure (headless lite)" - ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException,Invoke-ExternalChecked
+ 

@@ -31,6 +31,16 @@ Optional contrast:
 
 - `python tools/contrast_proof.py --old <old_proof.json> --new <new_proof.json> --out <contrast_report.md>`
 
+## Gate Levels
+
+- Lite (default in `verify_repo`):
+  - headless build (`CTCP_ENABLE_GUI=OFF`)
+  - workflow/contract/doc-index checks
+  - 1-2 minimal replay scenarios (suite=`lite`)
+- Full (opt-in):
+  - enabled by `CTCP_FULL_GATE=1` or explicit `--full`
+  - can include heavier checks (GUI/example build, broader tests)
+
 ## Artifact Layout
 
 `artifacts/verify/<timestamp>/` must include:
@@ -71,3 +81,11 @@ Smoke mode is required (`<app> --smoke`).
 
 Smoke must fail non-zero when app cannot initialize required runtime/plugins/resources.
 
+## Failure Bundle Contract
+
+For replay/adlc runs, failed execution must produce `failure_bundle.zip` containing at least:
+
+- `TRACE.md`
+- `diff.patch` (if git diff available)
+- `logs/*` (step logs/stdout/stderr)
+- key snapshots asserted during the run

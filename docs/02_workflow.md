@@ -1,5 +1,11 @@
-
 # 工作流
+
+> 规范优先级：若本文件与 `docs/00_CORE.md` 冲突，以 `docs/00_CORE.md` 为准。
+
+## 核心执行链（默认）
+- `doc -> analysis -> find -> plan -> build/verify -> contrast -> fix -> deploy/merge`
+- `find` 的含义是 workflow resolver（从本地流程库/历史成功记录选 recipe），不是上网检索。
+- 默认 headless，GUI 仅可选示例路径，不进入默认验收链路。
 
 ## 使用流程（用户视角）
 1. 打开工程目录

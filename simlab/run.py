@@ -65,7 +65,17 @@ def copy_repo(src: Path, dst: Path) -> None:
         ignored: set[str] = set()
         for name in names:
             child = (rel / name).as_posix()
-            if name in {".git", ".venv", "build", "dist", "__pycache__"}:
+            if name in {
+                ".git",
+                ".venv",
+                "build",
+                "build_lite",
+                "build_verify",
+                "build_gui",
+                "dist",
+                "__pycache__",
+                ".pytest_cache",
+            }:
                 ignored.add(name)
                 continue
             if child.startswith("tests/fixtures/adlc_forge_full_bundle/runs/"):
@@ -339,7 +349,7 @@ def load_scenarios(suite: str) -> list[dict[str, Any]]:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="SimLab scene replay runner")
-    ap.add_argument("--suite", default="all", choices=["all", "core", "integration"])
+    ap.add_argument("--suite", default="all", choices=["all", "lite", "core", "integration"])
     ap.add_argument("--runs-root", default=str(DEFAULT_RUNS_ROOT))
     ap.add_argument("--json-out", default="")
     args = ap.parse_args()

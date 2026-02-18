@@ -1,0 +1,3529 @@
+diff --git a/BUILD.md b/BUILD.md
+index 17641b8..3192b3e 100644
+--- a/BUILD.md
++++ b/BUILD.md
+@@ -1,27 +1,35 @@
+-# Build (Windows/macOS/Linux)
++# Build (Headless-first)
+ 
+ ## Prereqs
+-- Qt 6.x with modules: Widgets, WebEngineWidgets, WebChannel
+-  - (Qt 5.15+ 也可；通过 `CMAKE_PREFIX_PATH` 指定)
+ - CMake ≥ 3.21
+ - A C++17 compiler (MSVC / clang / gcc)
+ - Ninja（可选）
+ 
++GUI only (optional):
++- Qt 6.x (or Qt 5.15+) with Widgets, WebEngineWidgets, WebChannel
++- set `CMAKE_PREFIX_PATH`/`Qt6_DIR` for GUI build
++
+ ## Steps
+ 
+ ### Windows (PowerShell)
+ ```powershell
+-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="C:/Qt/6.6.1/msvc2019_64"
+-cmake --build build --config Release
++cmake -S . -B build_lite -DCMAKE_BUILD_TYPE=Release -DCTCP_ENABLE_GUI=OFF
++cmake --build build_lite --config Release
+ ```
+ 
+ ### Linux/macOS
+ ```bash
+-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+-cmake --build build
++cmake -S . -B build_lite -DCMAKE_BUILD_TYPE=Release -DCTCP_ENABLE_GUI=OFF
++cmake --build build_lite
+ ```
+ 
+-成功后可执行文件通常在：
+-- Windows: `build/<config>/...exe`（verify 脚本会把 Release 复制到 `build/` 便于发现）
+-- Unix: `build/<exe>`
++### GUI Example Build (optional)
++
++```powershell
++cmake -S . -B build_gui -DCMAKE_BUILD_TYPE=Release -DCTCP_ENABLE_GUI=ON -DCMAKE_PREFIX_PATH="C:/Qt/6.6.1/msvc2019_64"
++cmake --build build_gui --config Release
++```
+ 
++默认可执行文件：
++- headless: `ctcp_headless`
++- gui (optional): `ctcp`
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 3f60047..984f682 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -8,81 +8,97 @@ set(CMAKE_AUTOMOC ON)
+ include(CTest)
+ include(GNUInstallDirs)
+ 
+-# Try Qt 6 first, fall back to Qt 5 if necessary.
+-find_package(Qt6 COMPONENTS Widgets WebEngineWidgets WebChannel QUIET)
+-if(Qt6_FOUND)
+-  set(QT_PREFIX Qt6)
+-else()
+-  find_package(Qt5 COMPONENTS Widgets WebEngineWidgets WebChannel REQUIRED)
+-  set(QT_PREFIX Qt5)
+-endif()
++option(CTCP_ENABLE_GUI "Build Qt GUI example target" OFF)
+ 
+-set(SRC
+-    src/main.cpp
+-    src/MainWindow.cpp
+-    src/ProjectScanner.cpp
+-    src/SpecExtractor.cpp
+-    src/SchemaLoader.cpp
+-    src/MetaStore.cpp
+-    src/RunLoader.cpp
+-    src/GraphBuilder.cpp
+-    src/Bridge.cpp
+-    src/FileIndexer.cpp
+-    src/LayoutEngine.cpp
+-    src/DocPreviewer.cpp
+-    src/sddai_bridge.cpp
+-    src/preview_window.cpp
+-)
++if(CTCP_ENABLE_GUI)
++  # GUI example target (optional).
++  find_package(Qt6 COMPONENTS Widgets WebEngineWidgets WebChannel QUIET)
++  if(Qt6_FOUND)
++    set(QT_PREFIX Qt6)
++  else()
++    find_package(Qt5 COMPONENTS Widgets WebEngineWidgets WebChannel REQUIRED)
++    set(QT_PREFIX Qt5)
++  endif()
+ 
+-set(HDR
+-    include/MainWindow.h
+-    include/ProjectScanner.h
+-    include/SpecExtractor.h
+-    include/SchemaLoader.h
+-    include/MetaStore.h
+-    include/RunLoader.h
+-    include/GraphBuilder.h
+-    include/Bridge.h
+-    include/GraphTypes.h
+-    include/FileIndexer.h
+-    include/LayoutEngine.h
+-    include/DocPreviewer.h
+-    src/sddai_bridge.h
+-    src/preview_window.h
+-)
++  set(GUI_SRC
++      src/main.cpp
++      src/MainWindow.cpp
++      src/ProjectScanner.cpp
++      src/SpecExtractor.cpp
++      src/SchemaLoader.cpp
++      src/MetaStore.cpp
++      src/RunLoader.cpp
++      src/GraphBuilder.cpp
++      src/Bridge.cpp
++      src/FileIndexer.cpp
++      src/LayoutEngine.cpp
++      src/DocPreviewer.cpp
++      src/sddai_bridge.cpp
++      src/preview_window.cpp
++  )
+ 
+-if(QT_PREFIX STREQUAL "Qt6")
+-  qt_add_resources(QRC resources/app.qrc)
+-else()
+-  qt5_add_resources(QRC resources/app.qrc)
+-endif()
++  set(GUI_HDR
++      include/MainWindow.h
++      include/ProjectScanner.h
++      include/SpecExtractor.h
++      include/SchemaLoader.h
++      include/MetaStore.h
++      include/RunLoader.h
++      include/GraphBuilder.h
++      include/Bridge.h
++      include/GraphTypes.h
++      include/FileIndexer.h
++      include/LayoutEngine.h
++      include/DocPreviewer.h
++      src/sddai_bridge.h
++      src/preview_window.h
++  )
++
++  if(QT_PREFIX STREQUAL "Qt6")
++    qt_add_resources(QRC resources/app.qrc)
++  else()
++    qt5_add_resources(QRC resources/app.qrc)
++  endif()
+ 
+-add_executable(${PROJECT_NAME} ${SRC} ${HDR} ${QRC})
++  add_executable(ctcp ${GUI_SRC} ${GUI_HDR} ${QRC})
++  target_include_directories(ctcp PRIVATE include)
++  target_link_libraries(ctcp PRIVATE
++      ${QT_PREFIX}::Widgets
++      ${QT_PREFIX}::WebEngineWidgets
++      ${QT_PREFIX}::WebChannel
++  )
+ 
+-target_include_directories(${PROJECT_NAME} PRIVATE include)
++  if(MSVC)
++    target_compile_options(ctcp PRIVATE /W4 /permissive- /EHsc)
++  else()
++    target_compile_options(ctcp PRIVATE -Wall -Wextra -Wpedantic)
++  endif()
+ 
+-target_link_libraries(${PROJECT_NAME} PRIVATE
+-    ${QT_PREFIX}::Widgets
+-    ${QT_PREFIX}::WebEngineWidgets
+-    ${QT_PREFIX}::WebChannel
+-)
++  install(TARGETS ctcp RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+ 
+-if(MSVC)
+-  target_compile_options(${PROJECT_NAME} PRIVATE /W4 /permissive- /EHsc)
++  if(BUILD_TESTING)
++    add_test(NAME app_smoke COMMAND $<TARGET_FILE:ctcp> --smoke)
++    if(UNIX AND NOT APPLE)
++      set_tests_properties(app_smoke PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
++    endif()
++  endif()
+ else()
+-  target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+-endif()
++  # Headless engine target (default).
++  add_executable(ctcp_headless src/headless_main.cpp)
++  if(MSVC)
++    target_compile_options(ctcp_headless PRIVATE /W4 /permissive- /EHsc)
++  else()
++    target_compile_options(ctcp_headless PRIVATE -Wall -Wextra -Wpedantic)
++  endif()
+ 
+-install(TARGETS ${PROJECT_NAME}
+-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+-)
++  install(TARGETS ctcp_headless RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+ 
+-if(BUILD_TESTING)
+-  add_test(NAME app_smoke COMMAND $<TARGET_FILE:${PROJECT_NAME}> --smoke)
+-  if(UNIX AND NOT APPLE)
+-    set_tests_properties(app_smoke PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
++  if(BUILD_TESTING)
++    add_test(NAME headless_smoke COMMAND $<TARGET_FILE:ctcp_headless> --smoke)
+   endif()
++endif()
+ 
++if(BUILD_TESTING)
+   find_package(Python3 COMPONENTS Interpreter QUIET)
+   if(Python3_Interpreter_FOUND)
+     add_test(
+@@ -91,3 +107,4 @@ if(BUILD_TESTING)
+     )
+   endif()
+ endif()
++
+diff --git a/README.md b/README.md
+index 2c79795..7c888c5 100644
+--- a/README.md
++++ b/README.md
+@@ -1,6 +1,10 @@
+-# CTCP — Coding Team Control Protocol (Spec-first Autonomous Coding Team)
++# CTCP — ADLC + Multi-Agent Execution Engine
+ 
+-本仓库的目标：把“写代码”变成一条可验证的流水线，让 **AI/agent 像一个项目团队一样持续推进**：
++本仓库核心定位：把“项目实现”变成可验证、可回放、可审计的 ADLC 执行引擎。
++- 默认路径是 **headless**（不依赖 GUI/Qt）。
++- GUI 仅作为示例/可视化器，可选开启，不影响核心流程。
++
++系统目标：
+ - 你只需给一个目标（Goal）
+ - 系统会自动拆解、执行、验收、记录
+ - 只有在 **必须由你决策/提供信息** 时才会提问
+@@ -27,7 +31,12 @@ python tools\ctcp_assistant.py init-externals "your-goal"
+ python tools\ctcp_team.py start "your-goal"
+ ```
+ 
+-4) 验收（必须）：证据闭环 verify（推荐）
++4) 运行 ADLC headless 入口（最小闭环）
++```powershell
++python scripts\adlc_run.py --goal "your-goal" --force
++```
++
++5) 验收（必须）：证据闭环 verify（推荐）
+ ```powershell
+ powershell -ExecutionPolicy Bypass -File scripts\verify.ps1
+ ```
+@@ -36,7 +45,7 @@ powershell -ExecutionPolicy Bypass -File scripts\verify.ps1
+ bash scripts/verify.sh
+ ```
+ 
+-5) 基础仓库门禁（workflow/contract/doc-index）
++6) 基础仓库门禁（Lite 默认；workflow/contract/doc-index + lite scenario）
+ ```powershell
+ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
+ ```
+@@ -61,7 +70,21 @@ bash scripts/verify_repo.sh
+ 
+ ## Build
+ 
+-见 `BUILD.md`。
++默认 headless 构建：
++
++```powershell
++cmake -S . -B build_lite -DCTCP_ENABLE_GUI=OFF
++cmake --build build_lite --config Release
++```
++
++GUI 示例构建（可选）：
++
++```powershell
++cmake -S . -B build_gui -DCTCP_ENABLE_GUI=ON -DCMAKE_PREFIX_PATH="<Qt path>"
++cmake --build build_gui --config Release
++```
++
++更多见 `BUILD.md`。
+ 
+ ---
+ 
+diff --git a/build_verify/CMakeCache.txt b/build_verify/CMakeCache.txt
+index 0a25aab..320c103 100644
+--- a/build_verify/CMakeCache.txt
++++ b/build_verify/CMakeCache.txt
+@@ -234,6 +234,9 @@ COVERAGE_COMMAND:FILEPATH=COVERAGE_COMMAND-NOTFOUND
+ //Extra command line flags to pass to the coverage tool
+ COVERAGE_EXTRA_FLAGS:STRING=-l
+ 
++//Build Qt GUI example target
++CTCP_ENABLE_GUI:BOOL=OFF
++
+ //How many times to retry timed-out CTest submissions.
+ CTEST_SUBMIT_RETRY_COUNT:STRING=3
+ 
+@@ -468,4 +471,17 @@ MEMORYCHECK_SUPPRESSIONS_FILE-ADVANCED:INTERNAL=1
+ SITE-ADVANCED:INTERNAL=1
+ //CMAKE_INSTALL_PREFIX during last run
+ _GNUInstallDirs_LAST_CMAKE_INSTALL_PREFIX:INTERNAL=C:/Program Files (x86)/ctcp
++//Compiler reason failure
++_Python3_Compiler_REASON_FAILURE:INTERNAL=
++//Development reason failure
++_Python3_Development_REASON_FAILURE:INTERNAL=
++//Path to a program.
++_Python3_EXECUTABLE:INTERNAL=D:/anaconda/python.exe
++//Path to a program.
++_Python3_EXECUTABLE_DEBUG:INTERNAL=_Python3_EXECUTABLE_DEBUG-NOTFOUND
++//Python3 Properties
++_Python3_INTERPRETER_PROPERTIES:INTERNAL=Python;3;12;3;64;32;<none>;cp312-win_amd64;;D:\anaconda\Lib;D:\anaconda\Lib;D:\anaconda\Lib\site-packages;D:\anaconda\Lib\site-packages
++_Python3_INTERPRETER_SIGNATURE:INTERNAL=fccbc653291cbc678e2b702bbae21f4a
++//NumPy reason failure
++_Python3_NumPy_REASON_FAILURE:INTERNAL=
+ 
+diff --git a/build_verify/CMakeFiles/CMakeConfigureLog.yaml b/build_verify/CMakeFiles/CMakeConfigureLog.yaml
+index 20acfbf..8a748e5 100644
+--- a/build_verify/CMakeFiles/CMakeConfigureLog.yaml
++++ b/build_verify/CMakeFiles/CMakeConfigureLog.yaml
+@@ -6301,3 +6301,2670 @@ events:
+         - "C:/Program Files/CMake"
+         - "C:/Program Files (x86)/ctcp"
+ ...
++
++---
++events:
++  -
++    kind: "find-v1"
++    backtrace:
++      - "C:/Program Files/CMake/share/cmake-4.2/Modules/FindPython/Support.cmake:2022 (find_program)"
++      - "C:/Program Files/CMake/share/cmake-4.2/Modules/FindPython3.cmake:671 (include)"
++      - "CMakeLists.txt:102 (find_package)"
++    mode: "program"
++    variable: "_Python3_EXECUTABLE"
++    description: "Path to a program."
++    settings:
++      SearchFramework: "NEVER"
++      SearchAppBundle: "NEVER"
++      CMAKE_FIND_USE_CMAKE_PATH: false
++      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
++      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: false
++      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: false
++      CMAKE_FIND_USE_INSTALL_PREFIX: true
++    names:
++      - "python3.15"
++      - "python3.14"
++      - "python3.13"
++      - "python3.12"
++      - "python3.11"
++      - "python3.10"
++      - "python3.9"
++      - "python3.8"
++      - "python3.7"
++      - "python3.6"
++      - "python3.5"
++      - "python3.4"
++      - "python3.3"
++      - "python3.2"
++      - "python3.1"
++      - "python3.0"
++      - "python3"
++      - "python"
++      - "ipy3.15"
++      - "ipy3.14"
++      - "ipy3.13"
++      - "ipy3.12"
++      - "ipy3.11"
++      - "ipy3.10"
++      - "ipy3.9"
++      - "ipy3.8"
++      - "ipy3.7"
++      - "ipy3.6"
++      - "ipy3.5"
++      - "ipy3.4"
++      - "ipy3.3"
++      - "ipy3.2"
++      - "ipy3.1"
++      - "ipy3.0"
++      - "ipy3"
++      - "ipy64"
++      - "ipy32"
++      - "ipy"
++      - "ipy.exe"
++    candidate_directories:
++      - "D:/anaconda/bin/"
++      - "D:/anaconda/Scripts/"
++      - "D:/anaconda/share/ironpython3.15/"
++      - "D:/anaconda/share/ironpython3.14/"
++      - "D:/anaconda/share/ironpython3.13/"
++      - "D:/anaconda/share/ironpython3.12/"
++      - "D:/anaconda/share/ironpython3.11/"
++      - "D:/anaconda/share/ironpython3.10/"
++      - "D:/anaconda/share/ironpython3.9/"
++      - "D:/anaconda/share/ironpython3.8/"
++      - "D:/anaconda/share/ironpython3.7/"
++      - "D:/anaconda/share/ironpython3.6/"
++      - "D:/anaconda/share/ironpython3.5/"
++      - "D:/anaconda/share/ironpython3.4/"
++      - "D:/anaconda/share/ironpython3.3/"
++      - "D:/anaconda/share/ironpython3.2/"
++      - "D:/anaconda/share/ironpython3.1/"
++      - "D:/anaconda/share/ironpython3.0/"
++      - "D:/anaconda/net45/"
++      - "D:/anaconda/net40/"
++      - "D:/anaconda/"
++    searched_directories:
++      - "D:/anaconda/bin/python3.15.com"
++      - "D:/anaconda/bin/python3.15.exe"
++      - "D:/anaconda/bin/python3.15"
++      - "D:/anaconda/bin/python3.14.com"
++      - "D:/anaconda/bin/python3.14.exe"
++      - "D:/anaconda/bin/python3.14"
++      - "D:/anaconda/bin/python3.13.com"
++      - "D:/anaconda/bin/python3.13.exe"
++      - "D:/anaconda/bin/python3.13"
++      - "D:/anaconda/bin/python3.12.com"
++      - "D:/anaconda/bin/python3.12.exe"
++      - "D:/anaconda/bin/python3.12"
++      - "D:/anaconda/bin/python3.11.com"
++      - "D:/anaconda/bin/python3.11.exe"
++      - "D:/anaconda/bin/python3.11"
++      - "D:/anaconda/bin/python3.10.com"
++      - "D:/anaconda/bin/python3.10.exe"
++      - "D:/anaconda/bin/python3.10"
++      - "D:/anaconda/bin/python3.9.com"
++      - "D:/anaconda/bin/python3.9.exe"
++      - "D:/anaconda/bin/python3.9"
++      - "D:/anaconda/bin/python3.8.com"
++      - "D:/anaconda/bin/python3.8.exe"
++      - "D:/anaconda/bin/python3.8"
++      - "D:/anaconda/bin/python3.7.com"
++      - "D:/anaconda/bin/python3.7.exe"
++      - "D:/anaconda/bin/python3.7"
++      - "D:/anaconda/bin/python3.6.com"
++      - "D:/anaconda/bin/python3.6.exe"
++      - "D:/anaconda/bin/python3.6"
++      - "D:/anaconda/bin/python3.5.com"
++      - "D:/anaconda/bin/python3.5.exe"
++      - "D:/anaconda/bin/python3.5"
++      - "D:/anaconda/bin/python3.4.com"
++      - "D:/anaconda/bin/python3.4.exe"
++      - "D:/anaconda/bin/python3.4"
++      - "D:/anaconda/bin/python3.3.com"
++      - "D:/anaconda/bin/python3.3.exe"
++      - "D:/anaconda/bin/python3.3"
++      - "D:/anaconda/bin/python3.2.com"
++      - "D:/anaconda/bin/python3.2.exe"
++      - "D:/anaconda/bin/python3.2"
++      - "D:/anaconda/bin/python3.1.com"
++      - "D:/anaconda/bin/python3.1.exe"
++      - "D:/anaconda/bin/python3.1"
++      - "D:/anaconda/bin/python3.0.com"
++      - "D:/anaconda/bin/python3.0.exe"
++      - "D:/anaconda/bin/python3.0"
++      - "D:/anaconda/bin/python3.com"
++      - "D:/anaconda/bin/python3.exe"
++      - "D:/anaconda/bin/python3"
++      - "D:/anaconda/bin/python.com"
++      - "D:/anaconda/bin/python.exe"
++      - "D:/anaconda/bin/python"
++      - "D:/anaconda/bin/ipy3.15.com"
++      - "D:/anaconda/bin/ipy3.15.exe"
++      - "D:/anaconda/bin/ipy3.15"
++      - "D:/anaconda/bin/ipy3.14.com"
++      - "D:/anaconda/bin/ipy3.14.exe"
++      - "D:/anaconda/bin/ipy3.14"
++      - "D:/anaconda/bin/ipy3.13.com"
++      - "D:/anaconda/bin/ipy3.13.exe"
++      - "D:/anaconda/bin/ipy3.13"
++      - "D:/anaconda/bin/ipy3.12.com"
++      - "D:/anaconda/bin/ipy3.12.exe"
++      - "D:/anaconda/bin/ipy3.12"
++      - "D:/anaconda/bin/ipy3.11.com"
++      - "D:/anaconda/bin/ipy3.11.exe"
++      - "D:/anaconda/bin/ipy3.11"
++      - "D:/anaconda/bin/ipy3.10.com"
++      - "D:/anaconda/bin/ipy3.10.exe"
++      - "D:/anaconda/bin/ipy3.10"
++      - "D:/anaconda/bin/ipy3.9.com"
++      - "D:/anaconda/bin/ipy3.9.exe"
++      - "D:/anaconda/bin/ipy3.9"
++      - "D:/anaconda/bin/ipy3.8.com"
++      - "D:/anaconda/bin/ipy3.8.exe"
++      - "D:/anaconda/bin/ipy3.8"
++      - "D:/anaconda/bin/ipy3.7.com"
++      - "D:/anaconda/bin/ipy3.7.exe"
++      - "D:/anaconda/bin/ipy3.7"
++      - "D:/anaconda/bin/ipy3.6.com"
++      - "D:/anaconda/bin/ipy3.6.exe"
++      - "D:/anaconda/bin/ipy3.6"
++      - "D:/anaconda/bin/ipy3.5.com"
++      - "D:/anaconda/bin/ipy3.5.exe"
++      - "D:/anaconda/bin/ipy3.5"
++      - "D:/anaconda/bin/ipy3.4.com"
++      - "D:/anaconda/bin/ipy3.4.exe"
++      - "D:/anaconda/bin/ipy3.4"
++      - "D:/anaconda/bin/ipy3.3.com"
++      - "D:/anaconda/bin/ipy3.3.exe"
++      - "D:/anaconda/bin/ipy3.3"
++      - "D:/anaconda/bin/ipy3.2.com"
++      - "D:/anaconda/bin/ipy3.2.exe"
++      - "D:/anaconda/bin/ipy3.2"
++      - "D:/anaconda/bin/ipy3.1.com"
++      - "D:/anaconda/bin/ipy3.1.exe"
++      - "D:/anaconda/bin/ipy3.1"
++      - "D:/anaconda/bin/ipy3.0.com"
++      - "D:/anaconda/bin/ipy3.0.exe"
++      - "D:/anaconda/bin/ipy3.0"
++      - "D:/anaconda/bin/ipy3.com"
++      - "D:/anaconda/bin/ipy3.exe"
++      - "D:/anaconda/bin/ipy3"
++      - "D:/anaconda/bin/ipy64.com"
++      - "D:/anaconda/bin/ipy64.exe"
++      - "D:/anaconda/bin/ipy64"
++      - "D:/anaconda/bin/ipy32.com"
++      - "D:/anaconda/bin/ipy32.exe"
++      - "D:/anaconda/bin/ipy32"
++      - "D:/anaconda/bin/ipy.com"
++      - "D:/anaconda/bin/ipy.exe"
++      - "D:/anaconda/bin/ipy"
++      - "D:/anaconda/bin/ipy.exe.com"
++      - "D:/anaconda/bin/ipy.exe"
++      - "D:/anaconda/Scripts/python3.15.com"
++      - "D:/anaconda/Scripts/python3.15.exe"
++      - "D:/anaconda/Scripts/python3.15"
++      - "D:/anaconda/Scripts/python3.14.com"
++      - "D:/anaconda/Scripts/python3.14.exe"
++      - "D:/anaconda/Scripts/python3.14"
++      - "D:/anaconda/Scripts/python3.13.com"
++      - "D:/anaconda/Scripts/python3.13.exe"
++      - "D:/anaconda/Scripts/python3.13"
++      - "D:/anaconda/Scripts/python3.12.com"
++      - "D:/anaconda/Scripts/python3.12.exe"
++      - "D:/anaconda/Scripts/python3.12"
++      - "D:/anaconda/Scripts/python3.11.com"
++      - "D:/anaconda/Scripts/python3.11.exe"
++      - "D:/anaconda/Scripts/python3.11"
++      - "D:/anaconda/Scripts/python3.10.com"
++      - "D:/anaconda/Scripts/python3.10.exe"
++      - "D:/anaconda/Scripts/python3.10"
++      - "D:/anaconda/Scripts/python3.9.com"
++      - "D:/anaconda/Scripts/python3.9.exe"
++      - "D:/anaconda/Scripts/python3.9"
++      - "D:/anaconda/Scripts/python3.8.com"
++      - "D:/anaconda/Scripts/python3.8.exe"
++      - "D:/anaconda/Scripts/python3.8"
++      - "D:/anaconda/Scripts/python3.7.com"
++      - "D:/anaconda/Scripts/python3.7.exe"
++      - "D:/anaconda/Scripts/python3.7"
++      - "D:/anaconda/Scripts/python3.6.com"
++      - "D:/anaconda/Scripts/python3.6.exe"
++      - "D:/anaconda/Scripts/python3.6"
++      - "D:/anaconda/Scripts/python3.5.com"
++      - "D:/anaconda/Scripts/python3.5.exe"
++      - "D:/anaconda/Scripts/python3.5"
++      - "D:/anaconda/Scripts/python3.4.com"
++      - "D:/anaconda/Scripts/python3.4.exe"
++      - "D:/anaconda/Scripts/python3.4"
++      - "D:/anaconda/Scripts/python3.3.com"
++      - "D:/anaconda/Scripts/python3.3.exe"
++      - "D:/anaconda/Scripts/python3.3"
++      - "D:/anaconda/Scripts/python3.2.com"
++      - "D:/anaconda/Scripts/python3.2.exe"
++      - "D:/anaconda/Scripts/python3.2"
++      - "D:/anaconda/Scripts/python3.1.com"
++      - "D:/anaconda/Scripts/python3.1.exe"
++      - "D:/anaconda/Scripts/python3.1"
++      - "D:/anaconda/Scripts/python3.0.com"
++      - "D:/anaconda/Scripts/python3.0.exe"
++      - "D:/anaconda/Scripts/python3.0"
++      - "D:/anaconda/Scripts/python3.com"
++      - "D:/anaconda/Scripts/python3.exe"
++      - "D:/anaconda/Scripts/python3"
++      - "D:/anaconda/Scripts/python.com"
++      - "D:/anaconda/Scripts/python.exe"
++      - "D:/anaconda/Scripts/python"
++      - "D:/anaconda/Scripts/ipy3.15.com"
++      - "D:/anaconda/Scripts/ipy3.15.exe"
++      - "D:/anaconda/Scripts/ipy3.15"
++      - "D:/anaconda/Scripts/ipy3.14.com"
++      - "D:/anaconda/Scripts/ipy3.14.exe"
++      - "D:/anaconda/Scripts/ipy3.14"
++      - "D:/anaconda/Scripts/ipy3.13.com"
++      - "D:/anaconda/Scripts/ipy3.13.exe"
++      - "D:/anaconda/Scripts/ipy3.13"
++      - "D:/anaconda/Scripts/ipy3.12.com"
++      - "D:/anaconda/Scripts/ipy3.12.exe"
++      - "D:/anaconda/Scripts/ipy3.12"
++      - "D:/anaconda/Scripts/ipy3.11.com"
++      - "D:/anaconda/Scripts/ipy3.11.exe"
++      - "D:/anaconda/Scripts/ipy3.11"
++      - "D:/anaconda/Scripts/ipy3.10.com"
++      - "D:/anaconda/Scripts/ipy3.10.exe"
++      - "D:/anaconda/Scripts/ipy3.10"
++      - "D:/anaconda/Scripts/ipy3.9.com"
++      - "D:/anaconda/Scripts/ipy3.9.exe"
++      - "D:/anaconda/Scripts/ipy3.9"
++      - "D:/anaconda/Scripts/ipy3.8.com"
++      - "D:/anaconda/Scripts/ipy3.8.exe"
++      - "D:/anaconda/Scripts/ipy3.8"
++      - "D:/anaconda/Scripts/ipy3.7.com"
++      - "D:/anaconda/Scripts/ipy3.7.exe"
++      - "D:/anaconda/Scripts/ipy3.7"
++      - "D:/anaconda/Scripts/ipy3.6.com"
++      - "D:/anaconda/Scripts/ipy3.6.exe"
++      - "D:/anaconda/Scripts/ipy3.6"
++      - "D:/anaconda/Scripts/ipy3.5.com"
++      - "D:/anaconda/Scripts/ipy3.5.exe"
++      - "D:/anaconda/Scripts/ipy3.5"
++      - "D:/anaconda/Scripts/ipy3.4.com"
++      - "D:/anaconda/Scripts/ipy3.4.exe"
++      - "D:/anaconda/Scripts/ipy3.4"
++      - "D:/anaconda/Scripts/ipy3.3.com"
++      - "D:/anaconda/Scripts/ipy3.3.exe"
++      - "D:/anaconda/Scripts/ipy3.3"
++      - "D:/anaconda/Scripts/ipy3.2.com"
++      - "D:/anaconda/Scripts/ipy3.2.exe"
++      - "D:/anaconda/Scripts/ipy3.2"
++      - "D:/anaconda/Scripts/ipy3.1.com"
++      - "D:/anaconda/Scripts/ipy3.1.exe"
++      - "D:/anaconda/Scripts/ipy3.1"
++      - "D:/anaconda/Scripts/ipy3.0.com"
++      - "D:/anaconda/Scripts/ipy3.0.exe"
++      - "D:/anaconda/Scripts/ipy3.0"
++      - "D:/anaconda/Scripts/ipy3.com"
++      - "D:/anaconda/Scripts/ipy3.exe"
++      - "D:/anaconda/Scripts/ipy3"
++      - "D:/anaconda/Scripts/ipy64.com"
++      - "D:/anaconda/Scripts/ipy64.exe"
++      - "D:/anaconda/Scripts/ipy64"
++      - "D:/anaconda/Scripts/ipy32.com"
++      - "D:/anaconda/Scripts/ipy32.exe"
++      - "D:/anaconda/Scripts/ipy32"
++      - "D:/anaconda/Scripts/ipy.com"
++      - "D:/anaconda/Scripts/ipy.exe"
++      - "D:/anaconda/Scripts/ipy"
++      - "D:/anaconda/Scripts/ipy.exe.com"
++      - "D:/anaconda/Scripts/ipy.exe"
++      - "D:/anaconda/share/ironpython3.15/python3.15.com"
++      - "D:/anaconda/share/ironpython3.15/python3.15.exe"
++      - "D:/anaconda/share/ironpython3.15/python3.15"
++      - "D:/anaconda/share/ironpython3.15/python3.14.com"
++      - "D:/anaconda/share/ironpython3.15/python3.14.exe"
++      - "D:/anaconda/share/ironpython3.15/python3.14"
++      - "D:/anaconda/share/ironpython3.15/python3.13.com"
++      - "D:/anaconda/share/ironpython3.15/python3.13.exe"
++      - "D:/anaconda/share/ironpython3.15/python3.13"
++      - "D:/anaconda/share/ironpython3.15/python3.12.com"
++      - "D:/anaconda/share/ironpython3.15/python3.12.exe"
++      - "D:/anaconda/share/ironpython3.15/python3.12"
++      - "D:/anaconda/share/ironpython3.15/python3.11.com"
++      - "D:/anaconda/share/ironpython3.15/python3.11.exe"
++      - "D:/anaconda/share/ironpython3.15/python3.11"
++      - "D:/anaconda/share/ironpython3.15/python3.10.com"
++      - "D:/anaconda/share/ironpython3.15/python3.10.exe"
++      - "D:/anaconda/share/ironpython3.15/python3.10"
++      - "D:/anaconda/share/ironpython3.15/python3.9.com"
++      - "D:/anaconda/share/ironpython3.15/python3.9.exe"
++      - "D:/anaconda/share/ironpython3.15/python3.9"
++      - "D:/anaconda/share/ironpython3.15/python3.8.com"
++      - "D:/anaconda/share/ironpython3.15/python3.8.exe"
++      - "D:/anaconda/share/ironpython3.15/python3.8"
++      - "D:/anaconda/share/ironpython3.15/python3.7.com"
++      - "D:/anaconda/share/ironpython3.15/python3.7.exe"
++      - "D:/anaconda/share/ironpython3.15/python3.7"
++      - "D:/anaconda/share/ironpython3.15/python3.6.com"
++      - "D:/anaconda/share/ironpython3.15/python3.6.exe"
++      - "D:/anaconda/share/ironpython3.15/python3.6"
++      - "D:/anaconda/share/ironpython3.15/python3.5.com"
++      - "D:/anaconda/share/ironpython3.15/python3.5.exe"
++      - "D:/anaconda/share/ironpython3.15/python3.5"
++      - "D:/anaconda/share/ironpython3.15/python3.4.com"
++      - "D:/anaconda/share/ironpython3.15/python3.4.exe"
++      - "D:/anaconda/share/ironpython3.15/python3.4"
++      - "D:/anaconda/share/ironpython3.15/python3.3.com"
++      - "D:/anaconda/share/ironpython3.15/python3.3.exe"
++      - "D:/anaconda/share/ironpython3.15/python3.3"
++      - "D:/anaconda/share/ironpython3.15/python3.2.com"
++      - "D:/anaconda/share/ironpython3.15/python3.2.exe"
++      - "D:/anaconda/share/ironpython3.15/python3.2"
++      - "D:/anaconda/share/ironpython3.15/python3.1.com"
++      - "D:/anaconda/share/ironpython3.15/python3.1.exe"
++      - "D:/anaconda/share/ironpython3.15/python3.1"
++      - "D:/anaconda/share/ironpython3.15/python3.0.com"
++      - "D:/anaconda/share/ironpython3.15/python3.0.exe"
++      - "D:/anaconda/share/ironpython3.15/python3.0"
++      - "D:/anaconda/share/ironpython3.15/python3.com"
++      - "D:/anaconda/share/ironpython3.15/python3.exe"
++      - "D:/anaconda/share/ironpython3.15/python3"
++      - "D:/anaconda/share/ironpython3.15/python.com"
++      - "D:/anaconda/share/ironpython3.15/python.exe"
++      - "D:/anaconda/share/ironpython3.15/python"
++      - "D:/anaconda/share/ironpython3.15/ipy3.15.com"
++      - "D:/anaconda/share/ironpython3.15/ipy3.15.exe"
++      - "D:/anaconda/share/ironpython3.15/ipy3.15"
++      - "D:/anaconda/share/ironpython3.15/ipy3.14.com"
++      - "D:/anaconda/share/ironpython3.15/ipy3.14.exe"
++      - "D:/anaconda/share/ironpython3.15/ipy3.14"
++      - "D:/anaconda/share/ironpython3.15/ipy3.13.com"
++      - "D:/anaconda/share/ironpython3.15/ipy3.13.exe"
++      - "D:/anaconda/share/ironpython3.15/ipy3.13"
++      - "D:/anaconda/share/ironpython3.15/ipy3.12.com"
++      - "D:/anaconda/share/ironpython3.15/ipy3.12.exe"
++      - "D:/anaconda/share/ironpython3.15/ipy3.12"
++      - "D:/anaconda/share/ironpython3.15/ipy3.11.com"
++      - "D:/anaconda/share/ironpython3.15/ipy3.11.exe"
++      - "D:/anaconda/share/ironpython3.15/ipy3.11"
++      - "D:/anaconda/share/ironpython3.15/ipy3.10.com"
++      - "D:/anaconda/share/ironpython3.15/ipy3.10.exe"
++      - "D:/anaconda/share/ironpython3.15/ipy3.10"
++      - "D:/anaconda/share/ironpython3.15/ipy3.9.com"
++      - "D:/anaconda/share/ironpython3.15/ipy3.9.exe"
++      - "D:/anaconda/share/ironpython3.15/ipy3.9"
++      - "D:/anaconda/share/ironpython3.15/ipy3.8.com"
++      - "D:/anaconda/share/ironpython3.15/ipy3.8.exe"
++      - "D:/anaconda/share/ironpython3.15/ipy3.8"
++      - "D:/anaconda/share/ironpython3.15/ipy3.7.com"
++      - "D:/anaconda/share/ironpython3.15/ipy3.7.exe"
++      - "D:/anaconda/share/ironpython3.15/ipy3.7"
++      - "D:/anaconda/share/ironpython3.15/ipy3.6.com"
++      - "D:/anaconda/share/ironpython3.15/ipy3.6.exe"
++      - "D:/anaconda/share/ironpython3.15/ipy3.6"
++      - "D:/anaconda/share/ironpython3.15/ipy3.5.com"
++      - "D:/anaconda/share/ironpython3.15/ipy3.5.exe"
++      - "D:/anaconda/share/ironpython3.15/ipy3.5"
++      - "D:/anaconda/share/ironpython3.15/ipy3.4.com"
++      - "D:/anaconda/share/ironpython3.15/ipy3.4.exe"
++      - "D:/anaconda/share/ironpython3.15/ipy3.4"
++      - "D:/anaconda/share/ironpython3.15/ipy3.3.com"
++      - "D:/anaconda/share/ironpython3.15/ipy3.3.exe"
++      - "D:/anaconda/share/ironpython3.15/ipy3.3"
++      - "D:/anaconda/share/ironpython3.15/ipy3.2.com"
++      - "D:/anaconda/share/ironpython3.15/ipy3.2.exe"
++      - "D:/anaconda/share/ironpython3.15/ipy3.2"
++      - "D:/anaconda/share/ironpython3.15/ipy3.1.com"
++      - "D:/anaconda/share/ironpython3.15/ipy3.1.exe"
++      - "D:/anaconda/share/ironpython3.15/ipy3.1"
++      - "D:/anaconda/share/ironpython3.15/ipy3.0.com"
++      - "D:/anaconda/share/ironpython3.15/ipy3.0.exe"
++      - "D:/anaconda/share/ironpython3.15/ipy3.0"
++      - "D:/anaconda/share/ironpython3.15/ipy3.com"
++      - "D:/anaconda/share/ironpython3.15/ipy3.exe"
++      - "D:/anaconda/share/ironpython3.15/ipy3"
++      - "D:/anaconda/share/ironpython3.15/ipy64.com"
++      - "D:/anaconda/share/ironpython3.15/ipy64.exe"
++      - "D:/anaconda/share/ironpython3.15/ipy64"
++      - "D:/anaconda/share/ironpython3.15/ipy32.com"
++      - "D:/anaconda/share/ironpython3.15/ipy32.exe"
++      - "D:/anaconda/share/ironpython3.15/ipy32"
++      - "D:/anaconda/share/ironpython3.15/ipy.com"
++      - "D:/anaconda/share/ironpython3.15/ipy.exe"
++      - "D:/anaconda/share/ironpython3.15/ipy"
++      - "D:/anaconda/share/ironpython3.15/ipy.exe.com"
++      - "D:/anaconda/share/ironpython3.15/ipy.exe"
++      - "D:/anaconda/share/ironpython3.14/python3.15.com"
++      - "D:/anaconda/share/ironpython3.14/python3.15.exe"
++      - "D:/anaconda/share/ironpython3.14/python3.15"
++      - "D:/anaconda/share/ironpython3.14/python3.14.com"
++      - "D:/anaconda/share/ironpython3.14/python3.14.exe"
++      - "D:/anaconda/share/ironpython3.14/python3.14"
++      - "D:/anaconda/share/ironpython3.14/python3.13.com"
++      - "D:/anaconda/share/ironpython3.14/python3.13.exe"
++      - "D:/anaconda/share/ironpython3.14/python3.13"
++      - "D:/anaconda/share/ironpython3.14/python3.12.com"
++      - "D:/anaconda/share/ironpython3.14/python3.12.exe"
++      - "D:/anaconda/share/ironpython3.14/python3.12"
++      - "D:/anaconda/share/ironpython3.14/python3.11.com"
++      - "D:/anaconda/share/ironpython3.14/python3.11.exe"
++      - "D:/anaconda/share/ironpython3.14/python3.11"
++      - "D:/anaconda/share/ironpython3.14/python3.10.com"
++      - "D:/anaconda/share/ironpython3.14/python3.10.exe"
++      - "D:/anaconda/share/ironpython3.14/python3.10"
++      - "D:/anaconda/share/ironpython3.14/python3.9.com"
++      - "D:/anaconda/share/ironpython3.14/python3.9.exe"
++      - "D:/anaconda/share/ironpython3.14/python3.9"
++      - "D:/anaconda/share/ironpython3.14/python3.8.com"
++      - "D:/anaconda/share/ironpython3.14/python3.8.exe"
++      - "D:/anaconda/share/ironpython3.14/python3.8"
++      - "D:/anaconda/share/ironpython3.14/python3.7.com"
++      - "D:/anaconda/share/ironpython3.14/python3.7.exe"
++      - "D:/anaconda/share/ironpython3.14/python3.7"
++      - "D:/anaconda/share/ironpython3.14/python3.6.com"
++      - "D:/anaconda/share/ironpython3.14/python3.6.exe"
++      - "D:/anaconda/share/ironpython3.14/python3.6"
++      - "D:/anaconda/share/ironpython3.14/python3.5.com"
++      - "D:/anaconda/share/ironpython3.14/python3.5.exe"
++      - "D:/anaconda/share/ironpython3.14/python3.5"
++      - "D:/anaconda/share/ironpython3.14/python3.4.com"
++      - "D:/anaconda/share/ironpython3.14/python3.4.exe"
++      - "D:/anaconda/share/ironpython3.14/python3.4"
++      - "D:/anaconda/share/ironpython3.14/python3.3.com"
++      - "D:/anaconda/share/ironpython3.14/python3.3.exe"
++      - "D:/anaconda/share/ironpython3.14/python3.3"
++      - "D:/anaconda/share/ironpython3.14/python3.2.com"
++      - "D:/anaconda/share/ironpython3.14/python3.2.exe"
++      - "D:/anaconda/share/ironpython3.14/python3.2"
++      - "D:/anaconda/share/ironpython3.14/python3.1.com"
++      - "D:/anaconda/share/ironpython3.14/python3.1.exe"
++      - "D:/anaconda/share/ironpython3.14/python3.1"
++      - "D:/anaconda/share/ironpython3.14/python3.0.com"
++      - "D:/anaconda/share/ironpython3.14/python3.0.exe"
++      - "D:/anaconda/share/ironpython3.14/python3.0"
++      - "D:/anaconda/share/ironpython3.14/python3.com"
++      - "D:/anaconda/share/ironpython3.14/python3.exe"
++      - "D:/anaconda/share/ironpython3.14/python3"
++      - "D:/anaconda/share/ironpython3.14/python.com"
++      - "D:/anaconda/share/ironpython3.14/python.exe"
++      - "D:/anaconda/share/ironpython3.14/python"
++      - "D:/anaconda/share/ironpython3.14/ipy3.15.com"
++      - "D:/anaconda/share/ironpython3.14/ipy3.15.exe"
++      - "D:/anaconda/share/ironpython3.14/ipy3.15"
++      - "D:/anaconda/share/ironpython3.14/ipy3.14.com"
++      - "D:/anaconda/share/ironpython3.14/ipy3.14.exe"
++      - "D:/anaconda/share/ironpython3.14/ipy3.14"
++      - "D:/anaconda/share/ironpython3.14/ipy3.13.com"
++      - "D:/anaconda/share/ironpython3.14/ipy3.13.exe"
++      - "D:/anaconda/share/ironpython3.14/ipy3.13"
++      - "D:/anaconda/share/ironpython3.14/ipy3.12.com"
++      - "D:/anaconda/share/ironpython3.14/ipy3.12.exe"
++      - "D:/anaconda/share/ironpython3.14/ipy3.12"
++      - "D:/anaconda/share/ironpython3.14/ipy3.11.com"
++      - "D:/anaconda/share/ironpython3.14/ipy3.11.exe"
++      - "D:/anaconda/share/ironpython3.14/ipy3.11"
++      - "D:/anaconda/share/ironpython3.14/ipy3.10.com"
++      - "D:/anaconda/share/ironpython3.14/ipy3.10.exe"
++      - "D:/anaconda/share/ironpython3.14/ipy3.10"
++      - "D:/anaconda/share/ironpython3.14/ipy3.9.com"
++      - "D:/anaconda/share/ironpython3.14/ipy3.9.exe"
++      - "D:/anaconda/share/ironpython3.14/ipy3.9"
++      - "D:/anaconda/share/ironpython3.14/ipy3.8.com"
++      - "D:/anaconda/share/ironpython3.14/ipy3.8.exe"
++      - "D:/anaconda/share/ironpython3.14/ipy3.8"
++      - "D:/anaconda/share/ironpython3.14/ipy3.7.com"
++      - "D:/anaconda/share/ironpython3.14/ipy3.7.exe"
++      - "D:/anaconda/share/ironpython3.14/ipy3.7"
++      - "D:/anaconda/share/ironpython3.14/ipy3.6.com"
++      - "D:/anaconda/share/ironpython3.14/ipy3.6.exe"
++      - "D:/anaconda/share/ironpython3.14/ipy3.6"
++      - "D:/anaconda/share/ironpython3.14/ipy3.5.com"
++      - "D:/anaconda/share/ironpython3.14/ipy3.5.exe"
++      - "D:/anaconda/share/ironpython3.14/ipy3.5"
++      - "D:/anaconda/share/ironpython3.14/ipy3.4.com"
++      - "D:/anaconda/share/ironpython3.14/ipy3.4.exe"
++      - "D:/anaconda/share/ironpython3.14/ipy3.4"
++      - "D:/anaconda/share/ironpython3.14/ipy3.3.com"
++      - "D:/anaconda/share/ironpython3.14/ipy3.3.exe"
++      - "D:/anaconda/share/ironpython3.14/ipy3.3"
++      - "D:/anaconda/share/ironpython3.14/ipy3.2.com"
++      - "D:/anaconda/share/ironpython3.14/ipy3.2.exe"
++      - "D:/anaconda/share/ironpython3.14/ipy3.2"
++      - "D:/anaconda/share/ironpython3.14/ipy3.1.com"
++      - "D:/anaconda/share/ironpython3.14/ipy3.1.exe"
++      - "D:/anaconda/share/ironpython3.14/ipy3.1"
++      - "D:/anaconda/share/ironpython3.14/ipy3.0.com"
++      - "D:/anaconda/share/ironpython3.14/ipy3.0.exe"
++      - "D:/anaconda/share/ironpython3.14/ipy3.0"
++      - "D:/anaconda/share/ironpython3.14/ipy3.com"
++      - "D:/anaconda/share/ironpython3.14/ipy3.exe"
++      - "D:/anaconda/share/ironpython3.14/ipy3"
++      - "D:/anaconda/share/ironpython3.14/ipy64.com"
++      - "D:/anaconda/share/ironpython3.14/ipy64.exe"
++      - "D:/anaconda/share/ironpython3.14/ipy64"
++      - "D:/anaconda/share/ironpython3.14/ipy32.com"
++      - "D:/anaconda/share/ironpython3.14/ipy32.exe"
++      - "D:/anaconda/share/ironpython3.14/ipy32"
++      - "D:/anaconda/share/ironpython3.14/ipy.com"
++      - "D:/anaconda/share/ironpython3.14/ipy.exe"
++      - "D:/anaconda/share/ironpython3.14/ipy"
++      - "D:/anaconda/share/ironpython3.14/ipy.exe.com"
++      - "D:/anaconda/share/ironpython3.14/ipy.exe"
++      - "D:/anaconda/share/ironpython3.13/python3.15.com"
++      - "D:/anaconda/share/ironpython3.13/python3.15.exe"
++      - "D:/anaconda/share/ironpython3.13/python3.15"
++      - "D:/anaconda/share/ironpython3.13/python3.14.com"
++      - "D:/anaconda/share/ironpython3.13/python3.14.exe"
++      - "D:/anaconda/share/ironpython3.13/python3.14"
++      - "D:/anaconda/share/ironpython3.13/python3.13.com"
++      - "D:/anaconda/share/ironpython3.13/python3.13.exe"
++      - "D:/anaconda/share/ironpython3.13/python3.13"
++      - "D:/anaconda/share/ironpython3.13/python3.12.com"
++      - "D:/anaconda/share/ironpython3.13/python3.12.exe"
++      - "D:/anaconda/share/ironpython3.13/python3.12"
++      - "D:/anaconda/share/ironpython3.13/python3.11.com"
++      - "D:/anaconda/share/ironpython3.13/python3.11.exe"
++      - "D:/anaconda/share/ironpython3.13/python3.11"
++      - "D:/anaconda/share/ironpython3.13/python3.10.com"
++      - "D:/anaconda/share/ironpython3.13/python3.10.exe"
++      - "D:/anaconda/share/ironpython3.13/python3.10"
++      - "D:/anaconda/share/ironpython3.13/python3.9.com"
++      - "D:/anaconda/share/ironpython3.13/python3.9.exe"
++      - "D:/anaconda/share/ironpython3.13/python3.9"
++      - "D:/anaconda/share/ironpython3.13/python3.8.com"
++      - "D:/anaconda/share/ironpython3.13/python3.8.exe"
++      - "D:/anaconda/share/ironpython3.13/python3.8"
++      - "D:/anaconda/share/ironpython3.13/python3.7.com"
++      - "D:/anaconda/share/ironpython3.13/python3.7.exe"
++      - "D:/anaconda/share/ironpython3.13/python3.7"
++      - "D:/anaconda/share/ironpython3.13/python3.6.com"
++      - "D:/anaconda/share/ironpython3.13/python3.6.exe"
++      - "D:/anaconda/share/ironpython3.13/python3.6"
++      - "D:/anaconda/share/ironpython3.13/python3.5.com"
++      - "D:/anaconda/share/ironpython3.13/python3.5.exe"
++      - "D:/anaconda/share/ironpython3.13/python3.5"
++      - "D:/anaconda/share/ironpython3.13/python3.4.com"
++      - "D:/anaconda/share/ironpython3.13/python3.4.exe"
++      - "D:/anaconda/share/ironpython3.13/python3.4"
++      - "D:/anaconda/share/ironpython3.13/python3.3.com"
++      - "D:/anaconda/share/ironpython3.13/python3.3.exe"
++      - "D:/anaconda/share/ironpython3.13/python3.3"
++      - "D:/anaconda/share/ironpython3.13/python3.2.com"
++      - "D:/anaconda/share/ironpython3.13/python3.2.exe"
++      - "D:/anaconda/share/ironpython3.13/python3.2"
++      - "D:/anaconda/share/ironpython3.13/python3.1.com"
++      - "D:/anaconda/share/ironpython3.13/python3.1.exe"
++      - "D:/anaconda/share/ironpython3.13/python3.1"
++      - "D:/anaconda/share/ironpython3.13/python3.0.com"
++      - "D:/anaconda/share/ironpython3.13/python3.0.exe"
++      - "D:/anaconda/share/ironpython3.13/python3.0"
++      - "D:/anaconda/share/ironpython3.13/python3.com"
++      - "D:/anaconda/share/ironpython3.13/python3.exe"
++      - "D:/anaconda/share/ironpython3.13/python3"
++      - "D:/anaconda/share/ironpython3.13/python.com"
++      - "D:/anaconda/share/ironpython3.13/python.exe"
++      - "D:/anaconda/share/ironpython3.13/python"
++      - "D:/anaconda/share/ironpython3.13/ipy3.15.com"
++      - "D:/anaconda/share/ironpython3.13/ipy3.15.exe"
++      - "D:/anaconda/share/ironpython3.13/ipy3.15"
++      - "D:/anaconda/share/ironpython3.13/ipy3.14.com"
++      - "D:/anaconda/share/ironpython3.13/ipy3.14.exe"
++      - "D:/anaconda/share/ironpython3.13/ipy3.14"
++      - "D:/anaconda/share/ironpython3.13/ipy3.13.com"
++      - "D:/anaconda/share/ironpython3.13/ipy3.13.exe"
++      - "D:/anaconda/share/ironpython3.13/ipy3.13"
++      - "D:/anaconda/share/ironpython3.13/ipy3.12.com"
++      - "D:/anaconda/share/ironpython3.13/ipy3.12.exe"
++      - "D:/anaconda/share/ironpython3.13/ipy3.12"
++      - "D:/anaconda/share/ironpython3.13/ipy3.11.com"
++      - "D:/anaconda/share/ironpython3.13/ipy3.11.exe"
++      - "D:/anaconda/share/ironpython3.13/ipy3.11"
++      - "D:/anaconda/share/ironpython3.13/ipy3.10.com"
++      - "D:/anaconda/share/ironpython3.13/ipy3.10.exe"
++      - "D:/anaconda/share/ironpython3.13/ipy3.10"
++      - "D:/anaconda/share/ironpython3.13/ipy3.9.com"
++      - "D:/anaconda/share/ironpython3.13/ipy3.9.exe"
++      - "D:/anaconda/share/ironpython3.13/ipy3.9"
++      - "D:/anaconda/share/ironpython3.13/ipy3.8.com"
++      - "D:/anaconda/share/ironpython3.13/ipy3.8.exe"
++      - "D:/anaconda/share/ironpython3.13/ipy3.8"
++      - "D:/anaconda/share/ironpython3.13/ipy3.7.com"
++      - "D:/anaconda/share/ironpython3.13/ipy3.7.exe"
++      - "D:/anaconda/share/ironpython3.13/ipy3.7"
++      - "D:/anaconda/share/ironpython3.13/ipy3.6.com"
++      - "D:/anaconda/share/ironpython3.13/ipy3.6.exe"
++      - "D:/anaconda/share/ironpython3.13/ipy3.6"
++      - "D:/anaconda/share/ironpython3.13/ipy3.5.com"
++      - "D:/anaconda/share/ironpython3.13/ipy3.5.exe"
++      - "D:/anaconda/share/ironpython3.13/ipy3.5"
++      - "D:/anaconda/share/ironpython3.13/ipy3.4.com"
++      - "D:/anaconda/share/ironpython3.13/ipy3.4.exe"
++      - "D:/anaconda/share/ironpython3.13/ipy3.4"
++      - "D:/anaconda/share/ironpython3.13/ipy3.3.com"
++      - "D:/anaconda/share/ironpython3.13/ipy3.3.exe"
++      - "D:/anaconda/share/ironpython3.13/ipy3.3"
++      - "D:/anaconda/share/ironpython3.13/ipy3.2.com"
++      - "D:/anaconda/share/ironpython3.13/ipy3.2.exe"
++      - "D:/anaconda/share/ironpython3.13/ipy3.2"
++      - "D:/anaconda/share/ironpython3.13/ipy3.1.com"
++      - "D:/anaconda/share/ironpython3.13/ipy3.1.exe"
++      - "D:/anaconda/share/ironpython3.13/ipy3.1"
++      - "D:/anaconda/share/ironpython3.13/ipy3.0.com"
++      - "D:/anaconda/share/ironpython3.13/ipy3.0.exe"
++      - "D:/anaconda/share/ironpython3.13/ipy3.0"
++      - "D:/anaconda/share/ironpython3.13/ipy3.com"
++      - "D:/anaconda/share/ironpython3.13/ipy3.exe"
++      - "D:/anaconda/share/ironpython3.13/ipy3"
++      - "D:/anaconda/share/ironpython3.13/ipy64.com"
++      - "D:/anaconda/share/ironpython3.13/ipy64.exe"
++      - "D:/anaconda/share/ironpython3.13/ipy64"
++      - "D:/anaconda/share/ironpython3.13/ipy32.com"
++      - "D:/anaconda/share/ironpython3.13/ipy32.exe"
++      - "D:/anaconda/share/ironpython3.13/ipy32"
++      - "D:/anaconda/share/ironpython3.13/ipy.com"
++      - "D:/anaconda/share/ironpython3.13/ipy.exe"
++      - "D:/anaconda/share/ironpython3.13/ipy"
++      - "D:/anaconda/share/ironpython3.13/ipy.exe.com"
++      - "D:/anaconda/share/ironpython3.13/ipy.exe"
++      - "D:/anaconda/share/ironpython3.12/python3.15.com"
++      - "D:/anaconda/share/ironpython3.12/python3.15.exe"
++      - "D:/anaconda/share/ironpython3.12/python3.15"
++      - "D:/anaconda/share/ironpython3.12/python3.14.com"
++      - "D:/anaconda/share/ironpython3.12/python3.14.exe"
++      - "D:/anaconda/share/ironpython3.12/python3.14"
++      - "D:/anaconda/share/ironpython3.12/python3.13.com"
++      - "D:/anaconda/share/ironpython3.12/python3.13.exe"
++      - "D:/anaconda/share/ironpython3.12/python3.13"
++      - "D:/anaconda/share/ironpython3.12/python3.12.com"
++      - "D:/anaconda/share/ironpython3.12/python3.12.exe"
++      - "D:/anaconda/share/ironpython3.12/python3.12"
++      - "D:/anaconda/share/ironpython3.12/python3.11.com"
++      - "D:/anaconda/share/ironpython3.12/python3.11.exe"
++      - "D:/anaconda/share/ironpython3.12/python3.11"
++      - "D:/anaconda/share/ironpython3.12/python3.10.com"
++      - "D:/anaconda/share/ironpython3.12/python3.10.exe"
++      - "D:/anaconda/share/ironpython3.12/python3.10"
++      - "D:/anaconda/share/ironpython3.12/python3.9.com"
++      - "D:/anaconda/share/ironpython3.12/python3.9.exe"
++      - "D:/anaconda/share/ironpython3.12/python3.9"
++      - "D:/anaconda/share/ironpython3.12/python3.8.com"
++      - "D:/anaconda/share/ironpython3.12/python3.8.exe"
++      - "D:/anaconda/share/ironpython3.12/python3.8"
++      - "D:/anaconda/share/ironpython3.12/python3.7.com"
++      - "D:/anaconda/share/ironpython3.12/python3.7.exe"
++      - "D:/anaconda/share/ironpython3.12/python3.7"
++      - "D:/anaconda/share/ironpython3.12/python3.6.com"
++      - "D:/anaconda/share/ironpython3.12/python3.6.exe"
++      - "D:/anaconda/share/ironpython3.12/python3.6"
++      - "D:/anaconda/share/ironpython3.12/python3.5.com"
++      - "D:/anaconda/share/ironpython3.12/python3.5.exe"
++      - "D:/anaconda/share/ironpython3.12/python3.5"
++      - "D:/anaconda/share/ironpython3.12/python3.4.com"
++      - "D:/anaconda/share/ironpython3.12/python3.4.exe"
++      - "D:/anaconda/share/ironpython3.12/python3.4"
++      - "D:/anaconda/share/ironpython3.12/python3.3.com"
++      - "D:/anaconda/share/ironpython3.12/python3.3.exe"
++      - "D:/anaconda/share/ironpython3.12/python3.3"
++      - "D:/anaconda/share/ironpython3.12/python3.2.com"
++      - "D:/anaconda/share/ironpython3.12/python3.2.exe"
++      - "D:/anaconda/share/ironpython3.12/python3.2"
++      - "D:/anaconda/share/ironpython3.12/python3.1.com"
++      - "D:/anaconda/share/ironpython3.12/python3.1.exe"
++      - "D:/anaconda/share/ironpython3.12/python3.1"
++      - "D:/anaconda/share/ironpython3.12/python3.0.com"
++      - "D:/anaconda/share/ironpython3.12/python3.0.exe"
++      - "D:/anaconda/share/ironpython3.12/python3.0"
++      - "D:/anaconda/share/ironpython3.12/python3.com"
++      - "D:/anaconda/share/ironpython3.12/python3.exe"
++      - "D:/anaconda/share/ironpython3.12/python3"
++      - "D:/anaconda/share/ironpython3.12/python.com"
++      - "D:/anaconda/share/ironpython3.12/python.exe"
++      - "D:/anaconda/share/ironpython3.12/python"
++      - "D:/anaconda/share/ironpython3.12/ipy3.15.com"
++      - "D:/anaconda/share/ironpython3.12/ipy3.15.exe"
++      - "D:/anaconda/share/ironpython3.12/ipy3.15"
++      - "D:/anaconda/share/ironpython3.12/ipy3.14.com"
++      - "D:/anaconda/share/ironpython3.12/ipy3.14.exe"
++      - "D:/anaconda/share/ironpython3.12/ipy3.14"
++      - "D:/anaconda/share/ironpython3.12/ipy3.13.com"
++      - "D:/anaconda/share/ironpython3.12/ipy3.13.exe"
++      - "D:/anaconda/share/ironpython3.12/ipy3.13"
++      - "D:/anaconda/share/ironpython3.12/ipy3.12.com"
++      - "D:/anaconda/share/ironpython3.12/ipy3.12.exe"
++      - "D:/anaconda/share/ironpython3.12/ipy3.12"
++      - "D:/anaconda/share/ironpython3.12/ipy3.11.com"
++      - "D:/anaconda/share/ironpython3.12/ipy3.11.exe"
++      - "D:/anaconda/share/ironpython3.12/ipy3.11"
++      - "D:/anaconda/share/ironpython3.12/ipy3.10.com"
++      - "D:/anaconda/share/ironpython3.12/ipy3.10.exe"
++      - "D:/anaconda/share/ironpython3.12/ipy3.10"
++      - "D:/anaconda/share/ironpython3.12/ipy3.9.com"
++      - "D:/anaconda/share/ironpython3.12/ipy3.9.exe"
++      - "D:/anaconda/share/ironpython3.12/ipy3.9"
++      - "D:/anaconda/share/ironpython3.12/ipy3.8.com"
++      - "D:/anaconda/share/ironpython3.12/ipy3.8.exe"
++      - "D:/anaconda/share/ironpython3.12/ipy3.8"
++      - "D:/anaconda/share/ironpython3.12/ipy3.7.com"
++      - "D:/anaconda/share/ironpython3.12/ipy3.7.exe"
++      - "D:/anaconda/share/ironpython3.12/ipy3.7"
++      - "D:/anaconda/share/ironpython3.12/ipy3.6.com"
++      - "D:/anaconda/share/ironpython3.12/ipy3.6.exe"
++      - "D:/anaconda/share/ironpython3.12/ipy3.6"
++      - "D:/anaconda/share/ironpython3.12/ipy3.5.com"
++      - "D:/anaconda/share/ironpython3.12/ipy3.5.exe"
++      - "D:/anaconda/share/ironpython3.12/ipy3.5"
++      - "D:/anaconda/share/ironpython3.12/ipy3.4.com"
++      - "D:/anaconda/share/ironpython3.12/ipy3.4.exe"
++      - "D:/anaconda/share/ironpython3.12/ipy3.4"
++      - "D:/anaconda/share/ironpython3.12/ipy3.3.com"
++      - "D:/anaconda/share/ironpython3.12/ipy3.3.exe"
++      - "D:/anaconda/share/ironpython3.12/ipy3.3"
++      - "D:/anaconda/share/ironpython3.12/ipy3.2.com"
++      - "D:/anaconda/share/ironpython3.12/ipy3.2.exe"
++      - "D:/anaconda/share/ironpython3.12/ipy3.2"
++      - "D:/anaconda/share/ironpython3.12/ipy3.1.com"
++      - "D:/anaconda/share/ironpython3.12/ipy3.1.exe"
++      - "D:/anaconda/share/ironpython3.12/ipy3.1"
++      - "D:/anaconda/share/ironpython3.12/ipy3.0.com"
++      - "D:/anaconda/share/ironpython3.12/ipy3.0.exe"
++      - "D:/anaconda/share/ironpython3.12/ipy3.0"
++      - "D:/anaconda/share/ironpython3.12/ipy3.com"
++      - "D:/anaconda/share/ironpython3.12/ipy3.exe"
++      - "D:/anaconda/share/ironpython3.12/ipy3"
++      - "D:/anaconda/share/ironpython3.12/ipy64.com"
++      - "D:/anaconda/share/ironpython3.12/ipy64.exe"
++      - "D:/anaconda/share/ironpython3.12/ipy64"
++      - "D:/anaconda/share/ironpython3.12/ipy32.com"
++      - "D:/anaconda/share/ironpython3.12/ipy32.exe"
++      - "D:/anaconda/share/ironpython3.12/ipy32"
++      - "D:/anaconda/share/ironpython3.12/ipy.com"
++      - "D:/anaconda/share/ironpython3.12/ipy.exe"
++      - "D:/anaconda/share/ironpython3.12/ipy"
++      - "D:/anaconda/share/ironpython3.12/ipy.exe.com"
++      - "D:/anaconda/share/ironpython3.12/ipy.exe"
++      - "D:/anaconda/share/ironpython3.11/python3.15.com"
++      - "D:/anaconda/share/ironpython3.11/python3.15.exe"
++      - "D:/anaconda/share/ironpython3.11/python3.15"
++      - "D:/anaconda/share/ironpython3.11/python3.14.com"
++      - "D:/anaconda/share/ironpython3.11/python3.14.exe"
++      - "D:/anaconda/share/ironpython3.11/python3.14"
++      - "D:/anaconda/share/ironpython3.11/python3.13.com"
++      - "D:/anaconda/share/ironpython3.11/python3.13.exe"
++      - "D:/anaconda/share/ironpython3.11/python3.13"
++      - "D:/anaconda/share/ironpython3.11/python3.12.com"
++      - "D:/anaconda/share/ironpython3.11/python3.12.exe"
++      - "D:/anaconda/share/ironpython3.11/python3.12"
++      - "D:/anaconda/share/ironpython3.11/python3.11.com"
++      - "D:/anaconda/share/ironpython3.11/python3.11.exe"
++      - "D:/anaconda/share/ironpython3.11/python3.11"
++      - "D:/anaconda/share/ironpython3.11/python3.10.com"
++      - "D:/anaconda/share/ironpython3.11/python3.10.exe"
++      - "D:/anaconda/share/ironpython3.11/python3.10"
++      - "D:/anaconda/share/ironpython3.11/python3.9.com"
++      - "D:/anaconda/share/ironpython3.11/python3.9.exe"
++      - "D:/anaconda/share/ironpython3.11/python3.9"
++      - "D:/anaconda/share/ironpython3.11/python3.8.com"
++      - "D:/anaconda/share/ironpython3.11/python3.8.exe"
++      - "D:/anaconda/share/ironpython3.11/python3.8"
++      - "D:/anaconda/share/ironpython3.11/python3.7.com"
++      - "D:/anaconda/share/ironpython3.11/python3.7.exe"
++      - "D:/anaconda/share/ironpython3.11/python3.7"
++      - "D:/anaconda/share/ironpython3.11/python3.6.com"
++      - "D:/anaconda/share/ironpython3.11/python3.6.exe"
++      - "D:/anaconda/share/ironpython3.11/python3.6"
++      - "D:/anaconda/share/ironpython3.11/python3.5.com"
++      - "D:/anaconda/share/ironpython3.11/python3.5.exe"
++      - "D:/anaconda/share/ironpython3.11/python3.5"
++      - "D:/anaconda/share/ironpython3.11/python3.4.com"
++      - "D:/anaconda/share/ironpython3.11/python3.4.exe"
++      - "D:/anaconda/share/ironpython3.11/python3.4"
++      - "D:/anaconda/share/ironpython3.11/python3.3.com"
++      - "D:/anaconda/share/ironpython3.11/python3.3.exe"
++      - "D:/anaconda/share/ironpython3.11/python3.3"
++      - "D:/anaconda/share/ironpython3.11/python3.2.com"
++      - "D:/anaconda/share/ironpython3.11/python3.2.exe"
++      - "D:/anaconda/share/ironpython3.11/python3.2"
++      - "D:/anaconda/share/ironpython3.11/python3.1.com"
++      - "D:/anaconda/share/ironpython3.11/python3.1.exe"
++      - "D:/anaconda/share/ironpython3.11/python3.1"
++      - "D:/anaconda/share/ironpython3.11/python3.0.com"
++      - "D:/anaconda/share/ironpython3.11/python3.0.exe"
++      - "D:/anaconda/share/ironpython3.11/python3.0"
++      - "D:/anaconda/share/ironpython3.11/python3.com"
++      - "D:/anaconda/share/ironpython3.11/python3.exe"
++      - "D:/anaconda/share/ironpython3.11/python3"
++      - "D:/anaconda/share/ironpython3.11/python.com"
++      - "D:/anaconda/share/ironpython3.11/python.exe"
++      - "D:/anaconda/share/ironpython3.11/python"
++      - "D:/anaconda/share/ironpython3.11/ipy3.15.com"
++      - "D:/anaconda/share/ironpython3.11/ipy3.15.exe"
++      - "D:/anaconda/share/ironpython3.11/ipy3.15"
++      - "D:/anaconda/share/ironpython3.11/ipy3.14.com"
++      - "D:/anaconda/share/ironpython3.11/ipy3.14.exe"
++      - "D:/anaconda/share/ironpython3.11/ipy3.14"
++      - "D:/anaconda/share/ironpython3.11/ipy3.13.com"
++      - "D:/anaconda/share/ironpython3.11/ipy3.13.exe"
++      - "D:/anaconda/share/ironpython3.11/ipy3.13"
++      - "D:/anaconda/share/ironpython3.11/ipy3.12.com"
++      - "D:/anaconda/share/ironpython3.11/ipy3.12.exe"
++      - "D:/anaconda/share/ironpython3.11/ipy3.12"
++      - "D:/anaconda/share/ironpython3.11/ipy3.11.com"
++      - "D:/anaconda/share/ironpython3.11/ipy3.11.exe"
++      - "D:/anaconda/share/ironpython3.11/ipy3.11"
++      - "D:/anaconda/share/ironpython3.11/ipy3.10.com"
++      - "D:/anaconda/share/ironpython3.11/ipy3.10.exe"
++      - "D:/anaconda/share/ironpython3.11/ipy3.10"
++      - "D:/anaconda/share/ironpython3.11/ipy3.9.com"
++      - "D:/anaconda/share/ironpython3.11/ipy3.9.exe"
++      - "D:/anaconda/share/ironpython3.11/ipy3.9"
++      - "D:/anaconda/share/ironpython3.11/ipy3.8.com"
++      - "D:/anaconda/share/ironpython3.11/ipy3.8.exe"
++      - "D:/anaconda/share/ironpython3.11/ipy3.8"
++      - "D:/anaconda/share/ironpython3.11/ipy3.7.com"
++      - "D:/anaconda/share/ironpython3.11/ipy3.7.exe"
++      - "D:/anaconda/share/ironpython3.11/ipy3.7"
++      - "D:/anaconda/share/ironpython3.11/ipy3.6.com"
++      - "D:/anaconda/share/ironpython3.11/ipy3.6.exe"
++      - "D:/anaconda/share/ironpython3.11/ipy3.6"
++      - "D:/anaconda/share/ironpython3.11/ipy3.5.com"
++      - "D:/anaconda/share/ironpython3.11/ipy3.5.exe"
++      - "D:/anaconda/share/ironpython3.11/ipy3.5"
++      - "D:/anaconda/share/ironpython3.11/ipy3.4.com"
++      - "D:/anaconda/share/ironpython3.11/ipy3.4.exe"
++      - "D:/anaconda/share/ironpython3.11/ipy3.4"
++      - "D:/anaconda/share/ironpython3.11/ipy3.3.com"
++      - "D:/anaconda/share/ironpython3.11/ipy3.3.exe"
++      - "D:/anaconda/share/ironpython3.11/ipy3.3"
++      - "D:/anaconda/share/ironpython3.11/ipy3.2.com"
++      - "D:/anaconda/share/ironpython3.11/ipy3.2.exe"
++      - "D:/anaconda/share/ironpython3.11/ipy3.2"
++      - "D:/anaconda/share/ironpython3.11/ipy3.1.com"
++      - "D:/anaconda/share/ironpython3.11/ipy3.1.exe"
++      - "D:/anaconda/share/ironpython3.11/ipy3.1"
++      - "D:/anaconda/share/ironpython3.11/ipy3.0.com"
++      - "D:/anaconda/share/ironpython3.11/ipy3.0.exe"
++      - "D:/anaconda/share/ironpython3.11/ipy3.0"
++      - "D:/anaconda/share/ironpython3.11/ipy3.com"
++      - "D:/anaconda/share/ironpython3.11/ipy3.exe"
++      - "D:/anaconda/share/ironpython3.11/ipy3"
++      - "D:/anaconda/share/ironpython3.11/ipy64.com"
++      - "D:/anaconda/share/ironpython3.11/ipy64.exe"
++      - "D:/anaconda/share/ironpython3.11/ipy64"
++      - "D:/anaconda/share/ironpython3.11/ipy32.com"
++      - "D:/anaconda/share/ironpython3.11/ipy32.exe"
++      - "D:/anaconda/share/ironpython3.11/ipy32"
++      - "D:/anaconda/share/ironpython3.11/ipy.com"
++      - "D:/anaconda/share/ironpython3.11/ipy.exe"
++      - "D:/anaconda/share/ironpython3.11/ipy"
++      - "D:/anaconda/share/ironpython3.11/ipy.exe.com"
++      - "D:/anaconda/share/ironpython3.11/ipy.exe"
++      - "D:/anaconda/share/ironpython3.10/python3.15.com"
++      - "D:/anaconda/share/ironpython3.10/python3.15.exe"
++      - "D:/anaconda/share/ironpython3.10/python3.15"
++      - "D:/anaconda/share/ironpython3.10/python3.14.com"
++      - "D:/anaconda/share/ironpython3.10/python3.14.exe"
++      - "D:/anaconda/share/ironpython3.10/python3.14"
++      - "D:/anaconda/share/ironpython3.10/python3.13.com"
++      - "D:/anaconda/share/ironpython3.10/python3.13.exe"
++      - "D:/anaconda/share/ironpython3.10/python3.13"
++      - "D:/anaconda/share/ironpython3.10/python3.12.com"
++      - "D:/anaconda/share/ironpython3.10/python3.12.exe"
++      - "D:/anaconda/share/ironpython3.10/python3.12"
++      - "D:/anaconda/share/ironpython3.10/python3.11.com"
++      - "D:/anaconda/share/ironpython3.10/python3.11.exe"
++      - "D:/anaconda/share/ironpython3.10/python3.11"
++      - "D:/anaconda/share/ironpython3.10/python3.10.com"
++      - "D:/anaconda/share/ironpython3.10/python3.10.exe"
++      - "D:/anaconda/share/ironpython3.10/python3.10"
++      - "D:/anaconda/share/ironpython3.10/python3.9.com"
++      - "D:/anaconda/share/ironpython3.10/python3.9.exe"
++      - "D:/anaconda/share/ironpython3.10/python3.9"
++      - "D:/anaconda/share/ironpython3.10/python3.8.com"
++      - "D:/anaconda/share/ironpython3.10/python3.8.exe"
++      - "D:/anaconda/share/ironpython3.10/python3.8"
++      - "D:/anaconda/share/ironpython3.10/python3.7.com"
++      - "D:/anaconda/share/ironpython3.10/python3.7.exe"
++      - "D:/anaconda/share/ironpython3.10/python3.7"
++      - "D:/anaconda/share/ironpython3.10/python3.6.com"
++      - "D:/anaconda/share/ironpython3.10/python3.6.exe"
++      - "D:/anaconda/share/ironpython3.10/python3.6"
++      - "D:/anaconda/share/ironpython3.10/python3.5.com"
++      - "D:/anaconda/share/ironpython3.10/python3.5.exe"
++      - "D:/anaconda/share/ironpython3.10/python3.5"
++      - "D:/anaconda/share/ironpython3.10/python3.4.com"
++      - "D:/anaconda/share/ironpython3.10/python3.4.exe"
++      - "D:/anaconda/share/ironpython3.10/python3.4"
++      - "D:/anaconda/share/ironpython3.10/python3.3.com"
++      - "D:/anaconda/share/ironpython3.10/python3.3.exe"
++      - "D:/anaconda/share/ironpython3.10/python3.3"
++      - "D:/anaconda/share/ironpython3.10/python3.2.com"
++      - "D:/anaconda/share/ironpython3.10/python3.2.exe"
++      - "D:/anaconda/share/ironpython3.10/python3.2"
++      - "D:/anaconda/share/ironpython3.10/python3.1.com"
++      - "D:/anaconda/share/ironpython3.10/python3.1.exe"
++      - "D:/anaconda/share/ironpython3.10/python3.1"
++      - "D:/anaconda/share/ironpython3.10/python3.0.com"
++      - "D:/anaconda/share/ironpython3.10/python3.0.exe"
++      - "D:/anaconda/share/ironpython3.10/python3.0"
++      - "D:/anaconda/share/ironpython3.10/python3.com"
++      - "D:/anaconda/share/ironpython3.10/python3.exe"
++      - "D:/anaconda/share/ironpython3.10/python3"
++      - "D:/anaconda/share/ironpython3.10/python.com"
++      - "D:/anaconda/share/ironpython3.10/python.exe"
++      - "D:/anaconda/share/ironpython3.10/python"
++      - "D:/anaconda/share/ironpython3.10/ipy3.15.com"
++      - "D:/anaconda/share/ironpython3.10/ipy3.15.exe"
++      - "D:/anaconda/share/ironpython3.10/ipy3.15"
++      - "D:/anaconda/share/ironpython3.10/ipy3.14.com"
++      - "D:/anaconda/share/ironpython3.10/ipy3.14.exe"
++      - "D:/anaconda/share/ironpython3.10/ipy3.14"
++      - "D:/anaconda/share/ironpython3.10/ipy3.13.com"
++      - "D:/anaconda/share/ironpython3.10/ipy3.13.exe"
++      - "D:/anaconda/share/ironpython3.10/ipy3.13"
++      - "D:/anaconda/share/ironpython3.10/ipy3.12.com"
++      - "D:/anaconda/share/ironpython3.10/ipy3.12.exe"
++      - "D:/anaconda/share/ironpython3.10/ipy3.12"
++      - "D:/anaconda/share/ironpython3.10/ipy3.11.com"
++      - "D:/anaconda/share/ironpython3.10/ipy3.11.exe"
++      - "D:/anaconda/share/ironpython3.10/ipy3.11"
++      - "D:/anaconda/share/ironpython3.10/ipy3.10.com"
++      - "D:/anaconda/share/ironpython3.10/ipy3.10.exe"
++      - "D:/anaconda/share/ironpython3.10/ipy3.10"
++      - "D:/anaconda/share/ironpython3.10/ipy3.9.com"
++      - "D:/anaconda/share/ironpython3.10/ipy3.9.exe"
++      - "D:/anaconda/share/ironpython3.10/ipy3.9"
++      - "D:/anaconda/share/ironpython3.10/ipy3.8.com"
++      - "D:/anaconda/share/ironpython3.10/ipy3.8.exe"
++      - "D:/anaconda/share/ironpython3.10/ipy3.8"
++      - "D:/anaconda/share/ironpython3.10/ipy3.7.com"
++      - "D:/anaconda/share/ironpython3.10/ipy3.7.exe"
++      - "D:/anaconda/share/ironpython3.10/ipy3.7"
++      - "D:/anaconda/share/ironpython3.10/ipy3.6.com"
++      - "D:/anaconda/share/ironpython3.10/ipy3.6.exe"
++      - "D:/anaconda/share/ironpython3.10/ipy3.6"
++      - "D:/anaconda/share/ironpython3.10/ipy3.5.com"
++      - "D:/anaconda/share/ironpython3.10/ipy3.5.exe"
++      - "D:/anaconda/share/ironpython3.10/ipy3.5"
++      - "D:/anaconda/share/ironpython3.10/ipy3.4.com"
++      - "D:/anaconda/share/ironpython3.10/ipy3.4.exe"
++      - "D:/anaconda/share/ironpython3.10/ipy3.4"
++      - "D:/anaconda/share/ironpython3.10/ipy3.3.com"
++      - "D:/anaconda/share/ironpython3.10/ipy3.3.exe"
++      - "D:/anaconda/share/ironpython3.10/ipy3.3"
++      - "D:/anaconda/share/ironpython3.10/ipy3.2.com"
++      - "D:/anaconda/share/ironpython3.10/ipy3.2.exe"
++      - "D:/anaconda/share/ironpython3.10/ipy3.2"
++      - "D:/anaconda/share/ironpython3.10/ipy3.1.com"
++      - "D:/anaconda/share/ironpython3.10/ipy3.1.exe"
++      - "D:/anaconda/share/ironpython3.10/ipy3.1"
++      - "D:/anaconda/share/ironpython3.10/ipy3.0.com"
++      - "D:/anaconda/share/ironpython3.10/ipy3.0.exe"
++      - "D:/anaconda/share/ironpython3.10/ipy3.0"
++      - "D:/anaconda/share/ironpython3.10/ipy3.com"
++      - "D:/anaconda/share/ironpython3.10/ipy3.exe"
++      - "D:/anaconda/share/ironpython3.10/ipy3"
++      - "D:/anaconda/share/ironpython3.10/ipy64.com"
++      - "D:/anaconda/share/ironpython3.10/ipy64.exe"
++      - "D:/anaconda/share/ironpython3.10/ipy64"
++      - "D:/anaconda/share/ironpython3.10/ipy32.com"
++      - "D:/anaconda/share/ironpython3.10/ipy32.exe"
++      - "D:/anaconda/share/ironpython3.10/ipy32"
++      - "D:/anaconda/share/ironpython3.10/ipy.com"
++      - "D:/anaconda/share/ironpython3.10/ipy.exe"
++      - "D:/anaconda/share/ironpython3.10/ipy"
++      - "D:/anaconda/share/ironpython3.10/ipy.exe.com"
++      - "D:/anaconda/share/ironpython3.10/ipy.exe"
++      - "D:/anaconda/share/ironpython3.9/python3.15.com"
++      - "D:/anaconda/share/ironpython3.9/python3.15.exe"
++      - "D:/anaconda/share/ironpython3.9/python3.15"
++      - "D:/anaconda/share/ironpython3.9/python3.14.com"
++      - "D:/anaconda/share/ironpython3.9/python3.14.exe"
++      - "D:/anaconda/share/ironpython3.9/python3.14"
++      - "D:/anaconda/share/ironpython3.9/python3.13.com"
++      - "D:/anaconda/share/ironpython3.9/python3.13.exe"
++      - "D:/anaconda/share/ironpython3.9/python3.13"
++      - "D:/anaconda/share/ironpython3.9/python3.12.com"
++      - "D:/anaconda/share/ironpython3.9/python3.12.exe"
++      - "D:/anaconda/share/ironpython3.9/python3.12"
++      - "D:/anaconda/share/ironpython3.9/python3.11.com"
++      - "D:/anaconda/share/ironpython3.9/python3.11.exe"
++      - "D:/anaconda/share/ironpython3.9/python3.11"
++      - "D:/anaconda/share/ironpython3.9/python3.10.com"
++      - "D:/anaconda/share/ironpython3.9/python3.10.exe"
++      - "D:/anaconda/share/ironpython3.9/python3.10"
++      - "D:/anaconda/share/ironpython3.9/python3.9.com"
++      - "D:/anaconda/share/ironpython3.9/python3.9.exe"
++      - "D:/anaconda/share/ironpython3.9/python3.9"
++      - "D:/anaconda/share/ironpython3.9/python3.8.com"
++      - "D:/anaconda/share/ironpython3.9/python3.8.exe"
++      - "D:/anaconda/share/ironpython3.9/python3.8"
++      - "D:/anaconda/share/ironpython3.9/python3.7.com"
++      - "D:/anaconda/share/ironpython3.9/python3.7.exe"
++      - "D:/anaconda/share/ironpython3.9/python3.7"
++      - "D:/anaconda/share/ironpython3.9/python3.6.com"
++      - "D:/anaconda/share/ironpython3.9/python3.6.exe"
++      - "D:/anaconda/share/ironpython3.9/python3.6"
++      - "D:/anaconda/share/ironpython3.9/python3.5.com"
++      - "D:/anaconda/share/ironpython3.9/python3.5.exe"
++      - "D:/anaconda/share/ironpython3.9/python3.5"
++      - "D:/anaconda/share/ironpython3.9/python3.4.com"
++      - "D:/anaconda/share/ironpython3.9/python3.4.exe"
++      - "D:/anaconda/share/ironpython3.9/python3.4"
++      - "D:/anaconda/share/ironpython3.9/python3.3.com"
++      - "D:/anaconda/share/ironpython3.9/python3.3.exe"
++      - "D:/anaconda/share/ironpython3.9/python3.3"
++      - "D:/anaconda/share/ironpython3.9/python3.2.com"
++      - "D:/anaconda/share/ironpython3.9/python3.2.exe"
++      - "D:/anaconda/share/ironpython3.9/python3.2"
++      - "D:/anaconda/share/ironpython3.9/python3.1.com"
++      - "D:/anaconda/share/ironpython3.9/python3.1.exe"
++      - "D:/anaconda/share/ironpython3.9/python3.1"
++      - "D:/anaconda/share/ironpython3.9/python3.0.com"
++      - "D:/anaconda/share/ironpython3.9/python3.0.exe"
++      - "D:/anaconda/share/ironpython3.9/python3.0"
++      - "D:/anaconda/share/ironpython3.9/python3.com"
++      - "D:/anaconda/share/ironpython3.9/python3.exe"
++      - "D:/anaconda/share/ironpython3.9/python3"
++      - "D:/anaconda/share/ironpython3.9/python.com"
++      - "D:/anaconda/share/ironpython3.9/python.exe"
++      - "D:/anaconda/share/ironpython3.9/python"
++      - "D:/anaconda/share/ironpython3.9/ipy3.15.com"
++      - "D:/anaconda/share/ironpython3.9/ipy3.15.exe"
++      - "D:/anaconda/share/ironpython3.9/ipy3.15"
++      - "D:/anaconda/share/ironpython3.9/ipy3.14.com"
++      - "D:/anaconda/share/ironpython3.9/ipy3.14.exe"
++      - "D:/anaconda/share/ironpython3.9/ipy3.14"
++      - "D:/anaconda/share/ironpython3.9/ipy3.13.com"
++      - "D:/anaconda/share/ironpython3.9/ipy3.13.exe"
++      - "D:/anaconda/share/ironpython3.9/ipy3.13"
++      - "D:/anaconda/share/ironpython3.9/ipy3.12.com"
++      - "D:/anaconda/share/ironpython3.9/ipy3.12.exe"
++      - "D:/anaconda/share/ironpython3.9/ipy3.12"
++      - "D:/anaconda/share/ironpython3.9/ipy3.11.com"
++      - "D:/anaconda/share/ironpython3.9/ipy3.11.exe"
++      - "D:/anaconda/share/ironpython3.9/ipy3.11"
++      - "D:/anaconda/share/ironpython3.9/ipy3.10.com"
++      - "D:/anaconda/share/ironpython3.9/ipy3.10.exe"
++      - "D:/anaconda/share/ironpython3.9/ipy3.10"
++      - "D:/anaconda/share/ironpython3.9/ipy3.9.com"
++      - "D:/anaconda/share/ironpython3.9/ipy3.9.exe"
++      - "D:/anaconda/share/ironpython3.9/ipy3.9"
++      - "D:/anaconda/share/ironpython3.9/ipy3.8.com"
++      - "D:/anaconda/share/ironpython3.9/ipy3.8.exe"
++      - "D:/anaconda/share/ironpython3.9/ipy3.8"
++      - "D:/anaconda/share/ironpython3.9/ipy3.7.com"
++      - "D:/anaconda/share/ironpython3.9/ipy3.7.exe"
++      - "D:/anaconda/share/ironpython3.9/ipy3.7"
++      - "D:/anaconda/share/ironpython3.9/ipy3.6.com"
++      - "D:/anaconda/share/ironpython3.9/ipy3.6.exe"
++      - "D:/anaconda/share/ironpython3.9/ipy3.6"
++      - "D:/anaconda/share/ironpython3.9/ipy3.5.com"
++      - "D:/anaconda/share/ironpython3.9/ipy3.5.exe"
++      - "D:/anaconda/share/ironpython3.9/ipy3.5"
++      - "D:/anaconda/share/ironpython3.9/ipy3.4.com"
++      - "D:/anaconda/share/ironpython3.9/ipy3.4.exe"
++      - "D:/anaconda/share/ironpython3.9/ipy3.4"
++      - "D:/anaconda/share/ironpython3.9/ipy3.3.com"
++      - "D:/anaconda/share/ironpython3.9/ipy3.3.exe"
++      - "D:/anaconda/share/ironpython3.9/ipy3.3"
++      - "D:/anaconda/share/ironpython3.9/ipy3.2.com"
++      - "D:/anaconda/share/ironpython3.9/ipy3.2.exe"
++      - "D:/anaconda/share/ironpython3.9/ipy3.2"
++      - "D:/anaconda/share/ironpython3.9/ipy3.1.com"
++      - "D:/anaconda/share/ironpython3.9/ipy3.1.exe"
++      - "D:/anaconda/share/ironpython3.9/ipy3.1"
++      - "D:/anaconda/share/ironpython3.9/ipy3.0.com"
++      - "D:/anaconda/share/ironpython3.9/ipy3.0.exe"
++      - "D:/anaconda/share/ironpython3.9/ipy3.0"
++      - "D:/anaconda/share/ironpython3.9/ipy3.com"
++      - "D:/anaconda/share/ironpython3.9/ipy3.exe"
++      - "D:/anaconda/share/ironpython3.9/ipy3"
++      - "D:/anaconda/share/ironpython3.9/ipy64.com"
++      - "D:/anaconda/share/ironpython3.9/ipy64.exe"
++      - "D:/anaconda/share/ironpython3.9/ipy64"
++      - "D:/anaconda/share/ironpython3.9/ipy32.com"
++      - "D:/anaconda/share/ironpython3.9/ipy32.exe"
++      - "D:/anaconda/share/ironpython3.9/ipy32"
++      - "D:/anaconda/share/ironpython3.9/ipy.com"
++      - "D:/anaconda/share/ironpython3.9/ipy.exe"
++      - "D:/anaconda/share/ironpython3.9/ipy"
++      - "D:/anaconda/share/ironpython3.9/ipy.exe.com"
++      - "D:/anaconda/share/ironpython3.9/ipy.exe"
++      - "D:/anaconda/share/ironpython3.8/python3.15.com"
++      - "D:/anaconda/share/ironpython3.8/python3.15.exe"
++      - "D:/anaconda/share/ironpython3.8/python3.15"
++      - "D:/anaconda/share/ironpython3.8/python3.14.com"
++      - "D:/anaconda/share/ironpython3.8/python3.14.exe"
++      - "D:/anaconda/share/ironpython3.8/python3.14"
++      - "D:/anaconda/share/ironpython3.8/python3.13.com"
++      - "D:/anaconda/share/ironpython3.8/python3.13.exe"
++      - "D:/anaconda/share/ironpython3.8/python3.13"
++      - "D:/anaconda/share/ironpython3.8/python3.12.com"
++      - "D:/anaconda/share/ironpython3.8/python3.12.exe"
++      - "D:/anaconda/share/ironpython3.8/python3.12"
++      - "D:/anaconda/share/ironpython3.8/python3.11.com"
++      - "D:/anaconda/share/ironpython3.8/python3.11.exe"
++      - "D:/anaconda/share/ironpython3.8/python3.11"
++      - "D:/anaconda/share/ironpython3.8/python3.10.com"
++      - "D:/anaconda/share/ironpython3.8/python3.10.exe"
++      - "D:/anaconda/share/ironpython3.8/python3.10"
++      - "D:/anaconda/share/ironpython3.8/python3.9.com"
++      - "D:/anaconda/share/ironpython3.8/python3.9.exe"
++      - "D:/anaconda/share/ironpython3.8/python3.9"
++      - "D:/anaconda/share/ironpython3.8/python3.8.com"
++      - "D:/anaconda/share/ironpython3.8/python3.8.exe"
++      - "D:/anaconda/share/ironpython3.8/python3.8"
++      - "D:/anaconda/share/ironpython3.8/python3.7.com"
++      - "D:/anaconda/share/ironpython3.8/python3.7.exe"
++      - "D:/anaconda/share/ironpython3.8/python3.7"
++      - "D:/anaconda/share/ironpython3.8/python3.6.com"
++      - "D:/anaconda/share/ironpython3.8/python3.6.exe"
++      - "D:/anaconda/share/ironpython3.8/python3.6"
++      - "D:/anaconda/share/ironpython3.8/python3.5.com"
++      - "D:/anaconda/share/ironpython3.8/python3.5.exe"
++      - "D:/anaconda/share/ironpython3.8/python3.5"
++      - "D:/anaconda/share/ironpython3.8/python3.4.com"
++      - "D:/anaconda/share/ironpython3.8/python3.4.exe"
++      - "D:/anaconda/share/ironpython3.8/python3.4"
++      - "D:/anaconda/share/ironpython3.8/python3.3.com"
++      - "D:/anaconda/share/ironpython3.8/python3.3.exe"
++      - "D:/anaconda/share/ironpython3.8/python3.3"
++      - "D:/anaconda/share/ironpython3.8/python3.2.com"
++      - "D:/anaconda/share/ironpython3.8/python3.2.exe"
++      - "D:/anaconda/share/ironpython3.8/python3.2"
++      - "D:/anaconda/share/ironpython3.8/python3.1.com"
++      - "D:/anaconda/share/ironpython3.8/python3.1.exe"
++      - "D:/anaconda/share/ironpython3.8/python3.1"
++      - "D:/anaconda/share/ironpython3.8/python3.0.com"
++      - "D:/anaconda/share/ironpython3.8/python3.0.exe"
++      - "D:/anaconda/share/ironpython3.8/python3.0"
++      - "D:/anaconda/share/ironpython3.8/python3.com"
++      - "D:/anaconda/share/ironpython3.8/python3.exe"
++      - "D:/anaconda/share/ironpython3.8/python3"
++      - "D:/anaconda/share/ironpython3.8/python.com"
++      - "D:/anaconda/share/ironpython3.8/python.exe"
++      - "D:/anaconda/share/ironpython3.8/python"
++      - "D:/anaconda/share/ironpython3.8/ipy3.15.com"
++      - "D:/anaconda/share/ironpython3.8/ipy3.15.exe"
++      - "D:/anaconda/share/ironpython3.8/ipy3.15"
++      - "D:/anaconda/share/ironpython3.8/ipy3.14.com"
++      - "D:/anaconda/share/ironpython3.8/ipy3.14.exe"
++      - "D:/anaconda/share/ironpython3.8/ipy3.14"
++      - "D:/anaconda/share/ironpython3.8/ipy3.13.com"
++      - "D:/anaconda/share/ironpython3.8/ipy3.13.exe"
++      - "D:/anaconda/share/ironpython3.8/ipy3.13"
++      - "D:/anaconda/share/ironpython3.8/ipy3.12.com"
++      - "D:/anaconda/share/ironpython3.8/ipy3.12.exe"
++      - "D:/anaconda/share/ironpython3.8/ipy3.12"
++      - "D:/anaconda/share/ironpython3.8/ipy3.11.com"
++      - "D:/anaconda/share/ironpython3.8/ipy3.11.exe"
++      - "D:/anaconda/share/ironpython3.8/ipy3.11"
++      - "D:/anaconda/share/ironpython3.8/ipy3.10.com"
++      - "D:/anaconda/share/ironpython3.8/ipy3.10.exe"
++      - "D:/anaconda/share/ironpython3.8/ipy3.10"
++      - "D:/anaconda/share/ironpython3.8/ipy3.9.com"
++      - "D:/anaconda/share/ironpython3.8/ipy3.9.exe"
++      - "D:/anaconda/share/ironpython3.8/ipy3.9"
++      - "D:/anaconda/share/ironpython3.8/ipy3.8.com"
++      - "D:/anaconda/share/ironpython3.8/ipy3.8.exe"
++      - "D:/anaconda/share/ironpython3.8/ipy3.8"
++      - "D:/anaconda/share/ironpython3.8/ipy3.7.com"
++      - "D:/anaconda/share/ironpython3.8/ipy3.7.exe"
++      - "D:/anaconda/share/ironpython3.8/ipy3.7"
++      - "D:/anaconda/share/ironpython3.8/ipy3.6.com"
++      - "D:/anaconda/share/ironpython3.8/ipy3.6.exe"
++      - "D:/anaconda/share/ironpython3.8/ipy3.6"
++      - "D:/anaconda/share/ironpython3.8/ipy3.5.com"
++      - "D:/anaconda/share/ironpython3.8/ipy3.5.exe"
++      - "D:/anaconda/share/ironpython3.8/ipy3.5"
++      - "D:/anaconda/share/ironpython3.8/ipy3.4.com"
++      - "D:/anaconda/share/ironpython3.8/ipy3.4.exe"
++      - "D:/anaconda/share/ironpython3.8/ipy3.4"
++      - "D:/anaconda/share/ironpython3.8/ipy3.3.com"
++      - "D:/anaconda/share/ironpython3.8/ipy3.3.exe"
++      - "D:/anaconda/share/ironpython3.8/ipy3.3"
++      - "D:/anaconda/share/ironpython3.8/ipy3.2.com"
++      - "D:/anaconda/share/ironpython3.8/ipy3.2.exe"
++      - "D:/anaconda/share/ironpython3.8/ipy3.2"
++      - "D:/anaconda/share/ironpython3.8/ipy3.1.com"
++      - "D:/anaconda/share/ironpython3.8/ipy3.1.exe"
++      - "D:/anaconda/share/ironpython3.8/ipy3.1"
++      - "D:/anaconda/share/ironpython3.8/ipy3.0.com"
++      - "D:/anaconda/share/ironpython3.8/ipy3.0.exe"
++      - "D:/anaconda/share/ironpython3.8/ipy3.0"
++      - "D:/anaconda/share/ironpython3.8/ipy3.com"
++      - "D:/anaconda/share/ironpython3.8/ipy3.exe"
++      - "D:/anaconda/share/ironpython3.8/ipy3"
++      - "D:/anaconda/share/ironpython3.8/ipy64.com"
++      - "D:/anaconda/share/ironpython3.8/ipy64.exe"
++      - "D:/anaconda/share/ironpython3.8/ipy64"
++      - "D:/anaconda/share/ironpython3.8/ipy32.com"
++      - "D:/anaconda/share/ironpython3.8/ipy32.exe"
++      - "D:/anaconda/share/ironpython3.8/ipy32"
++      - "D:/anaconda/share/ironpython3.8/ipy.com"
++      - "D:/anaconda/share/ironpython3.8/ipy.exe"
++      - "D:/anaconda/share/ironpython3.8/ipy"
++      - "D:/anaconda/share/ironpython3.8/ipy.exe.com"
++      - "D:/anaconda/share/ironpython3.8/ipy.exe"
++      - "D:/anaconda/share/ironpython3.7/python3.15.com"
++      - "D:/anaconda/share/ironpython3.7/python3.15.exe"
++      - "D:/anaconda/share/ironpython3.7/python3.15"
++      - "D:/anaconda/share/ironpython3.7/python3.14.com"
++      - "D:/anaconda/share/ironpython3.7/python3.14.exe"
++      - "D:/anaconda/share/ironpython3.7/python3.14"
++      - "D:/anaconda/share/ironpython3.7/python3.13.com"
++      - "D:/anaconda/share/ironpython3.7/python3.13.exe"
++      - "D:/anaconda/share/ironpython3.7/python3.13"
++      - "D:/anaconda/share/ironpython3.7/python3.12.com"
++      - "D:/anaconda/share/ironpython3.7/python3.12.exe"
++      - "D:/anaconda/share/ironpython3.7/python3.12"
++      - "D:/anaconda/share/ironpython3.7/python3.11.com"
++      - "D:/anaconda/share/ironpython3.7/python3.11.exe"
++      - "D:/anaconda/share/ironpython3.7/python3.11"
++      - "D:/anaconda/share/ironpython3.7/python3.10.com"
++      - "D:/anaconda/share/ironpython3.7/python3.10.exe"
++      - "D:/anaconda/share/ironpython3.7/python3.10"
++      - "D:/anaconda/share/ironpython3.7/python3.9.com"
++      - "D:/anaconda/share/ironpython3.7/python3.9.exe"
++      - "D:/anaconda/share/ironpython3.7/python3.9"
++      - "D:/anaconda/share/ironpython3.7/python3.8.com"
++      - "D:/anaconda/share/ironpython3.7/python3.8.exe"
++      - "D:/anaconda/share/ironpython3.7/python3.8"
++      - "D:/anaconda/share/ironpython3.7/python3.7.com"
++      - "D:/anaconda/share/ironpython3.7/python3.7.exe"
++      - "D:/anaconda/share/ironpython3.7/python3.7"
++      - "D:/anaconda/share/ironpython3.7/python3.6.com"
++      - "D:/anaconda/share/ironpython3.7/python3.6.exe"
++      - "D:/anaconda/share/ironpython3.7/python3.6"
++      - "D:/anaconda/share/ironpython3.7/python3.5.com"
++      - "D:/anaconda/share/ironpython3.7/python3.5.exe"
++      - "D:/anaconda/share/ironpython3.7/python3.5"
++      - "D:/anaconda/share/ironpython3.7/python3.4.com"
++      - "D:/anaconda/share/ironpython3.7/python3.4.exe"
++      - "D:/anaconda/share/ironpython3.7/python3.4"
++      - "D:/anaconda/share/ironpython3.7/python3.3.com"
++      - "D:/anaconda/share/ironpython3.7/python3.3.exe"
++      - "D:/anaconda/share/ironpython3.7/python3.3"
++      - "D:/anaconda/share/ironpython3.7/python3.2.com"
++      - "D:/anaconda/share/ironpython3.7/python3.2.exe"
++      - "D:/anaconda/share/ironpython3.7/python3.2"
++      - "D:/anaconda/share/ironpython3.7/python3.1.com"
++      - "D:/anaconda/share/ironpython3.7/python3.1.exe"
++      - "D:/anaconda/share/ironpython3.7/python3.1"
++      - "D:/anaconda/share/ironpython3.7/python3.0.com"
++      - "D:/anaconda/share/ironpython3.7/python3.0.exe"
++      - "D:/anaconda/share/ironpython3.7/python3.0"
++      - "D:/anaconda/share/ironpython3.7/python3.com"
++      - "D:/anaconda/share/ironpython3.7/python3.exe"
++      - "D:/anaconda/share/ironpython3.7/python3"
++      - "D:/anaconda/share/ironpython3.7/python.com"
++      - "D:/anaconda/share/ironpython3.7/python.exe"
++      - "D:/anaconda/share/ironpython3.7/python"
++      - "D:/anaconda/share/ironpython3.7/ipy3.15.com"
++      - "D:/anaconda/share/ironpython3.7/ipy3.15.exe"
++      - "D:/anaconda/share/ironpython3.7/ipy3.15"
++      - "D:/anaconda/share/ironpython3.7/ipy3.14.com"
++      - "D:/anaconda/share/ironpython3.7/ipy3.14.exe"
++      - "D:/anaconda/share/ironpython3.7/ipy3.14"
++      - "D:/anaconda/share/ironpython3.7/ipy3.13.com"
++      - "D:/anaconda/share/ironpython3.7/ipy3.13.exe"
++      - "D:/anaconda/share/ironpython3.7/ipy3.13"
++      - "D:/anaconda/share/ironpython3.7/ipy3.12.com"
++      - "D:/anaconda/share/ironpython3.7/ipy3.12.exe"
++      - "D:/anaconda/share/ironpython3.7/ipy3.12"
++      - "D:/anaconda/share/ironpython3.7/ipy3.11.com"
++      - "D:/anaconda/share/ironpython3.7/ipy3.11.exe"
++      - "D:/anaconda/share/ironpython3.7/ipy3.11"
++      - "D:/anaconda/share/ironpython3.7/ipy3.10.com"
++      - "D:/anaconda/share/ironpython3.7/ipy3.10.exe"
++      - "D:/anaconda/share/ironpython3.7/ipy3.10"
++      - "D:/anaconda/share/ironpython3.7/ipy3.9.com"
++      - "D:/anaconda/share/ironpython3.7/ipy3.9.exe"
++      - "D:/anaconda/share/ironpython3.7/ipy3.9"
++      - "D:/anaconda/share/ironpython3.7/ipy3.8.com"
++      - "D:/anaconda/share/ironpython3.7/ipy3.8.exe"
++      - "D:/anaconda/share/ironpython3.7/ipy3.8"
++      - "D:/anaconda/share/ironpython3.7/ipy3.7.com"
++      - "D:/anaconda/share/ironpython3.7/ipy3.7.exe"
++      - "D:/anaconda/share/ironpython3.7/ipy3.7"
++      - "D:/anaconda/share/ironpython3.7/ipy3.6.com"
++      - "D:/anaconda/share/ironpython3.7/ipy3.6.exe"
++      - "D:/anaconda/share/ironpython3.7/ipy3.6"
++      - "D:/anaconda/share/ironpython3.7/ipy3.5.com"
++      - "D:/anaconda/share/ironpython3.7/ipy3.5.exe"
++      - "D:/anaconda/share/ironpython3.7/ipy3.5"
++      - "D:/anaconda/share/ironpython3.7/ipy3.4.com"
++      - "D:/anaconda/share/ironpython3.7/ipy3.4.exe"
++      - "D:/anaconda/share/ironpython3.7/ipy3.4"
++      - "D:/anaconda/share/ironpython3.7/ipy3.3.com"
++      - "D:/anaconda/share/ironpython3.7/ipy3.3.exe"
++      - "D:/anaconda/share/ironpython3.7/ipy3.3"
++      - "D:/anaconda/share/ironpython3.7/ipy3.2.com"
++      - "D:/anaconda/share/ironpython3.7/ipy3.2.exe"
++      - "D:/anaconda/share/ironpython3.7/ipy3.2"
++      - "D:/anaconda/share/ironpython3.7/ipy3.1.com"
++      - "D:/anaconda/share/ironpython3.7/ipy3.1.exe"
++      - "D:/anaconda/share/ironpython3.7/ipy3.1"
++      - "D:/anaconda/share/ironpython3.7/ipy3.0.com"
++      - "D:/anaconda/share/ironpython3.7/ipy3.0.exe"
++      - "D:/anaconda/share/ironpython3.7/ipy3.0"
++      - "D:/anaconda/share/ironpython3.7/ipy3.com"
++      - "D:/anaconda/share/ironpython3.7/ipy3.exe"
++      - "D:/anaconda/share/ironpython3.7/ipy3"
++      - "D:/anaconda/share/ironpython3.7/ipy64.com"
++      - "D:/anaconda/share/ironpython3.7/ipy64.exe"
++      - "D:/anaconda/share/ironpython3.7/ipy64"
++      - "D:/anaconda/share/ironpython3.7/ipy32.com"
++      - "D:/anaconda/share/ironpython3.7/ipy32.exe"
++      - "D:/anaconda/share/ironpython3.7/ipy32"
++      - "D:/anaconda/share/ironpython3.7/ipy.com"
++      - "D:/anaconda/share/ironpython3.7/ipy.exe"
++      - "D:/anaconda/share/ironpython3.7/ipy"
++      - "D:/anaconda/share/ironpython3.7/ipy.exe.com"
++      - "D:/anaconda/share/ironpython3.7/ipy.exe"
++      - "D:/anaconda/share/ironpython3.6/python3.15.com"
++      - "D:/anaconda/share/ironpython3.6/python3.15.exe"
++      - "D:/anaconda/share/ironpython3.6/python3.15"
++      - "D:/anaconda/share/ironpython3.6/python3.14.com"
++      - "D:/anaconda/share/ironpython3.6/python3.14.exe"
++      - "D:/anaconda/share/ironpython3.6/python3.14"
++      - "D:/anaconda/share/ironpython3.6/python3.13.com"
++      - "D:/anaconda/share/ironpython3.6/python3.13.exe"
++      - "D:/anaconda/share/ironpython3.6/python3.13"
++      - "D:/anaconda/share/ironpython3.6/python3.12.com"
++      - "D:/anaconda/share/ironpython3.6/python3.12.exe"
++      - "D:/anaconda/share/ironpython3.6/python3.12"
++      - "D:/anaconda/share/ironpython3.6/python3.11.com"
++      - "D:/anaconda/share/ironpython3.6/python3.11.exe"
++      - "D:/anaconda/share/ironpython3.6/python3.11"
++      - "D:/anaconda/share/ironpython3.6/python3.10.com"
++      - "D:/anaconda/share/ironpython3.6/python3.10.exe"
++      - "D:/anaconda/share/ironpython3.6/python3.10"
++      - "D:/anaconda/share/ironpython3.6/python3.9.com"
++      - "D:/anaconda/share/ironpython3.6/python3.9.exe"
++      - "D:/anaconda/share/ironpython3.6/python3.9"
++      - "D:/anaconda/share/ironpython3.6/python3.8.com"
++      - "D:/anaconda/share/ironpython3.6/python3.8.exe"
++      - "D:/anaconda/share/ironpython3.6/python3.8"
++      - "D:/anaconda/share/ironpython3.6/python3.7.com"
++      - "D:/anaconda/share/ironpython3.6/python3.7.exe"
++      - "D:/anaconda/share/ironpython3.6/python3.7"
++      - "D:/anaconda/share/ironpython3.6/python3.6.com"
++      - "D:/anaconda/share/ironpython3.6/python3.6.exe"
++      - "D:/anaconda/share/ironpython3.6/python3.6"
++      - "D:/anaconda/share/ironpython3.6/python3.5.com"
++      - "D:/anaconda/share/ironpython3.6/python3.5.exe"
++      - "D:/anaconda/share/ironpython3.6/python3.5"
++      - "D:/anaconda/share/ironpython3.6/python3.4.com"
++      - "D:/anaconda/share/ironpython3.6/python3.4.exe"
++      - "D:/anaconda/share/ironpython3.6/python3.4"
++      - "D:/anaconda/share/ironpython3.6/python3.3.com"
++      - "D:/anaconda/share/ironpython3.6/python3.3.exe"
++      - "D:/anaconda/share/ironpython3.6/python3.3"
++      - "D:/anaconda/share/ironpython3.6/python3.2.com"
++      - "D:/anaconda/share/ironpython3.6/python3.2.exe"
++      - "D:/anaconda/share/ironpython3.6/python3.2"
++      - "D:/anaconda/share/ironpython3.6/python3.1.com"
++      - "D:/anaconda/share/ironpython3.6/python3.1.exe"
++      - "D:/anaconda/share/ironpython3.6/python3.1"
++      - "D:/anaconda/share/ironpython3.6/python3.0.com"
++      - "D:/anaconda/share/ironpython3.6/python3.0.exe"
++      - "D:/anaconda/share/ironpython3.6/python3.0"
++      - "D:/anaconda/share/ironpython3.6/python3.com"
++      - "D:/anaconda/share/ironpython3.6/python3.exe"
++      - "D:/anaconda/share/ironpython3.6/python3"
++      - "D:/anaconda/share/ironpython3.6/python.com"
++      - "D:/anaconda/share/ironpython3.6/python.exe"
++      - "D:/anaconda/share/ironpython3.6/python"
++      - "D:/anaconda/share/ironpython3.6/ipy3.15.com"
++      - "D:/anaconda/share/ironpython3.6/ipy3.15.exe"
++      - "D:/anaconda/share/ironpython3.6/ipy3.15"
++      - "D:/anaconda/share/ironpython3.6/ipy3.14.com"
++      - "D:/anaconda/share/ironpython3.6/ipy3.14.exe"
++      - "D:/anaconda/share/ironpython3.6/ipy3.14"
++      - "D:/anaconda/share/ironpython3.6/ipy3.13.com"
++      - "D:/anaconda/share/ironpython3.6/ipy3.13.exe"
++      - "D:/anaconda/share/ironpython3.6/ipy3.13"
++      - "D:/anaconda/share/ironpython3.6/ipy3.12.com"
++      - "D:/anaconda/share/ironpython3.6/ipy3.12.exe"
++      - "D:/anaconda/share/ironpython3.6/ipy3.12"
++      - "D:/anaconda/share/ironpython3.6/ipy3.11.com"
++      - "D:/anaconda/share/ironpython3.6/ipy3.11.exe"
++      - "D:/anaconda/share/ironpython3.6/ipy3.11"
++      - "D:/anaconda/share/ironpython3.6/ipy3.10.com"
++      - "D:/anaconda/share/ironpython3.6/ipy3.10.exe"
++      - "D:/anaconda/share/ironpython3.6/ipy3.10"
++      - "D:/anaconda/share/ironpython3.6/ipy3.9.com"
++      - "D:/anaconda/share/ironpython3.6/ipy3.9.exe"
++      - "D:/anaconda/share/ironpython3.6/ipy3.9"
++      - "D:/anaconda/share/ironpython3.6/ipy3.8.com"
++      - "D:/anaconda/share/ironpython3.6/ipy3.8.exe"
++      - "D:/anaconda/share/ironpython3.6/ipy3.8"
++      - "D:/anaconda/share/ironpython3.6/ipy3.7.com"
++      - "D:/anaconda/share/ironpython3.6/ipy3.7.exe"
++      - "D:/anaconda/share/ironpython3.6/ipy3.7"
++      - "D:/anaconda/share/ironpython3.6/ipy3.6.com"
++      - "D:/anaconda/share/ironpython3.6/ipy3.6.exe"
++      - "D:/anaconda/share/ironpython3.6/ipy3.6"
++      - "D:/anaconda/share/ironpython3.6/ipy3.5.com"
++      - "D:/anaconda/share/ironpython3.6/ipy3.5.exe"
++      - "D:/anaconda/share/ironpython3.6/ipy3.5"
++      - "D:/anaconda/share/ironpython3.6/ipy3.4.com"
++      - "D:/anaconda/share/ironpython3.6/ipy3.4.exe"
++      - "D:/anaconda/share/ironpython3.6/ipy3.4"
++      - "D:/anaconda/share/ironpython3.6/ipy3.3.com"
++      - "D:/anaconda/share/ironpython3.6/ipy3.3.exe"
++      - "D:/anaconda/share/ironpython3.6/ipy3.3"
++      - "D:/anaconda/share/ironpython3.6/ipy3.2.com"
++      - "D:/anaconda/share/ironpython3.6/ipy3.2.exe"
++      - "D:/anaconda/share/ironpython3.6/ipy3.2"
++      - "D:/anaconda/share/ironpython3.6/ipy3.1.com"
++      - "D:/anaconda/share/ironpython3.6/ipy3.1.exe"
++      - "D:/anaconda/share/ironpython3.6/ipy3.1"
++      - "D:/anaconda/share/ironpython3.6/ipy3.0.com"
++      - "D:/anaconda/share/ironpython3.6/ipy3.0.exe"
++      - "D:/anaconda/share/ironpython3.6/ipy3.0"
++      - "D:/anaconda/share/ironpython3.6/ipy3.com"
++      - "D:/anaconda/share/ironpython3.6/ipy3.exe"
++      - "D:/anaconda/share/ironpython3.6/ipy3"
++      - "D:/anaconda/share/ironpython3.6/ipy64.com"
++      - "D:/anaconda/share/ironpython3.6/ipy64.exe"
++      - "D:/anaconda/share/ironpython3.6/ipy64"
++      - "D:/anaconda/share/ironpython3.6/ipy32.com"
++      - "D:/anaconda/share/ironpython3.6/ipy32.exe"
++      - "D:/anaconda/share/ironpython3.6/ipy32"
++      - "D:/anaconda/share/ironpython3.6/ipy.com"
++      - "D:/anaconda/share/ironpython3.6/ipy.exe"
++      - "D:/anaconda/share/ironpython3.6/ipy"
++      - "D:/anaconda/share/ironpython3.6/ipy.exe.com"
++      - "D:/anaconda/share/ironpython3.6/ipy.exe"
++      - "D:/anaconda/share/ironpython3.5/python3.15.com"
++      - "D:/anaconda/share/ironpython3.5/python3.15.exe"
++      - "D:/anaconda/share/ironpython3.5/python3.15"
++      - "D:/anaconda/share/ironpython3.5/python3.14.com"
++      - "D:/anaconda/share/ironpython3.5/python3.14.exe"
++      - "D:/anaconda/share/ironpython3.5/python3.14"
++      - "D:/anaconda/share/ironpython3.5/python3.13.com"
++      - "D:/anaconda/share/ironpython3.5/python3.13.exe"
++      - "D:/anaconda/share/ironpython3.5/python3.13"
++      - "D:/anaconda/share/ironpython3.5/python3.12.com"
++      - "D:/anaconda/share/ironpython3.5/python3.12.exe"
++      - "D:/anaconda/share/ironpython3.5/python3.12"
++      - "D:/anaconda/share/ironpython3.5/python3.11.com"
++      - "D:/anaconda/share/ironpython3.5/python3.11.exe"
++      - "D:/anaconda/share/ironpython3.5/python3.11"
++      - "D:/anaconda/share/ironpython3.5/python3.10.com"
++      - "D:/anaconda/share/ironpython3.5/python3.10.exe"
++      - "D:/anaconda/share/ironpython3.5/python3.10"
++      - "D:/anaconda/share/ironpython3.5/python3.9.com"
++      - "D:/anaconda/share/ironpython3.5/python3.9.exe"
++      - "D:/anaconda/share/ironpython3.5/python3.9"
++      - "D:/anaconda/share/ironpython3.5/python3.8.com"
++      - "D:/anaconda/share/ironpython3.5/python3.8.exe"
++      - "D:/anaconda/share/ironpython3.5/python3.8"
++      - "D:/anaconda/share/ironpython3.5/python3.7.com"
++      - "D:/anaconda/share/ironpython3.5/python3.7.exe"
++      - "D:/anaconda/share/ironpython3.5/python3.7"
++      - "D:/anaconda/share/ironpython3.5/python3.6.com"
++      - "D:/anaconda/share/ironpython3.5/python3.6.exe"
++      - "D:/anaconda/share/ironpython3.5/python3.6"
++      - "D:/anaconda/share/ironpython3.5/python3.5.com"
++      - "D:/anaconda/share/ironpython3.5/python3.5.exe"
++      - "D:/anaconda/share/ironpython3.5/python3.5"
++      - "D:/anaconda/share/ironpython3.5/python3.4.com"
++      - "D:/anaconda/share/ironpython3.5/python3.4.exe"
++      - "D:/anaconda/share/ironpython3.5/python3.4"
++      - "D:/anaconda/share/ironpython3.5/python3.3.com"
++      - "D:/anaconda/share/ironpython3.5/python3.3.exe"
++      - "D:/anaconda/share/ironpython3.5/python3.3"
++      - "D:/anaconda/share/ironpython3.5/python3.2.com"
++      - "D:/anaconda/share/ironpython3.5/python3.2.exe"
++      - "D:/anaconda/share/ironpython3.5/python3.2"
++      - "D:/anaconda/share/ironpython3.5/python3.1.com"
++      - "D:/anaconda/share/ironpython3.5/python3.1.exe"
++      - "D:/anaconda/share/ironpython3.5/python3.1"
++      - "D:/anaconda/share/ironpython3.5/python3.0.com"
++      - "D:/anaconda/share/ironpython3.5/python3.0.exe"
++      - "D:/anaconda/share/ironpython3.5/python3.0"
++      - "D:/anaconda/share/ironpython3.5/python3.com"
++      - "D:/anaconda/share/ironpython3.5/python3.exe"
++      - "D:/anaconda/share/ironpython3.5/python3"
++      - "D:/anaconda/share/ironpython3.5/python.com"
++      - "D:/anaconda/share/ironpython3.5/python.exe"
++      - "D:/anaconda/share/ironpython3.5/python"
++      - "D:/anaconda/share/ironpython3.5/ipy3.15.com"
++      - "D:/anaconda/share/ironpython3.5/ipy3.15.exe"
++      - "D:/anaconda/share/ironpython3.5/ipy3.15"
++      - "D:/anaconda/share/ironpython3.5/ipy3.14.com"
++      - "D:/anaconda/share/ironpython3.5/ipy3.14.exe"
++      - "D:/anaconda/share/ironpython3.5/ipy3.14"
++      - "D:/anaconda/share/ironpython3.5/ipy3.13.com"
++      - "D:/anaconda/share/ironpython3.5/ipy3.13.exe"
++      - "D:/anaconda/share/ironpython3.5/ipy3.13"
++      - "D:/anaconda/share/ironpython3.5/ipy3.12.com"
++      - "D:/anaconda/share/ironpython3.5/ipy3.12.exe"
++      - "D:/anaconda/share/ironpython3.5/ipy3.12"
++      - "D:/anaconda/share/ironpython3.5/ipy3.11.com"
++      - "D:/anaconda/share/ironpython3.5/ipy3.11.exe"
++      - "D:/anaconda/share/ironpython3.5/ipy3.11"
++      - "D:/anaconda/share/ironpython3.5/ipy3.10.com"
++      - "D:/anaconda/share/ironpython3.5/ipy3.10.exe"
++      - "D:/anaconda/share/ironpython3.5/ipy3.10"
++      - "D:/anaconda/share/ironpython3.5/ipy3.9.com"
++      - "D:/anaconda/share/ironpython3.5/ipy3.9.exe"
++      - "D:/anaconda/share/ironpython3.5/ipy3.9"
++      - "D:/anaconda/share/ironpython3.5/ipy3.8.com"
++      - "D:/anaconda/share/ironpython3.5/ipy3.8.exe"
++      - "D:/anaconda/share/ironpython3.5/ipy3.8"
++      - "D:/anaconda/share/ironpython3.5/ipy3.7.com"
++      - "D:/anaconda/share/ironpython3.5/ipy3.7.exe"
++      - "D:/anaconda/share/ironpython3.5/ipy3.7"
++      - "D:/anaconda/share/ironpython3.5/ipy3.6.com"
++      - "D:/anaconda/share/ironpython3.5/ipy3.6.exe"
++      - "D:/anaconda/share/ironpython3.5/ipy3.6"
++      - "D:/anaconda/share/ironpython3.5/ipy3.5.com"
++      - "D:/anaconda/share/ironpython3.5/ipy3.5.exe"
++      - "D:/anaconda/share/ironpython3.5/ipy3.5"
++      - "D:/anaconda/share/ironpython3.5/ipy3.4.com"
++      - "D:/anaconda/share/ironpython3.5/ipy3.4.exe"
++      - "D:/anaconda/share/ironpython3.5/ipy3.4"
++      - "D:/anaconda/share/ironpython3.5/ipy3.3.com"
++      - "D:/anaconda/share/ironpython3.5/ipy3.3.exe"
++      - "D:/anaconda/share/ironpython3.5/ipy3.3"
++      - "D:/anaconda/share/ironpython3.5/ipy3.2.com"
++      - "D:/anaconda/share/ironpython3.5/ipy3.2.exe"
++      - "D:/anaconda/share/ironpython3.5/ipy3.2"
++      - "D:/anaconda/share/ironpython3.5/ipy3.1.com"
++      - "D:/anaconda/share/ironpython3.5/ipy3.1.exe"
++      - "D:/anaconda/share/ironpython3.5/ipy3.1"
++      - "D:/anaconda/share/ironpython3.5/ipy3.0.com"
++      - "D:/anaconda/share/ironpython3.5/ipy3.0.exe"
++      - "D:/anaconda/share/ironpython3.5/ipy3.0"
++      - "D:/anaconda/share/ironpython3.5/ipy3.com"
++      - "D:/anaconda/share/ironpython3.5/ipy3.exe"
++      - "D:/anaconda/share/ironpython3.5/ipy3"
++      - "D:/anaconda/share/ironpython3.5/ipy64.com"
++      - "D:/anaconda/share/ironpython3.5/ipy64.exe"
++      - "D:/anaconda/share/ironpython3.5/ipy64"
++      - "D:/anaconda/share/ironpython3.5/ipy32.com"
++      - "D:/anaconda/share/ironpython3.5/ipy32.exe"
++      - "D:/anaconda/share/ironpython3.5/ipy32"
++      - "D:/anaconda/share/ironpython3.5/ipy.com"
++      - "D:/anaconda/share/ironpython3.5/ipy.exe"
++      - "D:/anaconda/share/ironpython3.5/ipy"
++      - "D:/anaconda/share/ironpython3.5/ipy.exe.com"
++      - "D:/anaconda/share/ironpython3.5/ipy.exe"
++      - "D:/anaconda/share/ironpython3.4/python3.15.com"
++      - "D:/anaconda/share/ironpython3.4/python3.15.exe"
++      - "D:/anaconda/share/ironpython3.4/python3.15"
++      - "D:/anaconda/share/ironpython3.4/python3.14.com"
++      - "D:/anaconda/share/ironpython3.4/python3.14.exe"
++      - "D:/anaconda/share/ironpython3.4/python3.14"
++      - "D:/anaconda/share/ironpython3.4/python3.13.com"
++      - "D:/anaconda/share/ironpython3.4/python3.13.exe"
++      - "D:/anaconda/share/ironpython3.4/python3.13"
++      - "D:/anaconda/share/ironpython3.4/python3.12.com"
++      - "D:/anaconda/share/ironpython3.4/python3.12.exe"
++      - "D:/anaconda/share/ironpython3.4/python3.12"
++      - "D:/anaconda/share/ironpython3.4/python3.11.com"
++      - "D:/anaconda/share/ironpython3.4/python3.11.exe"
++      - "D:/anaconda/share/ironpython3.4/python3.11"
++      - "D:/anaconda/share/ironpython3.4/python3.10.com"
++      - "D:/anaconda/share/ironpython3.4/python3.10.exe"
++      - "D:/anaconda/share/ironpython3.4/python3.10"
++      - "D:/anaconda/share/ironpython3.4/python3.9.com"
++      - "D:/anaconda/share/ironpython3.4/python3.9.exe"
++      - "D:/anaconda/share/ironpython3.4/python3.9"
++      - "D:/anaconda/share/ironpython3.4/python3.8.com"
++      - "D:/anaconda/share/ironpython3.4/python3.8.exe"
++      - "D:/anaconda/share/ironpython3.4/python3.8"
++      - "D:/anaconda/share/ironpython3.4/python3.7.com"
++      - "D:/anaconda/share/ironpython3.4/python3.7.exe"
++      - "D:/anaconda/share/ironpython3.4/python3.7"
++      - "D:/anaconda/share/ironpython3.4/python3.6.com"
++      - "D:/anaconda/share/ironpython3.4/python3.6.exe"
++      - "D:/anaconda/share/ironpython3.4/python3.6"
++      - "D:/anaconda/share/ironpython3.4/python3.5.com"
++      - "D:/anaconda/share/ironpython3.4/python3.5.exe"
++      - "D:/anaconda/share/ironpython3.4/python3.5"
++      - "D:/anaconda/share/ironpython3.4/python3.4.com"
++      - "D:/anaconda/share/ironpython3.4/python3.4.exe"
++      - "D:/anaconda/share/ironpython3.4/python3.4"
++      - "D:/anaconda/share/ironpython3.4/python3.3.com"
++      - "D:/anaconda/share/ironpython3.4/python3.3.exe"
++      - "D:/anaconda/share/ironpython3.4/python3.3"
++      - "D:/anaconda/share/ironpython3.4/python3.2.com"
++      - "D:/anaconda/share/ironpython3.4/python3.2.exe"
++      - "D:/anaconda/share/ironpython3.4/python3.2"
++      - "D:/anaconda/share/ironpython3.4/python3.1.com"
++      - "D:/anaconda/share/ironpython3.4/python3.1.exe"
++      - "D:/anaconda/share/ironpython3.4/python3.1"
++      - "D:/anaconda/share/ironpython3.4/python3.0.com"
++      - "D:/anaconda/share/ironpython3.4/python3.0.exe"
++      - "D:/anaconda/share/ironpython3.4/python3.0"
++      - "D:/anaconda/share/ironpython3.4/python3.com"
++      - "D:/anaconda/share/ironpython3.4/python3.exe"
++      - "D:/anaconda/share/ironpython3.4/python3"
++      - "D:/anaconda/share/ironpython3.4/python.com"
++      - "D:/anaconda/share/ironpython3.4/python.exe"
++      - "D:/anaconda/share/ironpython3.4/python"
++      - "D:/anaconda/share/ironpython3.4/ipy3.15.com"
++      - "D:/anaconda/share/ironpython3.4/ipy3.15.exe"
++      - "D:/anaconda/share/ironpython3.4/ipy3.15"
++      - "D:/anaconda/share/ironpython3.4/ipy3.14.com"
++      - "D:/anaconda/share/ironpython3.4/ipy3.14.exe"
++      - "D:/anaconda/share/ironpython3.4/ipy3.14"
++      - "D:/anaconda/share/ironpython3.4/ipy3.13.com"
++      - "D:/anaconda/share/ironpython3.4/ipy3.13.exe"
++      - "D:/anaconda/share/ironpython3.4/ipy3.13"
++      - "D:/anaconda/share/ironpython3.4/ipy3.12.com"
++      - "D:/anaconda/share/ironpython3.4/ipy3.12.exe"
++      - "D:/anaconda/share/ironpython3.4/ipy3.12"
++      - "D:/anaconda/share/ironpython3.4/ipy3.11.com"
++      - "D:/anaconda/share/ironpython3.4/ipy3.11.exe"
++      - "D:/anaconda/share/ironpython3.4/ipy3.11"
++      - "D:/anaconda/share/ironpython3.4/ipy3.10.com"
++      - "D:/anaconda/share/ironpython3.4/ipy3.10.exe"
++      - "D:/anaconda/share/ironpython3.4/ipy3.10"
++      - "D:/anaconda/share/ironpython3.4/ipy3.9.com"
++      - "D:/anaconda/share/ironpython3.4/ipy3.9.exe"
++      - "D:/anaconda/share/ironpython3.4/ipy3.9"
++      - "D:/anaconda/share/ironpython3.4/ipy3.8.com"
++      - "D:/anaconda/share/ironpython3.4/ipy3.8.exe"
++      - "D:/anaconda/share/ironpython3.4/ipy3.8"
++      - "D:/anaconda/share/ironpython3.4/ipy3.7.com"
++      - "D:/anaconda/share/ironpython3.4/ipy3.7.exe"
++      - "D:/anaconda/share/ironpython3.4/ipy3.7"
++      - "D:/anaconda/share/ironpython3.4/ipy3.6.com"
++      - "D:/anaconda/share/ironpython3.4/ipy3.6.exe"
++      - "D:/anaconda/share/ironpython3.4/ipy3.6"
++      - "D:/anaconda/share/ironpython3.4/ipy3.5.com"
++      - "D:/anaconda/share/ironpython3.4/ipy3.5.exe"
++      - "D:/anaconda/share/ironpython3.4/ipy3.5"
++      - "D:/anaconda/share/ironpython3.4/ipy3.4.com"
++      - "D:/anaconda/share/ironpython3.4/ipy3.4.exe"
++      - "D:/anaconda/share/ironpython3.4/ipy3.4"
++      - "D:/anaconda/share/ironpython3.4/ipy3.3.com"
++      - "D:/anaconda/share/ironpython3.4/ipy3.3.exe"
++      - "D:/anaconda/share/ironpython3.4/ipy3.3"
++      - "D:/anaconda/share/ironpython3.4/ipy3.2.com"
++      - "D:/anaconda/share/ironpython3.4/ipy3.2.exe"
++      - "D:/anaconda/share/ironpython3.4/ipy3.2"
++      - "D:/anaconda/share/ironpython3.4/ipy3.1.com"
++      - "D:/anaconda/share/ironpython3.4/ipy3.1.exe"
++      - "D:/anaconda/share/ironpython3.4/ipy3.1"
++      - "D:/anaconda/share/ironpython3.4/ipy3.0.com"
++      - "D:/anaconda/share/ironpython3.4/ipy3.0.exe"
++      - "D:/anaconda/share/ironpython3.4/ipy3.0"
++      - "D:/anaconda/share/ironpython3.4/ipy3.com"
++      - "D:/anaconda/share/ironpython3.4/ipy3.exe"
++      - "D:/anaconda/share/ironpython3.4/ipy3"
++      - "D:/anaconda/share/ironpython3.4/ipy64.com"
++      - "D:/anaconda/share/ironpython3.4/ipy64.exe"
++      - "D:/anaconda/share/ironpython3.4/ipy64"
++      - "D:/anaconda/share/ironpython3.4/ipy32.com"
++      - "D:/anaconda/share/ironpython3.4/ipy32.exe"
++      - "D:/anaconda/share/ironpython3.4/ipy32"
++      - "D:/anaconda/share/ironpython3.4/ipy.com"
++      - "D:/anaconda/share/ironpython3.4/ipy.exe"
++      - "D:/anaconda/share/ironpython3.4/ipy"
++      - "D:/anaconda/share/ironpython3.4/ipy.exe.com"
++      - "D:/anaconda/share/ironpython3.4/ipy.exe"
++      - "D:/anaconda/share/ironpython3.3/python3.15.com"
++      - "D:/anaconda/share/ironpython3.3/python3.15.exe"
++      - "D:/anaconda/share/ironpython3.3/python3.15"
++      - "D:/anaconda/share/ironpython3.3/python3.14.com"
++      - "D:/anaconda/share/ironpython3.3/python3.14.exe"
++      - "D:/anaconda/share/ironpython3.3/python3.14"
++      - "D:/anaconda/share/ironpython3.3/python3.13.com"
++      - "D:/anaconda/share/ironpython3.3/python3.13.exe"
++      - "D:/anaconda/share/ironpython3.3/python3.13"
++      - "D:/anaconda/share/ironpython3.3/python3.12.com"
++      - "D:/anaconda/share/ironpython3.3/python3.12.exe"
++      - "D:/anaconda/share/ironpython3.3/python3.12"
++      - "D:/anaconda/share/ironpython3.3/python3.11.com"
++      - "D:/anaconda/share/ironpython3.3/python3.11.exe"
++      - "D:/anaconda/share/ironpython3.3/python3.11"
++      - "D:/anaconda/share/ironpython3.3/python3.10.com"
++      - "D:/anaconda/share/ironpython3.3/python3.10.exe"
++      - "D:/anaconda/share/ironpython3.3/python3.10"
++      - "D:/anaconda/share/ironpython3.3/python3.9.com"
++      - "D:/anaconda/share/ironpython3.3/python3.9.exe"
++      - "D:/anaconda/share/ironpython3.3/python3.9"
++      - "D:/anaconda/share/ironpython3.3/python3.8.com"
++      - "D:/anaconda/share/ironpython3.3/python3.8.exe"
++      - "D:/anaconda/share/ironpython3.3/python3.8"
++      - "D:/anaconda/share/ironpython3.3/python3.7.com"
++      - "D:/anaconda/share/ironpython3.3/python3.7.exe"
++      - "D:/anaconda/share/ironpython3.3/python3.7"
++      - "D:/anaconda/share/ironpython3.3/python3.6.com"
++      - "D:/anaconda/share/ironpython3.3/python3.6.exe"
++      - "D:/anaconda/share/ironpython3.3/python3.6"
++      - "D:/anaconda/share/ironpython3.3/python3.5.com"
++      - "D:/anaconda/share/ironpython3.3/python3.5.exe"
++      - "D:/anaconda/share/ironpython3.3/python3.5"
++      - "D:/anaconda/share/ironpython3.3/python3.4.com"
++      - "D:/anaconda/share/ironpython3.3/python3.4.exe"
++      - "D:/anaconda/share/ironpython3.3/python3.4"
++      - "D:/anaconda/share/ironpython3.3/python3.3.com"
++      - "D:/anaconda/share/ironpython3.3/python3.3.exe"
++      - "D:/anaconda/share/ironpython3.3/python3.3"
++      - "D:/anaconda/share/ironpython3.3/python3.2.com"
++      - "D:/anaconda/share/ironpython3.3/python3.2.exe"
++      - "D:/anaconda/share/ironpython3.3/python3.2"
++      - "D:/anaconda/share/ironpython3.3/python3.1.com"
++      - "D:/anaconda/share/ironpython3.3/python3.1.exe"
++      - "D:/anaconda/share/ironpython3.3/python3.1"
++      - "D:/anaconda/share/ironpython3.3/python3.0.com"
++      - "D:/anaconda/share/ironpython3.3/python3.0.exe"
++      - "D:/anaconda/share/ironpython3.3/python3.0"
++      - "D:/anaconda/share/ironpython3.3/python3.com"
++      - "D:/anaconda/share/ironpython3.3/python3.exe"
++      - "D:/anaconda/share/ironpython3.3/python3"
++      - "D:/anaconda/share/ironpython3.3/python.com"
++      - "D:/anaconda/share/ironpython3.3/python.exe"
++      - "D:/anaconda/share/ironpython3.3/python"
++      - "D:/anaconda/share/ironpython3.3/ipy3.15.com"
++      - "D:/anaconda/share/ironpython3.3/ipy3.15.exe"
++      - "D:/anaconda/share/ironpython3.3/ipy3.15"
++      - "D:/anaconda/share/ironpython3.3/ipy3.14.com"
++      - "D:/anaconda/share/ironpython3.3/ipy3.14.exe"
++      - "D:/anaconda/share/ironpython3.3/ipy3.14"
++      - "D:/anaconda/share/ironpython3.3/ipy3.13.com"
++      - "D:/anaconda/share/ironpython3.3/ipy3.13.exe"
++      - "D:/anaconda/share/ironpython3.3/ipy3.13"
++      - "D:/anaconda/share/ironpython3.3/ipy3.12.com"
++      - "D:/anaconda/share/ironpython3.3/ipy3.12.exe"
++      - "D:/anaconda/share/ironpython3.3/ipy3.12"
++      - "D:/anaconda/share/ironpython3.3/ipy3.11.com"
++      - "D:/anaconda/share/ironpython3.3/ipy3.11.exe"
++      - "D:/anaconda/share/ironpython3.3/ipy3.11"
++      - "D:/anaconda/share/ironpython3.3/ipy3.10.com"
++      - "D:/anaconda/share/ironpython3.3/ipy3.10.exe"
++      - "D:/anaconda/share/ironpython3.3/ipy3.10"
++      - "D:/anaconda/share/ironpython3.3/ipy3.9.com"
++      - "D:/anaconda/share/ironpython3.3/ipy3.9.exe"
++      - "D:/anaconda/share/ironpython3.3/ipy3.9"
++      - "D:/anaconda/share/ironpython3.3/ipy3.8.com"
++      - "D:/anaconda/share/ironpython3.3/ipy3.8.exe"
++      - "D:/anaconda/share/ironpython3.3/ipy3.8"
++      - "D:/anaconda/share/ironpython3.3/ipy3.7.com"
++      - "D:/anaconda/share/ironpython3.3/ipy3.7.exe"
++      - "D:/anaconda/share/ironpython3.3/ipy3.7"
++      - "D:/anaconda/share/ironpython3.3/ipy3.6.com"
++      - "D:/anaconda/share/ironpython3.3/ipy3.6.exe"
++      - "D:/anaconda/share/ironpython3.3/ipy3.6"
++      - "D:/anaconda/share/ironpython3.3/ipy3.5.com"
++      - "D:/anaconda/share/ironpython3.3/ipy3.5.exe"
++      - "D:/anaconda/share/ironpython3.3/ipy3.5"
++      - "D:/anaconda/share/ironpython3.3/ipy3.4.com"
++      - "D:/anaconda/share/ironpython3.3/ipy3.4.exe"
++      - "D:/anaconda/share/ironpython3.3/ipy3.4"
++      - "D:/anaconda/share/ironpython3.3/ipy3.3.com"
++      - "D:/anaconda/share/ironpython3.3/ipy3.3.exe"
++      - "D:/anaconda/share/ironpython3.3/ipy3.3"
++      - "D:/anaconda/share/ironpython3.3/ipy3.2.com"
++      - "D:/anaconda/share/ironpython3.3/ipy3.2.exe"
++      - "D:/anaconda/share/ironpython3.3/ipy3.2"
++      - "D:/anaconda/share/ironpython3.3/ipy3.1.com"
++      - "D:/anaconda/share/ironpython3.3/ipy3.1.exe"
++      - "D:/anaconda/share/ironpython3.3/ipy3.1"
++      - "D:/anaconda/share/ironpython3.3/ipy3.0.com"
++      - "D:/anaconda/share/ironpython3.3/ipy3.0.exe"
++      - "D:/anaconda/share/ironpython3.3/ipy3.0"
++      - "D:/anaconda/share/ironpython3.3/ipy3.com"
++      - "D:/anaconda/share/ironpython3.3/ipy3.exe"
++      - "D:/anaconda/share/ironpython3.3/ipy3"
++      - "D:/anaconda/share/ironpython3.3/ipy64.com"
++      - "D:/anaconda/share/ironpython3.3/ipy64.exe"
++      - "D:/anaconda/share/ironpython3.3/ipy64"
++      - "D:/anaconda/share/ironpython3.3/ipy32.com"
++      - "D:/anaconda/share/ironpython3.3/ipy32.exe"
++      - "D:/anaconda/share/ironpython3.3/ipy32"
++      - "D:/anaconda/share/ironpython3.3/ipy.com"
++      - "D:/anaconda/share/ironpython3.3/ipy.exe"
++      - "D:/anaconda/share/ironpython3.3/ipy"
++      - "D:/anaconda/share/ironpython3.3/ipy.exe.com"
++      - "D:/anaconda/share/ironpython3.3/ipy.exe"
++      - "D:/anaconda/share/ironpython3.2/python3.15.com"
++      - "D:/anaconda/share/ironpython3.2/python3.15.exe"
++      - "D:/anaconda/share/ironpython3.2/python3.15"
++      - "D:/anaconda/share/ironpython3.2/python3.14.com"
++      - "D:/anaconda/share/ironpython3.2/python3.14.exe"
++      - "D:/anaconda/share/ironpython3.2/python3.14"
++      - "D:/anaconda/share/ironpython3.2/python3.13.com"
++      - "D:/anaconda/share/ironpython3.2/python3.13.exe"
++      - "D:/anaconda/share/ironpython3.2/python3.13"
++      - "D:/anaconda/share/ironpython3.2/python3.12.com"
++      - "D:/anaconda/share/ironpython3.2/python3.12.exe"
++      - "D:/anaconda/share/ironpython3.2/python3.12"
++      - "D:/anaconda/share/ironpython3.2/python3.11.com"
++      - "D:/anaconda/share/ironpython3.2/python3.11.exe"
++      - "D:/anaconda/share/ironpython3.2/python3.11"
++      - "D:/anaconda/share/ironpython3.2/python3.10.com"
++      - "D:/anaconda/share/ironpython3.2/python3.10.exe"
++      - "D:/anaconda/share/ironpython3.2/python3.10"
++      - "D:/anaconda/share/ironpython3.2/python3.9.com"
++      - "D:/anaconda/share/ironpython3.2/python3.9.exe"
++      - "D:/anaconda/share/ironpython3.2/python3.9"
++      - "D:/anaconda/share/ironpython3.2/python3.8.com"
++      - "D:/anaconda/share/ironpython3.2/python3.8.exe"
++      - "D:/anaconda/share/ironpython3.2/python3.8"
++      - "D:/anaconda/share/ironpython3.2/python3.7.com"
++      - "D:/anaconda/share/ironpython3.2/python3.7.exe"
++      - "D:/anaconda/share/ironpython3.2/python3.7"
++      - "D:/anaconda/share/ironpython3.2/python3.6.com"
++      - "D:/anaconda/share/ironpython3.2/python3.6.exe"
++      - "D:/anaconda/share/ironpython3.2/python3.6"
++      - "D:/anaconda/share/ironpython3.2/python3.5.com"
++      - "D:/anaconda/share/ironpython3.2/python3.5.exe"
++      - "D:/anaconda/share/ironpython3.2/python3.5"
++      - "D:/anaconda/share/ironpython3.2/python3.4.com"
++      - "D:/anaconda/share/ironpython3.2/python3.4.exe"
++      - "D:/anaconda/share/ironpython3.2/python3.4"
++      - "D:/anaconda/share/ironpython3.2/python3.3.com"
++      - "D:/anaconda/share/ironpython3.2/python3.3.exe"
++      - "D:/anaconda/share/ironpython3.2/python3.3"
++      - "D:/anaconda/share/ironpython3.2/python3.2.com"
++      - "D:/anaconda/share/ironpython3.2/python3.2.exe"
++      - "D:/anaconda/share/ironpython3.2/python3.2"
++      - "D:/anaconda/share/ironpython3.2/python3.1.com"
++      - "D:/anaconda/share/ironpython3.2/python3.1.exe"
++      - "D:/anaconda/share/ironpython3.2/python3.1"
++      - "D:/anaconda/share/ironpython3.2/python3.0.com"
++      - "D:/anaconda/share/ironpython3.2/python3.0.exe"
++      - "D:/anaconda/share/ironpython3.2/python3.0"
++      - "D:/anaconda/share/ironpython3.2/python3.com"
++      - "D:/anaconda/share/ironpython3.2/python3.exe"
++      - "D:/anaconda/share/ironpython3.2/python3"
++      - "D:/anaconda/share/ironpython3.2/python.com"
++      - "D:/anaconda/share/ironpython3.2/python.exe"
++      - "D:/anaconda/share/ironpython3.2/python"
++      - "D:/anaconda/share/ironpython3.2/ipy3.15.com"
++      - "D:/anaconda/share/ironpython3.2/ipy3.15.exe"
++      - "D:/anaconda/share/ironpython3.2/ipy3.15"
++      - "D:/anaconda/share/ironpython3.2/ipy3.14.com"
++      - "D:/anaconda/share/ironpython3.2/ipy3.14.exe"
++      - "D:/anaconda/share/ironpython3.2/ipy3.14"
++      - "D:/anaconda/share/ironpython3.2/ipy3.13.com"
++      - "D:/anaconda/share/ironpython3.2/ipy3.13.exe"
++      - "D:/anaconda/share/ironpython3.2/ipy3.13"
++      - "D:/anaconda/share/ironpython3.2/ipy3.12.com"
++      - "D:/anaconda/share/ironpython3.2/ipy3.12.exe"
++      - "D:/anaconda/share/ironpython3.2/ipy3.12"
++      - "D:/anaconda/share/ironpython3.2/ipy3.11.com"
++      - "D:/anaconda/share/ironpython3.2/ipy3.11.exe"
++      - "D:/anaconda/share/ironpython3.2/ipy3.11"
++      - "D:/anaconda/share/ironpython3.2/ipy3.10.com"
++      - "D:/anaconda/share/ironpython3.2/ipy3.10.exe"
++      - "D:/anaconda/share/ironpython3.2/ipy3.10"
++      - "D:/anaconda/share/ironpython3.2/ipy3.9.com"
++      - "D:/anaconda/share/ironpython3.2/ipy3.9.exe"
++      - "D:/anaconda/share/ironpython3.2/ipy3.9"
++      - "D:/anaconda/share/ironpython3.2/ipy3.8.com"
++      - "D:/anaconda/share/ironpython3.2/ipy3.8.exe"
++      - "D:/anaconda/share/ironpython3.2/ipy3.8"
++      - "D:/anaconda/share/ironpython3.2/ipy3.7.com"
++      - "D:/anaconda/share/ironpython3.2/ipy3.7.exe"
++      - "D:/anaconda/share/ironpython3.2/ipy3.7"
++      - "D:/anaconda/share/ironpython3.2/ipy3.6.com"
++      - "D:/anaconda/share/ironpython3.2/ipy3.6.exe"
++      - "D:/anaconda/share/ironpython3.2/ipy3.6"
++      - "D:/anaconda/share/ironpython3.2/ipy3.5.com"
++      - "D:/anaconda/share/ironpython3.2/ipy3.5.exe"
++      - "D:/anaconda/share/ironpython3.2/ipy3.5"
++      - "D:/anaconda/share/ironpython3.2/ipy3.4.com"
++      - "D:/anaconda/share/ironpython3.2/ipy3.4.exe"
++      - "D:/anaconda/share/ironpython3.2/ipy3.4"
++      - "D:/anaconda/share/ironpython3.2/ipy3.3.com"
++      - "D:/anaconda/share/ironpython3.2/ipy3.3.exe"
++      - "D:/anaconda/share/ironpython3.2/ipy3.3"
++      - "D:/anaconda/share/ironpython3.2/ipy3.2.com"
++      - "D:/anaconda/share/ironpython3.2/ipy3.2.exe"
++      - "D:/anaconda/share/ironpython3.2/ipy3.2"
++      - "D:/anaconda/share/ironpython3.2/ipy3.1.com"
++      - "D:/anaconda/share/ironpython3.2/ipy3.1.exe"
++      - "D:/anaconda/share/ironpython3.2/ipy3.1"
++      - "D:/anaconda/share/ironpython3.2/ipy3.0.com"
++      - "D:/anaconda/share/ironpython3.2/ipy3.0.exe"
++      - "D:/anaconda/share/ironpython3.2/ipy3.0"
++      - "D:/anaconda/share/ironpython3.2/ipy3.com"
++      - "D:/anaconda/share/ironpython3.2/ipy3.exe"
++      - "D:/anaconda/share/ironpython3.2/ipy3"
++      - "D:/anaconda/share/ironpython3.2/ipy64.com"
++      - "D:/anaconda/share/ironpython3.2/ipy64.exe"
++      - "D:/anaconda/share/ironpython3.2/ipy64"
++      - "D:/anaconda/share/ironpython3.2/ipy32.com"
++      - "D:/anaconda/share/ironpython3.2/ipy32.exe"
++      - "D:/anaconda/share/ironpython3.2/ipy32"
++      - "D:/anaconda/share/ironpython3.2/ipy.com"
++      - "D:/anaconda/share/ironpython3.2/ipy.exe"
++      - "D:/anaconda/share/ironpython3.2/ipy"
++      - "D:/anaconda/share/ironpython3.2/ipy.exe.com"
++      - "D:/anaconda/share/ironpython3.2/ipy.exe"
++      - "D:/anaconda/share/ironpython3.1/python3.15.com"
++      - "D:/anaconda/share/ironpython3.1/python3.15.exe"
++      - "D:/anaconda/share/ironpython3.1/python3.15"
++      - "D:/anaconda/share/ironpython3.1/python3.14.com"
++      - "D:/anaconda/share/ironpython3.1/python3.14.exe"
++      - "D:/anaconda/share/ironpython3.1/python3.14"
++      - "D:/anaconda/share/ironpython3.1/python3.13.com"
++      - "D:/anaconda/share/ironpython3.1/python3.13.exe"
++      - "D:/anaconda/share/ironpython3.1/python3.13"
++      - "D:/anaconda/share/ironpython3.1/python3.12.com"
++      - "D:/anaconda/share/ironpython3.1/python3.12.exe"
++      - "D:/anaconda/share/ironpython3.1/python3.12"
++      - "D:/anaconda/share/ironpython3.1/python3.11.com"
++      - "D:/anaconda/share/ironpython3.1/python3.11.exe"
++      - "D:/anaconda/share/ironpython3.1/python3.11"
++      - "D:/anaconda/share/ironpython3.1/python3.10.com"
++      - "D:/anaconda/share/ironpython3.1/python3.10.exe"
++      - "D:/anaconda/share/ironpython3.1/python3.10"
++      - "D:/anaconda/share/ironpython3.1/python3.9.com"
++      - "D:/anaconda/share/ironpython3.1/python3.9.exe"
++      - "D:/anaconda/share/ironpython3.1/python3.9"
++      - "D:/anaconda/share/ironpython3.1/python3.8.com"
++      - "D:/anaconda/share/ironpython3.1/python3.8.exe"
++      - "D:/anaconda/share/ironpython3.1/python3.8"
++      - "D:/anaconda/share/ironpython3.1/python3.7.com"
++      - "D:/anaconda/share/ironpython3.1/python3.7.exe"
++      - "D:/anaconda/share/ironpython3.1/python3.7"
++      - "D:/anaconda/share/ironpython3.1/python3.6.com"
++      - "D:/anaconda/share/ironpython3.1/python3.6.exe"
++      - "D:/anaconda/share/ironpython3.1/python3.6"
++      - "D:/anaconda/share/ironpython3.1/python3.5.com"
++      - "D:/anaconda/share/ironpython3.1/python3.5.exe"
++      - "D:/anaconda/share/ironpython3.1/python3.5"
++      - "D:/anaconda/share/ironpython3.1/python3.4.com"
++      - "D:/anaconda/share/ironpython3.1/python3.4.exe"
++      - "D:/anaconda/share/ironpython3.1/python3.4"
++      - "D:/anaconda/share/ironpython3.1/python3.3.com"
++      - "D:/anaconda/share/ironpython3.1/python3.3.exe"
++      - "D:/anaconda/share/ironpython3.1/python3.3"
++      - "D:/anaconda/share/ironpython3.1/python3.2.com"
++      - "D:/anaconda/share/ironpython3.1/python3.2.exe"
++      - "D:/anaconda/share/ironpython3.1/python3.2"
++      - "D:/anaconda/share/ironpython3.1/python3.1.com"
++      - "D:/anaconda/share/ironpython3.1/python3.1.exe"
++      - "D:/anaconda/share/ironpython3.1/python3.1"
++      - "D:/anaconda/share/ironpython3.1/python3.0.com"
++      - "D:/anaconda/share/ironpython3.1/python3.0.exe"
++      - "D:/anaconda/share/ironpython3.1/python3.0"
++      - "D:/anaconda/share/ironpython3.1/python3.com"
++      - "D:/anaconda/share/ironpython3.1/python3.exe"
++      - "D:/anaconda/share/ironpython3.1/python3"
++      - "D:/anaconda/share/ironpython3.1/python.com"
++      - "D:/anaconda/share/ironpython3.1/python.exe"
++      - "D:/anaconda/share/ironpython3.1/python"
++      - "D:/anaconda/share/ironpython3.1/ipy3.15.com"
++      - "D:/anaconda/share/ironpython3.1/ipy3.15.exe"
++      - "D:/anaconda/share/ironpython3.1/ipy3.15"
++      - "D:/anaconda/share/ironpython3.1/ipy3.14.com"
++      - "D:/anaconda/share/ironpython3.1/ipy3.14.exe"
++      - "D:/anaconda/share/ironpython3.1/ipy3.14"
++      - "D:/anaconda/share/ironpython3.1/ipy3.13.com"
++      - "D:/anaconda/share/ironpython3.1/ipy3.13.exe"
++      - "D:/anaconda/share/ironpython3.1/ipy3.13"
++      - "D:/anaconda/share/ironpython3.1/ipy3.12.com"
++      - "D:/anaconda/share/ironpython3.1/ipy3.12.exe"
++      - "D:/anaconda/share/ironpython3.1/ipy3.12"
++      - "D:/anaconda/share/ironpython3.1/ipy3.11.com"
++      - "D:/anaconda/share/ironpython3.1/ipy3.11.exe"
++      - "D:/anaconda/share/ironpython3.1/ipy3.11"
++      - "D:/anaconda/share/ironpython3.1/ipy3.10.com"
++      - "D:/anaconda/share/ironpython3.1/ipy3.10.exe"
++      - "D:/anaconda/share/ironpython3.1/ipy3.10"
++      - "D:/anaconda/share/ironpython3.1/ipy3.9.com"
++      - "D:/anaconda/share/ironpython3.1/ipy3.9.exe"
++      - "D:/anaconda/share/ironpython3.1/ipy3.9"
++      - "D:/anaconda/share/ironpython3.1/ipy3.8.com"
++      - "D:/anaconda/share/ironpython3.1/ipy3.8.exe"
++      - "D:/anaconda/share/ironpython3.1/ipy3.8"
++      - "D:/anaconda/share/ironpython3.1/ipy3.7.com"
++      - "D:/anaconda/share/ironpython3.1/ipy3.7.exe"
++      - "D:/anaconda/share/ironpython3.1/ipy3.7"
++      - "D:/anaconda/share/ironpython3.1/ipy3.6.com"
++      - "D:/anaconda/share/ironpython3.1/ipy3.6.exe"
++      - "D:/anaconda/share/ironpython3.1/ipy3.6"
++      - "D:/anaconda/share/ironpython3.1/ipy3.5.com"
++      - "D:/anaconda/share/ironpython3.1/ipy3.5.exe"
++      - "D:/anaconda/share/ironpython3.1/ipy3.5"
++      - "D:/anaconda/share/ironpython3.1/ipy3.4.com"
++      - "D:/anaconda/share/ironpython3.1/ipy3.4.exe"
++      - "D:/anaconda/share/ironpython3.1/ipy3.4"
++      - "D:/anaconda/share/ironpython3.1/ipy3.3.com"
++      - "D:/anaconda/share/ironpython3.1/ipy3.3.exe"
++      - "D:/anaconda/share/ironpython3.1/ipy3.3"
++      - "D:/anaconda/share/ironpython3.1/ipy3.2.com"
++      - "D:/anaconda/share/ironpython3.1/ipy3.2.exe"
++      - "D:/anaconda/share/ironpython3.1/ipy3.2"
++      - "D:/anaconda/share/ironpython3.1/ipy3.1.com"
++      - "D:/anaconda/share/ironpython3.1/ipy3.1.exe"
++      - "D:/anaconda/share/ironpython3.1/ipy3.1"
++      - "D:/anaconda/share/ironpython3.1/ipy3.0.com"
++      - "D:/anaconda/share/ironpython3.1/ipy3.0.exe"
++      - "D:/anaconda/share/ironpython3.1/ipy3.0"
++      - "D:/anaconda/share/ironpython3.1/ipy3.com"
++      - "D:/anaconda/share/ironpython3.1/ipy3.exe"
++      - "D:/anaconda/share/ironpython3.1/ipy3"
++      - "D:/anaconda/share/ironpython3.1/ipy64.com"
++      - "D:/anaconda/share/ironpython3.1/ipy64.exe"
++      - "D:/anaconda/share/ironpython3.1/ipy64"
++      - "D:/anaconda/share/ironpython3.1/ipy32.com"
++      - "D:/anaconda/share/ironpython3.1/ipy32.exe"
++      - "D:/anaconda/share/ironpython3.1/ipy32"
++      - "D:/anaconda/share/ironpython3.1/ipy.com"
++      - "D:/anaconda/share/ironpython3.1/ipy.exe"
++      - "D:/anaconda/share/ironpython3.1/ipy"
++      - "D:/anaconda/share/ironpython3.1/ipy.exe.com"
++      - "D:/anaconda/share/ironpython3.1/ipy.exe"
++      - "D:/anaconda/share/ironpython3.0/python3.15.com"
++      - "D:/anaconda/share/ironpython3.0/python3.15.exe"
++      - "D:/anaconda/share/ironpython3.0/python3.15"
++      - "D:/anaconda/share/ironpython3.0/python3.14.com"
++      - "D:/anaconda/share/ironpython3.0/python3.14.exe"
++      - "D:/anaconda/share/ironpython3.0/python3.14"
++      - "D:/anaconda/share/ironpython3.0/python3.13.com"
++      - "D:/anaconda/share/ironpython3.0/python3.13.exe"
++      - "D:/anaconda/share/ironpython3.0/python3.13"
++      - "D:/anaconda/share/ironpython3.0/python3.12.com"
++      - "D:/anaconda/share/ironpython3.0/python3.12.exe"
++      - "D:/anaconda/share/ironpython3.0/python3.12"
++      - "D:/anaconda/share/ironpython3.0/python3.11.com"
++      - "D:/anaconda/share/ironpython3.0/python3.11.exe"
++      - "D:/anaconda/share/ironpython3.0/python3.11"
++      - "D:/anaconda/share/ironpython3.0/python3.10.com"
++      - "D:/anaconda/share/ironpython3.0/python3.10.exe"
++      - "D:/anaconda/share/ironpython3.0/python3.10"
++      - "D:/anaconda/share/ironpython3.0/python3.9.com"
++      - "D:/anaconda/share/ironpython3.0/python3.9.exe"
++      - "D:/anaconda/share/ironpython3.0/python3.9"
++      - "D:/anaconda/share/ironpython3.0/python3.8.com"
++      - "D:/anaconda/share/ironpython3.0/python3.8.exe"
++      - "D:/anaconda/share/ironpython3.0/python3.8"
++      - "D:/anaconda/share/ironpython3.0/python3.7.com"
++      - "D:/anaconda/share/ironpython3.0/python3.7.exe"
++      - "D:/anaconda/share/ironpython3.0/python3.7"
++      - "D:/anaconda/share/ironpython3.0/python3.6.com"
++      - "D:/anaconda/share/ironpython3.0/python3.6.exe"
++      - "D:/anaconda/share/ironpython3.0/python3.6"
++      - "D:/anaconda/share/ironpython3.0/python3.5.com"
++      - "D:/anaconda/share/ironpython3.0/python3.5.exe"
++      - "D:/anaconda/share/ironpython3.0/python3.5"
++      - "D:/anaconda/share/ironpython3.0/python3.4.com"
++      - "D:/anaconda/share/ironpython3.0/python3.4.exe"
++      - "D:/anaconda/share/ironpython3.0/python3.4"
++      - "D:/anaconda/share/ironpython3.0/python3.3.com"
++      - "D:/anaconda/share/ironpython3.0/python3.3.exe"
++      - "D:/anaconda/share/ironpython3.0/python3.3"
++      - "D:/anaconda/share/ironpython3.0/python3.2.com"
++      - "D:/anaconda/share/ironpython3.0/python3.2.exe"
++      - "D:/anaconda/share/ironpython3.0/python3.2"
++      - "D:/anaconda/share/ironpython3.0/python3.1.com"
++      - "D:/anaconda/share/ironpython3.0/python3.1.exe"
++      - "D:/anaconda/share/ironpython3.0/python3.1"
++      - "D:/anaconda/share/ironpython3.0/python3.0.com"
++      - "D:/anaconda/share/ironpython3.0/python3.0.exe"
++      - "D:/anaconda/share/ironpython3.0/python3.0"
++      - "D:/anaconda/share/ironpython3.0/python3.com"
++      - "D:/anaconda/share/ironpython3.0/python3.exe"
++      - "D:/anaconda/share/ironpython3.0/python3"
++      - "D:/anaconda/share/ironpython3.0/python.com"
++      - "D:/anaconda/share/ironpython3.0/python.exe"
++      - "D:/anaconda/share/ironpython3.0/python"
++      - "D:/anaconda/share/ironpython3.0/ipy3.15.com"
++      - "D:/anaconda/share/ironpython3.0/ipy3.15.exe"
++      - "D:/anaconda/share/ironpython3.0/ipy3.15"
++      - "D:/anaconda/share/ironpython3.0/ipy3.14.com"
++      - "D:/anaconda/share/ironpython3.0/ipy3.14.exe"
++      - "D:/anaconda/share/ironpython3.0/ipy3.14"
++      - "D:/anaconda/share/ironpython3.0/ipy3.13.com"
++      - "D:/anaconda/share/ironpython3.0/ipy3.13.exe"
++      - "D:/anaconda/share/ironpython3.0/ipy3.13"
++      - "D:/anaconda/share/ironpython3.0/ipy3.12.com"
++      - "D:/anaconda/share/ironpython3.0/ipy3.12.exe"
++      - "D:/anaconda/share/ironpython3.0/ipy3.12"
++      - "D:/anaconda/share/ironpython3.0/ipy3.11.com"
++      - "D:/anaconda/share/ironpython3.0/ipy3.11.exe"
++      - "D:/anaconda/share/ironpython3.0/ipy3.11"
++      - "D:/anaconda/share/ironpython3.0/ipy3.10.com"
++      - "D:/anaconda/share/ironpython3.0/ipy3.10.exe"
++      - "D:/anaconda/share/ironpython3.0/ipy3.10"
++      - "D:/anaconda/share/ironpython3.0/ipy3.9.com"
++      - "D:/anaconda/share/ironpython3.0/ipy3.9.exe"
++      - "D:/anaconda/share/ironpython3.0/ipy3.9"
++      - "D:/anaconda/share/ironpython3.0/ipy3.8.com"
++      - "D:/anaconda/share/ironpython3.0/ipy3.8.exe"
++      - "D:/anaconda/share/ironpython3.0/ipy3.8"
++      - "D:/anaconda/share/ironpython3.0/ipy3.7.com"
++      - "D:/anaconda/share/ironpython3.0/ipy3.7.exe"
++      - "D:/anaconda/share/ironpython3.0/ipy3.7"
++      - "D:/anaconda/share/ironpython3.0/ipy3.6.com"
++      - "D:/anaconda/share/ironpython3.0/ipy3.6.exe"
++      - "D:/anaconda/share/ironpython3.0/ipy3.6"
++      - "D:/anaconda/share/ironpython3.0/ipy3.5.com"
++      - "D:/anaconda/share/ironpython3.0/ipy3.5.exe"
++      - "D:/anaconda/share/ironpython3.0/ipy3.5"
++      - "D:/anaconda/share/ironpython3.0/ipy3.4.com"
++      - "D:/anaconda/share/ironpython3.0/ipy3.4.exe"
++      - "D:/anaconda/share/ironpython3.0/ipy3.4"
++      - "D:/anaconda/share/ironpython3.0/ipy3.3.com"
++      - "D:/anaconda/share/ironpython3.0/ipy3.3.exe"
++      - "D:/anaconda/share/ironpython3.0/ipy3.3"
++      - "D:/anaconda/share/ironpython3.0/ipy3.2.com"
++      - "D:/anaconda/share/ironpython3.0/ipy3.2.exe"
++      - "D:/anaconda/share/ironpython3.0/ipy3.2"
++      - "D:/anaconda/share/ironpython3.0/ipy3.1.com"
++      - "D:/anaconda/share/ironpython3.0/ipy3.1.exe"
++      - "D:/anaconda/share/ironpython3.0/ipy3.1"
++      - "D:/anaconda/share/ironpython3.0/ipy3.0.com"
++      - "D:/anaconda/share/ironpython3.0/ipy3.0.exe"
++      - "D:/anaconda/share/ironpython3.0/ipy3.0"
++      - "D:/anaconda/share/ironpython3.0/ipy3.com"
++      - "D:/anaconda/share/ironpython3.0/ipy3.exe"
++      - "D:/anaconda/share/ironpython3.0/ipy3"
++      - "D:/anaconda/share/ironpython3.0/ipy64.com"
++      - "D:/anaconda/share/ironpython3.0/ipy64.exe"
++      - "D:/anaconda/share/ironpython3.0/ipy64"
++      - "D:/anaconda/share/ironpython3.0/ipy32.com"
++      - "D:/anaconda/share/ironpython3.0/ipy32.exe"
++      - "D:/anaconda/share/ironpython3.0/ipy32"
++      - "D:/anaconda/share/ironpython3.0/ipy.com"
++      - "D:/anaconda/share/ironpython3.0/ipy.exe"
++      - "D:/anaconda/share/ironpython3.0/ipy"
++      - "D:/anaconda/share/ironpython3.0/ipy.exe.com"
++      - "D:/anaconda/share/ironpython3.0/ipy.exe"
++      - "D:/anaconda/net45/python3.15.com"
++      - "D:/anaconda/net45/python3.15.exe"
++      - "D:/anaconda/net45/python3.15"
++      - "D:/anaconda/net45/python3.14.com"
++      - "D:/anaconda/net45/python3.14.exe"
++      - "D:/anaconda/net45/python3.14"
++      - "D:/anaconda/net45/python3.13.com"
++      - "D:/anaconda/net45/python3.13.exe"
++      - "D:/anaconda/net45/python3.13"
++      - "D:/anaconda/net45/python3.12.com"
++      - "D:/anaconda/net45/python3.12.exe"
++      - "D:/anaconda/net45/python3.12"
++      - "D:/anaconda/net45/python3.11.com"
++      - "D:/anaconda/net45/python3.11.exe"
++      - "D:/anaconda/net45/python3.11"
++      - "D:/anaconda/net45/python3.10.com"
++      - "D:/anaconda/net45/python3.10.exe"
++      - "D:/anaconda/net45/python3.10"
++      - "D:/anaconda/net45/python3.9.com"
++      - "D:/anaconda/net45/python3.9.exe"
++      - "D:/anaconda/net45/python3.9"
++      - "D:/anaconda/net45/python3.8.com"
++      - "D:/anaconda/net45/python3.8.exe"
++      - "D:/anaconda/net45/python3.8"
++      - "D:/anaconda/net45/python3.7.com"
++      - "D:/anaconda/net45/python3.7.exe"
++      - "D:/anaconda/net45/python3.7"
++      - "D:/anaconda/net45/python3.6.com"
++      - "D:/anaconda/net45/python3.6.exe"
++      - "D:/anaconda/net45/python3.6"
++      - "D:/anaconda/net45/python3.5.com"
++      - "D:/anaconda/net45/python3.5.exe"
++      - "D:/anaconda/net45/python3.5"
++      - "D:/anaconda/net45/python3.4.com"
++      - "D:/anaconda/net45/python3.4.exe"
++      - "D:/anaconda/net45/python3.4"
++      - "D:/anaconda/net45/python3.3.com"
++      - "D:/anaconda/net45/python3.3.exe"
++      - "D:/anaconda/net45/python3.3"
++      - "D:/anaconda/net45/python3.2.com"
++      - "D:/anaconda/net45/python3.2.exe"
++      - "D:/anaconda/net45/python3.2"
++      - "D:/anaconda/net45/python3.1.com"
++      - "D:/anaconda/net45/python3.1.exe"
++      - "D:/anaconda/net45/python3.1"
++      - "D:/anaconda/net45/python3.0.com"
++      - "D:/anaconda/net45/python3.0.exe"
++      - "D:/anaconda/net45/python3.0"
++      - "D:/anaconda/net45/python3.com"
++      - "D:/anaconda/net45/python3.exe"
++      - "D:/anaconda/net45/python3"
++      - "D:/anaconda/net45/python.com"
++      - "D:/anaconda/net45/python.exe"
++      - "D:/anaconda/net45/python"
++      - "D:/anaconda/net45/ipy3.15.com"
++      - "D:/anaconda/net45/ipy3.15.exe"
++      - "D:/anaconda/net45/ipy3.15"
++      - "D:/anaconda/net45/ipy3.14.com"
++      - "D:/anaconda/net45/ipy3.14.exe"
++      - "D:/anaconda/net45/ipy3.14"
++      - "D:/anaconda/net45/ipy3.13.com"
++      - "D:/anaconda/net45/ipy3.13.exe"
++      - "D:/anaconda/net45/ipy3.13"
++      - "D:/anaconda/net45/ipy3.12.com"
++      - "D:/anaconda/net45/ipy3.12.exe"
++      - "D:/anaconda/net45/ipy3.12"
++      - "D:/anaconda/net45/ipy3.11.com"
++      - "D:/anaconda/net45/ipy3.11.exe"
++      - "D:/anaconda/net45/ipy3.11"
++      - "D:/anaconda/net45/ipy3.10.com"
++      - "D:/anaconda/net45/ipy3.10.exe"
++      - "D:/anaconda/net45/ipy3.10"
++      - "D:/anaconda/net45/ipy3.9.com"
++      - "D:/anaconda/net45/ipy3.9.exe"
++      - "D:/anaconda/net45/ipy3.9"
++      - "D:/anaconda/net45/ipy3.8.com"
++      - "D:/anaconda/net45/ipy3.8.exe"
++      - "D:/anaconda/net45/ipy3.8"
++      - "D:/anaconda/net45/ipy3.7.com"
++      - "D:/anaconda/net45/ipy3.7.exe"
++      - "D:/anaconda/net45/ipy3.7"
++      - "D:/anaconda/net45/ipy3.6.com"
++      - "D:/anaconda/net45/ipy3.6.exe"
++      - "D:/anaconda/net45/ipy3.6"
++      - "D:/anaconda/net45/ipy3.5.com"
++      - "D:/anaconda/net45/ipy3.5.exe"
++      - "D:/anaconda/net45/ipy3.5"
++      - "D:/anaconda/net45/ipy3.4.com"
++      - "D:/anaconda/net45/ipy3.4.exe"
++      - "D:/anaconda/net45/ipy3.4"
++      - "D:/anaconda/net45/ipy3.3.com"
++      - "D:/anaconda/net45/ipy3.3.exe"
++      - "D:/anaconda/net45/ipy3.3"
++      - "D:/anaconda/net45/ipy3.2.com"
++      - "D:/anaconda/net45/ipy3.2.exe"
++      - "D:/anaconda/net45/ipy3.2"
++      - "D:/anaconda/net45/ipy3.1.com"
++      - "D:/anaconda/net45/ipy3.1.exe"
++      - "D:/anaconda/net45/ipy3.1"
++      - "D:/anaconda/net45/ipy3.0.com"
++      - "D:/anaconda/net45/ipy3.0.exe"
++      - "D:/anaconda/net45/ipy3.0"
++      - "D:/anaconda/net45/ipy3.com"
++      - "D:/anaconda/net45/ipy3.exe"
++      - "D:/anaconda/net45/ipy3"
++      - "D:/anaconda/net45/ipy64.com"
++      - "D:/anaconda/net45/ipy64.exe"
++      - "D:/anaconda/net45/ipy64"
++      - "D:/anaconda/net45/ipy32.com"
++      - "D:/anaconda/net45/ipy32.exe"
++      - "D:/anaconda/net45/ipy32"
++      - "D:/anaconda/net45/ipy.com"
++      - "D:/anaconda/net45/ipy.exe"
++      - "D:/anaconda/net45/ipy"
++      - "D:/anaconda/net45/ipy.exe.com"
++      - "D:/anaconda/net45/ipy.exe"
++      - "D:/anaconda/net40/python3.15.com"
++      - "D:/anaconda/net40/python3.15.exe"
++      - "D:/anaconda/net40/python3.15"
++      - "D:/anaconda/net40/python3.14.com"
++      - "D:/anaconda/net40/python3.14.exe"
++      - "D:/anaconda/net40/python3.14"
++      - "D:/anaconda/net40/python3.13.com"
++      - "D:/anaconda/net40/python3.13.exe"
++      - "D:/anaconda/net40/python3.13"
++      - "D:/anaconda/net40/python3.12.com"
++      - "D:/anaconda/net40/python3.12.exe"
++      - "D:/anaconda/net40/python3.12"
++      - "D:/anaconda/net40/python3.11.com"
++      - "D:/anaconda/net40/python3.11.exe"
++      - "D:/anaconda/net40/python3.11"
++      - "D:/anaconda/net40/python3.10.com"
++      - "D:/anaconda/net40/python3.10.exe"
++      - "D:/anaconda/net40/python3.10"
++      - "D:/anaconda/net40/python3.9.com"
++      - "D:/anaconda/net40/python3.9.exe"
++      - "D:/anaconda/net40/python3.9"
++      - "D:/anaconda/net40/python3.8.com"
++      - "D:/anaconda/net40/python3.8.exe"
++      - "D:/anaconda/net40/python3.8"
++      - "D:/anaconda/net40/python3.7.com"
++      - "D:/anaconda/net40/python3.7.exe"
++      - "D:/anaconda/net40/python3.7"
++      - "D:/anaconda/net40/python3.6.com"
++      - "D:/anaconda/net40/python3.6.exe"
++      - "D:/anaconda/net40/python3.6"
++      - "D:/anaconda/net40/python3.5.com"
++      - "D:/anaconda/net40/python3.5.exe"
++      - "D:/anaconda/net40/python3.5"
++      - "D:/anaconda/net40/python3.4.com"
++      - "D:/anaconda/net40/python3.4.exe"
++      - "D:/anaconda/net40/python3.4"
++      - "D:/anaconda/net40/python3.3.com"
++      - "D:/anaconda/net40/python3.3.exe"
++      - "D:/anaconda/net40/python3.3"
++      - "D:/anaconda/net40/python3.2.com"
++      - "D:/anaconda/net40/python3.2.exe"
++      - "D:/anaconda/net40/python3.2"
++      - "D:/anaconda/net40/python3.1.com"
++      - "D:/anaconda/net40/python3.1.exe"
++      - "D:/anaconda/net40/python3.1"
++      - "D:/anaconda/net40/python3.0.com"
++      - "D:/anaconda/net40/python3.0.exe"
++      - "D:/anaconda/net40/python3.0"
++      - "D:/anaconda/net40/python3.com"
++      - "D:/anaconda/net40/python3.exe"
++      - "D:/anaconda/net40/python3"
++      - "D:/anaconda/net40/python.com"
++      - "D:/anaconda/net40/python.exe"
++      - "D:/anaconda/net40/python"
++      - "D:/anaconda/net40/ipy3.15.com"
++      - "D:/anaconda/net40/ipy3.15.exe"
++      - "D:/anaconda/net40/ipy3.15"
++      - "D:/anaconda/net40/ipy3.14.com"
++      - "D:/anaconda/net40/ipy3.14.exe"
++      - "D:/anaconda/net40/ipy3.14"
++      - "D:/anaconda/net40/ipy3.13.com"
++      - "D:/anaconda/net40/ipy3.13.exe"
++      - "D:/anaconda/net40/ipy3.13"
++      - "D:/anaconda/net40/ipy3.12.com"
++      - "D:/anaconda/net40/ipy3.12.exe"
++      - "D:/anaconda/net40/ipy3.12"
++      - "D:/anaconda/net40/ipy3.11.com"
++      - "D:/anaconda/net40/ipy3.11.exe"
++      - "D:/anaconda/net40/ipy3.11"
++      - "D:/anaconda/net40/ipy3.10.com"
++      - "D:/anaconda/net40/ipy3.10.exe"
++      - "D:/anaconda/net40/ipy3.10"
++      - "D:/anaconda/net40/ipy3.9.com"
++      - "D:/anaconda/net40/ipy3.9.exe"
++      - "D:/anaconda/net40/ipy3.9"
++      - "D:/anaconda/net40/ipy3.8.com"
++      - "D:/anaconda/net40/ipy3.8.exe"
++      - "D:/anaconda/net40/ipy3.8"
++      - "D:/anaconda/net40/ipy3.7.com"
++      - "D:/anaconda/net40/ipy3.7.exe"
++      - "D:/anaconda/net40/ipy3.7"
++      - "D:/anaconda/net40/ipy3.6.com"
++      - "D:/anaconda/net40/ipy3.6.exe"
++      - "D:/anaconda/net40/ipy3.6"
++      - "D:/anaconda/net40/ipy3.5.com"
++      - "D:/anaconda/net40/ipy3.5.exe"
++      - "D:/anaconda/net40/ipy3.5"
++      - "D:/anaconda/net40/ipy3.4.com"
++      - "D:/anaconda/net40/ipy3.4.exe"
++      - "D:/anaconda/net40/ipy3.4"
++      - "D:/anaconda/net40/ipy3.3.com"
++      - "D:/anaconda/net40/ipy3.3.exe"
++      - "D:/anaconda/net40/ipy3.3"
++      - "D:/anaconda/net40/ipy3.2.com"
++      - "D:/anaconda/net40/ipy3.2.exe"
++      - "D:/anaconda/net40/ipy3.2"
++      - "D:/anaconda/net40/ipy3.1.com"
++      - "D:/anaconda/net40/ipy3.1.exe"
++      - "D:/anaconda/net40/ipy3.1"
++      - "D:/anaconda/net40/ipy3.0.com"
++      - "D:/anaconda/net40/ipy3.0.exe"
++      - "D:/anaconda/net40/ipy3.0"
++      - "D:/anaconda/net40/ipy3.com"
++      - "D:/anaconda/net40/ipy3.exe"
++      - "D:/anaconda/net40/ipy3"
++      - "D:/anaconda/net40/ipy64.com"
++      - "D:/anaconda/net40/ipy64.exe"
++      - "D:/anaconda/net40/ipy64"
++      - "D:/anaconda/net40/ipy32.com"
++      - "D:/anaconda/net40/ipy32.exe"
++      - "D:/anaconda/net40/ipy32"
++      - "D:/anaconda/net40/ipy.com"
++      - "D:/anaconda/net40/ipy.exe"
++      - "D:/anaconda/net40/ipy"
++      - "D:/anaconda/net40/ipy.exe.com"
++      - "D:/anaconda/net40/ipy.exe"
++      - "D:/anaconda/python3.15.com"
++      - "D:/anaconda/python3.15.exe"
++      - "D:/anaconda/python3.15"
++      - "D:/anaconda/python3.14.com"
++      - "D:/anaconda/python3.14.exe"
++      - "D:/anaconda/python3.14"
++      - "D:/anaconda/python3.13.com"
++      - "D:/anaconda/python3.13.exe"
++      - "D:/anaconda/python3.13"
++      - "D:/anaconda/python3.12.com"
++      - "D:/anaconda/python3.12.exe"
++      - "D:/anaconda/python3.12"
++      - "D:/anaconda/python3.11.com"
++      - "D:/anaconda/python3.11.exe"
++      - "D:/anaconda/python3.11"
++      - "D:/anaconda/python3.10.com"
++      - "D:/anaconda/python3.10.exe"
++      - "D:/anaconda/python3.10"
++      - "D:/anaconda/python3.9.com"
++      - "D:/anaconda/python3.9.exe"
++      - "D:/anaconda/python3.9"
++      - "D:/anaconda/python3.8.com"
++      - "D:/anaconda/python3.8.exe"
++      - "D:/anaconda/python3.8"
++      - "D:/anaconda/python3.7.com"
++      - "D:/anaconda/python3.7.exe"
++      - "D:/anaconda/python3.7"
++      - "D:/anaconda/python3.6.com"
++      - "D:/anaconda/python3.6.exe"
++      - "D:/anaconda/python3.6"
++      - "D:/anaconda/python3.5.com"
++      - "D:/anaconda/python3.5.exe"
++      - "D:/anaconda/python3.5"
++      - "D:/anaconda/python3.4.com"
++      - "D:/anaconda/python3.4.exe"
++      - "D:/anaconda/python3.4"
++      - "D:/anaconda/python3.3.com"
++      - "D:/anaconda/python3.3.exe"
++      - "D:/anaconda/python3.3"
++      - "D:/anaconda/python3.2.com"
++      - "D:/anaconda/python3.2.exe"
++      - "D:/anaconda/python3.2"
++      - "D:/anaconda/python3.1.com"
++      - "D:/anaconda/python3.1.exe"
++      - "D:/anaconda/python3.1"
++      - "D:/anaconda/python3.0.com"
++      - "D:/anaconda/python3.0.exe"
++      - "D:/anaconda/python3.0"
++      - "D:/anaconda/python3.com"
++      - "D:/anaconda/python3.exe"
++      - "D:/anaconda/python3"
++      - "D:/anaconda/python.com"
++    found: "D:/anaconda/python.exe"
++    search_context:
++      ENV{PATH}:
++        - "D:\\anaconda"
++        - "D:\\anaconda\\Library\\mingw-w64\\bin"
++        - "D:\\anaconda\\Library\\usr\\bin"
++        - "D:\\anaconda\\Library\\bin"
++        - "D:\\anaconda\\Scripts"
++        - "D:\\anaconda\\bin"
++        - "D:\\anaconda\\condabin"
++        - "C:\\Program Files\\PowerShell\\7"
++        - "C:\\Users\\sunom\\.codex\\tmp\\arg0\\codex-arg0OyGgdU"
++        - "C:\\WINDOWS\\System32"
++        - "C:\\apktool"
++        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit"
++        - "C:\\Program Files\\dotnet"
++        - "C:\\Program Files\\Docker\\Docker\\resources\\bin"
++        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
++        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
++        - "C:\\Program Files\\PowerShell\\7"
++        - "C:\\Program Files\\nodejs"
++        - "C:\\Program Files (x86)\\Microsoft SQL Server\\160\\Tools\\Binn"
++        - "C:\\Program Files\\Microsoft SQL Server\\160\\Tools\\Binn"
++        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn"
++        - "C:\\Program Files\\Microsoft SQL Server\\160\\DTS\\Binn"
++        - "C:\\apktool"
++        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit"
++        - "C:\\Program Files\\dotnet"
++        - "C:\\Program Files\\Docker\\Docker\\resources\\bin"
++        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
++        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
++        - "C:\\Program Files\\PowerShell\\7"
++        - "C:\\Program Files\\nodejs"
++        - "C:\\Program Files (x86)\\Microsoft SQL Server\\160\\Tools\\Binn"
++        - "C:\\Program Files\\Microsoft SQL Server\\160\\Tools\\Binn"
++        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn"
++        - "C:\\Program Files\\Microsoft SQL Server\\160\\DTS\\Binn"
++        - "C:\\apktool"
++        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit"
++        - "C:\\Program Files\\dotnet"
++        - "C:\\Program Files\\Docker\\Docker\\resources\\bin"
++        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
++        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
++        - "C:\\Program Files\\PowerShell\\7"
++        - "C:\\Program Files\\nodejs"
++        - "C:\\Program Files (x86)\\Microsoft SQL Server\\160\\Tools\\Binn"
++        - "C:\\Program Files\\Microsoft SQL Server\\160\\Tools\\Binn"
++        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn"
++        - "C:\\Program Files\\Microsoft SQL Server\\160\\DTS\\Binn"
++        - "C:\\Users\\sunom\\.cargo\\bin"
++        - "C:\\Users\\sunom\\AppData\\Local\\Programs\\Python\\Python313\\Scripts"
++        - "C:\\Users\\sunom\\AppData\\Local\\Programs\\Python\\Python313"
++        - "C:\\Users\\sunom\\AppData\\Local\\Programs\\Python\\Launcher"
++        - "C:\\Users\\sunom\\AppData\\Local\\pnpm"
++        - "C:\\Users\\sunom\\AppData\\Local\\Microsoft\\WindowsApps"
++        - "D:\\Git\\bin"
++        - "C:\\Program Files\\Vim\\vim91"
++        - "D:\\Anaconda\\envs\\speechbrain"
++        - "D:\\anaconda\\envs\\speechbrain\\Lib\\site-packages\\torch\\lib\\fbgemm.dll"
++        - "D:\\Microsoft VS Code\\bin"
++        - "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin"
++        - "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\libnvvp"
++        - "C:\\Program Files\\ffmpeg\\bin"
++        - "D:\\Qt\\6.8.0\\msvc2022_64"
++        - "C:\\Users\\sunom\\AppData\\Local\\GitHubDesktop\\bin"
++        - "C:\\platform-tools"
++        - "C:\\BaiduPCS-Go"
++        - "C:\\aliyunpan"
++        - "C:\\Program Files\\COLMAP"
++        - "C:\\Windows\\System32"
++        - "C:\\Windows\\System32\\Wbem"
++        - "C:\\Windows\\System32\\WindowsPowerShell\\v1.0"
++        - "C:\\Windows"
++        - "C:\\Program Files\\Tesseract-OCR"
++        - "C:\\Users\\sunom\\AppData\\Local\\Programs\\Ollama"
++        - "D:\\Qt\\6.8.0\\msvc2022_arm64"
++        - "D:\\vcpkg"
++        - "D:\\Qt\\6.8.0\\mingw_64\\bin"
++        - "D:\\Qt\\6.8.0\\llvm-mingw_64\\bin"
++        - "C:\\Users\\sunom\\AppData\\Roaming\\npm"
++        - "C:\\sqlite"
++        - "C:\\Program Files\\COLMAP\\colmap.bat"
++        - "c:\\Users\\sunom\\.vscode\\extensions\\openai.chatgpt-0.4.74-win32-x64\\bin\\windows-x86_64"
++      CMAKE_INSTALL_PREFIX: "C:/Program Files (x86)/ctcp"
++      CMAKE_SYSTEM_PREFIX_PATH:
++        - "C:/Program Files"
++        - "C:/Program Files (x86)"
++        - "C:/Program Files/CMake"
++        - "C:/Program Files (x86)/ctcp"
++  -
++    kind: "find-v1"
++    backtrace:
++      - "C:/Program Files/CMake/share/cmake-4.2/Modules/FindPython/Support.cmake:2437 (find_program)"
++      - "C:/Program Files/CMake/share/cmake-4.2/Modules/FindPython3.cmake:671 (include)"
++      - "CMakeLists.txt:102 (find_package)"
++    mode: "program"
++    variable: "_Python3_EXECUTABLE_DEBUG"
++    description: "Path to a program."
++    settings:
++      SearchFramework: "NEVER"
++      SearchAppBundle: "NEVER"
++      CMAKE_FIND_USE_CMAKE_PATH: true
++      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
++      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
++      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
++      CMAKE_FIND_USE_INSTALL_PREFIX: true
++    names:
++      - "python3.12_d"
++      - "python3_d"
++      - "python_d"
++    candidate_directories:
++      - "D:/anaconda/"
++    searched_directories:
++      - "D:/anaconda/python3.12_d.com"
++      - "D:/anaconda/python3.12_d.exe"
++      - "D:/anaconda/python3.12_d"
++      - "D:/anaconda/python3_d.com"
++      - "D:/anaconda/python3_d.exe"
++      - "D:/anaconda/python3_d"
++      - "D:/anaconda/python_d.com"
++      - "D:/anaconda/python_d.exe"
++      - "D:/anaconda/python_d"
++    found: false
++    search_context:
++      ENV{PATH}:
++        - "D:\\anaconda"
++        - "D:\\anaconda\\Library\\mingw-w64\\bin"
++        - "D:\\anaconda\\Library\\usr\\bin"
++        - "D:\\anaconda\\Library\\bin"
++        - "D:\\anaconda\\Scripts"
++        - "D:\\anaconda\\bin"
++        - "D:\\anaconda\\condabin"
++        - "C:\\Program Files\\PowerShell\\7"
++        - "C:\\Users\\sunom\\.codex\\tmp\\arg0\\codex-arg0OyGgdU"
++        - "C:\\WINDOWS\\System32"
++        - "C:\\apktool"
++        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit"
++        - "C:\\Program Files\\dotnet"
++        - "C:\\Program Files\\Docker\\Docker\\resources\\bin"
++        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
++        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
++        - "C:\\Program Files\\PowerShell\\7"
++        - "C:\\Program Files\\nodejs"
++        - "C:\\Program Files (x86)\\Microsoft SQL Server\\160\\Tools\\Binn"
++        - "C:\\Program Files\\Microsoft SQL Server\\160\\Tools\\Binn"
++        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn"
++        - "C:\\Program Files\\Microsoft SQL Server\\160\\DTS\\Binn"
++        - "C:\\apktool"
++        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit"
++        - "C:\\Program Files\\dotnet"
++        - "C:\\Program Files\\Docker\\Docker\\resources\\bin"
++        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
++        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
++        - "C:\\Program Files\\PowerShell\\7"
++        - "C:\\Program Files\\nodejs"
++        - "C:\\Program Files (x86)\\Microsoft SQL Server\\160\\Tools\\Binn"
++        - "C:\\Program Files\\Microsoft SQL Server\\160\\Tools\\Binn"
++        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn"
++        - "C:\\Program Files\\Microsoft SQL Server\\160\\DTS\\Binn"
++        - "C:\\apktool"
++        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit"
++        - "C:\\Program Files\\dotnet"
++        - "C:\\Program Files\\Docker\\Docker\\resources\\bin"
++        - "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR"
++        - "C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common"
++        - "C:\\Program Files\\PowerShell\\7"
++        - "C:\\Program Files\\nodejs"
++        - "C:\\Program Files (x86)\\Microsoft SQL Server\\160\\Tools\\Binn"
++        - "C:\\Program Files\\Microsoft SQL Server\\160\\Tools\\Binn"
++        - "C:\\Program Files\\Microsoft SQL Server\\Client SDK\\ODBC\\170\\Tools\\Binn"
++        - "C:\\Program Files\\Microsoft SQL Server\\160\\DTS\\Binn"
++        - "C:\\Users\\sunom\\.cargo\\bin"
++        - "C:\\Users\\sunom\\AppData\\Local\\Programs\\Python\\Python313\\Scripts"
++        - "C:\\Users\\sunom\\AppData\\Local\\Programs\\Python\\Python313"
++        - "C:\\Users\\sunom\\AppData\\Local\\Programs\\Python\\Launcher"
++        - "C:\\Users\\sunom\\AppData\\Local\\pnpm"
++        - "C:\\Users\\sunom\\AppData\\Local\\Microsoft\\WindowsApps"
++        - "D:\\Git\\bin"
++        - "C:\\Program Files\\Vim\\vim91"
++        - "D:\\Anaconda\\envs\\speechbrain"
++        - "D:\\anaconda\\envs\\speechbrain\\Lib\\site-packages\\torch\\lib\\fbgemm.dll"
++        - "D:\\Microsoft VS Code\\bin"
++        - "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin"
++        - "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\libnvvp"
++        - "C:\\Program Files\\ffmpeg\\bin"
++        - "D:\\Qt\\6.8.0\\msvc2022_64"
++        - "C:\\Users\\sunom\\AppData\\Local\\GitHubDesktop\\bin"
++        - "C:\\platform-tools"
++        - "C:\\BaiduPCS-Go"
++        - "C:\\aliyunpan"
++        - "C:\\Program Files\\COLMAP"
++        - "C:\\Windows\\System32"
++        - "C:\\Windows\\System32\\Wbem"
++        - "C:\\Windows\\System32\\WindowsPowerShell\\v1.0"
++        - "C:\\Windows"
++        - "C:\\Program Files\\Tesseract-OCR"
++        - "C:\\Users\\sunom\\AppData\\Local\\Programs\\Ollama"
++        - "D:\\Qt\\6.8.0\\msvc2022_arm64"
++        - "D:\\vcpkg"
++        - "D:\\Qt\\6.8.0\\mingw_64\\bin"
++        - "D:\\Qt\\6.8.0\\llvm-mingw_64\\bin"
++        - "C:\\Users\\sunom\\AppData\\Roaming\\npm"
++        - "C:\\sqlite"
++        - "C:\\Program Files\\COLMAP\\colmap.bat"
++        - "c:\\Users\\sunom\\.vscode\\extensions\\openai.chatgpt-0.4.74-win32-x64\\bin\\windows-x86_64"
++      CMAKE_INSTALL_PREFIX: "C:/Program Files (x86)/ctcp"
++      CMAKE_SYSTEM_PREFIX_PATH:
++        - "C:/Program Files"
++        - "C:/Program Files (x86)"
++        - "C:/Program Files/CMake"
++        - "C:/Program Files (x86)/ctcp"
++...
+diff --git a/docs/03_quality_gates.md b/docs/03_quality_gates.md
+index bfbcdc2..8fd958d 100644
+--- a/docs/03_quality_gates.md
++++ b/docs/03_quality_gates.md
+@@ -10,20 +10,25 @@
+ 
+ verify_repo 必须保证：
+ 
+-1) workflow gate
++1) headless lite path (default)
++- `CTCP_ENABLE_GUI=OFF` build path (if cmake exists)
++- lite ctest set
++- lite replay scenario(s)
++
++2) workflow gate
+ - meta/tasks/CURRENT.md 存在
+ - ai_context/00_AI_CONTRACT.md 存在
+ - ai_context/templates/aidoc 存在
+ - 默认禁止代码：未授权时不允许改代码目录
+ 
+-2) contract checks
++3) contract checks
+ - scripts/contract_checks.py 通过
+ 
+-3) doc index check
++4) doc index check
+ - scripts/sync_doc_links.py --check 通过
+ 
+-4) tests
+-- scripts/test_all.* 通过（当前为流程一致性测试 + case 结构检查）
++5) full checks（可选）
++- `CTCP_FULL_GATE=1` 时才跑更重测试（如 GUI 相关）
+ 
+ 如果你发现 verify_repo 没覆盖到某类失败，就把它补进 verify_repo，并新增一个 tests/cases 用例。
+ 
+diff --git a/docs/adlc_pipeline.md b/docs/adlc_pipeline.md
+index 2ea41b1..ea5e094 100644
+--- a/docs/adlc_pipeline.md
++++ b/docs/adlc_pipeline.md
+@@ -4,6 +4,8 @@ This repository enforces an executable ADLC loop:
+ 
+ `doc -> analysis -> find -> plan -> build <-> verify -> contrast -> fix -> merge/deploy`
+ 
++Default execution path is headless. GUI is optional and not part of mandatory Lite gate.
++
+ ## Stage Outputs
+ 
+ 1. `doc`
+@@ -32,6 +34,7 @@ This repository enforces an executable ADLC loop:
+ 
+ 8. `merge/deploy`
+ - Merge only if gate passes and evidence exists
++- Optional GUI/full checks run only in Full gate mode.
+ 
+ ## Gate Conditions
+ 
+@@ -50,4 +53,3 @@ Fail conditions:
+ 
+ CI runs the same verify scripts and uploads `artifacts/verify/**`.
+ Evidence is the source of truth for pass/fail claims.
+-
+diff --git a/docs/verify_contract.md b/docs/verify_contract.md
+index c72c06d..ddea9e2 100644
+--- a/docs/verify_contract.md
++++ b/docs/verify_contract.md
+@@ -31,6 +31,16 @@ Optional contrast:
+ 
+ - `python tools/contrast_proof.py --old <old_proof.json> --new <new_proof.json> --out <contrast_report.md>`
+ 
++## Gate Levels
++
++- Lite (default in `verify_repo`):
++  - headless build (`CTCP_ENABLE_GUI=OFF`)
++  - workflow/contract/doc-index checks
++  - 1-2 minimal replay scenarios (suite=`lite`)
++- Full (opt-in):
++  - enabled by `CTCP_FULL_GATE=1` or explicit `--full`
++  - can include heavier checks (GUI/example build, broader tests)
++
+ ## Artifact Layout
+ 
+ `artifacts/verify/<timestamp>/` must include:
+@@ -71,3 +81,11 @@ Smoke mode is required (`<app> --smoke`).
+ 
+ Smoke must fail non-zero when app cannot initialize required runtime/plugins/resources.
+ 
++## Failure Bundle Contract
++
++For replay/adlc runs, failed execution must produce `failure_bundle.zip` containing at least:
++
++- `TRACE.md`
++- `diff.patch` (if git diff available)
++- `logs/*` (step logs/stdout/stderr)
++- key snapshots asserted during the run
+diff --git a/meta/tasks/CURRENT.md b/meta/tasks/CURRENT.md
+index 7c11bff..77cc106 100644
+--- a/meta/tasks/CURRENT.md
++++ b/meta/tasks/CURRENT.md
+@@ -1,34 +1,25 @@
+-# Task — adlc-verify-evidence-closed-loop
++# Task — engine-lite
+ 
+ ## Context
+-- Convert verification from ad-hoc scripts into an evidence-driven, auditable ADLC loop.
+-- Enforce "no evidence = no test" through a hard gate tool.
+-- Keep GUI/build integration checks explicit and reproducible with logs and proof artifacts.
++- Why are we doing this?
+ 
+ ## Acceptance (must be checkable)
+-- [x] DoD written (this file complete)
+-- [x] Research logged (if needed): no new third-party runtime dependency planned
++- [ ] DoD written (this file complete)
++- [ ] Research logged (if needed): meta/externals/YYYYMMDD-engine-lite.md
+ - [x] Code changes allowed
+-- [x] Added `tools/run_verify.py` with configure/build/ctest/install/smoke sequencing and artifact logs
+-- [x] Added `tools/adlc_gate.py` to fail on missing evidence or non-PASS proof
+-- [x] Added `tools/contrast_proof.py` to diff two proof.json files and write markdown report
+-- [x] Added/updated `scripts/verify.sh` and `scripts/verify.ps1` to run verify + gate (+ optional contrast)
+-- [x] Added GUI `--smoke` mode with deterministic startup/exit behavior
+-- [x] CMake/CTest integration includes at least one logic test and one smoke test
+-- [x] Added docs: `docs/verify_contract.md` and `docs/adlc_pipeline.md`
+-- [x] CI includes Ubuntu + Windows verify workflow and uploads verify artifacts
+-- [x] Local verify command executed and evidence artifacts generated
++- [ ] Patch applies cleanly (`git apply ...`) OR overlay zip applies cleanly
++- [ ] `scripts/verify_repo.*` passes
++- [ ] Demo report updated: `meta/reports/LAST.md`
+ 
+ ## Plan
+-1) Update docs/contracts and problem registry entries.
+-2) Implement proof/gate/contrast Python tools.
+-3) Add GUI smoke CLI and CMake install/CTest hooks.
+-4) Wire shell/PowerShell verify wrappers to the new tools.
+-5) Add CI workflow and run local verification to produce evidence.
++1) Spec-first (docs/spec/meta)
++2) Implement (code if allowed)
++3) Verify (verify_repo)
++4) Record (problem_registry / decision_log if needed)
++5) Demo (LAST.md + TRACE)
+ 
+ ## Notes / Decisions
+-- Keep implementation stdlib-only Python for portability.
+-- Default smoke execution targets installed binary to catch deployment/runtime issues.
++-
+ 
+ ## Results
+-- Done. Evidence loop is implemented. Local proof run was produced, and gate correctly failed due local Qt/CMake package mismatch (expected behavior for hard gate).
++-
+diff --git a/scripts/verify.ps1 b/scripts/verify.ps1
+index 449078d..bc5fc3e 100644
+--- a/scripts/verify.ps1
++++ b/scripts/verify.ps1
+@@ -26,7 +26,8 @@ $cmd = @(
+   "--build", (Join-Path $Root "build_verify"),
+   "--install-prefix", (Join-Path $Root "dist"),
+   "--artifacts-root", (Join-Path $Root "artifacts\verify"),
+-  "--config", $Configuration
++  "--config", $Configuration,
++  "--cmake-arg=-DCTCP_ENABLE_GUI=OFF"
+ )
+ 
+ if ($env:VERIFY_SMOKE_CMD) {
+diff --git a/scripts/verify.sh b/scripts/verify.sh
+index 55b270f..1152657 100644
+--- a/scripts/verify.sh
++++ b/scripts/verify.sh
+@@ -27,6 +27,7 @@ cmd=(
+   --install-prefix "${ROOT}/dist"
+   --artifacts-root "${ROOT}/artifacts/verify"
+   --config "Release"
++  --cmake-arg=-DCTCP_ENABLE_GUI=OFF
+ )
+ 
+ if [[ -n "${VERIFY_SMOKE_CMD:-}" ]]; then
+diff --git a/scripts/verify_repo.ps1 b/scripts/verify_repo.ps1
+index daa5cc1..5bc8229 100644
+--- a/scripts/verify_repo.ps1
++++ b/scripts/verify_repo.ps1
+@@ -1,12 +1,17 @@
+ Param(
+-  [string]$Configuration = "Release"
++  [string]$Configuration = "Release",
++  [switch]$Full
+ )
+ 
+ $ErrorActionPreference = "Stop"
+ $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
+-$BuildDir = Join-Path $Root "build"
++$BuildDirLite = Join-Path $Root "build_lite"
++$RunFull = $Full -or ($env:CTCP_FULL_GATE -eq "1")
++$ModeName = "LITE"
++if ($RunFull) { $ModeName = "FULL" }
+ 
+ Write-Host "[verify_repo] repo root: $Root"
++Write-Host "[verify_repo] mode: $ModeName"
+ 
+ function Invoke-ExternalChecked {
+   param(
+@@ -33,44 +38,6 @@ function Invoke-Step {
+   & $Block
+ }
+ 
+-function Get-Qt6ConfigDir {
+-  if ($env:Qt6_DIR) {
+-    $direct = Join-Path $env:Qt6_DIR "Qt6Config.cmake"
+-    if (Test-Path $direct) { return $env:Qt6_DIR }
+-  }
+-
+-  if ($env:CMAKE_PREFIX_PATH) {
+-    $prefixes = $env:CMAKE_PREFIX_PATH -split ';'
+-    foreach ($p in $prefixes) {
+-      if (-not [string]::IsNullOrWhiteSpace($p)) {
+-        $cands = @(
+-          $p,
+-          (Join-Path $p "lib/cmake/Qt6"),
+-          (Join-Path $p "cmake/Qt6")
+-        )
+-        foreach ($c in $cands) {
+-          if (Test-Path (Join-Path $c "Qt6Config.cmake")) { return $c }
+-        }
+-      }
+-    }
+-  }
+-
+-  if (Get-Command qmake -ErrorAction SilentlyContinue) {
+-    $qtPrefix = (& qmake -query QT_INSTALL_PREFIX 2>$null).Trim()
+-    if ($qtPrefix) {
+-      $cands = @(
+-        (Join-Path $qtPrefix "lib/cmake/Qt6"),
+-        (Join-Path $qtPrefix "cmake/Qt6")
+-      )
+-      foreach ($c in $cands) {
+-        if (Test-Path (Join-Path $c "Qt6Config.cmake")) { return $c }
+-      }
+-    }
+-  }
+-
+-  return $null
+-}
+-
+ function Get-CmakeExe {
+   $cmd = Get-Command cmake -ErrorAction SilentlyContinue
+   if ($cmd) { return $cmd.Source }
+@@ -84,90 +51,61 @@ function Get-CmakeExe {
+   return $null
+ }
+ 
+-# 1) Build (best-effort)
+ $CmakeExe = Get-CmakeExe
+ if ($CmakeExe) {
+-  $Qt6ConfigDir = Get-Qt6ConfigDir
+-  if ($Qt6ConfigDir) {
+-    Write-Host "[verify_repo] Qt6 config detected: $Qt6ConfigDir"
+-    Invoke-Step -Name "cmake configure" -Block {
+-      Invoke-ExternalChecked -Label "cmake configure" -Command {
+-        & $CmakeExe -S $Root -B $BuildDir -DCMAKE_BUILD_TYPE=$Configuration "-DCMAKE_PREFIX_PATH=$Qt6ConfigDir"
+-      }
+-    }
+-    Invoke-Step -Name "cmake build" -Block {
+-      Invoke-ExternalChecked -Label "cmake build" -Command {
+-        & $CmakeExe --build $BuildDir --config $Configuration
+-      }
++  Invoke-Step -Name "cmake configure (headless lite)" -Block {
++    Invoke-ExternalChecked -Label "cmake configure (headless lite)" -Command {
++      & $CmakeExe -S $Root -B $BuildDirLite -DCMAKE_BUILD_TYPE=$Configuration "-DCTCP_ENABLE_GUI=OFF"
+     }
+-
+-    $CTestFile = Join-Path $BuildDir "CTestTestfile.cmake"
+-    if ((Test-Path $CTestFile) -and (Get-Command ctest -ErrorAction SilentlyContinue)) {
+-      Invoke-Step -Name "ctest" -Block {
+-        Invoke-ExternalChecked -Label "ctest" -Command {
+-          ctest --test-dir $BuildDir --output-on-failure
+-        }
+-      }
+-    } else {
+-      Write-Host "[verify_repo] no tests detected (skipping ctest)"
+-    }
+-  } else {
+-    Write-Host "[verify_repo] Qt6 SDK not found; skipping C++ build"
+   }
+-} else {
+-  Write-Host "[verify_repo] cmake not found; skipping C++ build"
+-}
+-
+-# 2) Web build (best-effort)
+-$WebPkg = Join-Path $Root "web\package.json"
+-if (Test-Path $WebPkg) {
+-  Write-Host "[verify_repo] web/package.json detected"
+-  if (Get-Command npm -ErrorAction SilentlyContinue) {
+-    Push-Location (Join-Path $Root "web")
+-    if (Test-Path "package-lock.json") {
+-      Invoke-ExternalChecked -Label "npm ci" -Command { npm ci }
+-    } else {
+-      Invoke-ExternalChecked -Label "npm install" -Command { npm install }
++  Invoke-Step -Name "cmake build (headless lite)" -Block {
++    Invoke-ExternalChecked -Label "cmake build (headless lite)" -Command {
++      & $CmakeExe --build $BuildDirLite --config $Configuration
+     }
+-    node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.build ? 0 : 1)"
+-    if ($LASTEXITCODE -eq 0) {
+-      Invoke-ExternalChecked -Label "npm run build" -Command { npm run build }
+-    } else {
+-      Write-Host "[verify_repo] no npm build script (skipping)"
++  }
++  if ((Test-Path (Join-Path $BuildDirLite "CTestTestfile.cmake")) -and (Get-Command ctest -ErrorAction SilentlyContinue)) {
++    Invoke-Step -Name "ctest lite" -Block {
++      Invoke-ExternalChecked -Label "ctest lite" -Command {
++        ctest --test-dir $BuildDirLite --output-on-failure -C $Configuration -R "headless_smoke|verify_tools_selftest"
++      }
+     }
+-    Pop-Location
+   } else {
+-    Write-Host "[verify_repo] npm not found; skipping web build"
++    Write-Host "[verify_repo] no tests detected in lite build (skip ctest)"
+   }
+ } else {
+-  Write-Host "[verify_repo] no web frontend detected (web/package.json missing)"
++  Write-Host "[verify_repo] cmake not found; skipping headless build"
+ }
+ 
+-# 3) Workflow checks (hard)
+ Invoke-Step -Name "workflow gate (workflow checks)" -Block {
+   Invoke-ExternalChecked -Label "workflow gate (workflow checks)" -Command { python scripts\workflow_checks.py }
+ }
+ 
+-# 4) Contract checks (hard)
+ Invoke-Step -Name "contract checks" -Block {
+   Invoke-ExternalChecked -Label "contract checks" -Command { python scripts\contract_checks.py }
+ }
+ 
+-# 5) Sync doc links (hard)
+ Invoke-Step -Name "doc index check (sync doc links --check)" -Block {
+   Invoke-ExternalChecked -Label "doc index check (sync doc links --check)" -Command {
+     python scripts\sync_doc_links.py --check
+   }
+ }
+ 
+-# 6) Tests (optional)
+-$TestAll = Join-Path $Root "scripts\test_all.ps1"
+-if (Test-Path $TestAll) {
+-  Invoke-Step -Name "tests" -Block {
+-    Invoke-ExternalChecked -Label "tests" -Command { powershell -ExecutionPolicy Bypass -File $TestAll }
++Invoke-Step -Name "lite scenario replay" -Block {
++  Invoke-ExternalChecked -Label "lite scenario replay" -Command {
++    python simlab\run.py --suite lite --runs-root tests\fixtures\adlc_forge_full_bundle\runs\simlab_lite_runs --json-out tests\fixtures\adlc_forge_full_bundle\runs\_simlab_lite_summary.json
++  }
++}
++
++if ($RunFull) {
++  Write-Host "[verify_repo] FULL mode enabled via --Full / CTCP_FULL_GATE=1"
++  $TestAll = Join-Path $Root "scripts\test_all.ps1"
++  if (Test-Path $TestAll) {
++    Invoke-Step -Name "tests (full)" -Block {
++      Invoke-ExternalChecked -Label "tests (full)" -Command { powershell -ExecutionPolicy Bypass -File $TestAll }
++    }
++  } else {
++    Write-Host "[verify_repo] tests (full): scripts/test_all.ps1 not found (skip)"
+   }
+-} else {
+-  Write-Host "[verify_repo] tests: scripts/test_all.ps1 not found (skip)"
+ }
+ 
+ Write-Host "[verify_repo] OK"
+diff --git a/scripts/verify_repo.sh b/scripts/verify_repo.sh
+index f0a0892..2eb0413 100644
+--- a/scripts/verify_repo.sh
++++ b/scripts/verify_repo.sh
+@@ -2,100 +2,58 @@
+ set -euo pipefail
+ 
+ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+-BUILD_DIR="${ROOT}/build"
++BUILD_DIR_LITE="${ROOT}/build_lite"
++MODE="${CTCP_FULL_GATE:-0}"
++if [[ "${1:-}" == "--full" ]]; then
++  MODE="1"
++fi
+ 
+ echo "[verify_repo] repo root: ${ROOT}"
+-
+-find_qt6_config_dir() {
+-  if [[ -n "${Qt6_DIR:-}" && -f "${Qt6_DIR}/Qt6Config.cmake" ]]; then
+-    echo "${Qt6_DIR}"
+-    return 0
+-  fi
+-
+-  if [[ -n "${CMAKE_PREFIX_PATH:-}" ]]; then
+-    IFS=':' read -r -a prefixes <<< "${CMAKE_PREFIX_PATH}"
+-    for p in "${prefixes[@]}"; do
+-      [[ -z "${p}" ]] && continue
+-      for c in "${p}" "${p}/lib/cmake/Qt6" "${p}/cmake/Qt6"; do
+-        if [[ -f "${c}/Qt6Config.cmake" ]]; then
+-          echo "${c}"
+-          return 0
+-        fi
+-      done
+-    done
+-  fi
+-
+-  if command -v qmake >/dev/null 2>&1; then
+-    qt_prefix="$(qmake -query QT_INSTALL_PREFIX 2>/dev/null || true)"
+-    for c in "${qt_prefix}/lib/cmake/Qt6" "${qt_prefix}/cmake/Qt6"; do
+-      if [[ -f "${c}/Qt6Config.cmake" ]]; then
+-        echo "${c}"
+-        return 0
+-      fi
+-    done
+-  fi
+-  return 1
+-}
+-
+-# 1) Build (best-effort)
+-if command -v cmake >/dev/null 2>&1; then
+-  if QT6_CONFIG_DIR="$(find_qt6_config_dir)"; then
+-    echo "[verify_repo] Qt6 config detected: ${QT6_CONFIG_DIR}"
+-    echo "[verify_repo] cmake configure..."
+-    cmake -S "${ROOT}" -B "${BUILD_DIR}" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="${QT6_CONFIG_DIR}"
+-    echo "[verify_repo] cmake build..."
+-    cmake --build "${BUILD_DIR}" --config Release
+-
+-    if [ -f "${BUILD_DIR}/CTestTestfile.cmake" ] && command -v ctest >/dev/null 2>&1; then
+-      echo "[verify_repo] ctest..."
+-      ctest --test-dir "${BUILD_DIR}" --output-on-failure
+-    else
+-      echo "[verify_repo] no tests detected (skipping ctest)"
+-    fi
+-  else
+-    echo "[verify_repo] Qt6 SDK not found; skipping C++ build"
+-  fi
++if [[ "${MODE}" == "1" ]]; then
++  echo "[verify_repo] mode: FULL"
+ else
+-  echo "[verify_repo] cmake not found; skipping C++ build"
++  echo "[verify_repo] mode: LITE"
+ fi
+ 
+-# 2) Web build (best-effort)
+-if [ -f "${ROOT}/web/package.json" ]; then
+-  echo "[verify_repo] web/package.json detected"
+-  if command -v npm >/dev/null 2>&1; then
+-    pushd "${ROOT}/web" >/dev/null
+-    if [ -f package-lock.json ]; then npm ci; else npm install; fi
+-    if node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.build ? 0 : 1)"; then
+-      npm run build
+-    else
+-      echo "[verify_repo] no npm build script (skipping)"
+-    fi
+-    popd >/dev/null
++if command -v cmake >/dev/null 2>&1; then
++  echo "[verify_repo] cmake configure (headless lite)"
++  cmake -S "${ROOT}" -B "${BUILD_DIR_LITE}" -DCMAKE_BUILD_TYPE=Release -DCTCP_ENABLE_GUI=OFF
++  echo "[verify_repo] cmake build (headless lite)"
++  cmake --build "${BUILD_DIR_LITE}" --config Release
++  if [[ -f "${BUILD_DIR_LITE}/CTestTestfile.cmake" ]] && command -v ctest >/dev/null 2>&1; then
++    echo "[verify_repo] ctest lite"
++    ctest --test-dir "${BUILD_DIR_LITE}" --output-on-failure -R "headless_smoke|verify_tools_selftest"
+   else
+-    echo "[verify_repo] npm not found; skipping web build"
++    echo "[verify_repo] no tests detected in lite build (skip ctest)"
+   fi
+ else
+-  echo "[verify_repo] no web frontend detected (web/package.json missing)"
++  echo "[verify_repo] cmake not found; skipping headless build"
+ fi
+ 
+-# 3) Workflow checks (hard)
+ echo "[verify_repo] workflow gate (workflow checks)"
+ python3 "${ROOT}/scripts/workflow_checks.py"
+ 
+-# 4) Contract checks (hard)
+ echo "[verify_repo] contract checks"
+ python3 "${ROOT}/scripts/contract_checks.py"
+ 
+-# 5) Sync doc links (hard)
+ echo "[verify_repo] doc index check (sync doc links --check)"
+ python3 "${ROOT}/scripts/sync_doc_links.py" --check
+ 
+-# 6) Tests (optional but recommended)
+-if [ -f "${ROOT}/scripts/test_all.sh" ]; then
+-  echo "[verify_repo] tests"
+-  bash "${ROOT}/scripts/test_all.sh"
+-else
+-  echo "[verify_repo] tests: scripts/test_all.sh not found (skip)"
++echo "[verify_repo] lite scenario replay"
++python3 "${ROOT}/simlab/run.py" \
++  --suite lite \
++  --runs-root "${ROOT}/tests/fixtures/adlc_forge_full_bundle/runs/simlab_lite_runs" \
++  --json-out "${ROOT}/tests/fixtures/adlc_forge_full_bundle/runs/_simlab_lite_summary.json"
++
++if [[ "${MODE}" == "1" ]]; then
++  echo "[verify_repo] FULL mode enabled"
++  if [[ -f "${ROOT}/scripts/test_all.sh" ]]; then
++    echo "[verify_repo] tests (full)"
++    bash "${ROOT}/scripts/test_all.sh"
++  else
++    echo "[verify_repo] tests (full): scripts/test_all.sh not found (skip)"
++  fi
+ fi
+ 
+ echo "[verify_repo] OK"
++
+diff --git a/simlab/run.py b/simlab/run.py
+index 2825795..f1267ea 100644
+--- a/simlab/run.py
++++ b/simlab/run.py
+@@ -339,7 +339,7 @@ def load_scenarios(suite: str) -> list[dict[str, Any]]:
+ 
+ def main() -> int:
+     ap = argparse.ArgumentParser(description="SimLab scene replay runner")
+-    ap.add_argument("--suite", default="all", choices=["all", "core", "integration"])
++    ap.add_argument("--suite", default="all", choices=["all", "lite", "core", "integration"])
+     ap.add_argument("--runs-root", default=str(DEFAULT_RUNS_ROOT))
+     ap.add_argument("--json-out", default="")
+     args = ap.parse_args()
+diff --git a/tools/run_verify.py b/tools/run_verify.py
+index f156aec..5afdec5 100644
+--- a/tools/run_verify.py
++++ b/tools/run_verify.py
+@@ -190,7 +190,7 @@ def main() -> int:
+     ap.add_argument("--ctest-arg", action="append", default=[])
+     ap.add_argument("--smoke-cmd", default="")
+     ap.add_argument("--smoke-prefix", default="")
+-    ap.add_argument("--smoke-bin", default="ctcp")
++    ap.add_argument("--smoke-bin", default="ctcp_headless")
+     ap.add_argument("--skip-install", action="store_true")
+     ap.add_argument("--skip-smoke", action="store_true")
+     args = ap.parse_args()
+warning: in the working copy of 'BUILD.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'CMakeLists.txt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/03_quality_gates.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/adlc_pipeline.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/verify_contract.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'meta/tasks/CURRENT.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/verify.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/verify.sh', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/verify_repo.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/verify_repo.sh', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'simlab/run.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tools/run_verify.py', LF will be replaced by CRLF the next time Git touches it

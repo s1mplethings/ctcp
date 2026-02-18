@@ -1,0 +1,1413 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 3f60047..f5924d1 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -4,85 +4,101 @@ project(ctcp LANGUAGES CXX)
+ 
+ set(CMAKE_CXX_STANDARD 17)
+ set(CMAKE_CXX_STANDARD_REQUIRED ON)
+-set(CMAKE_AUTOMOC ON)
+ include(CTest)
+ include(GNUInstallDirs)
+ 
+-# Try Qt 6 first, fall back to Qt 5 if necessary.
+-find_package(Qt6 COMPONENTS Widgets WebEngineWidgets WebChannel QUIET)
+-if(Qt6_FOUND)
+-  set(QT_PREFIX Qt6)
+-else()
+-  find_package(Qt5 COMPONENTS Widgets WebEngineWidgets WebChannel REQUIRED)
+-  set(QT_PREFIX Qt5)
+-endif()
++option(CTCP_ENABLE_GUI "Build Qt GUI example target" OFF)
+ 
+-set(SRC
+-    src/main.cpp
+-    src/MainWindow.cpp
+-    src/ProjectScanner.cpp
+-    src/SpecExtractor.cpp
+-    src/SchemaLoader.cpp
+-    src/MetaStore.cpp
+-    src/RunLoader.cpp
+-    src/GraphBuilder.cpp
+-    src/Bridge.cpp
+-    src/FileIndexer.cpp
+-    src/LayoutEngine.cpp
+-    src/DocPreviewer.cpp
+-    src/sddai_bridge.cpp
+-    src/preview_window.cpp
+-)
++if(CTCP_ENABLE_GUI)
++  set(CMAKE_AUTOMOC ON)
++  # GUI example target (optional).
++  find_package(Qt6 COMPONENTS Widgets WebEngineWidgets WebChannel QUIET)
++  if(Qt6_FOUND)
++    set(QT_PREFIX Qt6)
++  else()
++    find_package(Qt5 COMPONENTS Widgets WebEngineWidgets WebChannel REQUIRED)
++    set(QT_PREFIX Qt5)
++  endif()
+ 
+-set(HDR
+-    include/MainWindow.h
+-    include/ProjectScanner.h
+-    include/SpecExtractor.h
+-    include/SchemaLoader.h
+-    include/MetaStore.h
+-    include/RunLoader.h
+-    include/GraphBuilder.h
+-    include/Bridge.h
+-    include/GraphTypes.h
+-    include/FileIndexer.h
+-    include/LayoutEngine.h
+-    include/DocPreviewer.h
+-    src/sddai_bridge.h
+-    src/preview_window.h
+-)
++  set(GUI_SRC
++      src/main.cpp
++      src/MainWindow.cpp
++      src/ProjectScanner.cpp
++      src/SpecExtractor.cpp
++      src/SchemaLoader.cpp
++      src/MetaStore.cpp
++      src/RunLoader.cpp
++      src/GraphBuilder.cpp
++      src/Bridge.cpp
++      src/FileIndexer.cpp
++      src/LayoutEngine.cpp
++      src/DocPreviewer.cpp
++      src/sddai_bridge.cpp
++      src/preview_window.cpp
++  )
+ 
+-if(QT_PREFIX STREQUAL "Qt6")
+-  qt_add_resources(QRC resources/app.qrc)
+-else()
+-  qt5_add_resources(QRC resources/app.qrc)
+-endif()
++  set(GUI_HDR
++      include/MainWindow.h
++      include/ProjectScanner.h
++      include/SpecExtractor.h
++      include/SchemaLoader.h
++      include/MetaStore.h
++      include/RunLoader.h
++      include/GraphBuilder.h
++      include/Bridge.h
++      include/GraphTypes.h
++      include/FileIndexer.h
++      include/LayoutEngine.h
++      include/DocPreviewer.h
++      src/sddai_bridge.h
++      src/preview_window.h
++  )
++
++  if(QT_PREFIX STREQUAL "Qt6")
++    qt_add_resources(QRC resources/app.qrc)
++  else()
++    qt5_add_resources(QRC resources/app.qrc)
++  endif()
+ 
+-add_executable(${PROJECT_NAME} ${SRC} ${HDR} ${QRC})
++  add_executable(ctcp ${GUI_SRC} ${GUI_HDR} ${QRC})
++  target_include_directories(ctcp PRIVATE include)
++  target_link_libraries(ctcp PRIVATE
++      ${QT_PREFIX}::Widgets
++      ${QT_PREFIX}::WebEngineWidgets
++      ${QT_PREFIX}::WebChannel
++  )
+ 
+-target_include_directories(${PROJECT_NAME} PRIVATE include)
++  if(MSVC)
++    target_compile_options(ctcp PRIVATE /W4 /permissive- /EHsc)
++  else()
++    target_compile_options(ctcp PRIVATE -Wall -Wextra -Wpedantic)
++  endif()
+ 
+-target_link_libraries(${PROJECT_NAME} PRIVATE
+-    ${QT_PREFIX}::Widgets
+-    ${QT_PREFIX}::WebEngineWidgets
+-    ${QT_PREFIX}::WebChannel
+-)
++  install(TARGETS ctcp RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+ 
+-if(MSVC)
+-  target_compile_options(${PROJECT_NAME} PRIVATE /W4 /permissive- /EHsc)
++  if(BUILD_TESTING)
++    add_test(NAME app_smoke COMMAND $<TARGET_FILE:ctcp> --smoke)
++    if(UNIX AND NOT APPLE)
++      set_tests_properties(app_smoke PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
++    endif()
++  endif()
+ else()
+-  target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+-endif()
++  # Headless engine target (default).
++  add_executable(ctcp_headless src/headless_main.cpp)
++  if(MSVC)
++    target_compile_options(ctcp_headless PRIVATE /W4 /permissive- /EHsc)
++  else()
++    target_compile_options(ctcp_headless PRIVATE -Wall -Wextra -Wpedantic)
++  endif()
+ 
+-install(TARGETS ${PROJECT_NAME}
+-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+-)
++  install(TARGETS ctcp_headless RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+ 
+-if(BUILD_TESTING)
+-  add_test(NAME app_smoke COMMAND $<TARGET_FILE:${PROJECT_NAME}> --smoke)
+-  if(UNIX AND NOT APPLE)
+-    set_tests_properties(app_smoke PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
++  if(BUILD_TESTING)
++    add_test(NAME headless_smoke COMMAND $<TARGET_FILE:ctcp_headless> --smoke)
+   endif()
++endif()
+ 
++if(BUILD_TESTING)
+   find_package(Python3 COMPONENTS Interpreter QUIET)
+   if(Python3_Interpreter_FOUND)
+     add_test(
+diff --git a/README.md b/README.md
+index 2c79795..4832645 100644
+--- a/README.md
++++ b/README.md
+@@ -1,17 +1,30 @@
+-# CTCP — Coding Team Control Protocol (Spec-first Autonomous Coding Team)
++# CTCP — ADLC + Multi-Agent Execution Engine
+ 
+-本仓库的目标：把“写代码”变成一条可验证的流水线，让 **AI/agent 像一个项目团队一样持续推进**：
++本仓库核心定位：核心 = ADLC 执行引擎（证据链 + failure bundle），把“项目实现”变成可验证、可回放、可审计的执行闭环。
++- 默认路径是 **headless**（不依赖 GUI/Qt）。
++- GUI 仅作为示例/可视化器，可选开启，不影响核心流程。
++- find = workflow resolver（从本地 `workflow_registry/` + 历史成功记录解析最佳 workflow，不依赖联网检索）。
++- GUI 可选/默认挂起（不影响核心 gate）。
++
++系统目标：
+ - 你只需给一个目标（Goal）
+ - 系统会自动拆解、执行、验收、记录
+ - 只有在 **必须由你决策/提供信息** 时才会提问
+ - 最终给你一份可回放的演示报告（trace + 可复现命令）
+ 
+-> 强约束入口：先读 `AGENTS.md` 和 `ai_context/00_AI_CONTRACT.md`。
++> 强约束入口：先读 `docs/00_CORE.md`、`AGENTS.md`、`ai_context/00_AI_CONTRACT.md`。  
++> 规则冲突时以 `docs/00_CORE.md` 为准。
+ 
+ ---
+ 
+ ## Quick Start
+ 
++最小命令（核心链路）：
++```powershell
++powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
++python scripts\adlc_run.py --goal "your-goal" --force
++```
++
+ 1) 生成任务单（DoD/验收先行）
+ ```powershell
+ python tools\ctcp_assistant.py init-task "your-goal"
+@@ -27,7 +40,12 @@ python tools\ctcp_assistant.py init-externals "your-goal"
+ python tools\ctcp_team.py start "your-goal"
+ ```
+ 
+-4) 验收（必须）：证据闭环 verify（推荐）
++4) 运行 ADLC headless 入口（最小闭环）
++```powershell
++python scripts\adlc_run.py --goal "your-goal" --force
++```
++
++5) 验收（必须）：证据闭环 verify（推荐）
+ ```powershell
+ powershell -ExecutionPolicy Bypass -File scripts\verify.ps1
+ ```
+@@ -36,7 +54,7 @@ powershell -ExecutionPolicy Bypass -File scripts\verify.ps1
+ bash scripts/verify.sh
+ ```
+ 
+-5) 基础仓库门禁（workflow/contract/doc-index）
++6) 基础仓库门禁（Lite 默认；workflow/contract/doc-index + lite scenario）
+ ```powershell
+ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
+ ```
+@@ -61,7 +79,21 @@ bash scripts/verify_repo.sh
+ 
+ ## Build
+ 
+-见 `BUILD.md`。
++默认 headless 构建：
++
++```powershell
++cmake -S . -B build_lite -DCTCP_ENABLE_GUI=OFF
++cmake --build build_lite --config Release
++```
++
++GUI 示例构建（可选）：
++
++```powershell
++cmake -S . -B build_gui -DCTCP_ENABLE_GUI=ON -DCMAKE_PREFIX_PATH="<Qt path>"
++cmake --build build_gui --config Release
++```
++
++更多见 `BUILD.md`。
+ 
+ ---
+ 
+@@ -77,6 +109,7 @@ bash scripts/verify_repo.sh
+ - [BUILD.md](BUILD.md)
+ - [PATCH_README.md](PATCH_README.md)
+ - [TREE.md](TREE.md)
++- [docs/00_CORE.md](docs/00_CORE.md)
+ - [docs/00_overview.md](docs/00_overview.md)
+ - [docs/01_architecture.md](docs/01_architecture.md)
+ - [docs/02_workflow.md](docs/02_workflow.md)
+diff --git a/docs/00_CORE.md b/docs/00_CORE.md
+new file mode 100644
+index 0000000..2e37999
+--- /dev/null
++++ b/docs/00_CORE.md
+@@ -0,0 +1,184 @@
++# CTCP Core Protocol
++
++若本文件与其它文档冲突，以本文件为准。
++
++## 0.1 规范关键字
++
++本文件使用 RFC 风格关键字：
++- `MUST` / `SHALL`：强制要求，不满足即不合规
++- `SHOULD`：强建议，允许有限例外但必须记录原因
++- `MAY`：可选项
++
++## 0. 北极星定义
++
++CTCP 的核心不是 GUI。CTCP 的核心是一个可执行、可验收、可迭代的工程执行机：
++
++- 以 ADLC 作为契约化流水线：`doc -> analysis -> find -> plan -> build/verify -> contrast -> fix -> deploy/merge`
++- 以 `workflow_registry` + resolver(`find`) 作为“复用最佳流程”的更新机制
++- 以 SimLab（回放/验收/证据链）作为“可运行的证明”
++- 以 failure bundle 作为“失败的唯一事实来源”
++- GUI 仅作为可选示例/可视化器，不属于默认构建/默认验收链路
++
++## 1. 术语与边界
++
++### 1.1 ADLC 流程（唯一权威执行链）
++
++`doc -> analysis -> find -> plan -> [build <-> verify] -> contrast -> fix -> deploy/merge`
++
++### 1.2 Find 的真实含义（非常重要）
++
++- find 不是上网找资料
++- find 是 Workflow Resolver：从已有流程库/历史成功记录中，挑选最适合当前 goal 的现成 workflow（recipe）作为依赖来执行
++- Web 只能作为更新流程库的离线输入，不允许成为主链路硬依赖
++
++### 1.3 GUI 的定位
++
++GUI（Qt/Cytoscape）用于：
++- 展示工程结构示例（docs/specs/modules/contracts/gates/runs）
++- 可选可视化 runs、graph、流程关系
++
++GUI 默认不参与：
++- `verify_repo` 默认 gate
++- Lite scenarios
++- 核心 runner 执行链
++
++## 2. 仓库结构约定（AI 必须遵守）
++
++### 2.1 核心目录
++
++- `workflow_registry/`: 流程库（find 的主要输入）
++- `scripts/`: 入口脚本（workflow dispatch、verify）
++- `simlab/`: 最小回放/验收框架（scenarios + run engine）
++- `runs/` 或 `simlab/_runs/`: 所有执行产物（TRACE、bundle、events）
++- `meta/`: 工程关系/视图/配置
++- `specs/`: 契约与 schema
++- `docs/`: 核心规则与 DoD
++
++### 2.2 运行产物目录（固定）
++
++每次运行 `MUST` 写入：
++- `simlab/_runs/<run_id>/TRACE.md`
++- `simlab/_runs/<run_id>/artifacts/`
++
++失败时 `MUST` 写入：
++- `simlab/_runs/<run_id>/failure_bundle.zip`
++
++## 3. 核心不变量（任何 agent 不得违反）
++
++- Doc-first：任何实质改动前 `MUST` 读取 `docs/00_CORE.md` + `AGENTS.md` + 相关 specs
++- 默认 headless：默认验收 `SHALL` 不依赖 GUI/Qt
++- 最小变更：修复 `SHALL` 只针对失败证据，禁止顺手重构
++- 失败唯一事实源：Fixer `MUST` 只依据 `failure_bundle.zip`
++- 交付可应用：补丁 `MUST` 为 unified diff（`diff.patch` 可 `git apply`）
++- find 可消费：find 输出 `MUST` 结构化，plan `MUST` 消费它
++- 两级 gate：默认 `SHALL` 只跑 Lite；Full `MUST` 显式开启
++
++## 4. 执行角色（多 agent 最小组织）
++
++可单 agent 实现，但接口输出需兼容以下角色：
++
++- DocGatekeeper: `artifacts/guardrails.md`
++- Analyzer: `artifacts/analysis.md`
++- Resolver(Find): `artifacts/find_result.json`
++- Planner: `artifacts/PLAN.md`
++- PatchMaker: `artifacts/diff.patch`
++- Verifier: `TRACE.md` + `artifacts/verify_report.md`
++- Fixer: 输入 `failure_bundle.zip`，输出新 `diff.patch`
++- ReleaseReporter: `artifacts/release_report.md`
++
++## 5. 每一步必须输入/输出（MUST）
++
++### 5.1 doc
++- 输入：repo tree、`docs/00_CORE.md`、`AGENTS.md`、相关 specs
++- 输出：`artifacts/guardrails.md`
++- 判定：未生成 guardrails 直接 FAIL
++
++### 5.2 analysis
++- 输入：goal + guardrails + 关键文件摘要
++- 输出：`artifacts/analysis.md`
++- 判定：只做问题定义/约束确认，不写大段计划细节
++
++### 5.3 find（Resolver）
++- 输入：goal + analysis + `workflow_registry/index.json` + 历史成功记录
++- 输出：`artifacts/find_result.json`
++- 最小字段：
++  - `selected_workflow_id`
++  - `selected_version`
++  - `params`
++  - `top_candidates`(<=3)
++  - `decision`
++- 判定：找不到 workflow 时必须输出 `selected_workflow_id=null`，并在 plan 走 fallback minimal workflow
++
++### 5.4 plan
++- 输入：`find_result.json` + guardrails + analysis
++- 输出：`artifacts/PLAN.md`
++- 必须包含：workflow id/version、参数填充、gates、预计改动路径
++
++### 5.5 build <-> verify
++- 输入：`PLAN.md` + repo state
++- 输出：`TRACE.md` + `artifacts/verify_report.md`
++- 失败：必须产出 `failure_bundle.zip` 并进入 contrast/fix
++
++### 5.6 contrast -> fix
++- 输入（唯一可信）：`failure_bundle.zip`
++- 输出：新 `diff.patch`，可选 `artifacts/fix_notes.md`
++- 判定：修复后必须重新 build/verify，直到 Lite gate 绿或预算耗尽
++
++### 5.7 deploy/merge
++- 输入：最后一次 PASS verify_report + diff.patch
++- 输出：`artifacts/release_report.md`
++
++## 6. Workflow Registry（find 核心依赖）
++
++### 6.1 目录规范
++- `workflow_registry/<workflow_id>/recipe.yaml` 需声明：输入/输出/steps/gates/cost hints
++- `workflow_registry/index.json` 需支持：tags、supported goals、dependency level、last_known_good
++
++### 6.2 Fallback Minimal Workflow（保底）
++
++必须存在最小 workflow（例如 `wf_minimal_patch_verify`）：
++- 只做：plan -> patch -> Lite verify -> 证据打包
++- 目标：find 找不到时仍可继续执行而不阻塞
++
++## 7. SimLab（证据链规则）
++
++### 7.1 最小 step 类型（MVP）
++- `run`
++- `write`
++- `expect_path`
++- `expect_text`
++- 可选：`expect_bundle`
++
++### 7.2 TRACE.md 必须记录
++- 每一步命令、cwd、返回码
++- stdout/stderr 摘要
++- 关键产物路径
++
++### 7.3 failure_bundle.zip 最小内容
++- `TRACE.md`
++- `diff.patch`（若有）
++- `logs/*`
++- `snapshot/*`（至少关键文件/目录快照）
++
++## 8. Gate Matrix（默认 Lite，Full 可选）
++
++### 8.1 Lite（默认必须）
++- headless build（不需要 Qt）
++- 跑 1~2 个最小 scenario（如 `S01_init_task` / `S02_doc_first_gate`）
++- 输出 TRACE 与 verify_report
++
++### 8.2 Full（显式开启）
++- GUI build（仅 `CTCP_ENABLE_GUI=ON` 且依赖满足）
++- 更完整 scenarios 与更严格检查
++
++## 9. GUI 挂起策略（可选化原则）
++
++- 构建开关：`CTCP_ENABLE_GUI`（默认 `OFF`）
++- `verify_repo` 默认不触发 GUI
++- 仅在显式要求 GUI 或 Full gate 开启且环境具备 Qt 时，GUI 参与 build/verify
++
++## 10. 核心一句话（系统提示）
++
++- find = 从本地流程库/历史成功中解析并选择 workflow
++- verify = 必须在沙盒里跑出 TRACE
++- fail = 必须产出 failure_bundle，修复只能依据 bundle
+diff --git a/docs/02_workflow.md b/docs/02_workflow.md
+index 704d477..5725474 100644
+--- a/docs/02_workflow.md
++++ b/docs/02_workflow.md
+@@ -1,6 +1,12 @@
+-
+ # 工作流
+ 
++> 规范优先级：若本文件与 `docs/00_CORE.md` 冲突，以 `docs/00_CORE.md` 为准。
++
++## 核心执行链（默认）
++- `doc -> analysis -> find -> plan -> build/verify -> contrast -> fix -> deploy/merge`
++- `find` 的含义是 workflow resolver（从本地流程库/历史成功记录选 recipe），不是上网检索。
++- 默认 headless，GUI 仅可选示例路径，不进入默认验收链路。
++
+ ## 使用流程（用户视角）
+ 1. 打开工程目录
+    - GUI 扫描并识别 SDDAI 结构（docs/specs/scripts/ai_context/runs）
+diff --git a/scripts/adlc_run.py b/scripts/adlc_run.py
+new file mode 100644
+index 0000000..72f4957
+--- /dev/null
++++ b/scripts/adlc_run.py
+@@ -0,0 +1,230 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++import argparse
++import datetime as dt
++import json
++import os
++import shutil
++import subprocess
++import zipfile
++from pathlib import Path
++
++ROOT = Path(__file__).resolve().parents[1]
++
++
++def run_cmd(cmd: list[str], cwd: Path) -> tuple[int, str, str]:
++    p = subprocess.run(
++        cmd,
++        cwd=str(cwd),
++        capture_output=True,
++        text=True,
++        encoding="utf-8",
++        errors="replace",
++    )
++    return p.returncode, p.stdout, p.stderr
++
++
++def write_text(path: Path, text: str) -> None:
++    path.parent.mkdir(parents=True, exist_ok=True)
++    path.write_text(text, encoding="utf-8")
++
++
++def collect_diff(root: Path) -> str:
++    rc, out, err = run_cmd(["git", "diff"], root)
++    _ = rc
++    return out + err
++
++
++def make_bundle(run_dir: Path) -> Path:
++    bundle = run_dir / "failure_bundle.zip"
++    with zipfile.ZipFile(bundle, "w", zipfile.ZIP_DEFLATED) as zf:
++        for p in run_dir.rglob("*"):
++            if p.is_file() and p != bundle:
++                zf.write(p, p.relative_to(run_dir).as_posix())
++    return bundle
++
++
++def main() -> int:
++    ap = argparse.ArgumentParser(description="Headless ADLC runner (doc->plan->patch->verify->bundle).")
++    ap.add_argument("--goal", default="headless-lite")
++    ap.add_argument("--verify-cmd", default="")
++    ap.add_argument("--force", action="store_true")
++    args = ap.parse_args()
++
++    run_id = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
++    run_dir = ROOT / "meta" / "runs" / f"{run_id}-adlc-headless"
++    artifacts_dir = run_dir / "artifacts"
++    logs_dir = run_dir / "logs"
++    trace_path = run_dir / "TRACE.md"
++    write_text(
++        trace_path,
++        "\n".join(
++            [
++                f"# ADLC Run Trace — {run_id}",
++                "",
++                f"- Goal: {args.goal}",
++                "- Pipeline: doc -> plan -> patch -> verify -> bundle",
++                "",
++                "## Steps",
++            ]
++        )
++        + "\n",
++    )
++
++    def append_trace(lines: list[str]) -> None:
++        with trace_path.open("a", encoding="utf-8") as f:
++            f.write("\n".join(lines) + "\n")
++
++    # doc / plan
++    cmd1 = ["python", "tools/ctcp_assistant.py", "init-task", args.goal]
++    if args.force or (ROOT / "meta" / "tasks" / "CURRENT.md").exists():
++        cmd1.append("--force")
++    rc1, out1, err1 = run_cmd(cmd1, ROOT)
++    write_text(logs_dir / "01_init_task.stdout.log", out1)
++    write_text(logs_dir / "01_init_task.stderr.log", err1)
++    append_trace(
++        [
++            "",
++            "### 1) plan",
++            f"- cmd: `{' '.join(cmd1)}`",
++            f"- rc: `{rc1}`",
++        ]
++    )
++    if rc1 != 0:
++        write_text(run_dir / "diff.patch", collect_diff(ROOT))
++        bundle = make_bundle(run_dir)
++        append_trace(["", "## Result", f"- status: fail", f"- bundle: `{bundle.as_posix()}`"])
++        return 1
++
++    # analysis
++    analysis_path = artifacts_dir / "analysis.md"
++    write_text(
++        analysis_path,
++        "\n".join(
++            [
++                "# Analysis",
++                "",
++                f"- Goal: {args.goal}",
++                "- Constraints: default headless, minimal patch, evidence required",
++                "- Risk: verify may fail due to gate or environment drift",
++            ]
++        )
++        + "\n",
++    )
++    append_trace(["", "### 2) analysis", f"- file: `{analysis_path.as_posix()}`", "- rc: `0`"])
++
++    # find (resolver)
++    find_path = artifacts_dir / "find_result.json"
++    cmd_find = ["python", "scripts/resolve_workflow.py", "--goal", args.goal, "--out", str(find_path)]
++    rc_find, out_find, err_find = run_cmd(cmd_find, ROOT)
++    write_text(logs_dir / "02_find.stdout.log", out_find)
++    write_text(logs_dir / "02_find.stderr.log", err_find)
++    append_trace(["", "### 3) find", f"- cmd: `{' '.join(cmd_find)}`", f"- rc: `{rc_find}`"])
++    if rc_find != 0:
++        write_text(run_dir / "diff.patch", collect_diff(ROOT))
++        bundle = make_bundle(run_dir)
++        append_trace(["", "## Result", f"- status: fail", f"- bundle: `{bundle.as_posix()}`"])
++        return 1
++
++    find_doc = json.loads(find_path.read_text(encoding="utf-8"))
++
++    # plan
++    plan_path = artifacts_dir / "PLAN.md"
++    write_text(
++        plan_path,
++        "\n".join(
++            [
++                "# PLAN",
++                "",
++                f"- Workflow: {find_doc.get('selected_workflow_id')}@{find_doc.get('selected_version')}",
++                "- Steps: doc -> analysis -> find -> plan -> verify -> bundle",
++                "- Gate: lite verify_repo + simlab lite",
++                "- Allowed paths: docs/meta/scripts/simlab/workflow_registry",
++            ]
++        )
++        + "\n",
++    )
++    append_trace(["", "### 4) plan", f"- file: `{plan_path.as_posix()}`", "- rc: `0`"])
++
++    # patch (placeholder no-op for now)
++    patch_note = artifacts_dir / "PATCH_PLAN.md"
++    write_text(
++        patch_note,
++        "# Patch Stage\n\n- This minimal runner keeps patch stage as no-op placeholder for now.\n",
++    )
++    append_trace(
++        [
++            "",
++            "### 5) patch",
++            f"- file: `{patch_note.as_posix()}`",
++            "- status: no-op placeholder",
++        ]
++    )
++
++    # verify
++    if args.verify_cmd.strip():
++        verify_cmd = args.verify_cmd.split()
++    else:
++        verify_cmd = ["python", "simlab/run.py", "--suite", "lite"]
++    rc2, out2, err2 = run_cmd(verify_cmd, ROOT)
++    write_text(logs_dir / "03_verify.stdout.log", out2)
++    write_text(logs_dir / "03_verify.stderr.log", err2)
++    verify_report = artifacts_dir / "verify_report.md"
++    write_text(
++        verify_report,
++        "\n".join(
++            [
++                "# Verify Report",
++                "",
++                f"- cmd: `{' '.join(verify_cmd)}`",
++                f"- rc: `{rc2}`",
++                "",
++                "## stdout (tail)",
++                "```",
++                out2[-1000:],
++                "```",
++                "",
++                "## stderr (tail)",
++                "```",
++                err2[-1000:],
++                "```",
++            ]
++        )
++        + "\n",
++    )
++    append_trace(
++        [
++            "",
++            "### 6) verify",
++            f"- cmd: `{' '.join(verify_cmd)}`",
++            f"- rc: `{rc2}`",
++            f"- report: `{verify_report.as_posix()}`",
++        ]
++    )
++    if rc2 != 0:
++        write_text(run_dir / "diff.patch", collect_diff(ROOT))
++        bundle = make_bundle(run_dir)
++        append_trace(["", "## Result", f"- status: fail", f"- bundle: `{bundle.as_posix()}`"])
++        return 1
++
++    append_trace(["", "## Result", "- status: pass"])
++    write_text(
++        run_dir / "RUN.json",
++        json.dumps(
++            {
++                "run_id": run_id,
++                "goal": args.goal,
++                "result": "PASS",
++                "trace": trace_path.as_posix(),
++            },
++            ensure_ascii=False,
++            indent=2,
++        ),
++    )
++    print(f"[adlc_run] run_dir={run_dir.as_posix()}")
++    return 0
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+diff --git a/scripts/resolve_workflow.py b/scripts/resolve_workflow.py
+new file mode 100644
+index 0000000..87f32fa
+--- /dev/null
++++ b/scripts/resolve_workflow.py
+@@ -0,0 +1,140 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++import argparse
++import datetime as dt
++import json
++from pathlib import Path
++from typing import Any
++
++ROOT = Path(__file__).resolve().parents[1]
++INDEX_PATH = ROOT / "workflow_registry" / "index.json"
++DEFAULT_OUT = ROOT / "artifacts" / "find_result.json"
++
++
++def _load_json(path: Path) -> dict[str, Any]:
++    return json.loads(path.read_text(encoding="utf-8"))
++
++
++def _tokenize(text: str) -> list[str]:
++    out = []
++    for part in text.lower().replace("_", "-").split():
++        for p in part.split("-"):
++            p = p.strip()
++            if p:
++                out.append(p)
++    return out
++
++
++def _collect_history(repo: Path) -> dict[str, int]:
++    scores: dict[str, int] = {}
++    roots = [
++        repo / "simlab" / "_runs",
++        repo / "tests" / "fixtures" / "adlc_forge_full_bundle" / "runs" / "simlab_runs",
++    ]
++    for base in roots:
++        if not base.exists():
++            continue
++        for summary in base.rglob("summary.json"):
++            try:
++                doc = _load_json(summary)
++            except Exception:
++                continue
++            passed = int(doc.get("passed", 0))
++            failed = int(doc.get("failed", 0))
++            if passed > 0 and failed == 0:
++                scores["wf_minimal_patch_verify"] = scores.get("wf_minimal_patch_verify", 0) + passed
++    return scores
++
++
++def _score_workflow(wf: dict[str, Any], goal_tokens: list[str], history_score: int) -> tuple[int, dict[str, Any]]:
++    tags = [str(x).lower() for x in wf.get("tags", [])]
++    goals = [str(x).lower() for x in wf.get("supported_goals", [])]
++    dep = str(wf.get("dependency_level", "med")).lower()
++
++    tag_hits = sum(1 for t in goal_tokens if t in tags or t in goals)
++    dep_bonus = {"low": 30, "med": 10, "high": 0}.get(dep, 5)
++    total = tag_hits * 20 + dep_bonus + history_score * 3
++    detail = {"tag_hits": tag_hits, "dependency_level": dep, "history_score": history_score, "total_score": total}
++    return total, detail
++
++
++def resolve(goal: str, repo: Path) -> dict[str, Any]:
++    index = _load_json(INDEX_PATH)
++    workflows = list(index.get("workflows", []))
++    goal_tokens = _tokenize(goal)
++    history = _collect_history(repo)
++
++    ranked: list[dict[str, Any]] = []
++    for wf in workflows:
++        wf_id = str(wf.get("id", ""))
++        score, detail = _score_workflow(wf, goal_tokens, history.get(wf_id, 0))
++        ranked.append(
++            {
++                "id": wf_id,
++                "version": str(wf.get("version", "")),
++                "score": score,
++                "dependency_level": str(wf.get("dependency_level", "med")),
++                "path": str(wf.get("path", "")),
++                "detail": detail,
++            }
++        )
++
++    ranked.sort(key=lambda x: x["score"], reverse=True)
++    selected = ranked[0] if ranked and ranked[0]["score"] > 0 else None
++    if selected is None and workflows:
++        for w in workflows:
++            if str(w.get("id")) == "wf_minimal_patch_verify":
++                selected = {
++                    "id": str(w.get("id")),
++                    "version": str(w.get("version", "")),
++                    "score": 0,
++                    "dependency_level": str(w.get("dependency_level", "low")),
++                    "path": str(w.get("path", "")),
++                    "detail": {"reason": "fallback_minimal_workflow"},
++                }
++                break
++
++    result = {
++        "schema_version": "ctcp-find-result-v1",
++        "generated_at": dt.datetime.now().isoformat(timespec="seconds"),
++        "goal": goal,
++        "selected_workflow_id": selected["id"] if selected else None,
++        "selected_version": selected["version"] if selected else None,
++        "selected_path": selected["path"] if selected else None,
++        "params_schema": {
++            "goal": "string",
++            "constraints": "object",
++            "repo_hints": "object"
++        },
++        "params": {"goal": goal, "constraints": {}, "repo_hints": {"headless_default": True}},
++        "top_candidates": ranked[:3],
++        "decision": {
++            "reason": "prefer local workflow_registry + recent successful runs + low dependency",
++            "history_scores": history,
++            "fallback_used": bool(selected and selected.get("score", 0) == 0),
++        },
++    }
++    return result
++
++
++def main() -> int:
++    ap = argparse.ArgumentParser(description="Resolve the best local workflow from workflow_registry.")
++    ap.add_argument("--goal", required=True)
++    ap.add_argument("--out", default=str(DEFAULT_OUT))
++    ap.add_argument("--repo", default=str(ROOT))
++    args = ap.parse_args()
++
++    repo = Path(args.repo).resolve()
++    out = Path(args.out).resolve()
++    out.parent.mkdir(parents=True, exist_ok=True)
++
++    result = resolve(goal=args.goal, repo=repo)
++    out.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
++    print(f"[resolve_workflow] out={out.as_posix()}")
++    print(f"[resolve_workflow] selected={result['selected_workflow_id']}")
++    return 0
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+diff --git a/scripts/sync_doc_links.py b/scripts/sync_doc_links.py
+index 37a6d33..bccbb0d 100644
+--- a/scripts/sync_doc_links.py
++++ b/scripts/sync_doc_links.py
+@@ -18,6 +18,7 @@ CURATED_DOCS = [
+     "BUILD.md",
+     "PATCH_README.md",
+     "TREE.md",
++    "docs/00_CORE.md",
+     "docs/00_overview.md",
+     "docs/01_architecture.md",
+     "docs/02_workflow.md",
+diff --git a/scripts/verify_repo.ps1 b/scripts/verify_repo.ps1
+index daa5cc1..40bb1eb 100644
+--- a/scripts/verify_repo.ps1
++++ b/scripts/verify_repo.ps1
+@@ -1,12 +1,17 @@
+ Param(
+-  [string]$Configuration = "Release"
++  [string]$Configuration = "Release",
++  [switch]$Full
+ )
+ 
+ $ErrorActionPreference = "Stop"
+ $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
+-$BuildDir = Join-Path $Root "build"
++$BuildDirLite = Join-Path $Root "build_lite"
++$RunFull = $Full -or ($env:CTCP_FULL_GATE -eq "1")
++$ModeName = "LITE"
++if ($RunFull) { $ModeName = "FULL" }
+ 
+ Write-Host "[verify_repo] repo root: $Root"
++Write-Host "[verify_repo] mode: $ModeName"
+ 
+ function Invoke-ExternalChecked {
+   param(
+@@ -33,44 +38,6 @@ function Invoke-Step {
+   & $Block
+ }
+ 
+-function Get-Qt6ConfigDir {
+-  if ($env:Qt6_DIR) {
+-    $direct = Join-Path $env:Qt6_DIR "Qt6Config.cmake"
+-    if (Test-Path $direct) { return $env:Qt6_DIR }
+-  }
+-
+-  if ($env:CMAKE_PREFIX_PATH) {
+-    $prefixes = $env:CMAKE_PREFIX_PATH -split ';'
+-    foreach ($p in $prefixes) {
+-      if (-not [string]::IsNullOrWhiteSpace($p)) {
+-        $cands = @(
+-          $p,
+-          (Join-Path $p "lib/cmake/Qt6"),
+-          (Join-Path $p "cmake/Qt6")
+-        )
+-        foreach ($c in $cands) {
+-          if (Test-Path (Join-Path $c "Qt6Config.cmake")) { return $c }
+-        }
+-      }
+-    }
+-  }
+-
+-  if (Get-Command qmake -ErrorAction SilentlyContinue) {
+-    $qtPrefix = (& qmake -query QT_INSTALL_PREFIX 2>$null).Trim()
+-    if ($qtPrefix) {
+-      $cands = @(
+-        (Join-Path $qtPrefix "lib/cmake/Qt6"),
+-        (Join-Path $qtPrefix "cmake/Qt6")
+-      )
+-      foreach ($c in $cands) {
+-        if (Test-Path (Join-Path $c "Qt6Config.cmake")) { return $c }
+-      }
+-    }
+-  }
+-
+-  return $null
+-}
+-
+ function Get-CmakeExe {
+   $cmd = Get-Command cmake -ErrorAction SilentlyContinue
+   if ($cmd) { return $cmd.Source }
+@@ -84,90 +51,73 @@ function Get-CmakeExe {
+   return $null
+ }
+ 
+-# 1) Build (best-effort)
++function Get-CtestExe {
++  $cmd = Get-Command ctest -ErrorAction SilentlyContinue
++  if ($cmd) { return $cmd.Source }
++  $cm = Get-CmakeExe
++  if ($cm) {
++    $cand = Join-Path (Split-Path -Parent $cm) "ctest.exe"
++    if (Test-Path $cand) { return $cand }
++  }
++  return $null
++}
++
+ $CmakeExe = Get-CmakeExe
++$CtestExe = Get-CtestExe
+ if ($CmakeExe) {
+-  $Qt6ConfigDir = Get-Qt6ConfigDir
+-  if ($Qt6ConfigDir) {
+-    Write-Host "[verify_repo] Qt6 config detected: $Qt6ConfigDir"
+-    Invoke-Step -Name "cmake configure" -Block {
+-      Invoke-ExternalChecked -Label "cmake configure" -Command {
+-        & $CmakeExe -S $Root -B $BuildDir -DCMAKE_BUILD_TYPE=$Configuration "-DCMAKE_PREFIX_PATH=$Qt6ConfigDir"
+-      }
+-    }
+-    Invoke-Step -Name "cmake build" -Block {
+-      Invoke-ExternalChecked -Label "cmake build" -Command {
+-        & $CmakeExe --build $BuildDir --config $Configuration
+-      }
++  Invoke-Step -Name "cmake configure (headless lite)" -Block {
++    Invoke-ExternalChecked -Label "cmake configure (headless lite)" -Command {
++      & $CmakeExe -S $Root -B $BuildDirLite -DCMAKE_BUILD_TYPE=$Configuration "-DCTCP_ENABLE_GUI=OFF" "-DBUILD_TESTING=ON"
+     }
+-
+-    $CTestFile = Join-Path $BuildDir "CTestTestfile.cmake"
+-    if ((Test-Path $CTestFile) -and (Get-Command ctest -ErrorAction SilentlyContinue)) {
+-      Invoke-Step -Name "ctest" -Block {
+-        Invoke-ExternalChecked -Label "ctest" -Command {
+-          ctest --test-dir $BuildDir --output-on-failure
+-        }
+-      }
+-    } else {
+-      Write-Host "[verify_repo] no tests detected (skipping ctest)"
+-    }
+-  } else {
+-    Write-Host "[verify_repo] Qt6 SDK not found; skipping C++ build"
+   }
+-} else {
+-  Write-Host "[verify_repo] cmake not found; skipping C++ build"
+-}
+-
+-# 2) Web build (best-effort)
+-$WebPkg = Join-Path $Root "web\package.json"
+-if (Test-Path $WebPkg) {
+-  Write-Host "[verify_repo] web/package.json detected"
+-  if (Get-Command npm -ErrorAction SilentlyContinue) {
+-    Push-Location (Join-Path $Root "web")
+-    if (Test-Path "package-lock.json") {
+-      Invoke-ExternalChecked -Label "npm ci" -Command { npm ci }
+-    } else {
+-      Invoke-ExternalChecked -Label "npm install" -Command { npm install }
++  Invoke-Step -Name "cmake build (headless lite)" -Block {
++    Invoke-ExternalChecked -Label "cmake build (headless lite)" -Command {
++      & $CmakeExe --build $BuildDirLite --config $Configuration
+     }
+-    node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.build ? 0 : 1)"
+-    if ($LASTEXITCODE -eq 0) {
+-      Invoke-ExternalChecked -Label "npm run build" -Command { npm run build }
+-    } else {
+-      Write-Host "[verify_repo] no npm build script (skipping)"
++  }
++  if ((Test-Path (Join-Path $BuildDirLite "CTestTestfile.cmake")) -and $CtestExe) {
++    Invoke-Step -Name "ctest lite" -Block {
++      Invoke-ExternalChecked -Label "ctest lite" -Command {
++        & $CtestExe --test-dir $BuildDirLite --output-on-failure -C $Configuration -R "headless_smoke|verify_tools_selftest"
++      }
+     }
+-    Pop-Location
+   } else {
+-    Write-Host "[verify_repo] npm not found; skipping web build"
++    Write-Host "[verify_repo] no tests detected or ctest missing in lite build (skip ctest)"
+   }
+ } else {
+-  Write-Host "[verify_repo] no web frontend detected (web/package.json missing)"
++  Write-Host "[verify_repo] cmake not found; skipping headless build"
+ }
+ 
+-# 3) Workflow checks (hard)
+ Invoke-Step -Name "workflow gate (workflow checks)" -Block {
+   Invoke-ExternalChecked -Label "workflow gate (workflow checks)" -Command { python scripts\workflow_checks.py }
+ }
+ 
+-# 4) Contract checks (hard)
+ Invoke-Step -Name "contract checks" -Block {
+   Invoke-ExternalChecked -Label "contract checks" -Command { python scripts\contract_checks.py }
+ }
+ 
+-# 5) Sync doc links (hard)
+ Invoke-Step -Name "doc index check (sync doc links --check)" -Block {
+   Invoke-ExternalChecked -Label "doc index check (sync doc links --check)" -Command {
+     python scripts\sync_doc_links.py --check
+   }
+ }
+ 
+-# 6) Tests (optional)
+-$TestAll = Join-Path $Root "scripts\test_all.ps1"
+-if (Test-Path $TestAll) {
+-  Invoke-Step -Name "tests" -Block {
+-    Invoke-ExternalChecked -Label "tests" -Command { powershell -ExecutionPolicy Bypass -File $TestAll }
++Invoke-Step -Name "lite scenario replay" -Block {
++  Invoke-ExternalChecked -Label "lite scenario replay" -Command {
++    python simlab\run.py --suite lite --runs-root tests\fixtures\adlc_forge_full_bundle\runs\simlab_lite_runs --json-out tests\fixtures\adlc_forge_full_bundle\runs\_simlab_lite_summary.json
++  }
++}
++
++if ($RunFull) {
++  Write-Host "[verify_repo] FULL mode enabled via --Full / CTCP_FULL_GATE=1"
++  $TestAll = Join-Path $Root "scripts\test_all.ps1"
++  if (Test-Path $TestAll) {
++    Invoke-Step -Name "tests (full)" -Block {
++      Invoke-ExternalChecked -Label "tests (full)" -Command { powershell -ExecutionPolicy Bypass -File $TestAll }
++    }
++  } else {
++    Write-Host "[verify_repo] tests (full): scripts/test_all.ps1 not found (skip)"
+   }
+-} else {
+-  Write-Host "[verify_repo] tests: scripts/test_all.ps1 not found (skip)"
+ }
+ 
+ Write-Host "[verify_repo] OK"
+diff --git a/scripts/verify_repo.sh b/scripts/verify_repo.sh
+index f0a0892..0eaba58 100644
+--- a/scripts/verify_repo.sh
++++ b/scripts/verify_repo.sh
+@@ -2,100 +2,64 @@
+ set -euo pipefail
+ 
+ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+-BUILD_DIR="${ROOT}/build"
++BUILD_DIR_LITE="${ROOT}/build_lite"
++CTEST_EXE=""
++MODE="${CTCP_FULL_GATE:-0}"
++if [[ "${1:-}" == "--full" ]]; then
++  MODE="1"
++fi
+ 
+ echo "[verify_repo] repo root: ${ROOT}"
+-
+-find_qt6_config_dir() {
+-  if [[ -n "${Qt6_DIR:-}" && -f "${Qt6_DIR}/Qt6Config.cmake" ]]; then
+-    echo "${Qt6_DIR}"
+-    return 0
+-  fi
+-
+-  if [[ -n "${CMAKE_PREFIX_PATH:-}" ]]; then
+-    IFS=':' read -r -a prefixes <<< "${CMAKE_PREFIX_PATH}"
+-    for p in "${prefixes[@]}"; do
+-      [[ -z "${p}" ]] && continue
+-      for c in "${p}" "${p}/lib/cmake/Qt6" "${p}/cmake/Qt6"; do
+-        if [[ -f "${c}/Qt6Config.cmake" ]]; then
+-          echo "${c}"
+-          return 0
+-        fi
+-      done
+-    done
+-  fi
+-
+-  if command -v qmake >/dev/null 2>&1; then
+-    qt_prefix="$(qmake -query QT_INSTALL_PREFIX 2>/dev/null || true)"
+-    for c in "${qt_prefix}/lib/cmake/Qt6" "${qt_prefix}/cmake/Qt6"; do
+-      if [[ -f "${c}/Qt6Config.cmake" ]]; then
+-        echo "${c}"
+-        return 0
+-      fi
+-    done
+-  fi
+-  return 1
+-}
+-
+-# 1) Build (best-effort)
+-if command -v cmake >/dev/null 2>&1; then
+-  if QT6_CONFIG_DIR="$(find_qt6_config_dir)"; then
+-    echo "[verify_repo] Qt6 config detected: ${QT6_CONFIG_DIR}"
+-    echo "[verify_repo] cmake configure..."
+-    cmake -S "${ROOT}" -B "${BUILD_DIR}" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="${QT6_CONFIG_DIR}"
+-    echo "[verify_repo] cmake build..."
+-    cmake --build "${BUILD_DIR}" --config Release
+-
+-    if [ -f "${BUILD_DIR}/CTestTestfile.cmake" ] && command -v ctest >/dev/null 2>&1; then
+-      echo "[verify_repo] ctest..."
+-      ctest --test-dir "${BUILD_DIR}" --output-on-failure
+-    else
+-      echo "[verify_repo] no tests detected (skipping ctest)"
+-    fi
+-  else
+-    echo "[verify_repo] Qt6 SDK not found; skipping C++ build"
+-  fi
++if [[ "${MODE}" == "1" ]]; then
++  echo "[verify_repo] mode: FULL"
+ else
+-  echo "[verify_repo] cmake not found; skipping C++ build"
++  echo "[verify_repo] mode: LITE"
+ fi
+ 
+-# 2) Web build (best-effort)
+-if [ -f "${ROOT}/web/package.json" ]; then
+-  echo "[verify_repo] web/package.json detected"
+-  if command -v npm >/dev/null 2>&1; then
+-    pushd "${ROOT}/web" >/dev/null
+-    if [ -f package-lock.json ]; then npm ci; else npm install; fi
+-    if node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.build ? 0 : 1)"; then
+-      npm run build
+-    else
+-      echo "[verify_repo] no npm build script (skipping)"
+-    fi
+-    popd >/dev/null
++if command -v cmake >/dev/null 2>&1; then
++  CMAKE_EXE="$(command -v cmake)"
++  if command -v ctest >/dev/null 2>&1; then
++    CTEST_EXE="$(command -v ctest)"
++  elif [[ -x "$(dirname "${CMAKE_EXE}")/ctest" ]]; then
++    CTEST_EXE="$(dirname "${CMAKE_EXE}")/ctest"
++  fi
++  echo "[verify_repo] cmake configure (headless lite)"
++  cmake -S "${ROOT}" -B "${BUILD_DIR_LITE}" -DCMAKE_BUILD_TYPE=Release -DCTCP_ENABLE_GUI=OFF -DBUILD_TESTING=ON
++  echo "[verify_repo] cmake build (headless lite)"
++  cmake --build "${BUILD_DIR_LITE}" --config Release
++  if [[ -f "${BUILD_DIR_LITE}/CTestTestfile.cmake" ]] && [[ -n "${CTEST_EXE}" ]]; then
++    echo "[verify_repo] ctest lite"
++    "${CTEST_EXE}" --test-dir "${BUILD_DIR_LITE}" --output-on-failure -R "headless_smoke|verify_tools_selftest"
+   else
+-    echo "[verify_repo] npm not found; skipping web build"
++    echo "[verify_repo] no tests detected or ctest missing in lite build (skip ctest)"
+   fi
+ else
+-  echo "[verify_repo] no web frontend detected (web/package.json missing)"
++  echo "[verify_repo] cmake not found; skipping headless build"
+ fi
+ 
+-# 3) Workflow checks (hard)
+ echo "[verify_repo] workflow gate (workflow checks)"
+ python3 "${ROOT}/scripts/workflow_checks.py"
+ 
+-# 4) Contract checks (hard)
+ echo "[verify_repo] contract checks"
+ python3 "${ROOT}/scripts/contract_checks.py"
+ 
+-# 5) Sync doc links (hard)
+ echo "[verify_repo] doc index check (sync doc links --check)"
+ python3 "${ROOT}/scripts/sync_doc_links.py" --check
+ 
+-# 6) Tests (optional but recommended)
+-if [ -f "${ROOT}/scripts/test_all.sh" ]; then
+-  echo "[verify_repo] tests"
+-  bash "${ROOT}/scripts/test_all.sh"
+-else
+-  echo "[verify_repo] tests: scripts/test_all.sh not found (skip)"
++echo "[verify_repo] lite scenario replay"
++python3 "${ROOT}/simlab/run.py" \
++  --suite lite \
++  --runs-root "${ROOT}/tests/fixtures/adlc_forge_full_bundle/runs/simlab_lite_runs" \
++  --json-out "${ROOT}/tests/fixtures/adlc_forge_full_bundle/runs/_simlab_lite_summary.json"
++
++if [[ "${MODE}" == "1" ]]; then
++  echo "[verify_repo] FULL mode enabled"
++  if [[ -f "${ROOT}/scripts/test_all.sh" ]]; then
++    echo "[verify_repo] tests (full)"
++    bash "${ROOT}/scripts/test_all.sh"
++  else
++    echo "[verify_repo] tests (full): scripts/test_all.sh not found (skip)"
++  fi
+ fi
+ 
+ echo "[verify_repo] OK"
+diff --git a/simlab/run.py b/simlab/run.py
+index 2825795..1e53695 100644
+--- a/simlab/run.py
++++ b/simlab/run.py
+@@ -65,7 +65,17 @@ def copy_repo(src: Path, dst: Path) -> None:
+         ignored: set[str] = set()
+         for name in names:
+             child = (rel / name).as_posix()
+-            if name in {".git", ".venv", "build", "dist", "__pycache__"}:
++            if name in {
++                ".git",
++                ".venv",
++                "build",
++                "build_lite",
++                "build_verify",
++                "build_gui",
++                "dist",
++                "__pycache__",
++                ".pytest_cache",
++            }:
+                 ignored.add(name)
+                 continue
+             if child.startswith("tests/fixtures/adlc_forge_full_bundle/runs/"):
+@@ -339,7 +349,7 @@ def load_scenarios(suite: str) -> list[dict[str, Any]]:
+ 
+ def main() -> int:
+     ap = argparse.ArgumentParser(description="SimLab scene replay runner")
+-    ap.add_argument("--suite", default="all", choices=["all", "core", "integration"])
++    ap.add_argument("--suite", default="all", choices=["all", "lite", "core", "integration"])
+     ap.add_argument("--runs-root", default=str(DEFAULT_RUNS_ROOT))
+     ap.add_argument("--json-out", default="")
+     args = ap.parse_args()
+diff --git a/simlab/scenarios/S00_lite_headless.yaml b/simlab/scenarios/S00_lite_headless.yaml
+new file mode 100644
+index 0000000..2bdae63
+--- /dev/null
++++ b/simlab/scenarios/S00_lite_headless.yaml
+@@ -0,0 +1,29 @@
++{
++  "id": "S00_lite_headless",
++  "name": "lite headless sanity",
++  "suite": "lite",
++  "steps": [
++    {
++      "run": {
++        "cmd": "python tools/ctcp_assistant.py init-task lite-headless --force",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_path": {
++        "path": "meta/tasks/CURRENT.md",
++        "exists": true
++      }
++    },
++    {
++      "expect_text": {
++        "path": "meta/tasks/CURRENT.md",
++        "includes": [
++          "Code changes allowed",
++          "## Acceptance"
++        ]
++      }
++    }
++  ]
++}
++
+diff --git a/src/headless_main.cpp b/src/headless_main.cpp
+new file mode 100644
+index 0000000..05b9f36
+--- /dev/null
++++ b/src/headless_main.cpp
+@@ -0,0 +1,39 @@
++#include <chrono>
++#include <cstring>
++#include <iostream>
++#include <string>
++#include <thread>
++
++namespace {
++bool has_flag(int argc, char* argv[], const char* flag) {
++  for (int i = 1; i < argc; ++i) {
++    if (std::strcmp(argv[i], flag) == 0) {
++      return true;
++    }
++  }
++  return false;
++}
++}  // namespace
++
++int main(int argc, char* argv[]) {
++  try {
++    const bool smoke = has_flag(argc, argv, "--smoke");
++    if (smoke) {
++      std::cout << "[ctcp_headless] smoke start\n";
++      std::this_thread::sleep_for(std::chrono::milliseconds(60));
++      std::cout << "[ctcp_headless] smoke ok\n";
++      return 0;
++    }
++
++    std::cout << "ctcp headless engine\n";
++    std::cout << "Use --smoke for startup sanity check.\n";
++    return 0;
++  } catch (const std::exception& ex) {
++    std::cerr << "[ctcp_headless][fatal] " << ex.what() << "\n";
++    return 2;
++  } catch (...) {
++    std::cerr << "[ctcp_headless][fatal] unknown exception\n";
++    return 3;
++  }
++}
++
+diff --git a/workflow_registry/index.json b/workflow_registry/index.json
+new file mode 100644
+index 0000000..61acfd5
+--- /dev/null
++++ b/workflow_registry/index.json
+@@ -0,0 +1,34 @@
++{
++  "schema_version": "ctcp-workflow-index-v1",
++  "generated_at": "2026-02-18T00:00:00",
++  "workflows": [
++    {
++      "id": "wf_minimal_patch_verify",
++      "version": "1.0.0",
++      "path": "workflow_registry/wf_minimal_patch_verify/recipe.yaml",
++      "tags": [
++        "ctcp",
++        "headless",
++        "adlc",
++        "patch",
++        "verify"
++      ],
++      "supported_goals": [
++        "bugfix",
++        "refactor-minimal",
++        "workflow-hardening",
++        "headless-lite",
++        "gate-fix"
++      ],
++      "dependency_level": "low",
++      "cost_hint": {
++        "time_level": "low",
++        "api_level": "low"
++      },
++      "last_known_good": {
++        "status": "pass",
++        "source": "simlab_lite"
++      }
++    }
++  ]
++}
+diff --git a/workflow_registry/wf_minimal_patch_verify/recipe.yaml b/workflow_registry/wf_minimal_patch_verify/recipe.yaml
+new file mode 100644
+index 0000000..f344e0f
+--- /dev/null
++++ b/workflow_registry/wf_minimal_patch_verify/recipe.yaml
+@@ -0,0 +1,46 @@
++id: wf_minimal_patch_verify
++version: 1.0.0
++description: Minimal fallback workflow for patch + lite verify with evidence bundle.
++
++inputs:
++  required:
++    - goal
++    - repo_root
++    - workflow_registry/index.json
++  optional:
++    - constraints
++    - previous_runs
++
++outputs:
++  required:
++    - artifacts/find_result.json
++    - artifacts/PLAN.md
++    - artifacts/diff.patch
++    - TRACE.md
++    - artifacts/verify_report.md
++  on_failure:
++    - failure_bundle.zip
++
++steps:
++  - doc
++  - analysis
++  - find
++  - plan
++  - build
++  - verify
++  - contrast
++  - fix
++  - deploy_or_merge
++
++gates:
++  lite:
++    - verify_repo_default
++    - simlab_lite
++  full:
++    - verify_repo_full
++    - gui_optional
++
++cost_hints:
++  dependency_level: low
++  api_level: low
++  estimated_minutes: 5

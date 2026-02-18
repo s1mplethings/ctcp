@@ -1,0 +1,11 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index 305b7b1..be69014 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -58,3 +58,5 @@ int main(int argc, char *argv[]) {
+         return 3;
+     }
+ }
++
++// simlab-s02
+warning: in the working copy of 'src/main.cpp', LF will be replaced by CRLF the next time Git touches it

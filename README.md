@@ -1,16 +1,29 @@
-# CTCP — Coding Team Control Protocol (Spec-first Autonomous Coding Team)
+# CTCP — ADLC + Multi-Agent Execution Engine
 
-本仓库的目标：把“写代码”变成一条可验证的流水线，让 **AI/agent 像一个项目团队一样持续推进**：
+本仓库核心定位：核心 = ADLC 执行引擎（证据链 + failure bundle），把“项目实现”变成可验证、可回放、可审计的执行闭环。
+- 默认路径是 **headless**（不依赖 GUI/Qt）。
+- GUI 仅作为示例/可视化器，可选开启，不影响核心流程。
+- find = workflow resolver（从本地 `workflow_registry/` + 历史成功记录解析最佳 workflow，不依赖联网检索）。
+- GUI 可选/默认挂起（不影响核心 gate）。
+
+系统目标：
 - 你只需给一个目标（Goal）
 - 系统会自动拆解、执行、验收、记录
 - 只有在 **必须由你决策/提供信息** 时才会提问
 - 最终给你一份可回放的演示报告（trace + 可复现命令）
 
-> 强约束入口：先读 `AGENTS.md` 和 `ai_context/00_AI_CONTRACT.md`。
+> 强约束入口：先读 `docs/00_CORE.md`、`AGENTS.md`、`ai_context/00_AI_CONTRACT.md`。  
+> 规则冲突时以 `docs/00_CORE.md` 为准。
 
 ---
 
 ## Quick Start
+
+最小命令（核心链路）：
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
+python scripts\adlc_run.py --goal "your-goal" --force
+```
 
 1) 生成任务单（DoD/验收先行）
 ```powershell
@@ -27,7 +40,12 @@ python tools\ctcp_assistant.py init-externals "your-goal"
 python tools\ctcp_team.py start "your-goal"
 ```
 
-4) 验收（必须）：证据闭环 verify（推荐）
+4) 运行 ADLC headless 入口（最小闭环）
+```powershell
+python scripts\adlc_run.py --goal "your-goal" --force
+```
+
+5) 验收（必须）：证据闭环 verify（推荐）
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\verify.ps1
 ```
@@ -36,7 +54,7 @@ powershell -ExecutionPolicy Bypass -File scripts\verify.ps1
 bash scripts/verify.sh
 ```
 
-5) 基础仓库门禁（workflow/contract/doc-index）
+6) 基础仓库门禁（Lite 默认；workflow/contract/doc-index + lite scenario）
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
 ```
@@ -61,7 +79,21 @@ bash scripts/verify_repo.sh
 
 ## Build
 
-见 `BUILD.md`。
+默认 headless 构建：
+
+```powershell
+cmake -S . -B build_lite -DCTCP_ENABLE_GUI=OFF
+cmake --build build_lite --config Release
+```
+
+GUI 示例构建（可选）：
+
+```powershell
+cmake -S . -B build_gui -DCTCP_ENABLE_GUI=ON -DCMAKE_PREFIX_PATH="<Qt path>"
+cmake --build build_gui --config Release
+```
+
+更多见 `BUILD.md`。
 
 ---
 
@@ -77,6 +109,7 @@ bash scripts/verify_repo.sh
 - [BUILD.md](BUILD.md)
 - [PATCH_README.md](PATCH_README.md)
 - [TREE.md](TREE.md)
+- [docs/00_CORE.md](docs/00_CORE.md)
 - [docs/00_overview.md](docs/00_overview.md)
 - [docs/01_architecture.md](docs/01_architecture.md)
 - [docs/02_workflow.md](docs/02_workflow.md)

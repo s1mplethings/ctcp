@@ -1,0 +1,46 @@
+id: wf_minimal_patch_verify
+version: 1.0.0
+description: Minimal fallback workflow for patch + lite verify with evidence bundle.
+
+inputs:
+  required:
+    - goal
+    - repo_root
+    - workflow_registry/index.json
+  optional:
+    - constraints
+    - previous_runs
+
+outputs:
+  required:
+    - artifacts/find_result.json
+    - artifacts/PLAN.md
+    - artifacts/diff.patch
+    - TRACE.md
+    - artifacts/verify_report.md
+  on_failure:
+    - failure_bundle.zip
+
+steps:
+  - doc
+  - analysis
+  - find
+  - plan
+  - build
+  - verify
+  - contrast
+  - fix
+  - deploy_or_merge
+
+gates:
+  lite:
+    - verify_repo_default
+    - simlab_lite
+  full:
+    - verify_repo_full
+    - gui_optional
+
+cost_hints:
+  dependency_level: low
+  api_level: low
+  estimated_minutes: 5

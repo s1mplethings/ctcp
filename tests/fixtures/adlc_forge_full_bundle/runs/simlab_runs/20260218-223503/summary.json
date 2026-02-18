@@ -1,0 +1,196 @@
+{
+  "run_id": "20260218-223503",
+  "generated_at": "2026-02-18T22:35:21",
+  "suite": "core",
+  "runs_root": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs",
+  "run_dir": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223503",
+  "total": 6,
+  "passed": 4,
+  "failed": 2,
+  "scenarios": [
+    {
+      "id": "S01_init_task",
+      "name": "init task document with required checklist",
+      "suite": "core",
+      "status": "pass",
+      "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223503/S01_init_task/TRACE.md",
+      "bundle": "",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python tools/ctcp_assistant.py init-task simlab-init --force",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "[ok] task: meta\\tasks\\20260218-223506-simlab-init.md\n[ok] current: meta\\tasks\\CURRENT.md\n",
+          "stderr_tail": ""
+        },
+        {
+          "type": "expect_path",
+          "path": "meta/tasks/CURRENT.md",
+          "exists": true,
+          "expect": true
+        },
+        {
+          "type": "expect_text",
+          "path": "meta/tasks/CURRENT.md",
+          "includes": [
+            "## Acceptance",
+            "Code changes allowed"
+          ],
+          "excludes": [],
+          "size": 610
+        }
+      ]
+    },
+    {
+      "id": "S02_doc_first_gate",
+      "name": "unauthorized code changes must fail verify gate",
+      "suite": "core",
+      "status": "fail",
+      "error": "step 3: output assertion failed: missing expected text: Code changes allowed",
+      "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223503/S02_doc_first_gate/TRACE.md",
+      "bundle": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223503/S02_doc_first_gate/failure_bundle.zip",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; p=Path('meta/tasks/CURRENT.md'); t=p.read_text(encoding='utf-8'); p.write_text(t.replace('[x] Code changes allowed','[ ] Code changes allowed').replace('[X] Code changes allowed','[ ] Code changes allowed'), encoding='utf-8')\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "write",
+          "path": "src/main.cpp",
+          "mode": "append",
+          "bytes": 15
+        },
+        {
+          "type": "run",
+          "cmd": "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1",
+          "cwd": ".",
+          "rc": 1,
+          "expect_exit": "nonzero",
+          "stdout_tail": "[verify_repo] repo root: D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\simlab_runs\\20260218-223503\\S02_doc_first_gate\\sandbox\n[verify_repo] mode: LITE\n[verify_repo] cmake configure (headless lite)\n",
+          "stderr_tail": "orge_full_bundle/runs/simlab_runs/20260218-223503/S02_doc_first_gate/sandbox/build_lite/CMakeCache.txt is different than the directory d:/.c_projects/adc/ctcp/build_lite where CMakeCache.txt was created. This may result in binaries being created in the wrong place. If you are not sure, reedit the CMakeCache.txt\nCMake Error: The source \"D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223503/S02_doc_first_gate/sandbox/CMakeLists.txt\" does not match the source \"D:/.c_projects/adc/ctcp/CMakeLists.txt\" used to generate cache.  Re-run cmake with a different source directory.\nInvoke-ExternalChecked : [verify_repo] FAILED: cmake configure (headless lite) (exit=1)\nAt D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\simlab_runs\\20260218-223503\\S02_doc_first_gate\\sa\nndbox\\scripts\\verify_repo.ps1:69 char:5\n+     Invoke-ExternalChecked -Label \"cmake configure (headless lite)\" - ...\n+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException\n    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException,Invoke-ExternalChecked\n \n"
+        }
+      ]
+    },
+    {
+      "id": "S03_doc_index_check",
+      "name": "doc index check should pass and markers must exist",
+      "suite": "core",
+      "status": "pass",
+      "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223503/S03_doc_index_check/TRACE.md",
+      "bundle": "",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python scripts/sync_doc_links.py --check",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "[sync_doc_links] ok\n",
+          "stderr_tail": ""
+        },
+        {
+          "type": "expect_text",
+          "path": "README.md",
+          "includes": [
+            "<!-- CTCP:DOC_INDEX:BEGIN -->",
+            "<!-- CTCP:DOC_INDEX:END -->"
+          ],
+          "excludes": [],
+          "size": 2577
+        }
+      ]
+    },
+    {
+      "id": "S04_assistant_force",
+      "name": "assistant commands accept --force",
+      "suite": "core",
+      "status": "pass",
+      "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223503/S04_assistant_force/TRACE.md",
+      "bundle": "",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python tools/ctcp_assistant.py init-task simlab-force --force",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "[ok] task: meta\\tasks\\20260218-223514-simlab-force.md\n[ok] current: meta\\tasks\\CURRENT.md\n",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python tools/ctcp_assistant.py init-externals simlab-force --force",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "[ok] externals: meta\\externals\\20260218-simlab-force.md\n",
+          "stderr_tail": ""
+        },
+        {
+          "type": "expect_path",
+          "path": "meta/tasks/CURRENT.md",
+          "exists": true,
+          "expect": true
+        }
+      ]
+    },
+    {
+      "id": "S05_run_artifacts",
+      "name": "verify run should keep report artifact sections available",
+      "suite": "core",
+      "status": "fail",
+      "error": "step 1: expect_exit mismatch, rc=1, expect=0",
+      "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223503/S05_run_artifacts/TRACE.md",
+      "bundle": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223503/S05_run_artifacts/failure_bundle.zip",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1",
+          "cwd": ".",
+          "rc": 1,
+          "expect_exit": 0,
+          "stdout_tail": "[verify_repo] repo root: D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\simlab_runs\\20260218-223503\\S05_run_artifacts\\sandbox\n[verify_repo] mode: LITE\n[verify_repo] cmake configure (headless lite)\n",
+          "stderr_tail": "c_forge_full_bundle/runs/simlab_runs/20260218-223503/S05_run_artifacts/sandbox/build_lite/CMakeCache.txt is different than the directory d:/.c_projects/adc/ctcp/build_lite where CMakeCache.txt was created. This may result in binaries being created in the wrong place. If you are not sure, reedit the CMakeCache.txt\nCMake Error: The source \"D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223503/S05_run_artifacts/sandbox/CMakeLists.txt\" does not match the source \"D:/.c_projects/adc/ctcp/CMakeLists.txt\" used to generate cache.  Re-run cmake with a different source directory.\nInvoke-ExternalChecked : [verify_repo] FAILED: cmake configure (headless lite) (exit=1)\nAt D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\simlab_runs\\20260218-223503\\S05_run_artifacts\\san\ndbox\\scripts\\verify_repo.ps1:69 char:5\n+     Invoke-ExternalChecked -Label \"cmake configure (headless lite)\" - ...\n+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException\n    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException,Invoke-ExternalChecked\n \n"
+        }
+      ]
+    },
+    {
+      "id": "S06_failure_bundle",
+      "name": "failure should produce evidence bundle",
+      "suite": "core",
+      "status": "pass",
+      "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223503/S06_failure_bundle/TRACE.md",
+      "bundle": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223503/S06_failure_bundle/failure_bundle.zip",
+      "steps": [
+        {
+          "type": "write",
+          "path": "README.md",
+          "mode": "append",
+          "bytes": 46
+        },
+        {
+          "type": "run",
+          "cmd": "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1",
+          "cwd": ".",
+          "rc": 1,
+          "expect_exit": "nonzero",
+          "stdout_tail": "[verify_repo] repo root: D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\simlab_runs\\20260218-223503\\S06_failure_bundle\\sandbox\n[verify_repo] mode: LITE\n[verify_repo] cmake configure (headless lite)\n",
+          "stderr_tail": "orge_full_bundle/runs/simlab_runs/20260218-223503/S06_failure_bundle/sandbox/build_lite/CMakeCache.txt is different than the directory d:/.c_projects/adc/ctcp/build_lite where CMakeCache.txt was created. This may result in binaries being created in the wrong place. If you are not sure, reedit the CMakeCache.txt\nCMake Error: The source \"D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223503/S06_failure_bundle/sandbox/CMakeLists.txt\" does not match the source \"D:/.c_projects/adc/ctcp/CMakeLists.txt\" used to generate cache.  Re-run cmake with a different source directory.\nInvoke-ExternalChecked : [verify_repo] FAILED: cmake configure (headless lite) (exit=1)\nAt D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\simlab_runs\\20260218-223503\\S06_failure_bundle\\sa\nndbox\\scripts\\verify_repo.ps1:69 char:5\n+     Invoke-ExternalChecked -Label \"cmake configure (headless lite)\" - ...\n+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException\n    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException,Invoke-ExternalChecked\n \n"
+        },
+        {
+          "type": "expect_bundle",
+          "exists": true,
+          "expect": true,
+          "path": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223503/S06_failure_bundle/failure_bundle.zip"
+        }
+      ]
+    }
+  ]
+}

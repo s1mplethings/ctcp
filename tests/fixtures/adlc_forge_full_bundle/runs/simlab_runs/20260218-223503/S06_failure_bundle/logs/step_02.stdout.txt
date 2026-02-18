@@ -1,0 +1,3 @@
+[verify_repo] repo root: D:\.c_projects\adc\ctcp\tests\fixtures\adlc_forge_full_bundle\runs\simlab_runs\20260218-223503\S06_failure_bundle\sandbox
+[verify_repo] mode: LITE
+[verify_repo] cmake configure (headless lite)

@@ -1,0 +1,34 @@
+{
+  "schema_version": "ctcp-workflow-index-v1",
+  "generated_at": "2026-02-18T00:00:00",
+  "workflows": [
+    {
+      "id": "wf_minimal_patch_verify",
+      "version": "1.0.0",
+      "path": "workflow_registry/wf_minimal_patch_verify/recipe.yaml",
+      "tags": [
+        "ctcp",
+        "headless",
+        "adlc",
+        "patch",
+        "verify"
+      ],
+      "supported_goals": [
+        "bugfix",
+        "refactor-minimal",
+        "workflow-hardening",
+        "headless-lite",
+        "gate-fix"
+      ],
+      "dependency_level": "low",
+      "cost_hint": {
+        "time_level": "low",
+        "api_level": "low"
+      },
+      "last_known_good": {
+        "status": "pass",
+        "source": "simlab_lite"
+      }
+    }
+  ]
+}

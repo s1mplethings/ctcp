@@ -27,6 +27,8 @@ cmd=(
   --install-prefix "${ROOT}/dist"
   --artifacts-root "${ROOT}/artifacts/verify"
   --config "Release"
+  --cmake-arg=-DCTCP_ENABLE_GUI=OFF
+  --cmake-arg=-DBUILD_TESTING=ON
 )
 
 if [[ -n "${VERIFY_SMOKE_CMD:-}" ]]; then

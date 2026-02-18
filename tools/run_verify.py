@@ -190,7 +190,7 @@ def main() -> int:
     ap.add_argument("--ctest-arg", action="append", default=[])
     ap.add_argument("--smoke-cmd", default="")
     ap.add_argument("--smoke-prefix", default="")
-    ap.add_argument("--smoke-bin", default="ctcp")
+    ap.add_argument("--smoke-bin", default="ctcp_headless")
     ap.add_argument("--skip-install", action="store_true")
     ap.add_argument("--skip-smoke", action="store_true")
     args = ap.parse_args()

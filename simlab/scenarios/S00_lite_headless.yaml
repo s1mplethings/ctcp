@@ -1,0 +1,29 @@
+{
+  "id": "S00_lite_headless",
+  "name": "lite headless sanity",
+  "suite": "lite",
+  "steps": [
+    {
+      "run": {
+        "cmd": "python tools/ctcp_assistant.py init-task lite-headless --force",
+        "expect_exit": 0
+      }
+    },
+    {
+      "expect_path": {
+        "path": "meta/tasks/CURRENT.md",
+        "exists": true
+      }
+    },
+    {
+      "expect_text": {
+        "path": "meta/tasks/CURRENT.md",
+        "includes": [
+          "Code changes allowed",
+          "## Acceptance"
+        ]
+      }
+    }
+  ]
+}
+

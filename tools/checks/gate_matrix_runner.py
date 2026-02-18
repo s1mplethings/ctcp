@@ -171,7 +171,17 @@ def copy_repo_for_sandbox(dst: Path) -> Path:
 
         for name in names:
             child = (rel / name).as_posix()
-            if name in {".git", ".venv", "build", "dist"}:
+            if name in {
+                ".git",
+                ".venv",
+                "build",
+                "build_lite",
+                "build_verify",
+                "build_gui",
+                "dist",
+                "__pycache__",
+                ".pytest_cache",
+            }:
                 ignored.add(name)
                 continue
             if child.startswith("runs/") or child.startswith("tests/fixtures/adlc_forge_full_bundle/runs/"):

@@ -10,20 +10,25 @@
 
 verify_repo 必须保证：
 
-1) workflow gate
+1) headless lite path (default)
+- `CTCP_ENABLE_GUI=OFF` build path (if cmake exists)
+- lite ctest set
+- lite replay scenario(s)
+
+2) workflow gate
 - meta/tasks/CURRENT.md 存在
 - ai_context/00_AI_CONTRACT.md 存在
 - ai_context/templates/aidoc 存在
 - 默认禁止代码：未授权时不允许改代码目录
 
-2) contract checks
+3) contract checks
 - scripts/contract_checks.py 通过
 
-3) doc index check
+4) doc index check
 - scripts/sync_doc_links.py --check 通过
 
-4) tests
-- scripts/test_all.* 通过（当前为流程一致性测试 + case 结构检查）
+5) full checks（可选）
+- `CTCP_FULL_GATE=1` 时才跑更重测试（如 GUI 相关）
 
 如果你发现 verify_repo 没覆盖到某类失败，就把它补进 verify_repo，并新增一个 tests/cases 用例。
 

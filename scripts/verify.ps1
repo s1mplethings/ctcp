@@ -26,7 +26,9 @@ $cmd = @(
   "--build", (Join-Path $Root "build_verify"),
   "--install-prefix", (Join-Path $Root "dist"),
   "--artifacts-root", (Join-Path $Root "artifacts\verify"),
-  "--config", $Configuration
+  "--config", $Configuration,
+  "--cmake-arg=-DCTCP_ENABLE_GUI=OFF",
+  "--cmake-arg=-DBUILD_TESTING=ON"
 )
 
 if ($env:VERIFY_SMOKE_CMD) {

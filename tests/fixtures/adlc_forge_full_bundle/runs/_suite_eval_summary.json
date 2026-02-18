@@ -1,6 +1,6 @@
 {
   "suite": "gate-matrix-27",
-  "generated_at": "2026-02-18T21:41:28",
+  "generated_at": "2026-02-18T22:38:24",
   "total": 27,
   "passed": 26,
   "failed": 0,
@@ -40,9 +40,9 @@
       "expectation": "verify should fail with Code changes allowed hint",
       "evidence": {
         "rc": 1,
-        "stdout_tail": "[verify_repo] repo root: D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\n[verify_repo] Qt6 SDK not found; skipping C++ build\n[verify_repo] no web frontend detected (web/package.json missing)\n[verify_repo] workflow gate (workflow checks)\n[workflow_checks][error] code changes detected but CURRENT.md does not allow code edits.\nAdd and tick the checkbox in meta/tasks/CURRENT.md:\n  - [x] Code changes allowed\nCode changes:\n  - src/main.cpp\n",
-        "stderr_tail": "Invoke-ExternalChecked : [verify_repo] FAILED: workflow gate (workflow checks) (exit=1)\nAt D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\\scripts\\verify_repo.ps1:148 \nchar:3\n+   Invoke-ExternalChecked -Label \"workflow gate (workflow checks)\" -Co ...\n+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException\n    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException,Invoke-ExternalChecked\n \n",
-        "diff": "diff --git a/meta/tasks/CURRENT.md b/meta/tasks/CURRENT.md\nindex 191fc07..abf85ae 100644\n--- a/meta/tasks/CURRENT.md\n+++ b/meta/tasks/CURRENT.md\n@@ -8,7 +8,7 @@\n ## Acceptance (must be checkable)\n - [x] DoD written (this file complete)\n - [x] Research logged (if needed): no new third-party runtime dependency planned\n-- [x] Code changes allowed\n+- [ ] Code changes allowed\n - [ ] Added `tools/run_verify.py` with configure/build/ctest/install/smoke sequencing and artifact logs\n - [ ] Added `tools/adlc_gate.py` to fail on missing evidence or non-PASS proof\n - [ ] Added `tools/contrast_proof.py` to diff two proof.json files and write markdown report\ndiff --git a/src/main.cpp b/src/main.cpp\nindex 305b7b1..a5c8996 100644\n--- a/src/main.cpp\n+++ b/src/main.cpp\n@@ -58,3 +58,5 @@ int main(int argc, char *argv[]) {\n         return 3;\n     }\n }\n+\n+// matrix-case-01\n"
+        "stdout_tail": "_repo] cmake build (headless lite)\n适用于 .NET Framework MSBuild 版本 17.14.8+a7a4d5af0\n\n  1>Checking Build System\n  Building Custom Rule D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_gate_matrix_sandbox/CMakeLists.txt\n  headless_main.cpp\n  ctcp_headless.vcxproj -> D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\\build_lite\\Release\\ctcp_headless.exe\n  Building Custom Rule D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_gate_matrix_sandbox/CMakeLists.txt\n[verify_repo] ctest lite\nTest project D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_gate_matrix_sandbox/build_lite\n    Start 1: headless_smoke\n1/2 Test #1: headless_smoke ...................   Passed    0.18 sec\n    Start 2: verify_tools_selftest\n2/2 Test #2: verify_tools_selftest ............   Passed    0.13 sec\n\n100% tests passed, 0 tests failed out of 2\n\nTotal Test time (real) =   0.32 sec\n[verify_repo] workflow gate (workflow checks)\n[workflow_checks][error] code changes detected but CURRENT.md does not allow code edits.\nAdd and tick the checkbox in meta/tasks/CURRENT.md:\n  - [x] Code changes allowed\nCode changes:\n  - src/main.cpp\n",
+        "stderr_tail": "CMake Warning:\n  Manually-specified variables were not used by the project:\n\n    CMAKE_BUILD_TYPE\n\n\nInvoke-ExternalChecked : [verify_repo] FAILED: workflow gate (workflow checks) (exit=1)\nAt D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\\scripts\\verify_repo.ps1:92 c\nhar:3\n+   Invoke-ExternalChecked -Label \"workflow gate (workflow checks)\" -Co ...\n+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException\n    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException,Invoke-ExternalChecked\n \n",
+        "diff": "diff --git a/src/main.cpp b/src/main.cpp\nindex 305b7b1..a5c8996 100644\n--- a/src/main.cpp\n+++ b/src/main.cpp\n@@ -58,3 +58,5 @@ int main(int argc, char *argv[]) {\n         return 3;\n     }\n }\n+\n+// matrix-case-01\n"
       }
     },
     {
@@ -52,7 +52,7 @@
       "expectation": "workflow gate should pass with authorization",
       "evidence": {
         "rc": 0,
-        "stdout_tail": "[verify_repo] repo root: D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\n[verify_repo] Qt6 SDK not found; skipping C++ build\n[verify_repo] no web frontend detected (web/package.json missing)\n[verify_repo] workflow gate (workflow checks)\n[workflow_checks] ok\n[verify_repo] contract checks\n[contract_checks] schema presence ok\n[contract_checks] meta schema_version ok\n[contract_checks] readme links ok\n[contract_checks] unique Graph Spider implementation ok\n[verify_repo] doc index check (sync doc links --check)\n[sync_doc_links] ok\n[verify_repo] tests\n[tests] ok (10 cases)\n[verify_repo] OK\n",
+        "stdout_tail": "_gate_matrix_sandbox\\build_lite\\Release\\ctcp_headless.exe\n  Building Custom Rule D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_gate_matrix_sandbox/CMakeLists.txt\n[verify_repo] ctest lite\nTest project D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_gate_matrix_sandbox/build_lite\n    Start 1: headless_smoke\n1/2 Test #1: headless_smoke ...................   Passed    0.11 sec\n    Start 2: verify_tools_selftest\n2/2 Test #2: verify_tools_selftest ............   Passed    0.13 sec\n\n100% tests passed, 0 tests failed out of 2\n\nTotal Test time (real) =   0.24 sec\n[verify_repo] workflow gate (workflow checks)\n[workflow_checks] ok\n[verify_repo] contract checks\n[contract_checks] schema presence ok\n[contract_checks] meta schema_version ok\n[contract_checks] readme links ok\n[contract_checks] unique Graph Spider implementation ok\n[verify_repo] doc index check (sync doc links --check)\n[sync_doc_links] ok\n[verify_repo] lite scenario replay\n{\"run_dir\": \"D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_gate_matrix_sandbox/tests/fixtures/adlc_forge_full_bundle/runs/simlab_lite_runs/20260218-223736\", \"passed\": 1, \"failed\": 0}\n[verify_repo] OK\n",
         "stderr_tail": ""
       }
     },
@@ -63,7 +63,7 @@
       "expectation": "doc-only change should not be blocked by workflow gate",
       "evidence": {
         "rc": 0,
-        "stdout_tail": "[verify_repo] repo root: D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\n[verify_repo] Qt6 SDK not found; skipping C++ build\n[verify_repo] no web frontend detected (web/package.json missing)\n[verify_repo] workflow gate (workflow checks)\n[workflow_checks] ok (no code changes)\n[verify_repo] contract checks\n[contract_checks] schema presence ok\n[contract_checks] meta schema_version ok\n[contract_checks] readme links ok\n[contract_checks] unique Graph Spider implementation ok\n[verify_repo] doc index check (sync doc links --check)\n[sync_doc_links] ok\n[verify_repo] tests\n[tests] ok (10 cases)\n[verify_repo] OK\n",
+        "stdout_tail": ".8+a7a4d5af0\n\n  ctcp_headless.vcxproj -> D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\\build_lite\\Release\\ctcp_headless.exe\n[verify_repo] ctest lite\nTest project D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_gate_matrix_sandbox/build_lite\n    Start 1: headless_smoke\n1/2 Test #1: headless_smoke ...................   Passed    0.11 sec\n    Start 2: verify_tools_selftest\n2/2 Test #2: verify_tools_selftest ............   Passed    0.12 sec\n\n100% tests passed, 0 tests failed out of 2\n\nTotal Test time (real) =   0.24 sec\n[verify_repo] workflow gate (workflow checks)\n[workflow_checks] ok (no code changes)\n[verify_repo] contract checks\n[contract_checks] schema presence ok\n[contract_checks] meta schema_version ok\n[contract_checks] readme links ok\n[contract_checks] unique Graph Spider implementation ok\n[verify_repo] doc index check (sync doc links --check)\n[sync_doc_links] ok\n[verify_repo] lite scenario replay\n{\"run_dir\": \"D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_gate_matrix_sandbox/tests/fixtures/adlc_forge_full_bundle/runs/simlab_lite_runs/20260218-223740\", \"passed\": 1, \"failed\": 0}\n[verify_repo] OK\n",
         "stderr_tail": ""
       }
     },
@@ -74,8 +74,8 @@
       "expectation": "verify should fail and mention missing AI contract",
       "evidence": {
         "rc": 1,
-        "stdout_tail": "[verify_repo] repo root: D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\n[verify_repo] Qt6 SDK not found; skipping C++ build\n[verify_repo] no web frontend detected (web/package.json missing)\n[verify_repo] workflow gate (workflow checks)\n[workflow_checks][error] missing required workflow files:\n  - ai_context/00_AI_CONTRACT.md\n",
-        "stderr_tail": "Invoke-ExternalChecked : [verify_repo] FAILED: workflow gate (workflow checks) (exit=1)\nAt D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\\scripts\\verify_repo.ps1:148 \nchar:3\n+   Invoke-ExternalChecked -Label \"workflow gate (workflow checks)\" -Co ...\n+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException\n    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException,Invoke-ExternalChecked\n \n"
+        "stdout_tail": "\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\n[verify_repo] mode: LITE\n[verify_repo] cmake configure (headless lite)\n-- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.26200.\n-- Configuring done (0.5s)\n-- Generating done (0.0s)\n-- Build files have been written to: D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_gate_matrix_sandbox/build_lite\n[verify_repo] cmake build (headless lite)\n适用于 .NET Framework MSBuild 版本 17.14.8+a7a4d5af0\n\n  ctcp_headless.vcxproj -> D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\\build_lite\\Release\\ctcp_headless.exe\n[verify_repo] ctest lite\nTest project D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_gate_matrix_sandbox/build_lite\n    Start 1: headless_smoke\n1/2 Test #1: headless_smoke ...................   Passed    0.11 sec\n    Start 2: verify_tools_selftest\n2/2 Test #2: verify_tools_selftest ............   Passed    0.12 sec\n\n100% tests passed, 0 tests failed out of 2\n\nTotal Test time (real) =   0.23 sec\n[verify_repo] workflow gate (workflow checks)\n[workflow_checks][error] missing required workflow files:\n  - ai_context/00_AI_CONTRACT.md\n",
+        "stderr_tail": "Invoke-ExternalChecked : [verify_repo] FAILED: workflow gate (workflow checks) (exit=1)\nAt D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\\scripts\\verify_repo.ps1:92 c\nhar:3\n+   Invoke-ExternalChecked -Label \"workflow gate (workflow checks)\" -Co ...\n+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException\n    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException,Invoke-ExternalChecked\n \n"
       }
     },
     {
@@ -85,8 +85,8 @@
       "expectation": "contract check should detect broken README link",
       "evidence": {
         "rc": 1,
-        "stdout_tail": "[verify_repo] repo root: D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\n[verify_repo] Qt6 SDK not found; skipping C++ build\n[verify_repo] no web frontend detected (web/package.json missing)\n[verify_repo] workflow gate (workflow checks)\n[workflow_checks] ok (no code changes)\n[verify_repo] contract checks\n[contract_checks] schema presence ok\n[contract_checks] meta schema_version ok\n",
-        "stderr_tail": "[contract_checks] README contains broken local links:\n- README.md:99: broken link 'docs/NOPE.md' -> 'docs/NOPE.md'\nInvoke-ExternalChecked : [verify_repo] FAILED: contract checks (exit=1)\nAt D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\\scripts\\verify_repo.ps1:153 \nchar:3\n+   Invoke-ExternalChecked -Label \"contract checks\" -Command { python s ...\n+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException\n    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException,Invoke-ExternalChecked\n \n"
+        "stdout_tail": "_sandbox\n[verify_repo] mode: LITE\n[verify_repo] cmake configure (headless lite)\n-- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.26200.\n-- Configuring done (0.5s)\n-- Generating done (0.0s)\n-- Build files have been written to: D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_gate_matrix_sandbox/build_lite\n[verify_repo] cmake build (headless lite)\n适用于 .NET Framework MSBuild 版本 17.14.8+a7a4d5af0\n\n  ctcp_headless.vcxproj -> D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\\build_lite\\Release\\ctcp_headless.exe\n[verify_repo] ctest lite\nTest project D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_gate_matrix_sandbox/build_lite\n    Start 1: headless_smoke\n1/2 Test #1: headless_smoke ...................   Passed    0.11 sec\n    Start 2: verify_tools_selftest\n2/2 Test #2: verify_tools_selftest ............   Passed    0.12 sec\n\n100% tests passed, 0 tests failed out of 2\n\nTotal Test time (real) =   0.24 sec\n[verify_repo] workflow gate (workflow checks)\n[workflow_checks] ok (no code changes)\n[verify_repo] contract checks\n[contract_checks] schema presence ok\n[contract_checks] meta schema_version ok\n",
+        "stderr_tail": "[contract_checks] README contains broken local links:\n- README.md:122: broken link 'docs/NOPE.md' -> 'docs/NOPE.md'\nInvoke-ExternalChecked : [verify_repo] FAILED: contract checks (exit=1)\nAt D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\\scripts\\verify_repo.ps1:96 c\nhar:3\n+   Invoke-ExternalChecked -Label \"contract checks\" -Command { python s ...\n+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException\n    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException,Invoke-ExternalChecked\n \n"
       }
     },
     {
@@ -96,7 +96,7 @@
       "expectation": "contract check should pass after link fix",
       "evidence": {
         "rc": 0,
-        "stdout_tail": "[verify_repo] repo root: D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\n[verify_repo] Qt6 SDK not found; skipping C++ build\n[verify_repo] no web frontend detected (web/package.json missing)\n[verify_repo] workflow gate (workflow checks)\n[workflow_checks] ok (no git diff detected)\n[verify_repo] contract checks\n[contract_checks] schema presence ok\n[contract_checks] meta schema_version ok\n[contract_checks] readme links ok\n[contract_checks] unique Graph Spider implementation ok\n[verify_repo] doc index check (sync doc links --check)\n[sync_doc_links] ok\n[verify_repo] tests\n[tests] ok (10 cases)\n[verify_repo] OK\n",
+        "stdout_tail": "a4d5af0\n\n  ctcp_headless.vcxproj -> D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\\build_lite\\Release\\ctcp_headless.exe\n[verify_repo] ctest lite\nTest project D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_gate_matrix_sandbox/build_lite\n    Start 1: headless_smoke\n1/2 Test #1: headless_smoke ...................   Passed    0.10 sec\n    Start 2: verify_tools_selftest\n2/2 Test #2: verify_tools_selftest ............   Passed    0.12 sec\n\n100% tests passed, 0 tests failed out of 2\n\nTotal Test time (real) =   0.23 sec\n[verify_repo] workflow gate (workflow checks)\n[workflow_checks] ok (no git diff detected)\n[verify_repo] contract checks\n[contract_checks] schema presence ok\n[contract_checks] meta schema_version ok\n[contract_checks] readme links ok\n[contract_checks] unique Graph Spider implementation ok\n[verify_repo] doc index check (sync doc links --check)\n[sync_doc_links] ok\n[verify_repo] lite scenario replay\n{\"run_dir\": \"D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_gate_matrix_sandbox/tests/fixtures/adlc_forge_full_bundle/runs/simlab_lite_runs/20260218-223747\", \"passed\": 1, \"failed\": 0}\n[verify_repo] OK\n",
         "stderr_tail": ""
       }
     },
@@ -133,7 +133,7 @@
       "expectation": "CURRENT.md should contain acceptance checklist",
       "evidence": {
         "rc": 0,
-        "stdout": "[ok] task: meta\\tasks\\20260218-214112-hitbox-fix.md\n[ok] current: meta\\tasks\\CURRENT.md\n",
+        "stdout": "[ok] task: meta\\tasks\\20260218-223750-hitbox-fix.md\n[ok] current: meta\\tasks\\CURRENT.md\n",
         "current_head": "# Task — hitbox-fix\n\n## Context\n- Why are we doing this?\n\n## Acceptance (must be checkable)\n- [ ] DoD written (this file complete)\n- [ ] Research logged (if needed): meta/externals/YYYYMMDD-hitbox-fix.md\n- [ ] Code changes allowed\n- [ ] Patch applies cleanly (`git apply ...`) OR overlay zip applies cleanly\n- [ ] `scripts/verify_repo.*` passes\n- [ ] Demo report updated: `meta/reports/LAST.md`\n\n## Plan\n1) Spec-first (docs/spec/meta)\n2) Implement (code if allowed)\n3) Verify (verify_repo)\n4) Record (problem_registry / decision_log if needed)\n5) Demo (LAST.md + TRACE)\n"
       }
     },
@@ -178,11 +178,11 @@
         "rc": 0,
         "positions": [
           0,
-          231,
-          316,
-          514
+          1111,
+          1196,
+          1394
         ],
-        "stdout_tail": "[verify_repo] repo root: D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\n[verify_repo] Qt6 SDK not found; skipping C++ build\n[verify_repo] no web frontend detected (web/package.json missing)\n[verify_repo] workflow gate (workflow checks)\n[workflow_checks] ok (no code changes)\n[verify_repo] contract checks\n[contract_checks] schema presence ok\n[contract_checks] meta schema_version ok\n[contract_checks] readme links ok\n[contract_checks] unique Graph Spider implementation ok\n[verify_repo] doc index check (sync doc links --check)\n[sync_doc_links] ok\n[verify_repo] tests\n[tests] ok (10 cases)\n[verify_repo] OK\n",
+        "stdout_tail": "[verify_repo] repo root: D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\n[verify_repo] mode: LITE\n[verify_repo] cmake configure (headless lite)\n-- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.26200.\n-- Configuring done (0.4s)\n-- Generating done (0.0s)\n-- Build files have been written to: D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_gate_matrix_sandbox/build_lite\n[verify_repo] cmake build (headless lite)\n适用于 .NET Framework MSBuild 版本 17.14.8+a7a4d5af0\n\n  ctcp_headless.vcxproj -> D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\_gate_matrix_sandbox\\build_lite\\Release\\ctcp_headless.exe\n[verify_repo] ctest lite\nTest project D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_gate_matrix_sandbox/build_lite\n    Start 1: headless_smoke\n1/2 Test #1: headless_smoke ...................   Passed    0.10 sec\n    Start 2: verify_tools_selftest\n2/2 Test #2: verify_tools_selftest ............   Passed    0.12 sec\n\n100% tests passed, 0 tests failed out of 2\n\nTotal Test time (real) =   0.23 sec\n[verify_repo] workflow gate (workflow checks)\n[workflow_checks] ok (no code changes)\n[verify_repo] contract checks\n[contract_checks] schema presence ok\n[contract_checks] meta schema_version ok\n[contract_checks] readme links ok\n[contract_checks] unique Graph Spider implementation ok\n[verify_repo] doc index check (sync doc links --check)\n[sync_doc_links] ok\n[verify_repo] lite scenario replay\n{\"run_dir\": \"D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_gate_matrix_sandbox/tests/fixtures/adlc_forge_full_bundle/runs/simlab_lite_runs/20260218-223752\", \"passed\": 1, \"failed\": 0}\n[verify_repo] OK\n",
         "stderr_tail": ""
       }
     },
@@ -336,9 +336,9 @@
       "evidence": {
         "scenario_id": "S01_init_task",
         "status": "pass",
-        "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-214113/S01_init_task/TRACE.md",
+        "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223754/S01_init_task/TRACE.md",
         "bundle": "",
-        "run_dir": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-214113",
+        "run_dir": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223754",
         "simlab_summary_path": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_simlab_suite_summary.json"
       }
     },
@@ -350,9 +350,9 @@
       "evidence": {
         "scenario_id": "S02_doc_first_gate",
         "status": "pass",
-        "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-214113/S02_doc_first_gate/TRACE.md",
+        "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223754/S02_doc_first_gate/TRACE.md",
         "bundle": "",
-        "run_dir": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-214113",
+        "run_dir": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223754",
         "simlab_summary_path": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_simlab_suite_summary.json"
       }
     },
@@ -364,9 +364,9 @@
       "evidence": {
         "scenario_id": "S03_doc_index_check",
         "status": "pass",
-        "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-214113/S03_doc_index_check/TRACE.md",
+        "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223754/S03_doc_index_check/TRACE.md",
         "bundle": "",
-        "run_dir": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-214113",
+        "run_dir": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223754",
         "simlab_summary_path": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_simlab_suite_summary.json"
       }
     },
@@ -378,9 +378,9 @@
       "evidence": {
         "scenario_id": "S04_assistant_force",
         "status": "pass",
-        "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-214113/S04_assistant_force/TRACE.md",
+        "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223754/S04_assistant_force/TRACE.md",
         "bundle": "",
-        "run_dir": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-214113",
+        "run_dir": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223754",
         "simlab_summary_path": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_simlab_suite_summary.json"
       }
     },
@@ -392,9 +392,9 @@
       "evidence": {
         "scenario_id": "S05_run_artifacts",
         "status": "pass",
-        "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-214113/S05_run_artifacts/TRACE.md",
+        "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223754/S05_run_artifacts/TRACE.md",
         "bundle": "",
-        "run_dir": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-214113",
+        "run_dir": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223754",
         "simlab_summary_path": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_simlab_suite_summary.json"
       }
     },
@@ -406,9 +406,9 @@
       "evidence": {
         "scenario_id": "S06_failure_bundle",
         "status": "pass",
-        "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-214113/S06_failure_bundle/TRACE.md",
-        "bundle": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-214113/S06_failure_bundle/failure_bundle.zip",
-        "run_dir": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-214113",
+        "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223754/S06_failure_bundle/TRACE.md",
+        "bundle": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223754/S06_failure_bundle/failure_bundle.zip",
+        "run_dir": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260218-223754",
         "simlab_summary_path": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/_simlab_suite_summary.json"
       }
     },

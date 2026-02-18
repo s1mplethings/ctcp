@@ -234,6 +234,9 @@ COVERAGE_COMMAND:FILEPATH=COVERAGE_COMMAND-NOTFOUND
 //Extra command line flags to pass to the coverage tool
 COVERAGE_EXTRA_FLAGS:STRING=-l
 
+//Build Qt GUI example target
+CTCP_ENABLE_GUI:BOOL=OFF
+
 //How many times to retry timed-out CTest submissions.
 CTEST_SUBMIT_RETRY_COUNT:STRING=3
 
@@ -468,4 +471,17 @@ MEMORYCHECK_SUPPRESSIONS_FILE-ADVANCED:INTERNAL=1
 SITE-ADVANCED:INTERNAL=1
 //CMAKE_INSTALL_PREFIX during last run
 _GNUInstallDirs_LAST_CMAKE_INSTALL_PREFIX:INTERNAL=C:/Program Files (x86)/ctcp
+//Compiler reason failure
+_Python3_Compiler_REASON_FAILURE:INTERNAL=
+//Development reason failure
+_Python3_Development_REASON_FAILURE:INTERNAL=
+//Path to a program.
+_Python3_EXECUTABLE:INTERNAL=D:/anaconda/python.exe
+//Path to a program.
+_Python3_EXECUTABLE_DEBUG:INTERNAL=_Python3_EXECUTABLE_DEBUG-NOTFOUND
+//Python3 Properties
+_Python3_INTERPRETER_PROPERTIES:INTERNAL=Python;3;12;3;64;32;<none>;cp312-win_amd64;;D:\anaconda\Lib;D:\anaconda\Lib;D:\anaconda\Lib\site-packages;D:\anaconda\Lib\site-packages
+_Python3_INTERPRETER_SIGNATURE:INTERNAL=fccbc653291cbc678e2b702bbae21f4a
+//NumPy reason failure
+_Python3_NumPy_REASON_FAILURE:INTERNAL=
 

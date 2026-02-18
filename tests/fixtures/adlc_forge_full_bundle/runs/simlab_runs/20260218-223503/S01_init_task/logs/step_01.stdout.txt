@@ -1,0 +1,2 @@
+[ok] task: meta\tasks\20260218-223506-simlab-init.md
+[ok] current: meta\tasks\CURRENT.md

@@ -1,0 +1,47 @@
+{
+  "run_id": "20260218-223107",
+  "generated_at": "2026-02-18T22:31:10",
+  "suite": "lite",
+  "runs_root": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_lite_runs",
+  "run_dir": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_lite_runs/20260218-223107",
+  "total": 1,
+  "passed": 1,
+  "failed": 0,
+  "scenarios": [
+    {
+      "id": "S00_lite_headless",
+      "name": "lite headless sanity",
+      "suite": "lite",
+      "status": "pass",
+      "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_lite_runs/20260218-223107/S00_lite_headless/TRACE.md",
+      "bundle": "",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python tools/ctcp_assistant.py init-task lite-headless --force",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "[ok] task: meta\\tasks\\20260218-223110-lite-headless.md\n[ok] current: meta\\tasks\\CURRENT.md\n",
+          "stderr_tail": ""
+        },
+        {
+          "type": "expect_path",
+          "path": "meta/tasks/CURRENT.md",
+          "exists": true,
+          "expect": true
+        },
+        {
+          "type": "expect_text",
+          "path": "meta/tasks/CURRENT.md",
+          "includes": [
+            "Code changes allowed",
+            "## Acceptance"
+          ],
+          "excludes": [],
+          "size": 614
+        }
+      ]
+    }
+  ]
+}
