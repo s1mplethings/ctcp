@@ -41,7 +41,7 @@
 3) 未找到：允许仅文档模式（Doc-only），但必须强提示“无法构建协议边/模块边”
 
 ### 2.3 scripts_root / ai_context_root / runs_root
-- scripts_root：优先 `<root>/scripts/` 且存在 `verify.ps1` 或 `verify.sh`
+- scripts_root：优先 `<root>/scripts/` 且存在 `verify_repo.ps1` 或 `verify_repo.sh`
 - ai_context_root：优先 `<root>/ai_context/` 且存在 `problem_registry.md` 或 `decision_log.md`
 - runs_root：优先 `<root>/runs/`（可缺省）
 

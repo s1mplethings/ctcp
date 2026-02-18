@@ -5,9 +5,9 @@ Param(
 $ErrorActionPreference = "Stop"
 $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $BuildDir = Join-Path $Root "build"
-$ExeRelPath = Join-Path "Release" "sddai_gui_qtwebengine.exe"
+$ExeRelPath = Join-Path "Release" "ctcp.exe"
 $ExePath = Join-Path $BuildDir $ExeRelPath
-$FlatExePath = Join-Path $BuildDir "sddai_gui_qtwebengine.exe"
+$FlatExePath = Join-Path $BuildDir "ctcp.exe"
 
 Write-Host "[verify] repo root: $Root"
 
@@ -71,6 +71,16 @@ if (Test-Path $WebPkg) {
   }
 } else {
   Write-Host "[verify] no web frontend detected (web/package.json missing)"
+}
+
+if (Get-Command python -ErrorAction SilentlyContinue) {
+  Write-Host "[verify] redundancy guard..."
+  python (Join-Path $Root "tools/checks/redundancy_guard.py")
+  if ($LASTEXITCODE -ne 0) {
+    throw "[verify] redundancy guard failed"
+  }
+} else {
+  Write-Host "[verify] python not found; skipping redundancy guard"
 }
 
 Write-Host "[verify] OK"

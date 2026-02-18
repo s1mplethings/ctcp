@@ -1,0 +1,63 @@
+{
+  "_comment": "Live / Integration suite — only runs when env gate passes (API key present + network allowed).",
+  "suite": {
+    "id": "forge-full-v1-live",
+    "title": "ADLC Forge Full — LIVE (real API, network allowed)",
+    "tier": "live",
+
+    "env_gate": {
+      "required_env": ["OPENAI_API_KEY"],
+      "optional_env": ["OPENAI_BASE_URL", "OPENAI_MODEL"],
+      "network": "allow",
+      "skip_message": "SKIP: OPENAI_API_KEY not set — live suite requires API access. Use forge_full_suite.yaml (regression) for offline runs."
+    },
+
+    "provider": {
+      "adapter": "openai_compatible",
+      "base_url": "${OPENAI_BASE_URL}",
+      "model": "${OPENAI_MODEL}",
+      "api_key_env": "OPENAI_API_KEY",
+      "timeout_sec": 120,
+      "max_retries": 2
+    },
+
+    "cost_guard": {
+      "max_tasks": 36,
+      "max_total_api_calls": 200,
+      "max_cost_usd": 5.0,
+      "abort_on_exceed": true
+    },
+
+    "base_suite": "forge_full_suite.yaml",
+
+    "defaults": {
+      "constraints": {
+        "network": "allow",
+        "install_deps": "deny",
+        "time_budget_sec": 1800
+      },
+      "scoring": {
+        "weights": {
+          "result": 0.45,
+          "process": 0.35,
+          "routing": 0.2
+        },
+        "penalties": {
+          "no_new_test": -10,
+          "huge_diff_over_300_lines": -8,
+          "verify_missing_logs": -10
+        },
+        "limits": {
+          "max_diff_lines_soft": 300,
+          "max_build_verify_iterations_soft": 4
+        }
+      },
+      "capstone_gates": {
+        "lite_required": ["I01","I02","I03","I04","I05","I06","I07","I08"],
+        "full_optional": ["I09","I10","I11","I12"]
+      }
+    },
+
+    "tasks_ref": "inherit:forge_full_suite.yaml"
+  }
+}

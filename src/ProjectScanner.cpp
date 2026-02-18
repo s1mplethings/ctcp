@@ -143,8 +143,8 @@ EvalResult evaluateCandidate(const QString &candidatePath) {
 
     if (res.layout.scriptsRoot.isEmpty()) {
         const QString scripts = optionalDir(root, QStringLiteral("scripts"));
-        if (!scripts.isEmpty() && (QFile::exists(QDir(scripts).filePath(QStringLiteral("verify.ps1"))) ||
-                                   QFile::exists(QDir(scripts).filePath(QStringLiteral("verify.sh"))))) {
+        if (!scripts.isEmpty() && (QFile::exists(QDir(scripts).filePath(QStringLiteral("verify_repo.ps1"))) ||
+                                   QFile::exists(QDir(scripts).filePath(QStringLiteral("verify_repo.sh"))))) {
             res.layout.scriptsRoot = scripts;
             res.score += 2;
             res.reasons << "scripts";

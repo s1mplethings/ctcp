@@ -1,0 +1,27 @@
+{
+  "_comment": "Regression suite wrapper — offline, stub-based, always safe to run in CI.",
+  "suite": {
+    "id": "forge-full-v1-regression",
+    "title": "ADLC Forge Full — REGRESSION (offline, stubs)",
+    "tier": "regression",
+
+    "env_gate": {
+      "required_env": [],
+      "network": "deny",
+      "skip_message": null
+    },
+
+    "base_suite": "forge_full_suite.yaml",
+    "materialize_stubs": true,
+
+    "defaults": {
+      "constraints": {
+        "network": "deny",
+        "install_deps": "deny",
+        "time_budget_sec": 900
+      }
+    },
+
+    "tasks_ref": "inherit:forge_full_suite.yaml"
+  }
+}

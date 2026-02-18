@@ -1,4 +1,4 @@
-# SDDAI GUI Workspace
+# ctcp Workspace
 
 本仓库聚合 Qt WebEngine 客户端与 Codex 工作流约束。按下列顺序使用：
 
@@ -27,15 +27,6 @@
 ## 新增工具
 - **Clean Zip**：`python tools/make_clean_zip.py` 生成 dist/clean_repo.zip，给 agent/AI 用 clean zip，避免 build/ 干扰。
 - **蛛网布局 & LOD**：前端提供同心/放射布局 fallback，大图自动抽稀标签；控制台打印 `renderGraph.total` 便于性能观察。
-- **AI Doc 生成**：
-  - UI：运行应用，菜单 File -> `Generate AI Doc...` 选择目标目录，生成 `docs/aidoc/*`（已有文件备份为 .bak）。
-  - 脚本：
-    ```powershell
-    powershell -ExecutionPolicy Bypass -File scripts/gen_aidoc.ps1 -Target "C:\\path\\to\\project"
-    ```
-    ```bash
-    bash scripts/gen_aidoc.sh /path/to/project
-    ```
 
 ## 目录速览
 - `src/` `include/` `web/`：Qt 主程序与前端静态资源。

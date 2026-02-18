@@ -9,8 +9,8 @@ from pathlib import Path
 import zipfile
 
 EXCLUDE_DIRS = {"build", "dist", "runs", ".git", "__pycache__"}
-EXCLUDE_FILES = {"patch_debug.txt"}
-EXCLUDE_SUFFIXES = {".log", ".tmp"}
+EXCLUDE_FILES = {"patch_debug.txt", "_tmp_patch.py"}
+EXCLUDE_SUFFIXES = {".log", ".tmp", ".bak"}
 
 
 def should_skip(rel_path: Path, output_path: Path) -> bool:

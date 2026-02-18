@@ -44,4 +44,11 @@ else
   echo "[verify] no web frontend detected (web/package.json missing)"
 fi
 
+if command -v python >/dev/null 2>&1; then
+  echo "[verify] redundancy guard..."
+  python "${ROOT}/tools/checks/redundancy_guard.py"
+else
+  echo "[verify] python not found; skipping redundancy guard"
+fi
+
 echo "[verify] OK"

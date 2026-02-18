@@ -1,6 +1,5 @@
 #include "MainWindow.h"
 #include "Bridge.h"
-#include "sddai_bridge.h"
 
 #include <QApplication>
 #include <QFile>

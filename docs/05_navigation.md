@@ -12,6 +12,7 @@
 - [04_project_detection.md](04_project_detection.md)
 - [11_webengine_resources.md](11_webengine_resources.md)
 - [20_conventions.md](20_conventions.md)
+- [21_redundancy_guardrails.md](21_redundancy_guardrails.md)
 
 ## Specs（模块规范）
 - [ProjectScanner](../specs/modules/project_scanner/spec.md)

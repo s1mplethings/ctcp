@@ -20,6 +20,7 @@ docs/
   15_performance_rules.md
   16_visual_rules.md
   20_conventions.md
+  21_redundancy_guardrails.md
 
 specs/
   modules/

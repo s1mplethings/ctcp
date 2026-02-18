@@ -179,3 +179,27 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# Repo hygiene: avoid committing temporary/debug artifacts
+/_tmp*.py
+/patch_debug.txt
+*.bak
+/runs/self_check/
+/runs/self_improve/
+/issue_memory/
+
+# Privacy / local-only data (do not upload)
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.secret
+*.secrets
+*.credentials
+/.codex/
+/tests/fixtures/adlc_forge_full_bundle/runs/
+/tests/fixtures/adlc_forge_full_bundle/fixtures/toy_py/.pytest_cache/

@@ -15,8 +15,8 @@
 ## 单一入口（语义）
 - 语义入口：verify
 - 实现：
-  - Linux/macOS：`bash scripts/verify.sh`
-  - Windows：`powershell -ExecutionPolicy Bypass -File scripts/verify.ps1`
+  - Linux/macOS：`bash scripts/verify_repo.sh`
+  - Windows：`powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
 
 ## 失败处理
 - gate 失败：记录到 `ai_context/problem_registry.md`（含复现命令 + 关键日志）

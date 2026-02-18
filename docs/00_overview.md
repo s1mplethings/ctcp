@@ -32,8 +32,8 @@
 - **Run**：一次运行的进度与产物（可由目录推断或由 events.jsonl 精确驱动）
 
 ## verify（语义单入口 + OS 实现）
-- Linux/macOS：`bash scripts/verify.sh`
-- Windows：`powershell -ExecutionPolicy Bypass -File scripts/verify.ps1`
+- Linux/macOS：`bash scripts/verify_repo.sh`
+- Windows：`powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
 
 
 ## 工程识别（建议）

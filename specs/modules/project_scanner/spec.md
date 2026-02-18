@@ -35,7 +35,7 @@
 2) 无 Marker 时用 Heuristic：
 - docs_root：优先 `docs/` 含 `00_overview.md` 或 `02_workflow.md`；其次根目录直接含这些文件
 - specs_root：优先 `specs/` 含 `modules/` 或 `contract_output/`
-- scripts_root：`scripts/` 含 `verify.ps1` 或 `verify.sh`
+- scripts_root：`scripts/` 含 `verify_repo.ps1` 或 `verify_repo.sh`
 - ai_context_root：`ai_context/` 含 `problem_registry.md` 或 `decision_log.md`
 - runs_root：`runs/`（可缺省）
 3) 多候选评分：见 docs/04_project_detection.md

@@ -13,8 +13,5 @@
     <file alias="web/graph_spider/README.md">../web/graph_spider/README.md</file>
     <file alias="qt_style.qss">../resources/qt_style.qss</file>
     
-    <!-- Redirect shells (兼容入口，无实现) -->
-    <file alias="web/graph_force/index.html">../web/graph_force/index.html</file>
-    <file alias="web/graph_spider_v2/index.html">../web/graph_spider_v2/index.html</file>
   </qresource>
 </RCC>
