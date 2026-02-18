@@ -1,0 +1,23 @@
+{
+  "id": "S03_doc_index_check",
+  "name": "doc index check should pass and markers must exist",
+  "suite": "core",
+  "steps": [
+    {
+      "run": {
+        "cmd": "python scripts/sync_doc_links.py --check",
+        "expect_exit": 0
+      }
+    },
+    {
+      "expect_text": {
+        "path": "README.md",
+        "includes": [
+          "<!-- CTCP:DOC_INDEX:BEGIN -->",
+          "<!-- CTCP:DOC_INDEX:END -->"
+        ]
+      }
+    }
+  ]
+}
+

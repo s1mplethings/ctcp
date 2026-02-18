@@ -1,0 +1,26 @@
+{
+  "id": "S04_assistant_force",
+  "name": "assistant commands accept --force",
+  "suite": "core",
+  "steps": [
+    {
+      "run": {
+        "cmd": "python tools/ctcp_assistant.py init-task simlab-force --force",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python tools/ctcp_assistant.py init-externals simlab-force --force",
+        "expect_exit": 0
+      }
+    },
+    {
+      "expect_path": {
+        "path": "meta/tasks/CURRENT.md",
+        "exists": true
+      }
+    }
+  ]
+}
+

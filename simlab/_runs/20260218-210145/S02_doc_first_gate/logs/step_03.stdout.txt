@@ -1,0 +1,9 @@
+[verify_repo] repo root: D:\.c_projects\adc\ctcp\simlab\_runs\20260218-210145\S02_doc_first_gate\sandbox
+[verify_repo] Qt6 SDK not found; skipping C++ build
+[verify_repo] no web frontend detected (web/package.json missing)
+[verify_repo] workflow gate (workflow checks)
+[workflow_checks][error] code changes detected but CURRENT.md does not allow code edits.
+Add and tick the checkbox in meta/tasks/CURRENT.md:
+  - [x] Code changes allowed
+Code changes:
+  - src/main.cpp

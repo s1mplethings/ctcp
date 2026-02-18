@@ -179,3 +179,9 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# Repo hygiene
+_tmp_patch.py
+patch_debug.txt
+*.bak
+artifacts/verify/

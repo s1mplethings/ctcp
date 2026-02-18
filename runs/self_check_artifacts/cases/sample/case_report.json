@@ -1,0 +1,15 @@
+{
+  "id": "sample",
+  "pass": true,
+  "returncode": 0,
+  "stdout": "[ok] copied D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\sample_input.json -> D:\\.c_projects\\adc\\ctcp\\runs\\self_check_artifacts\\cases\\sample\\sample_output.json\n",
+  "stderr": "",
+  "outputs": [
+    {
+      "path": "D:\\.c_projects\\adc\\ctcp\\runs\\self_check_artifacts\\cases\\sample\\sample_output.json",
+      "pass": true,
+      "reason": "match"
+    }
+  ],
+  "errors": []
+}

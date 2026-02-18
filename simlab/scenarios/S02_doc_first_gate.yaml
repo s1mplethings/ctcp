@@ -1,0 +1,30 @@
+{
+  "id": "S02_doc_first_gate",
+  "name": "unauthorized code changes must fail verify gate",
+  "suite": "core",
+  "steps": [
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; p=Path('meta/tasks/CURRENT.md'); t=p.read_text(encoding='utf-8'); p.write_text(t.replace('[x] Code changes allowed','[ ] Code changes allowed').replace('[X] Code changes allowed','[ ] Code changes allowed'), encoding='utf-8')\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "write": {
+        "path": "src/main.cpp",
+        "mode": "append",
+        "content": "\n// simlab-s02\n"
+      }
+    },
+    {
+      "run": {
+        "cmd": "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1",
+        "expect_exit": "nonzero",
+        "expect_output_includes": [
+          "Code changes allowed"
+        ]
+      }
+    }
+  ]
+}
+

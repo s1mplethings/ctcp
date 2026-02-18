@@ -1,18 +1,20 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(sddai_gui_qtwebengine LANGUAGES CXX)
+project(ctcp LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
+include(CTest)
+include(GNUInstallDirs)
 
 # Try Qt 6 first, fall back to Qt 5 if necessary.
-find_package(Qt6 COMPONENTS Widgets WebEngineWidgets WebChannel REQUIRED QUIET)
-if(NOT Qt6_FOUND)
+find_package(Qt6 COMPONENTS Widgets WebEngineWidgets WebChannel QUIET)
+if(Qt6_FOUND)
+  set(QT_PREFIX Qt6)
+else()
   find_package(Qt5 COMPONENTS Widgets WebEngineWidgets WebChannel REQUIRED)
   set(QT_PREFIX Qt5)
-else()
-  set(QT_PREFIX Qt6)
 endif()
 
 set(SRC
@@ -69,4 +71,23 @@ if(MSVC)
   target_compile_options(${PROJECT_NAME} PRIVATE /W4 /permissive- /EHsc)
 else()
   target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+install(TARGETS ${PROJECT_NAME}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+if(BUILD_TESTING)
+  add_test(NAME app_smoke COMMAND $<TARGET_FILE:${PROJECT_NAME}> --smoke)
+  if(UNIX AND NOT APPLE)
+    set_tests_properties(app_smoke PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+  endif()
+
+  find_package(Python3 COMPONENTS Interpreter QUIET)
+  if(Python3_Interpreter_FOUND)
+    add_test(
+      NAME verify_tools_selftest
+      COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/tests/test_verify_tools.py
+    )
+  endif()
 endif()

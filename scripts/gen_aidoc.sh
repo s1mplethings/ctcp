@@ -7,9 +7,15 @@ if [ $# -lt 1 ]; then
 fi
 SCRIPT_DIR=$(cd -- "$(dirname "$0")" && pwd)
 REPO_ROOT=$(cd -- "${SCRIPT_DIR}/.." && pwd)
-TPL="${REPO_ROOT}/ai_context/templates/aidoc"
+TPL1="${REPO_ROOT}/ai_context/templates/aidoc"
+TPL2="${REPO_ROOT}/ai_context/ai_context/templates/aidoc"
+TPL="$TPL1"
 if [ ! -d "$TPL" ]; then
-  echo "Template not found: $TPL" >&2; exit 1
+  TPL="$TPL2"
+fi
+if [ ! -d "$TPL" ]; then
+  echo "Template not found: $TPL1 OR $TPL2" >&2
+  exit 1
 fi
 DST="$1/docs/aidoc"
 mkdir -p "$DST"

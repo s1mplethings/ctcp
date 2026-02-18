@@ -1,0 +1,30 @@
+{
+  "id": "S05_run_artifacts",
+  "name": "verify run should keep report artifact sections available",
+  "suite": "core",
+  "steps": [
+    {
+      "run": {
+        "cmd": "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1",
+        "expect_exit": 0
+      }
+    },
+    {
+      "expect_path": {
+        "path": "meta/reports/LAST.md",
+        "exists": true
+      }
+    },
+    {
+      "expect_text": {
+        "path": "meta/reports/LAST.md",
+        "includes": [
+          "## Readlist",
+          "## Changes",
+          "## Verify"
+        ]
+      }
+    }
+  ]
+}
+

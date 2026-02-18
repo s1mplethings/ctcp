@@ -1,0 +1,15 @@
+[verify_repo] repo root: D:\.c_projects\adc\ctcp\tests\fixtures\adlc_forge_full_bundle\runs\simlab_runs\20260218-210222\S05_run_artifacts\sandbox
+[verify_repo] Qt6 SDK not found; skipping C++ build
+[verify_repo] no web frontend detected (web/package.json missing)
+[verify_repo] workflow gate (workflow checks)
+[workflow_checks] ok (no git diff detected)
+[verify_repo] contract checks
+[contract_checks] schema presence ok
+[contract_checks] meta schema_version ok
+[contract_checks] readme links ok
+[contract_checks] unique Graph Spider implementation ok
+[verify_repo] doc index check (sync doc links --check)
+[sync_doc_links] ok
+[verify_repo] tests
+[tests] ok (10 cases)
+[verify_repo] OK

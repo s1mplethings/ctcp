@@ -1,5 +1,7 @@
 
 import json
+import re
+from urllib.parse import unquote
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -9,6 +11,49 @@ SCHEMAS = [
     ROOT / "specs" / "contract_output" / "meta_pipeline_graph.schema.json",
     ROOT / "specs" / "contract_output" / "run_events.schema.json",
 ]
+
+README_MD = ROOT / "README.md"
+MD_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
+
+
+def _is_external_link(link: str) -> bool:
+    lower = link.lower()
+    return (
+        lower.startswith("http://")
+        or lower.startswith("https://")
+        or lower.startswith("mailto:")
+        or lower.startswith("tel:")
+    )
+
+
+def check_readme_links() -> None:
+    if not README_MD.exists():
+        print("[contract_checks] README.md not found (skip readme link check)")
+        return
+
+    errors: list[str] = []
+    for lineno, line in enumerate(README_MD.read_text(encoding="utf-8", errors="replace").splitlines(), start=1):
+        for raw_link in MD_LINK_RE.findall(line):
+            link = raw_link.strip()
+            if not link or _is_external_link(link) or link.startswith("#"):
+                continue
+
+            path_part = link.split("#", 1)[0].strip()
+            if not path_part:
+                continue
+            path_part = unquote(path_part)
+            rel = path_part[1:] if path_part.startswith("/") else path_part
+            candidate = (ROOT / rel).resolve()
+            if not candidate.exists():
+                errors.append(f"README.md:{lineno}: broken link '{raw_link}' -> '{rel}'")
+
+    if errors:
+        raise SystemExit(
+            "[contract_checks] README contains broken local links:\n"
+            + "\n".join(f"- {e}" for e in errors)
+        )
+
+    print("[contract_checks] readme links ok")
 
 
 def check_unique_graph_spider_impl() -> None:
@@ -86,6 +131,7 @@ def main():
     else:
         print("[contract_checks] meta/pipeline_graph.json not found (ok for fresh project)")
 
+    check_readme_links()
     check_unique_graph_spider_impl()
 
 if __name__ == "__main__":

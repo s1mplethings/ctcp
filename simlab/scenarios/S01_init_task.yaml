@@ -1,0 +1,29 @@
+{
+  "id": "S01_init_task",
+  "name": "init task document with required checklist",
+  "suite": "core",
+  "steps": [
+    {
+      "run": {
+        "cmd": "python tools/ctcp_assistant.py init-task simlab-init --force",
+        "expect_exit": 0
+      }
+    },
+    {
+      "expect_path": {
+        "path": "meta/tasks/CURRENT.md",
+        "exists": true
+      }
+    },
+    {
+      "expect_text": {
+        "path": "meta/tasks/CURRENT.md",
+        "includes": [
+          "## Acceptance",
+          "Code changes allowed"
+        ]
+      }
+    }
+  ]
+}
+

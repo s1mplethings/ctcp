@@ -1,0 +1,12 @@
+diff --git a/README.md b/README.md
+index 2c79795..c87c616 100644
+--- a/README.md
++++ b/README.md
+@@ -95,3 +95,6 @@ bash scripts/verify_repo.sh
+ 
+ - 本仓库默认 **Spec-first**：先改 docs/spec/meta，再改代码。
+ - “禁止代码”由 `scripts/workflow_checks.py` 强制执行（不满足直接 fail）。
++
++
++- [simlab-broken-link](docs/NOPE_SIMLAB.md)
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it

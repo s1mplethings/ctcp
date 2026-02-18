@@ -1,43 +1,80 @@
-# SDDAI GUI (QtWebEngine) — Codex 项目契约（强约束）
+# CTCP — Agent Contract (Hard Rules)
 
-> 目标：这是“实验 + 可用工具”的仓库。**任何改动必须可验证、可回退、可复现**。
+> 目标：让 agent 变成“项目团队”：自驱推进、可验证交付、只问必要问题、能演示全过程。
 
-## 0. Codex 运行规则（必须遵守）
-1. **先读再动手**：开始任何任务前，先读取并总结本仓库的：
-   - `BUILD.md`（如何构建）
-   - `PATCH_README.md`（如何产出 patch / zip）
-   - `TREE.md`（结构约定）
-   - `ai_context/` 内的约定文档（如果存在）
-2. **先找现成实现再造轮子（Research-first）**：
-   - 先用网络检索 3~5 个“同类实现/库/示例项目”，记录到 `meta/externals/<topic>.md`（模板见 `meta/externals/TEMPLATE.md`）。
-   - 对每个候选写：许可证、维护活跃度、体量、集成方式、你为什么选它/弃它。
-   - 研究完后，把选型结论和 DoD 摘要同步到 `meta/tasks/<YYYYMMDD>-<topic>.md`，方便复用。
-3. **只交付可应用的变更**：
-   - 默认交付为 `git apply` 可用的 unified diff（或放到 `PATCHES/` 里）。
-   - 如果要交付 zip，zip 必须包含：patch + 新增文件 + 应用说明（见本仓库的 `PATCH_README.md`）。
-4. **强制验收（Verify gate）**：
-   - 任何改动完成后必须运行 `scripts/verify_repo.*`（如不存在则按本仓库约定补齐）并在输出中给出关键结果/失败原因。
-   - 验收失败要写明下一步（修复思路/绕过方式），不允许“我觉得可以”式提交。
-5. **最小改动原则**：
-   - 每个 patch 只解决一个主题；避免同时大改结构 + 大改逻辑。
-   - 新依赖必须写入 `third_party/THIRD_PARTY.md` 并说明引入原因、版本、license。
-6. **文件输入必落地用例**：只要用户提供了测试输入文件，必须把它放进 `tests/fixtures/`，并新增/更新 `tests/cases/*.case.json`；如无明确 oracle，先用 `python tools/checks/case_runner.py --record --case <id>` 生成 golden，再把 golden 纳入回归测试。
+这份文件是 **强约束**：任何 agent/自动化必须遵守。违反即视为失败交付。
 
-## 1. 目录责任边界（你必须按边界做事）
-- `src/`：Qt/C++ 主程序、WebEngine 宿主、文件索引/解析、与 JS 的桥接（QWebChannel / IPC）。
-- `web/`：纯前端（Markdown 渲染、Graph 可视化、交互）。
-- `ai_context/`：给 AI 的项目规则、工作流、问题记忆、外部参考清单。
-- `meta/`：任务单、外部方案评审、实验记录。
-- `scripts/`：一键构建/校验/打包脚本（verify、pack、生成清单等）。
+---
 
-## 2. 你在这个项目里最常见的正确做法（建议默认）
-- **QtWebEngine + 本地 HTML/JS**：C++ 只负责提供数据（文件树/链接关系/搜索结果），JS 负责渲染（Markdown/Graph）。
-- **Graph 优先用 d3-force / canvas**：DOM/SVG 节点太多会卡；优先 Canvas/WebGL 路线。
-- **渲染要可降级**：大图时自动降级：减少 label、聚类、限制最大节点、惰性加载。
+## 0) 允许提问的唯一条件（否则不要问）
 
-## 3. 必须产出的“工程痕迹”
-- 任务开始：`meta/tasks/<YYYYMMDD>-<topic>.md`（模板：`meta/tasks/TEMPLATE.md`）
-- 选型：`meta/externals/<topic>.md`
-- 改动：一个 patch（或一组 patch）
-- 验收：`scripts/verify_repo.*` 输出
+你只能在下面场景提问（写入 `meta/runs/<ts>/QUESTIONS.md`）：
+
+1. 需要用户提供 **密钥/账号/外部权限**（例如 API key、访问令牌）
+2. 需要用户在 **互斥方案** 中拍板（例如“重命名项目/大重构/破坏兼容”）
+3. 缺少关键约束导致无法继续（例如目标平台、必须支持的版本、许可证限制）
+
+除此之外，全部用默认策略推进，并在报告里写明默认选择与可替代项。
+
+---
+
+## 1) 必读文件（开始任何动作之前）
+
+必须读取并总结（写入 `meta/reports/LAST.md` 的 Readlist）：
+
+- `ai_context/00_AI_CONTRACT.md`
+- `README.md`
+- `BUILD.md`
+- `PATCH_README.md`
+- `TREE.md`（如果存在）
+- `docs/03_quality_gates.md`（如果存在）
+- `ai_context/problem_registry.md`
+- `ai_context/decision_log.md`
+
+---
+
+## 2) 执行顺序（不可跳过）
+
+1. **创建/更新任务单**：`meta/tasks/CURRENT.md`（模板：`meta/tasks/TEMPLATE.md`）
+2. **Research-first（如需要）**：记录到 `meta/externals/<date>-*.md`
+3. **Spec-first**：先更新 docs/spec/meta（让流程可被审计）
+4. **代码改动（受门禁）**：只有当 `meta/tasks/CURRENT.md` 勾选了
+   - [x] Code changes allowed
+   才允许改 `src/ web/ scripts/ tools/ include/` 等代码目录
+5. **验收闭环（必须）**：运行 `scripts/verify_repo.*` 并记录输出
+6. **演示报告（必须）**：更新 `meta/reports/LAST.md`
+
+---
+
+## 3) 唯一验收入口（DoD Gate）
+
+只允许使用：
+- Windows: `scripts/verify_repo.ps1`
+- Unix: `scripts/verify_repo.sh`
+
+`verify_repo` 必须覆盖：
+- build / web build（可跳过但要明确日志原因）
+- workflow gate（禁止代码/必须任务单/必须契约文件）
+- contract checks
+- doc index check
+- tests（如果存在）
+
+---
+
+## 4) 强制交付格式（agent 最终输出必须包含）
+
+1. Readlist（读了哪些文件 + 关键约束）
+2. Plan（分阶段：Docs/Spec → Code → Verify → Report）
+3. Changes（文件清单 + 关键 diff 摘要）
+4. Verify（命令 + 关键输出 / 失败原因）
+5. Questions（若有：阻塞问题 + 选项 + 默认建议）
+6. Demo（指出 `meta/reports/LAST.md` 与 `meta/runs/<ts>/TRACE.md`）
+
+---
+
+## 5) 最小改动原则
+
+- 一个 patch 只做一件事（一个主题）
+- 新依赖必须记录到 `third_party/THIRD_PARTY.md`（若目录存在）
+- 任何绕过 gate 的行为必须写入 `ai_context/decision_log.md`
 

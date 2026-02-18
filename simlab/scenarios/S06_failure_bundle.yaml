@@ -1,0 +1,27 @@
+{
+  "id": "S06_failure_bundle",
+  "name": "failure should produce evidence bundle",
+  "suite": "core",
+  "steps": [
+    {
+      "write": {
+        "path": "README.md",
+        "mode": "append",
+        "content": "\n\n- [simlab-broken-link](docs/NOPE_SIMLAB.md)\n"
+      }
+    },
+    {
+      "run": {
+        "cmd": "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1",
+        "expect_exit": "nonzero",
+        "bundle_on_nonzero": true
+      }
+    },
+    {
+      "expect_bundle": {
+        "exists": true
+      }
+    }
+  ]
+}
+

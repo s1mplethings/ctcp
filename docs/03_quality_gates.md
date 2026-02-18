@@ -1,29 +1,33 @@
+# Quality Gates (DoD)
 
-# 质量门（Quality Gates）
+本仓库的“合格交付”主判定方式：`scripts/verify.*` 通过（证据 gate）。
+`scripts/verify_repo.*` 仍用于 workflow/contract/doc-index 的基础门禁。
 
-## Gate 顺序（推荐）
-1) lint
-2) unit
-3) integration
-4) contract checks
-5) golden（可选）
+“没证据=没测试”硬规则：
+- 必须生成 `artifacts/verify/<timestamp>/proof.json` 与步骤日志。
+- 必须通过 `tools/adlc_gate.py`。
+- `proof.result != PASS` 或日志缺失 -> 直接 fail。
 
-## 强制要求
-- integration 必跑（至少覆盖：打开工程 → 构图 → 输出 Graph JSON）
-- contract checks 必跑（至少覆盖：Graph JSON / Meta JSON / Events JSONL 的 schema 约束）
+verify_repo 必须保证：
 
-## 单一入口（语义）
-- 语义入口：verify
-- 实现：
-  - Linux/macOS：`bash scripts/verify.sh`
-  - Windows：`powershell -ExecutionPolicy Bypass -File scripts/verify.ps1`
+1) workflow gate
+- meta/tasks/CURRENT.md 存在
+- ai_context/00_AI_CONTRACT.md 存在
+- ai_context/templates/aidoc 存在
+- 默认禁止代码：未授权时不允许改代码目录
 
-## 失败处理
-- gate 失败：记录到 `ai_context/problem_registry.md`（含复现命令 + 关键日志）
-- 临时跳过：记录到 `ai_context/decision_log.md`（含原因 + 回补计划）
+2) contract checks
+- scripts/contract_checks.py 通过
 
-## Trace Links
-- docs/13_contracts_index.md
-- specs/contract_output/graph.schema.json
-- specs/contract_output/meta_pipeline_graph.schema.json
-- specs/contract_output/run_events.schema.json
+3) doc index check
+- scripts/sync_doc_links.py --check 通过
+
+4) tests
+- scripts/test_all.* 通过（当前为流程一致性测试 + case 结构检查）
+
+如果你发现 verify_repo 没覆盖到某类失败，就把它补进 verify_repo，并新增一个 tests/cases 用例。
+
+证据闭环工具：
+- `tools/run_verify.py`
+- `tools/adlc_gate.py`
+- `tools/contrast_proof.py`

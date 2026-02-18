@@ -11,6 +11,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QCoreApplication>
+#include <QSet>
 #include <QUrl>
 
 SddaiBridge::SddaiBridge(Bridge* core, QObject* parent)
@@ -116,11 +117,35 @@ void SddaiBridge::openPath(const QString& relativePath) {
 
 
 bool SddaiBridge::copyAidocTemplate(const QString& targetDir) const {
-  const QString repoRoot = QDir(projectRoot_).isAbsolute() && !projectRoot_.isEmpty()
-      ? QDir(projectRoot_).absolutePath()
-      : QDir(QCoreApplication::applicationDirPath()).absoluteFilePath("..");
-  const QString tplDir = QDir(repoRoot).absoluteFilePath("ai_context/templates/aidoc");
-  if (!QDir(tplDir).exists()) return false;
+  QStringList rootCandidates;
+  const QString appDir = QCoreApplication::applicationDirPath();
+  rootCandidates << QDir(appDir).absoluteFilePath("..")
+                 << QDir(appDir).absoluteFilePath("../..")
+                 << QDir::currentPath();
+  if (!projectRoot_.isEmpty()) {
+    rootCandidates << QDir(projectRoot_).absolutePath();
+  }
+
+  QString tplDir;
+  QSet<QString> seenRoots;
+  for (const QString& root : rootCandidates) {
+    const QString normalizedRoot = QDir(root).absolutePath();
+    if (seenRoots.contains(normalizedRoot)) continue;
+    seenRoots.insert(normalizedRoot);
+
+    const QString primaryTpl = QDir(normalizedRoot).absoluteFilePath("ai_context/templates/aidoc");
+    if (QDir(primaryTpl).exists()) {
+      tplDir = primaryTpl;
+      break;
+    }
+
+    const QString legacyTpl = QDir(normalizedRoot).absoluteFilePath("ai_context/ai_context/templates/aidoc");
+    if (QDir(legacyTpl).exists()) {
+      tplDir = legacyTpl;
+      break;
+    }
+  }
+  if (tplDir.isEmpty()) return false;
 
   QDir dst(QDir(targetDir).absoluteFilePath("docs/aidoc"));
   if (!dst.exists()) dst.mkpath(".");

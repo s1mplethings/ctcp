@@ -3,7 +3,7 @@
   用法：
     powershell -ExecutionPolicy Bypass -File scripts\gen_aidoc.ps1 -Target "C:\\your\\project"
   逻辑：
-    - 从 ai_context\templates\aidoc 拷贝模板到目标目录的 docs/aidoc。
+    - 从 ai_context\templates\aidoc（兼容旧路径 ai_context\ai_context\templates\aidoc）拷贝模板到目标目录的 docs/aidoc。
     - 现有文件会备份为 <name>.bak。
 #>
 param(
@@ -12,8 +12,14 @@ param(
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repo = Split-Path -Parent $root
-$template = Join-Path $repo 'ai_context/templates/aidoc'
-if (-not (Test-Path $template)) { Write-Error "Template not found: $template"; exit 1 }
+$candidate1 = Join-Path $repo 'ai_context/templates/aidoc'
+$candidate2 = Join-Path $repo 'ai_context/ai_context/templates/aidoc'
+$template = $candidate1
+if (-not (Test-Path $template)) { $template = $candidate2 }
+if (-not (Test-Path $template)) {
+  Write-Error "Template not found: $candidate1 OR $candidate2"
+  exit 1
+}
 $dst = Join-Path $Target 'docs/aidoc'
 New-Item -ItemType Directory -Force -Path $dst | Out-Null
 

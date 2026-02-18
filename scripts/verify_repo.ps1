@@ -5,72 +5,169 @@ Param(
 $ErrorActionPreference = "Stop"
 $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $BuildDir = Join-Path $Root "build"
-$ExeRelPath = Join-Path "Release" "sddai_gui_qtwebengine.exe"
-$ExePath = Join-Path $BuildDir $ExeRelPath
-$FlatExePath = Join-Path $BuildDir "sddai_gui_qtwebengine.exe"
 
-Write-Host "[verify] repo root: $Root"
+Write-Host "[verify_repo] repo root: $Root"
 
-if (Get-Command cmake -ErrorAction SilentlyContinue) {
-  Write-Host "[verify] cmake configure..."
-  cmake -S $Root -B $BuildDir -DCMAKE_BUILD_TYPE=$Configuration
-  Write-Host "[verify] cmake build..."
-  cmake --build $BuildDir --config $Configuration
-
-  # Deploy Qt runtime beside the exe so it is runnable from build folder
-  $qtBinCandidates = @()
-  if ($env:QT_ROOT) { $qtBinCandidates += (Join-Path $env:QT_ROOT "bin") }
-  if ($env:CMAKE_PREFIX_PATH) {
-    $qtBinCandidates += ($env:CMAKE_PREFIX_PATH -split ";" | ForEach-Object { Join-Path $_ "bin" })
+function Invoke-ExternalChecked {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Label,
+    [Parameter(Mandatory = $true)]
+    [scriptblock]$Command
+  )
+  & $Command
+  if ($LASTEXITCODE -ne 0) {
+    Write-Error "[verify_repo] FAILED: $Label (exit=$LASTEXITCODE)"
+    exit $LASTEXITCODE
   }
-  # common fallback for local setup
-  $qtBinCandidates += "D:\Qt\6.6.1\msvc2019_64\bin"
-  $windeploy = $qtBinCandidates | Where-Object { Test-Path (Join-Path $_ "windeployqt.exe") } | Select-Object -First 1
-  if ($windeploy) {
-    $windeployExe = Join-Path $windeploy "windeployqt.exe"
-    Write-Host "[verify] windeployqt: $windeployExe"
-    if (Test-Path $ExePath) {
-      & $windeployExe --no-quick-import --no-translations --no-system-d3d-compiler --release $ExePath
-    } else {
-      Write-Host "[verify] exe not found for deploy: $ExePath"
-    }
-    # Flatten Release output into build/ for easier discovery
-    if (Test-Path (Join-Path $BuildDir "Release")) {
-      Write-Host "[verify] flatten build/Release -> build/"
-      robocopy (Join-Path $BuildDir "Release") $BuildDir /E /NFL /NDL /NJH /NJS /NC /NS | Out-Null
-      if (Test-Path $FlatExePath) {
-        Write-Host "[verify] exe in build/: $FlatExePath"
+}
+
+function Invoke-Step {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Name,
+    [Parameter(Mandatory = $true)]
+    [scriptblock]$Block
+  )
+  Write-Host "[verify_repo] $Name"
+  & $Block
+}
+
+function Get-Qt6ConfigDir {
+  if ($env:Qt6_DIR) {
+    $direct = Join-Path $env:Qt6_DIR "Qt6Config.cmake"
+    if (Test-Path $direct) { return $env:Qt6_DIR }
+  }
+
+  if ($env:CMAKE_PREFIX_PATH) {
+    $prefixes = $env:CMAKE_PREFIX_PATH -split ';'
+    foreach ($p in $prefixes) {
+      if (-not [string]::IsNullOrWhiteSpace($p)) {
+        $cands = @(
+          $p,
+          (Join-Path $p "lib/cmake/Qt6"),
+          (Join-Path $p "cmake/Qt6")
+        )
+        foreach ($c in $cands) {
+          if (Test-Path (Join-Path $c "Qt6Config.cmake")) { return $c }
+        }
       }
     }
-  } else {
-    Write-Host "[verify] windeployqt not found (set QT_ROOT or CMAKE_PREFIX_PATH)"
   }
 
-  $CTestFile = Join-Path $BuildDir "CTestTestfile.cmake"
-  if ((Test-Path $CTestFile) -and (Get-Command ctest -ErrorAction SilentlyContinue)) {
-    Write-Host "[verify] ctest..."
-    ctest --test-dir $BuildDir --output-on-failure
-  } else {
-    Write-Host "[verify] no tests detected (skipping ctest)"
+  if (Get-Command qmake -ErrorAction SilentlyContinue) {
+    $qtPrefix = (& qmake -query QT_INSTALL_PREFIX 2>$null).Trim()
+    if ($qtPrefix) {
+      $cands = @(
+        (Join-Path $qtPrefix "lib/cmake/Qt6"),
+        (Join-Path $qtPrefix "cmake/Qt6")
+      )
+      foreach ($c in $cands) {
+        if (Test-Path (Join-Path $c "Qt6Config.cmake")) { return $c }
+      }
+    }
   }
-} else {
-  Write-Host "[verify] cmake not found; skipping C++ build"
+
+  return $null
 }
 
+function Get-CmakeExe {
+  $cmd = Get-Command cmake -ErrorAction SilentlyContinue
+  if ($cmd) { return $cmd.Source }
+  $cands = @(
+    "C:\Program Files\CMake\bin\cmake.exe",
+    "C:\Program Files (x86)\CMake\bin\cmake.exe"
+  )
+  foreach ($c in $cands) {
+    if (Test-Path $c) { return $c }
+  }
+  return $null
+}
+
+# 1) Build (best-effort)
+$CmakeExe = Get-CmakeExe
+if ($CmakeExe) {
+  $Qt6ConfigDir = Get-Qt6ConfigDir
+  if ($Qt6ConfigDir) {
+    Write-Host "[verify_repo] Qt6 config detected: $Qt6ConfigDir"
+    Invoke-Step -Name "cmake configure" -Block {
+      Invoke-ExternalChecked -Label "cmake configure" -Command {
+        & $CmakeExe -S $Root -B $BuildDir -DCMAKE_BUILD_TYPE=$Configuration "-DCMAKE_PREFIX_PATH=$Qt6ConfigDir"
+      }
+    }
+    Invoke-Step -Name "cmake build" -Block {
+      Invoke-ExternalChecked -Label "cmake build" -Command {
+        & $CmakeExe --build $BuildDir --config $Configuration
+      }
+    }
+
+    $CTestFile = Join-Path $BuildDir "CTestTestfile.cmake"
+    if ((Test-Path $CTestFile) -and (Get-Command ctest -ErrorAction SilentlyContinue)) {
+      Invoke-Step -Name "ctest" -Block {
+        Invoke-ExternalChecked -Label "ctest" -Command {
+          ctest --test-dir $BuildDir --output-on-failure
+        }
+      }
+    } else {
+      Write-Host "[verify_repo] no tests detected (skipping ctest)"
+    }
+  } else {
+    Write-Host "[verify_repo] Qt6 SDK not found; skipping C++ build"
+  }
+} else {
+  Write-Host "[verify_repo] cmake not found; skipping C++ build"
+}
+
+# 2) Web build (best-effort)
 $WebPkg = Join-Path $Root "web\package.json"
 if (Test-Path $WebPkg) {
-  Write-Host "[verify] web/package.json detected"
+  Write-Host "[verify_repo] web/package.json detected"
   if (Get-Command npm -ErrorAction SilentlyContinue) {
     Push-Location (Join-Path $Root "web")
-    if (Test-Path "package-lock.json") { npm ci } else { npm install }
-    $hasBuild = node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.build ? 0 : 1)"
-    if ($LASTEXITCODE -eq 0) { npm run build } else { Write-Host "[verify] no npm build script (skipping)" }
+    if (Test-Path "package-lock.json") {
+      Invoke-ExternalChecked -Label "npm ci" -Command { npm ci }
+    } else {
+      Invoke-ExternalChecked -Label "npm install" -Command { npm install }
+    }
+    node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.build ? 0 : 1)"
+    if ($LASTEXITCODE -eq 0) {
+      Invoke-ExternalChecked -Label "npm run build" -Command { npm run build }
+    } else {
+      Write-Host "[verify_repo] no npm build script (skipping)"
+    }
     Pop-Location
   } else {
-    Write-Host "[verify] npm not found; skipping web build"
+    Write-Host "[verify_repo] npm not found; skipping web build"
   }
 } else {
-  Write-Host "[verify] no web frontend detected (web/package.json missing)"
+  Write-Host "[verify_repo] no web frontend detected (web/package.json missing)"
 }
 
-Write-Host "[verify] OK"
+# 3) Workflow checks (hard)
+Invoke-Step -Name "workflow gate (workflow checks)" -Block {
+  Invoke-ExternalChecked -Label "workflow gate (workflow checks)" -Command { python scripts\workflow_checks.py }
+}
+
+# 4) Contract checks (hard)
+Invoke-Step -Name "contract checks" -Block {
+  Invoke-ExternalChecked -Label "contract checks" -Command { python scripts\contract_checks.py }
+}
+
+# 5) Sync doc links (hard)
+Invoke-Step -Name "doc index check (sync doc links --check)" -Block {
+  Invoke-ExternalChecked -Label "doc index check (sync doc links --check)" -Command {
+    python scripts\sync_doc_links.py --check
+  }
+}
+
+# 6) Tests (optional)
+$TestAll = Join-Path $Root "scripts\test_all.ps1"
+if (Test-Path $TestAll) {
+  Invoke-Step -Name "tests" -Block {
+    Invoke-ExternalChecked -Label "tests" -Command { powershell -ExecutionPolicy Bypass -File $TestAll }
+  }
+} else {
+  Write-Host "[verify_repo] tests: scripts/test_all.ps1 not found (skip)"
+}
+
+Write-Host "[verify_repo] OK"
