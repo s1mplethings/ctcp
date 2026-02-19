@@ -1,107 +1,108 @@
-# Demo Report — LAST
+# Demo Report - LAST
 
 ## Goal
-- Implement Local Orchestrator artifact-driven progression with optional controlled web-find artifact gating, while keeping ADLC mainline unchanged and enforcing stricter repo hygiene gates.
+- Implement TeamNet dispatcher/provider auto-invocation for missing artifacts:
+  - local `librarian` auto-exec
+  - API-role `manual_outbox` prompt generation
+  - outbox budget stop gate
+  - outbox refill tracking events
+- Add lite regressions for dispatcher behavior.
 
 ## Readlist
 - `ai_context/00_AI_CONTRACT.md`
-  - Enforce task-first, verify entrypoint, and auditable report output.
 - `README.md`
-  - Core execution defaults and verify entrypoints.
 - `BUILD.md`
-  - Headless lite build assumptions.
 - `PATCH_README.md`
-  - Minimal patch + verify requirements.
 - `TREE.md`
-  - Repository structure reference.
 - `docs/03_quality_gates.md`
-  - Lite replay and workflow/contract/doc-index gate obligations.
 - `ai_context/problem_registry.md`
-  - Evidence-first verify discipline.
 - `ai_context/decision_log.md`
-  - No bypass entries needed.
 - `docs/00_CORE.md`
-  - Canonical protocol source (updated to v0.1 contract text).
+- `docs/02_workflow.md`
+- `docs/22_agent_teamnet.md`
+- `docs/30_artifact_contracts.md`
+- `meta/tasks/CURRENT.md`
+- `meta/tasks/TEMPLATE.md`
 
 ## Plan
-1) Write/update the 4 contract documents as the source of truth.
-2) Refactor orchestrator into strict artifact-gated progression with review/signature gates.
-3) Add optional `find_web` contract + offline validation and lite check scenario.
-4) Tighten verify_repo anti-pollution gate for build/run outputs tracked or appearing in repo.
-5) Run orchestrator checks + `scripts/verify_repo.ps1` and record evidence.
+1. Docs/Spec: add dispatcher/provider and outbox contract sections.
+2. Code: add `ctcp_dispatch` + provider modules and orchestrator integration.
+3. Tests: add lite scenarios for missing-review outbox and librarian local-exec.
+4. Verify: run doc index check, simlab lite suite, and `verify_repo`.
+5. Report: update LAST with demo pointers.
 
-## Timeline / Trace pointer
-- Run pointer: `meta/run_pointers/LAST_RUN.txt`
-- External run folder: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-152020-orchestrate`
-- Trace: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-152020-orchestrate\TRACE.md`
+## Timeline / Trace Pointer
+- External demo run dir:
+  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-163807-orchestrate`
+- Demo trace:
+  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-163807-orchestrate\TRACE.md`
+- Demo outbox prompt:
+  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-163807-orchestrate\outbox\001_contract_guardian_review_contract.md`
+- Demo pointer file:
+  - `meta/run_pointers/LAST_RUN.txt`
 
 ## Changes
-- Contract docs (source of truth)
-  - `docs/00_CORE.md` rewritten to `CTCP Core Contract (v0.1)`.
-  - `docs/21_paths_and_locations.md` rewritten to `Paths and Locations (v0.1)`.
-  - Added `docs/22_teamnet_adlc.md` (`TeamNet x ADLC Overview (v0.1)`).
-  - Added `docs/30_artifact_contracts.md` (`Artifact Contracts (v0.1)`).
-- Workflow/docs integration
-  - `docs/02_workflow.md` updated with Local Orchestrator artifact-progression + find mode notes.
-  - `README.md` updated with controlled optional web-find note while default remains offline.
-  - `scripts/sync_doc_links.py` updated curated index list to include new docs and README index resynced.
-- Artifact schemas
-  - Updated `specs/ctcp_file_request_v1.json` to `needs[] + budget + reason` contract.
-  - Updated `specs/ctcp_context_pack_v1.json` to `omitted[]` structured objects with reason enum.
-  - Added/updated `specs/ctcp_find_web_v1.json` with `constraints(max_queries,max_pages,allow_domains)` and structured locator.
-- Orchestrator implementation
-  - Rewrote `scripts/ctcp_orchestrate.py` as strict artifact-driven state machine.
-  - `new-run`: creates external run layout (`repo_ref.json`, `events.jsonl`, `artifacts/`, `reviews/`, `logs/`, `snapshot/`, `TRACE.md`) and writes `meta/run_pointers/LAST_RUN.txt`.
-  - `status`: shows missing artifact/block reason and responsible role.
-  - `advance`: gates on `guardrails -> analysis -> find_result -> (optional find_web) -> file_request -> context_pack -> PLAN_draft -> reviews APPROVE -> PLAN signed -> diff.patch -> apply -> verify`.
-  - `resolver_plus_web` mode now blocks on missing/invalid `artifacts/find_web.json` with owner `Researcher`.
-  - verify output switched to `artifacts/verify_report.json` with required fields.
-- Gate/quality updates
-  - Added `tools/checks/find_web_contract.py` (offline find_web schema checker).
-  - Added `simlab/scenarios/S11_lite_find_web_contract.yaml` (lite contract check scenario).
-  - Existing `simlab/run.py` empty-suite fail behavior remains active (`no scenarios` => exit 1).
-- Repo hygiene gate hardening
-  - `scripts/verify_repo.ps1` and `scripts/verify_repo.sh` now fail on:
-    - tracked build outputs
-    - tracked run outputs (`meta/runs`, `simlab/_runs*`)
-    - unignored build/run outputs in repo
-  - Why this gate is mandatory:
-    - tracked build/run artifacts break repo cleanliness and make `verify_repo` non-reproducible across machines.
-    - in-repo run outputs violate the external blackboard contract (`CTCP_RUNS_ROOT`) and pollute review diffs.
-  - lite replay default runs are now external (`python simlab/run.py --suite lite`); in-repo fixture path only when `CTCP_WRITE_FIXTURES=1`.
-- Pollution cleanup to satisfy new gate
-  - Removed tracked historical run outputs from git index:
-    - `meta/runs/**`
-    - `simlab/_runs/**`
+- Unified diff patch bundle:
+  - `PATCHES/20260219-teamnet-dispatch.patch`
+- Spec/contract docs:
+  - `docs/22_agent_teamnet.md`: added dispatcher/provider wiring and boundaries.
+  - `docs/30_artifact_contracts.md`: added `dispatch_config` and `outbox/*.md` contracts.
+- Dispatcher/provider implementation:
+  - `scripts/ctcp_dispatch.py` (new): gate->role/action mapping, config loading, provider dispatch, outbox fulfillment detection.
+  - `tools/providers/manual_outbox.py` (new): template-based prompt generation, dedupe, budget stop.
+  - `tools/providers/local_exec.py` (new): librarian-only local execution for `context_pack`.
+  - `tools/providers/__init__.py` (new).
+- Orchestrator integration:
+  - `scripts/ctcp_orchestrate.py`:
+    - creates `artifacts/dispatch_config.json` on `new-run`
+    - includes `outbox/` in run layout
+    - `advance` dispatches on blocked/fail gates:
+      - `LOCAL_EXEC_COMPLETED` / `LOCAL_EXEC_FAILED`
+      - `OUTBOX_PROMPT_CREATED`
+      - `STOP_BUDGET_EXCEEDED`
+    - `status` now prints:
+      - `outbox prompt created: ...` (when present)
+      - `STOP: budget_exceeded (...)` (when applicable)
+    - tracks refill completion via `OUTBOX_PROMPT_FULFILLED`.
+- Prompt templates (new):
+  - `agents/prompts/chair_plan_draft.md`
+  - `agents/prompts/chair_file_request.md`
+  - `agents/prompts/contract_guardian_review.md`
+  - `agents/prompts/cost_controller_review.md`
+  - `agents/prompts/patchmaker_patch.md`
+  - `agents/prompts/fixer_patch.md`
+  - `agents/prompts/researcher_find_web.md`
+  - `agents/prompts/librarian_context_pack.md`
+- Lite regressions:
+  - `simlab/scenarios/S12_lite_orchestrate_context_gate.yaml` (updated: pins librarian to manual_outbox for old gate assertion).
+  - `simlab/scenarios/S13_lite_dispatch_outbox_on_missing_review.yaml` (new).
+  - `simlab/scenarios/S14_lite_dispatch_local_exec_librarian.yaml` (new).
+- Task tracking:
+  - `meta/tasks/CURRENT.md` updated for this dispatcher task.
 
 ## Verify
-- Syntax checks:
-  - `python -m py_compile scripts/ctcp_orchestrate.py scripts/resolve_workflow.py simlab/run.py tools/checks/find_web_contract.py tools/run_paths.py`
-  - Result: pass.
-- Orchestrator creation:
-  - `python scripts/ctcp_orchestrate.py new-run --goal "smoke"`
-  - Result: pass; run created under external root and pointer updated.
-- Orchestrator progression to librarian gate:
-  - Prepared `artifacts/guardrails.md`, `artifacts/analysis.md`, `artifacts/file_request.json`, then ran:
-  - `python scripts/ctcp_orchestrate.py advance --max-steps 8`
-  - Result: blocked on `artifacts/context_pack.json` with owner `Local Librarian`.
-- Optional web-find gate behavior (resolver_plus_web):
-  - Switched guardrails to `find_mode: resolver_plus_web`, then ran:
-  - `python scripts/ctcp_orchestrate.py advance --run-dir <last_run> --max-steps 4`
-  - Result: blocked on `artifacts/find_web.json` with owner `Researcher`.
-- Mandatory gate:
-  - `powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1`
-  - Exit: `0`
-  - Key output:
-    - anti-pollution gate passed
-    - headless lite build + ctest passed
-    - workflow/contract/doc-index checks passed
-    - lite scenario replay passed with `passed: 3, failed: 0`
-    - `[verify_repo] OK`
+- `git worktree add d:\\.c_projects\\adc\\ctcp_patch_check_<ts> HEAD`
+  - `git -C d:\\.c_projects\\adc\\ctcp_patch_check_<ts> apply --check d:/.c_projects/adc/ctcp/PATCHES/20260219-teamnet-dispatch.patch`
+  - result: pass (then worktree removed)
+- `python -m py_compile scripts/ctcp_orchestrate.py scripts/ctcp_dispatch.py scripts/ctcp_librarian.py tools/providers/manual_outbox.py tools/providers/local_exec.py`
+  - result: pass
+- `python scripts/sync_doc_links.py --check`
+  - result: `[sync_doc_links] ok`
+- `python simlab/run.py --suite lite`
+  - result: `{"passed": 6, "failed": 0, ...}`
+- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
+  - result: pass
+  - key output:
+    - ctest lite: `2/2` passed
+    - workflow gate: ok
+    - contract checks: ok
+    - doc index check: ok
+    - lite scenario replay: `{"passed": 6, "failed": 0, ...}`
+    - final: `[verify_repo] OK`
 
-## Open questions (if any)
+## Open Questions
 - None.
 
-## Next steps
-- Commit the full contract + orchestrator + gate patch as a single focused change set.
-- Optionally add a negative lite scenario for invalid `find_web.json` to assert expected fail path explicitly.
+## Next Steps
+1. If needed, add a dedicated lite case for `budget_exceeded` stop behavior.
+2. If needed, add richer chair/fixer templates for adjudication and post-failure fix loops.

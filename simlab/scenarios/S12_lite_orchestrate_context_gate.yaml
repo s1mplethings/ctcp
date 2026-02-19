@@ -1,0 +1,66 @@
+{
+  "id": "S12_lite_orchestrate_context_gate",
+  "name": "lite orchestrator blocks on missing context_pack with external run dir",
+  "suite": "lite",
+  "steps": [
+    {
+      "run": {
+        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-orchestrate-lite > artifacts/_orch_newrun.out.txt 2>&1",
+        "expect_exit": 0
+      }
+    },
+    {
+      "expect_text": {
+        "path": "artifacts/_orch_newrun.out.txt",
+        "includes": [
+          "[ctcp_orchestrate] run_dir="
+        ]
+      }
+    },
+    {
+      "expect_text": {
+        "path": "meta/run_pointers/LAST_RUN.txt",
+        "includes": [
+          "ctcp",
+          "runs"
+        ],
+        "excludes": [
+          "simlab_runs"
+        ]
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; art.mkdir(parents=True, exist_ok=True); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-orchestrate-lite','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':1,'max_total_bytes':2000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); cfg=Path(rd)/'artifacts'/'dispatch_config.json'; doc={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'manual_outbox','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; cfg.write_text(json.dumps(doc, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 8 > artifacts/_orch_advance.out.txt 2>&1",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python scripts/ctcp_orchestrate.py status > artifacts/_orch_status.out.txt 2>&1",
+        "expect_exit": 0
+      }
+    },
+    {
+      "expect_text": {
+        "path": "artifacts/_orch_status.out.txt",
+        "includes": [
+          "blocked: waiting for context_pack.json",
+          "owner=Local Librarian"
+        ]
+      }
+    }
+  ]
+}

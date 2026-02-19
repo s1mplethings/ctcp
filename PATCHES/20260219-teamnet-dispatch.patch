@@ -1,0 +1,1747 @@
+diff --git a/docs/22_agent_teamnet.md b/docs/22_agent_teamnet.md
+index 7500e47..e0bbcdf 100644
+--- a/docs/22_agent_teamnet.md
++++ b/docs/22_agent_teamnet.md
+@@ -1,66 +1,68 @@
+-# Agent TeamNet (ADLC Mainline)
++# Agent TeamNet Contract (v0.2)
+ 
+-目标：给任意 AI 一个最小但完整的团队协作拓扑，明确谁负责什么、谁能决策、产物落在哪里。
++`docs/00_CORE.md` is authoritative. This file turns that contract into role wiring for multi-agent execution.
+ 
+-## TeamNet role graph (mesh)
++## TeamNet Mesh
+ 
+ ```text
+- +------------------+      +------------------+      +------------------+
+- |  Local Librarian |----->|    Blackboard    |<-----|    Researcher    |
+- | read-only supply |      | work + artifacts |      | externals summary|
+- +---------+--------+      +---------+--------+      +---------+--------+
+-           |                         |                         |
+-           v                         v                         v
+- +---------+--------+      +---------+--------+      +---------+--------+
+- | ContractGuardian |----->| Chair/Planner    |<-----| CostController   |
+- | adversarial DoD  |      | ONLY decision    |      | adversarial cost |
+- +------------------+      +----+--------+----+      +------------------+
+-                                 |        |
+-                                 v        v
+-                          +------+--+  +--+---------------+
+-                          |PatchMaker|  |  Local Verifier |
+-                          | execute  |  |  fact judge     |
+-                          +----+-----+  +--------+--------+
+-                               ^                 |
+-                               |                 v
+-                               |        +--------+--------+
+-                               +--------+     Fixer       |
+-                                        | execute (bundle)|
+-                                        +-----------------+
++                     (adversarial reviews only)
++      +--------------------+         +--------------------+
++      | ContractGuardian   |-------->|                    |
++      | cost/contract gate |         |                    |
++      +--------------------+         |                    |
++                                     |   Chair/Planner    |
++      +--------------------+         | (ONLY decision)    |
++      | CostController     |-------->|                    |
++      | budget gate        |         |                    |
++      +--------------------+         +----------+---------+
++                                                |
++                                                v
++ +--------------------+    context_pack   +----+---------------+
++ | Local Librarian    |------------------>| PatchMaker / Fixer |
++ | read-only supplier |                   | execution only      |
++ +----------+---------+                   +----+----------------+
++            ^                                  |
++            | file_request                     | diff.patch
++            |                                  v
++ +----------+---------+                 +------+--------------+
++ | Local Orchestrator |---------------->| Local Verifier      |
++ | gate driver only   |<----------------| fact judge only     |
++ +----------+---------+   verify result +------+--------------+
++            ^
++            | externals_pack (optional candidate input)
++ +----------+---------+
++ | Web Researcher     |
++ | offline source pack|
++ +--------------------+
+ ```
+ 
+-角色要点：
+-- Local Librarian：只读仓库，负责 context_pack/file_supply，减少 API 文件读取成本。
+-- Researcher：仅补充 externals 摘要；`find` 主链路仍是本地 workflow resolver。
+-- Blackboard：统一工作区与产物交换面。
+-- ContractGuardian：对抗式检查 contract/DoD/gate。
+-- CostController：对抗式限制 token、调用次数、读文件预算（通过 Chair 施加约束）。
+-- Chair/Planner：唯一决策点。
+-- PatchMaker/Fixer：执行角色，Fixer 只基于 failure bundle 修复。
+-- Local Verifier：事实判定，运行 `verify_repo`/SimLab。
++## Role Contract
+ 
+-## ADLC mainline with agent assists
++| Role | Inputs | Outputs | MUST NOT | ADLC Binding |
++|---|---|---|---|---|
++| Chair/Planner | `analysis.md`, `find_result.json`, reviews, context pack | `PLAN_draft.md`, signed `PLAN.md`, adjudication | Delegate final decision | `analysis`, `plan`, `deploy/merge` |
++| Local Orchestrator | artifact presence/state, signed plan, gate results | status transitions, run pointer updates, gate triggers | Decide workflow/plan, write patch, approve reviews | all steps as driver |
++| Local Librarian | `file_request.json` | `context_pack.json` | Decide solution, patch code | `analysis -> plan` support |
++| Web Researcher | guardrails + query budget | `meta/externals/<goal_slug>/externals_pack.json` | Replace resolver result, execute patch | optional input before `plan` |
++| ContractGuardian | `PLAN_draft.md`, contract docs | `reviews/review_contract.md` (`APPROVE/BLOCK`) | Edit source code or patch | `plan` gate |
++| CostController | `PLAN_draft.md`, budgets, stop conditions | `reviews/review_cost.md` (`APPROVE/BLOCK`) | Edit source code or patch | `plan` gate |
++| PatchMaker/Fixer | signed `PLAN.md`, failure bundle | `artifacts/diff.patch` | Expand scope outside plan, self-approve | `fix` and execute loop |
++| Local Verifier | repo/run state, verify entrypoint | `TRACE.md`, `artifacts/verify_report.json`, `failure_bundle.zip` (on fail) | Decide acceptance policy | `[build<->verify]`, `contrast` |
+ 
+-```text
+-doc -> analysis -> find -> plan -> build/verify -> contrast -> fix -> deploy/merge
+-  |       |         |       |           |            |        |         |
+-  |       |         |       |           |            |        |         +--> artifacts/release_report.md
+-  |       |         |       |           |            |        +------------> artifacts/diff.patch (new)
+-  |       |         |       |           |            +---------------------> failure_bundle.zip (input to Fixer)
+-  |       |         |       |           +----------------------------------> TRACE.md + artifacts/verify_report.md
+-  |       |         |       +-----------------------------------------------> artifacts/PLAN.md
+-  |       |         +-------------------------------------------------------> artifacts/find_result.json
+-  |       +-----------------------------------------------------------------> artifacts/analysis.md
+-  +-------------------------------------------------------------------------> artifacts/guardrails.md
++## Hard Boundaries
+ 
+-* ONLY decision point across steps: Chair/Planner
+-```
++- Unique decision authority: `Chair/Planner` only.
++- Local Orchestrator/Librarian are low-cost context providers and gate drivers, not strategists.
++- Web Researcher provides offline, structured candidate evidence only; cannot become execution single point of failure.
++- Adversarial roles (`ContractGuardian`, `CostController`, optional red-team) exist to block unsafe plans; they cannot write code directly.
++
++## Dispatcher/Provider Wiring
+ 
+-产物映射（与 `docs/00_CORE.md` 第 4/5 节一致）：
+-- doc -> `artifacts/guardrails.md`
+-- analysis -> `artifacts/analysis.md`
+-- find -> `artifacts/find_result.json`
+-- plan -> `artifacts/PLAN.md`
+-- build/verify -> `TRACE.md`, `artifacts/verify_report.md`
+-- contrast/fix -> `failure_bundle.zip` -> `artifacts/diff.patch`
+-- deploy/merge -> `artifacts/release_report.md`
++- Orchestrator MAY call a local dispatcher when blocked by missing artifacts.
++- Dispatcher input authority remains the same gate state; it does not change workflow selection authority.
++- Provider types:
++  - `local_exec`: local script execution, restricted to librarian context-pack generation.
++  - `manual_outbox`: writes standardized outbox prompts for external/manual agents.
++- `manual_outbox` prompts must constrain write scope to run_dir target artifacts only.
++- `manual_outbox` prompts must not instruct any direct repo edits.
++- When `max_outbox_prompts` budget is exceeded, dispatcher must stop creating prompts (`budget_exceeded`).
+diff --git a/docs/30_artifact_contracts.md b/docs/30_artifact_contracts.md
+index fa7c579..aca7f09 100644
+--- a/docs/30_artifact_contracts.md
++++ b/docs/30_artifact_contracts.md
+@@ -139,3 +139,46 @@ J) events.jsonl
+ Each line:
+ 
+ {"ts":"...","role":"...","event":"...","path":"..."}
++
++K) artifacts/dispatch_config.json
++
++Fields:
++
++schema_version: "ctcp-dispatch-config-v1"
++
++mode: "manual_outbox" | "local_exec"
++
++role_providers: {
++  "librarian": "local_exec|manual_outbox",
++  "chair": "manual_outbox",
++  "contract_guardian": "manual_outbox",
++  "cost_controller": "manual_outbox",
++  "patchmaker": "manual_outbox",
++  "fixer": "manual_outbox",
++  "researcher": "manual_outbox"
++}
++
++budgets: { "max_outbox_prompts": int }
++
++Rules:
++- `local_exec` MUST only auto-execute librarian context pack generation.
++- API-facing roles MUST use manual outbox prompts (no direct network/API call in local orchestrator).
++
++L) outbox/*.md (manual provider prompt)
++
++Prompt must include:
++
++Run-Dir (absolute path)
++
++Role / Action / Target-Path
++
++write to: <run-relative target path>
++
++missing artifacts list
++
++budget values (`max_outbox_prompts`, `max_files`, `max_total_bytes`, `max_iterations`)
++
++Hard constraints:
++- Only write requested target artifact in run_dir.
++- Do not modify repo files.
++- Follow role template output keys (for example `Verdict: APPROVE|BLOCK`, `Status: SIGNED`, patch only `artifacts/diff.patch`).
+diff --git a/meta/reports/LAST.md b/meta/reports/LAST.md
+index 1f3b799..3374ab4 100644
+--- a/meta/reports/LAST.md
++++ b/meta/reports/LAST.md
+@@ -1,107 +1,103 @@
+-# Demo Report — LAST
++# Demo Report - LAST
+ 
+ ## Goal
+-- Implement Local Orchestrator artifact-driven progression with optional controlled web-find artifact gating, while keeping ADLC mainline unchanged and enforcing stricter repo hygiene gates.
++- Implement TeamNet dispatcher/provider auto-invocation for missing artifacts:
++  - local `librarian` auto-exec
++  - API-role `manual_outbox` prompt generation
++  - outbox budget stop gate
++  - outbox refill tracking events
++- Add lite regressions for dispatcher behavior.
+ 
+ ## Readlist
+ - `ai_context/00_AI_CONTRACT.md`
+-  - Enforce task-first, verify entrypoint, and auditable report output.
+ - `README.md`
+-  - Core execution defaults and verify entrypoints.
+ - `BUILD.md`
+-  - Headless lite build assumptions.
+ - `PATCH_README.md`
+-  - Minimal patch + verify requirements.
+ - `TREE.md`
+-  - Repository structure reference.
+ - `docs/03_quality_gates.md`
+-  - Lite replay and workflow/contract/doc-index gate obligations.
+ - `ai_context/problem_registry.md`
+-  - Evidence-first verify discipline.
+ - `ai_context/decision_log.md`
+-  - No bypass entries needed.
+ - `docs/00_CORE.md`
+-  - Canonical protocol source (updated to v0.1 contract text).
++- `docs/02_workflow.md`
++- `docs/22_agent_teamnet.md`
++- `docs/30_artifact_contracts.md`
++- `meta/tasks/CURRENT.md`
++- `meta/tasks/TEMPLATE.md`
+ 
+ ## Plan
+-1) Write/update the 4 contract documents as the source of truth.
+-2) Refactor orchestrator into strict artifact-gated progression with review/signature gates.
+-3) Add optional `find_web` contract + offline validation and lite check scenario.
+-4) Tighten verify_repo anti-pollution gate for build/run outputs tracked or appearing in repo.
+-5) Run orchestrator checks + `scripts/verify_repo.ps1` and record evidence.
++1. Docs/Spec: add dispatcher/provider and outbox contract sections.
++2. Code: add `ctcp_dispatch` + provider modules and orchestrator integration.
++3. Tests: add lite scenarios for missing-review outbox and librarian local-exec.
++4. Verify: run doc index check, simlab lite suite, and `verify_repo`.
++5. Report: update LAST with demo pointers.
+ 
+-## Timeline / Trace pointer
+-- Run pointer: `meta/run_pointers/LAST_RUN.txt`
+-- External run folder: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-152020-orchestrate`
+-- Trace: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-152020-orchestrate\TRACE.md`
++## Timeline / Trace Pointer
++- External demo run dir:
++  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-163807-orchestrate`
++- Demo trace:
++  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-163807-orchestrate\TRACE.md`
++- Demo outbox prompt:
++  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-163807-orchestrate\outbox\001_contract_guardian_review_contract.md`
++- Demo pointer file:
++  - `meta/run_pointers/LAST_RUN.txt`
+ 
+ ## Changes
+-- Contract docs (source of truth)
+-  - `docs/00_CORE.md` rewritten to `CTCP Core Contract (v0.1)`.
+-  - `docs/21_paths_and_locations.md` rewritten to `Paths and Locations (v0.1)`.
+-  - Added `docs/22_teamnet_adlc.md` (`TeamNet x ADLC Overview (v0.1)`).
+-  - Added `docs/30_artifact_contracts.md` (`Artifact Contracts (v0.1)`).
+-- Workflow/docs integration
+-  - `docs/02_workflow.md` updated with Local Orchestrator artifact-progression + find mode notes.
+-  - `README.md` updated with controlled optional web-find note while default remains offline.
+-  - `scripts/sync_doc_links.py` updated curated index list to include new docs and README index resynced.
+-- Artifact schemas
+-  - Updated `specs/ctcp_file_request_v1.json` to `needs[] + budget + reason` contract.
+-  - Updated `specs/ctcp_context_pack_v1.json` to `omitted[]` structured objects with reason enum.
+-  - Added/updated `specs/ctcp_find_web_v1.json` with `constraints(max_queries,max_pages,allow_domains)` and structured locator.
+-- Orchestrator implementation
+-  - Rewrote `scripts/ctcp_orchestrate.py` as strict artifact-driven state machine.
+-  - `new-run`: creates external run layout (`repo_ref.json`, `events.jsonl`, `artifacts/`, `reviews/`, `logs/`, `snapshot/`, `TRACE.md`) and writes `meta/run_pointers/LAST_RUN.txt`.
+-  - `status`: shows missing artifact/block reason and responsible role.
+-  - `advance`: gates on `guardrails -> analysis -> find_result -> (optional find_web) -> file_request -> context_pack -> PLAN_draft -> reviews APPROVE -> PLAN signed -> diff.patch -> apply -> verify`.
+-  - `resolver_plus_web` mode now blocks on missing/invalid `artifacts/find_web.json` with owner `Researcher`.
+-  - verify output switched to `artifacts/verify_report.json` with required fields.
+-- Gate/quality updates
+-  - Added `tools/checks/find_web_contract.py` (offline find_web schema checker).
+-  - Added `simlab/scenarios/S11_lite_find_web_contract.yaml` (lite contract check scenario).
+-  - Existing `simlab/run.py` empty-suite fail behavior remains active (`no scenarios` => exit 1).
+-- Repo hygiene gate hardening
+-  - `scripts/verify_repo.ps1` and `scripts/verify_repo.sh` now fail on:
+-    - tracked build outputs
+-    - tracked run outputs (`meta/runs`, `simlab/_runs*`)
+-    - unignored build/run outputs in repo
+-  - Why this gate is mandatory:
+-    - tracked build/run artifacts break repo cleanliness and make `verify_repo` non-reproducible across machines.
+-    - in-repo run outputs violate the external blackboard contract (`CTCP_RUNS_ROOT`) and pollute review diffs.
+-  - lite replay default runs are now external (`python simlab/run.py --suite lite`); in-repo fixture path only when `CTCP_WRITE_FIXTURES=1`.
+-- Pollution cleanup to satisfy new gate
+-  - Removed tracked historical run outputs from git index:
+-    - `meta/runs/**`
+-    - `simlab/_runs/**`
++- Spec/contract docs:
++  - `docs/22_agent_teamnet.md`: added dispatcher/provider wiring and boundaries.
++  - `docs/30_artifact_contracts.md`: added `dispatch_config` and `outbox/*.md` contracts.
++- Dispatcher/provider implementation:
++  - `scripts/ctcp_dispatch.py` (new): gate->role/action mapping, config loading, provider dispatch, outbox fulfillment detection.
++  - `tools/providers/manual_outbox.py` (new): template-based prompt generation, dedupe, budget stop.
++  - `tools/providers/local_exec.py` (new): librarian-only local execution for `context_pack`.
++  - `tools/providers/__init__.py` (new).
++- Orchestrator integration:
++  - `scripts/ctcp_orchestrate.py`:
++    - creates `artifacts/dispatch_config.json` on `new-run`
++    - includes `outbox/` in run layout
++    - `advance` dispatches on blocked/fail gates:
++      - `LOCAL_EXEC_COMPLETED` / `LOCAL_EXEC_FAILED`
++      - `OUTBOX_PROMPT_CREATED`
++      - `STOP_BUDGET_EXCEEDED`
++    - `status` now prints:
++      - `outbox prompt created: ...` (when present)
++      - `STOP: budget_exceeded (...)` (when applicable)
++    - tracks refill completion via `OUTBOX_PROMPT_FULFILLED`.
++- Prompt templates (new):
++  - `agents/prompts/chair_plan_draft.md`
++  - `agents/prompts/chair_file_request.md`
++  - `agents/prompts/contract_guardian_review.md`
++  - `agents/prompts/cost_controller_review.md`
++  - `agents/prompts/patchmaker_patch.md`
++  - `agents/prompts/fixer_patch.md`
++  - `agents/prompts/researcher_find_web.md`
++  - `agents/prompts/librarian_context_pack.md`
++- Lite regressions:
++  - `simlab/scenarios/S12_lite_orchestrate_context_gate.yaml` (updated: pins librarian to manual_outbox for old gate assertion).
++  - `simlab/scenarios/S13_lite_dispatch_outbox_on_missing_review.yaml` (new).
++  - `simlab/scenarios/S14_lite_dispatch_local_exec_librarian.yaml` (new).
++- Task tracking:
++  - `meta/tasks/CURRENT.md` updated for this dispatcher task.
+ 
+ ## Verify
+-- Syntax checks:
+-  - `python -m py_compile scripts/ctcp_orchestrate.py scripts/resolve_workflow.py simlab/run.py tools/checks/find_web_contract.py tools/run_paths.py`
+-  - Result: pass.
+-- Orchestrator creation:
+-  - `python scripts/ctcp_orchestrate.py new-run --goal "smoke"`
+-  - Result: pass; run created under external root and pointer updated.
+-- Orchestrator progression to librarian gate:
+-  - Prepared `artifacts/guardrails.md`, `artifacts/analysis.md`, `artifacts/file_request.json`, then ran:
+-  - `python scripts/ctcp_orchestrate.py advance --max-steps 8`
+-  - Result: blocked on `artifacts/context_pack.json` with owner `Local Librarian`.
+-- Optional web-find gate behavior (resolver_plus_web):
+-  - Switched guardrails to `find_mode: resolver_plus_web`, then ran:
+-  - `python scripts/ctcp_orchestrate.py advance --run-dir <last_run> --max-steps 4`
+-  - Result: blocked on `artifacts/find_web.json` with owner `Researcher`.
+-- Mandatory gate:
+-  - `powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1`
+-  - Exit: `0`
+-  - Key output:
+-    - anti-pollution gate passed
+-    - headless lite build + ctest passed
+-    - workflow/contract/doc-index checks passed
+-    - lite scenario replay passed with `passed: 3, failed: 0`
+-    - `[verify_repo] OK`
++- `python -m py_compile scripts/ctcp_orchestrate.py scripts/ctcp_dispatch.py scripts/ctcp_librarian.py tools/providers/manual_outbox.py tools/providers/local_exec.py`
++  - result: pass
++- `python scripts/sync_doc_links.py --check`
++  - result: `[sync_doc_links] ok`
++- `python simlab/run.py --suite lite`
++  - result: `{"passed": 6, "failed": 0, ...}`
++- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
++  - result: pass
++  - key output:
++    - ctest lite: `2/2` passed
++    - workflow gate: ok
++    - contract checks: ok
++    - doc index check: ok
++    - lite scenario replay: `{"passed": 6, "failed": 0, ...}`
++    - final: `[verify_repo] OK`
+ 
+-## Open questions (if any)
++## Open Questions
+ - None.
+ 
+-## Next steps
+-- Commit the full contract + orchestrator + gate patch as a single focused change set.
+-- Optionally add a negative lite scenario for invalid `find_web.json` to assert expected fail path explicitly.
++## Next Steps
++1. If needed, add a dedicated lite case for `budget_exceeded` stop behavior.
++2. If needed, add richer chair/fixer templates for adjudication and post-failure fix loops.
+diff --git a/meta/tasks/CURRENT.md b/meta/tasks/CURRENT.md
+index 60d09c1..f6071d8 100644
+--- a/meta/tasks/CURRENT.md
++++ b/meta/tasks/CURRENT.md
+@@ -1,37 +1,50 @@
+-# Task — local-orchestrator-dual-find-protocol
++# Task - teamnet-dispatcher-provider-manual-outbox
+ 
+ ## Context
+-- Need to align repository contracts to a single authority set: `docs/00_CORE.md`, `docs/21_paths_and_locations.md`, `docs/22_teamnet_adlc.md`, and `docs/30_artifact_contracts.md`.
+-- Need Local Orchestrator to be artifact-driven (missing artifact => blocked) while keeping ADLC mainline unchanged.
+-- Need optional web-find channel (`resolver_plus_web`) without implementing any real network search in repo code.
+-- Need verify gates to fail on tracked/in-repo build/run pollution and keep lite scenario gate real.
++- Add TeamNet dispatcher/provider automation layer on top of the existing orchestrator state machine.
++- Keep resolver-first and external-run constraints unchanged.
++- Implement only local pluggable providers without network/API calls:
++  - `manual_outbox` provider for API roles.
++  - `local_exec` provider only for local librarian auto-execution.
++- Add lite regression coverage for dispatcher behavior.
+ 
+ ## Acceptance (must be checkable)
+ - [x] DoD written (this file complete)
+-- [x] Research logged (if needed): N/A (repo-local contract + implementation task)
++- [x] Research logged (if needed): N/A (repo-local contract alignment)
+ - [x] Code changes allowed
+ - [x] Patch applies cleanly (`git apply ...`) OR overlay zip applies cleanly
+ - [x] `scripts/verify_repo.*` passes
+ - [x] Demo report updated: `meta/reports/LAST.md`
+ 
+ ## Plan
+-1) Replace/update the 4 contract docs as the primary source of truth.
+-2) Refactor `scripts/ctcp_orchestrate.py` to strict artifact-gated progression and review/signature gates.
+-3) Add optional `find_web` artifact contract + offline validator + lite scenario check.
+-4) Tighten verify_repo anti-pollution rules for tracked/in-repo build/run outputs.
+-5) Run orchestrator smoke checks and `scripts/verify_repo.ps1`, then record report.
++1) Spec-first: update TeamNet/artifact docs for `dispatch_config` and outbox prompt contract.
++2) Implement dispatcher core + providers (`manual_outbox`, `local_exec`) and orchestrator integration (`status`/`advance`).
++3) Add prompt templates under `agents/prompts/` for Chair/Guardian/Cost/Patch/Fix/Research (+ librarian template compatibility).
++4) Add 1-2 lite SimLab scenarios for dispatcher outbox and librarian local-exec behavior.
++5) Run `python scripts/sync_doc_links.py --check` and `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`.
++6) Update `meta/reports/LAST.md` with readlist/plan/verify/demo pointer.
+ 
+ ## Notes / Decisions
+-- No GUI changes.
+-- No new dependencies; stdlib only.
+-- No real web search implementation: web-find remains external artifact input only.
+-- Keep decision authority in Chair artifacts (`PLAN_draft.md` / signed `PLAN.md` + review adjudication).
++- `find_result.json` remains the only resolver authority; `find_web` is candidate input only.
++- Runs remain outside repo under `CTCP_RUNS_ROOT`; repo keeps only run pointers.
++- No new dependencies.
+ 
+ ## Results
+-- Updated contract docs and path/team/artifact rules to v0.1 text.
+-- Implemented Local Orchestrator as artifact gate driver (no plan/review content generation).
+-- Added `ctcp_find_web_v1` schema and offline validator.
+-- Added lite scenario to validate `find_web.json` fields in `resolver_plus_web` mode.
+-- Updated verify gate to fail on tracked/unignored build and run outputs inside repo.
+-- Removed tracked historical run outputs from `meta/runs` and `simlab/_runs` to satisfy new gate.
+-- `powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1` passed.
++- Added dispatcher/provider layer:
++  - `scripts/ctcp_dispatch.py`
++  - `tools/providers/manual_outbox.py`
++  - `tools/providers/local_exec.py`
++- Integrated dispatch into `scripts/ctcp_orchestrate.py` (`new-run/status/advance`) with:
++  - auto-created `artifacts/dispatch_config.json`
++  - `OUTBOX_PROMPT_CREATED` and `OUTBOX_PROMPT_FULFILLED` events
++  - budget stop (`STOP_BUDGET_EXCEEDED`)
++  - librarian local-exec path
++- Added prompt templates under `agents/prompts/`.
++- Added/updated lite scenarios:
++  - `S12_lite_orchestrate_context_gate` (updated)
++  - `S13_lite_dispatch_outbox_on_missing_review` (new)
++  - `S14_lite_dispatch_local_exec_librarian` (new)
++- Verification:
++  - `python scripts/sync_doc_links.py --check` passed
++  - `python simlab/run.py --suite lite` passed (`6/6`)
++  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` passed
+diff --git a/scripts/ctcp_orchestrate.py b/scripts/ctcp_orchestrate.py
+index f469643..80647f0 100644
+--- a/scripts/ctcp_orchestrate.py
++++ b/scripts/ctcp_orchestrate.py
+@@ -24,6 +24,12 @@ except ModuleNotFoundError:
+     sys.path.insert(0, str(ROOT))
+     from tools.run_paths import get_repo_slug, make_run_dir
+ 
++try:
++    import ctcp_dispatch
++except ModuleNotFoundError:
++    sys.path.insert(0, str(Path(__file__).resolve().parent))
++    import ctcp_dispatch
++
+ 
+ def now_iso() -> str:
+     return dt.datetime.now().isoformat(timespec="seconds")
+@@ -81,15 +87,34 @@ def write_pointer(path: Path, target: Path) -> None:
+     path.write_text(str(target.resolve()) + "\n", encoding="utf-8")
+ 
+ 
++def is_within(child: Path, parent: Path) -> bool:
++    try:
++        child.resolve().relative_to(parent.resolve())
++        return True
++    except ValueError:
++        return False
++
++
++def ensure_external_run_dir(run_dir: Path) -> None:
++    if is_within(run_dir, ROOT):
++        raise SystemExit(
++            f"[ctcp_orchestrate] run_dir must be outside repo root; got inside repo: {run_dir}"
++        )
++
++
+ def resolve_run_dir(raw: str) -> Path:
+     if raw.strip():
+-        return Path(raw).expanduser().resolve()
++        run_dir = Path(raw).expanduser().resolve()
++        ensure_external_run_dir(run_dir)
++        return run_dir
+     if not LAST_RUN_POINTER.exists():
+         raise SystemExit("[ctcp_orchestrate] missing LAST_RUN pointer; pass --run-dir")
+     pointed = LAST_RUN_POINTER.read_text(encoding="utf-8").strip()
+     if not pointed:
+         raise SystemExit("[ctcp_orchestrate] LAST_RUN pointer is empty; pass --run-dir")
+-    return Path(pointed).expanduser().resolve()
++    run_dir = Path(pointed).expanduser().resolve()
++    ensure_external_run_dir(run_dir)
++    return run_dir
+ 
+ 
+ def append_trace(run_dir: Path, text: str) -> None:
+@@ -110,10 +135,22 @@ def append_event(run_dir: Path, role: str, event: str, path: str = "", **extra:
+ def ensure_layout(run_dir: Path) -> None:
+     (run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+     (run_dir / "reviews").mkdir(parents=True, exist_ok=True)
++    (run_dir / "outbox").mkdir(parents=True, exist_ok=True)
+     (run_dir / "logs").mkdir(parents=True, exist_ok=True)
+     (run_dir / "snapshot").mkdir(parents=True, exist_ok=True)
+ 
+ 
++def sync_outbox_fulfilled_events(run_dir: Path) -> None:
++    for row in ctcp_dispatch.detect_fulfilled_prompts(run_dir):
++        append_event(
++            run_dir,
++            row.get("role", "") or "manual_outbox",
++            "OUTBOX_PROMPT_FULFILLED",
++            row["prompt_path"],
++            target_path=row["target_path"],
++        )
++
++
+ def git_info() -> tuple[str, bool]:
+     rc_sha, out_sha, _ = run_cmd(["git", "rev-parse", "HEAD"], ROOT)
+     sha = out_sha.strip() if rc_sha == 0 else "unknown"
+@@ -170,6 +207,12 @@ def plan_signed(path: Path) -> bool:
+     return False
+ 
+ 
++def goal_slug(goal: str) -> str:
++    text = re.sub(r"[^a-z0-9_-]+", "-", (goal or "").strip().lower())
++    text = re.sub(r"-{2,}", "-", text).strip("-_")
++    return text or "goal"
++
++
+ def validate_find_web(path: Path) -> tuple[bool, str]:
+     if not path.exists():
+         return False, "missing artifacts/find_web.json"
+@@ -210,6 +253,50 @@ def validate_find_web(path: Path) -> tuple[bool, str]:
+     return True, "ok"
+ 
+ 
++def _validate_externals_pack(path: Path) -> tuple[bool, str]:
++    try:
++        doc = read_json(path)
++    except Exception as exc:
++        return False, f"invalid json: {exc}"
++
++    if doc.get("schema_version") != "ctcp-externals-pack-v1":
++        return False, "schema_version must be ctcp-externals-pack-v1"
++
++    constraints = doc.get("constraints")
++    if not isinstance(constraints, dict):
++        return False, "constraints must be object"
++    for k in ("max_sources", "allowed_domains", "blocked_domains", "no_login_required", "no_dynamic_only"):
++        if k not in constraints:
++            return False, f"constraints missing key: {k}"
++
++    sources = doc.get("sources")
++    if not isinstance(sources, list):
++        return False, "sources must be array"
++    for idx, item in enumerate(sources):
++        if not isinstance(item, dict):
++            return False, f"sources[{idx}] must be object"
++        for k in ("url", "title", "why_relevant", "retrieved_at"):
++            if k not in item:
++                return False, f"sources[{idx}] missing key: {k}"
++    return True, "ok"
++
++
++def validate_externals_pack(goal: str) -> tuple[bool, str, str]:
++    externals_root = ROOT / "meta" / "externals"
++    candidates: list[Path] = []
++    candidates.append(externals_root / goal_slug(goal) / "externals_pack.json")
++    if externals_root.exists():
++        candidates.extend(sorted(p for p in externals_root.glob("*/externals_pack.json") if p not in candidates))
++
++    for cand in candidates:
++        if not cand.exists():
++            continue
++        ok, msg = _validate_externals_pack(cand)
++        if ok:
++            return True, str(cand.resolve()), "ok"
++    return False, "", "missing valid externals_pack.json"
++
++
+ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
+     if str(run_doc.get("status", "")).lower() == "pass":
+         return {"state": "pass", "owner": "", "path": "", "reason": "run already pass"}
+@@ -232,38 +319,48 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
+     review_cost = reviews / "review_cost.md"
+     patch_marker = artifacts / "patch_apply.json"
+ 
++    goal = str(run_doc.get("goal", ""))
++
+     if not guardrails.exists():
+-        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/guardrails.md", "reason": "missing guardrails"}
++        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/guardrails.md", "reason": "waiting for guardrails.md"}
+ 
+     ok, msg, policy = parse_guardrails(guardrails)
+     if not ok:
+         return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/guardrails.md", "reason": msg}
+ 
+     if not analysis.exists():
+-        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/analysis.md", "reason": "missing analysis"}
++        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/analysis.md", "reason": "waiting for analysis.md"}
+ 
+     if not find_result.exists():
+         return {"state": "resolve_find_local", "owner": "Local Orchestrator", "path": "artifacts/find_result.json", "reason": "run local resolver"}
+ 
+     if policy["find_mode"] == "resolver_plus_web":
+         ok_web, msg_web = validate_find_web(find_web)
+-        if not ok_web:
+-            return {"state": "blocked", "owner": "Researcher", "path": "artifacts/find_web.json", "reason": msg_web}
++        ok_ext, ext_path, _ = validate_externals_pack(goal)
++        if not ok_web and not ok_ext:
++            return {
++                "state": "blocked",
++                "owner": "Researcher",
++                "path": "artifacts/find_web.json|meta/externals/<goal_slug>/externals_pack.json",
++                "reason": "waiting for find_web.json or externals_pack.json",
++            }
++        if not ok_web and ok_ext:
++            pass
+ 
+     if not file_request.exists():
+-        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/file_request.json", "reason": "missing file_request"}
++        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/file_request.json", "reason": "waiting for file_request.json"}
+ 
+     if not context_pack.exists():
+-        return {"state": "blocked", "owner": "Local Librarian", "path": "artifacts/context_pack.json", "reason": "missing context_pack"}
++        return {"state": "blocked", "owner": "Local Librarian", "path": "artifacts/context_pack.json", "reason": "waiting for context_pack.json"}
+ 
+     if not plan_draft.exists():
+-        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/PLAN_draft.md", "reason": "missing PLAN_draft"}
++        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/PLAN_draft.md", "reason": "waiting for PLAN_draft.md"}
+ 
+     if not review_contract.exists():
+-        return {"state": "blocked", "owner": "Contract Guardian", "path": "reviews/review_contract.md", "reason": "missing contract review"}
++        return {"state": "blocked", "owner": "Contract Guardian", "path": "reviews/review_contract.md", "reason": "waiting for review_contract.md"}
+ 
+     if not review_cost.exists():
+-        return {"state": "blocked", "owner": "Cost Controller", "path": "reviews/review_cost.md", "reason": "missing cost review"}
++        return {"state": "blocked", "owner": "Cost Controller", "path": "reviews/review_cost.md", "reason": "waiting for review_cost.md"}
+ 
+     verdict_contract = parse_verdict(review_contract)
+     verdict_cost = parse_verdict(review_cost)
+@@ -272,14 +369,14 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
+             "state": "blocked",
+             "owner": "Chair/Planner",
+             "path": "reviews/review_contract.md,reviews/review_cost.md",
+-            "reason": f"review verdicts not APPROVE (contract={verdict_contract}, cost={verdict_cost})",
++            "reason": f"waiting for APPROVE reviews (contract={verdict_contract}, cost={verdict_cost})",
+         }
+ 
+     if not plan.exists() or not plan_signed(plan):
+-        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/PLAN.md", "reason": "PLAN.md missing or not SIGNED"}
++        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/PLAN.md", "reason": "waiting for signed PLAN.md"}
+ 
+     if not patch.exists():
+-        return {"state": "blocked", "owner": "PatchMaker", "path": "artifacts/diff.patch", "reason": "missing diff.patch"}
++        return {"state": "blocked", "owner": "PatchMaker", "path": "artifacts/diff.patch", "reason": "waiting for diff.patch"}
+ 
+     if patch_marker.exists():
+         try:
+@@ -310,6 +407,7 @@ def verify_cmd() -> list[str]:
+ def cmd_new_run(goal: str, run_id: str) -> int:
+     rid = run_id.strip() or default_run_id()
+     run_dir = make_run_dir(ROOT, rid)
++    ensure_external_run_dir(run_dir)
+     if run_dir.exists() and any(run_dir.iterdir()):
+         print(f"[ctcp_orchestrate] run dir exists and not empty: {run_dir}")
+         return 1
+@@ -356,6 +454,7 @@ def cmd_new_run(goal: str, run_id: str) -> int:
+         run_dir / "events.jsonl",
+         "",
+     )
++    ctcp_dispatch.ensure_dispatch_config(run_dir)
+     write_text(
+         run_dir / "artifacts" / "guardrails.template.md",
+         "\n".join(
+@@ -389,10 +488,19 @@ def save_run_doc(run_dir: Path, run_doc: dict[str, Any]) -> None:
+ 
+ 
+ def cmd_status(run_dir: Path) -> int:
++    sync_outbox_fulfilled_events(run_dir)
+     run_doc = load_run_doc(run_dir)
+     gate = current_gate(run_dir, run_doc)
++    preview = ctcp_dispatch.dispatch_preview(run_dir, run_doc, gate)
++    latest_outbox = ctcp_dispatch.latest_outbox_prompt_path(run_dir)
+     print(f"[ctcp_orchestrate] run_dir={run_dir}")
+     print(f"[ctcp_orchestrate] run_status={run_doc.get('status')}")
++    if gate["state"] == "blocked":
++        print(f"[ctcp_orchestrate] blocked: {gate['reason']}")
++    if latest_outbox:
++        print(f"[ctcp_orchestrate] outbox prompt created: {latest_outbox}")
++    if preview.get("status") == "budget_exceeded":
++        print(f"[ctcp_orchestrate] STOP: budget_exceeded ({preview.get('reason', '')})")
+     print(f"[ctcp_orchestrate] next={gate['state']}")
+     print(f"[ctcp_orchestrate] owner={gate['owner']}")
+     print(f"[ctcp_orchestrate] path={gate['path']}")
+@@ -402,6 +510,7 @@ def cmd_status(run_dir: Path) -> int:
+ 
+ def cmd_advance(run_dir: Path, max_steps: int) -> int:
+     ensure_layout(run_dir)
++    sync_outbox_fulfilled_events(run_dir)
+     run_doc = load_run_doc(run_dir)
+     goal = str(run_doc.get("goal", "")).strip() or "unspecified-goal"
+     steps = 0
+@@ -411,9 +520,6 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
+         if str(run_doc.get("status", "")).lower() == "pass":
+             print("[ctcp_orchestrate] run already PASS")
+             return 0
+-        if str(run_doc.get("status", "")).lower() == "fail":
+-            print("[ctcp_orchestrate] run already FAIL")
+-            return 1
+ 
+         gate = current_gate(run_dir, run_doc)
+         state = gate["state"]
+@@ -510,9 +616,88 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
+             print("[ctcp_orchestrate] PASS: verify succeeded")
+             return 0
+ 
+-        if state in {"pass", "fail"}:
++        if state == "pass":
+             return cmd_status(run_dir)
+ 
++        dispatch = ctcp_dispatch.dispatch_once(run_dir, run_doc, gate, ROOT)
++        dispatch_status = str(dispatch.get("status", ""))
++
++        if dispatch_status == "executed":
++            append_event(
++                run_dir,
++                str(dispatch.get("role", "librarian")),
++                "LOCAL_EXEC_COMPLETED",
++                str(dispatch.get("target_path", "")),
++                provider=str(dispatch.get("provider", "")),
++                cmd=str(dispatch.get("cmd", "")),
++                rc=int(dispatch.get("rc", 0)),
++            )
++            steps += 1
++            continue
++
++        if dispatch_status == "outbox_created":
++            outbox_path = str(dispatch.get("path", ""))
++            append_event(
++                run_dir,
++                str(dispatch.get("role", "manual_outbox")),
++                "OUTBOX_PROMPT_CREATED",
++                outbox_path,
++                target_path=str(dispatch.get("target_path", "")),
++                action=str(dispatch.get("action", "")),
++                provider=str(dispatch.get("provider", "")),
++            )
++            run_doc["status"] = "blocked"
++            run_doc["blocked_reason"] = reason
++            save_run_doc(run_dir, run_doc)
++            print(f"[ctcp_orchestrate] blocked: {reason} (owner={owner}, path={path})")
++            print(f"[ctcp_orchestrate] outbox prompt created: {outbox_path}")
++            return 0
++
++        if dispatch_status == "outbox_exists":
++            run_doc["status"] = "blocked"
++            run_doc["blocked_reason"] = reason
++            save_run_doc(run_dir, run_doc)
++            existing_path = str(dispatch.get("path", ""))
++            print(f"[ctcp_orchestrate] blocked: {reason} (owner={owner}, path={path})")
++            if existing_path:
++                print(f"[ctcp_orchestrate] waiting for outbox response: {existing_path}")
++            return 0
++
++        if dispatch_status == "budget_exceeded":
++            run_doc["status"] = "blocked"
++            run_doc["blocked_reason"] = "budget_exceeded"
++            save_run_doc(run_dir, run_doc)
++            append_event(
++                run_dir,
++                "Local Orchestrator",
++                "STOP_BUDGET_EXCEEDED",
++                "artifacts/dispatch_config.json",
++                reason=str(dispatch.get("reason", "")),
++                provider=str(dispatch.get("provider", "")),
++            )
++            print(f"[ctcp_orchestrate] STOP: budget_exceeded ({dispatch.get('reason', '')})")
++            return 0
++
++        if dispatch_status == "exec_failed":
++            run_doc["status"] = "blocked"
++            run_doc["blocked_reason"] = str(dispatch.get("reason", "local_exec_failed"))
++            save_run_doc(run_dir, run_doc)
++            append_event(
++                run_dir,
++                str(dispatch.get("role", "librarian")),
++                "LOCAL_EXEC_FAILED",
++                str(dispatch.get("target_path", "")),
++                provider=str(dispatch.get("provider", "")),
++                cmd=str(dispatch.get("cmd", "")),
++                rc=int(dispatch.get("rc", 1)),
++            )
++            print(f"[ctcp_orchestrate] blocked: {dispatch.get('reason', 'local_exec failed')}")
++            return 0
++
++        if state == "fail":
++            print("[ctcp_orchestrate] run already FAIL")
++            return 1
++
+         run_doc["status"] = "blocked"
+         run_doc["blocked_reason"] = reason
+         save_run_doc(run_dir, run_doc)
+diff --git a/scripts/ctcp_dispatch.py b/scripts/ctcp_dispatch.py
+new file mode 100644
+index 0000000..4f3782b
+--- /dev/null
++++ b/scripts/ctcp_dispatch.py
+@@ -0,0 +1,312 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++import json
++import re
++import sys
++from pathlib import Path
++from typing import Any
++
++ROOT = Path(__file__).resolve().parents[1]
++DISPATCH_CONFIG_PATH = Path("artifacts") / "dispatch_config.json"
++
++try:
++    from tools.providers import local_exec, manual_outbox
++except ModuleNotFoundError:
++    sys.path.insert(0, str(ROOT))
++    from tools.providers import local_exec, manual_outbox
++
++KNOWN_PROVIDERS = {"manual_outbox", "local_exec"}
++
++
++def default_dispatch_config_doc() -> dict[str, Any]:
++    return {
++        "schema_version": "ctcp-dispatch-config-v1",
++        "mode": "manual_outbox",
++        "role_providers": {
++            "librarian": "local_exec",
++            "chair": "manual_outbox",
++            "contract_guardian": "manual_outbox",
++            "cost_controller": "manual_outbox",
++            "patchmaker": "manual_outbox",
++            "fixer": "manual_outbox",
++            "researcher": "manual_outbox",
++        },
++        "budgets": {"max_outbox_prompts": 20},
++    }
++
++
++def _normalize_provider(value: str) -> str:
++    text = (value or "").strip().lower()
++    if text in KNOWN_PROVIDERS:
++        return text
++    return "manual_outbox"
++
++
++def _read_json(path: Path) -> dict[str, Any]:
++    return json.loads(path.read_text(encoding="utf-8"))
++
++
++def _write_json(path: Path, doc: dict[str, Any]) -> None:
++    path.parent.mkdir(parents=True, exist_ok=True)
++    path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
++
++
++def ensure_dispatch_config(run_dir: Path) -> Path:
++    path = run_dir / DISPATCH_CONFIG_PATH
++    if not path.exists():
++        _write_json(path, default_dispatch_config_doc())
++    return path
++
++
++def load_dispatch_config(run_dir: Path) -> tuple[dict[str, Any] | None, str]:
++    path = run_dir / DISPATCH_CONFIG_PATH
++    if not path.exists():
++        return None, "missing artifacts/dispatch_config.json"
++
++    try:
++        raw = _read_json(path)
++    except Exception as exc:
++        return None, f"invalid dispatch_config json: {exc}"
++
++    if not isinstance(raw, dict):
++        return None, "dispatch_config must be object"
++
++    if raw.get("schema_version") != "ctcp-dispatch-config-v1":
++        return None, "dispatch_config schema_version must be ctcp-dispatch-config-v1"
++
++    role_providers_raw = raw.get("role_providers", {})
++    role_providers: dict[str, str] = {}
++    if isinstance(role_providers_raw, dict):
++        for k, v in role_providers_raw.items():
++            role_providers[str(k).strip().lower()] = _normalize_provider(str(v))
++
++    budgets = raw.get("budgets", {})
++    if not isinstance(budgets, dict):
++        budgets = {}
++    try:
++        max_prompts = int(budgets.get("max_outbox_prompts", 20))
++    except Exception:
++        max_prompts = 20
++    budgets["max_outbox_prompts"] = max(1, max_prompts)
++
++    cfg = {
++        "schema_version": "ctcp-dispatch-config-v1",
++        "mode": _normalize_provider(str(raw.get("mode", "manual_outbox"))),
++        "role_providers": role_providers,
++        "budgets": budgets,
++    }
++    return cfg, "ok"
++
++
++def _parse_guardrails_budgets(run_dir: Path) -> dict[str, str]:
++    path = run_dir / "artifacts" / "guardrails.md"
++    if not path.exists():
++        return {"max_files": "", "max_total_bytes": "", "max_iterations": ""}
++    out = {"max_files": "", "max_total_bytes": "", "max_iterations": ""}
++    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
++        m = re.match(r"^\s*([A-Za-z0-9_\-]+)\s*:\s*(.+?)\s*$", line)
++        if not m:
++            continue
++        key = m.group(1).strip().lower()
++        if key in out:
++            out[key] = m.group(2).strip()
++    return out
++
++
++def _split_missing_paths(path_value: str) -> list[str]:
++    parts = [x.strip() for x in re.split(r"[|,]", path_value or "") if x.strip()]
++    seen: set[str] = set()
++    out: list[str] = []
++    for p in parts:
++        if p not in seen:
++            seen.add(p)
++            out.append(p)
++    return out
++
++
++def _gate_owner(owner: str) -> str:
++    return re.sub(r"[^a-z0-9]+", "_", (owner or "").strip().lower()).strip("_")
++
++
++def derive_request(gate: dict[str, str], run_doc: dict[str, Any]) -> dict[str, Any] | None:
++    state = str(gate.get("state", "")).strip().lower()
++    owner = _gate_owner(str(gate.get("owner", "")))
++    path_value = str(gate.get("path", "")).strip()
++    reason = str(gate.get("reason", "")).strip()
++    path_l = path_value.lower()
++    reason_l = reason.lower()
++    goal = str(run_doc.get("goal", "")).strip()
++
++    if state == "fail":
++        return {
++            "role": "fixer",
++            "action": "fix_patch",
++            "target_path": "artifacts/diff.patch",
++            "missing_paths": ["failure_bundle.zip", "artifacts/diff.patch"],
++            "reason": reason or "verify failed; fix required",
++            "goal": goal,
++        }
++
++    if state != "blocked":
++        return None
++
++    if "context_pack.json" in path_l:
++        role, action, target = "librarian", "context_pack", "artifacts/context_pack.json"
++    elif "review_contract.md" in path_l and "review_cost.md" in path_l and "approve reviews" in reason_l:
++        role, action, target = "chair", "plan_draft", "artifacts/PLAN_draft.md"
++    elif "review_contract.md" in path_l:
++        role, action, target = "contract_guardian", "review_contract", "reviews/review_contract.md"
++    elif "review_cost.md" in path_l:
++        role, action, target = "cost_controller", "review_cost", "reviews/review_cost.md"
++    elif "plan_draft.md" in path_l:
++        role, action, target = "chair", "plan_draft", "artifacts/PLAN_draft.md"
++    elif "plan.md" in path_l:
++        role, action, target = "chair", "plan_signed", "artifacts/PLAN.md"
++    elif "file_request.json" in path_l:
++        role, action, target = "chair", "file_request", "artifacts/file_request.json"
++    elif "find_web.json" in path_l or "externals_pack.json" in path_l:
++        role, action, target = "researcher", "find_web", "artifacts/find_web.json"
++    elif "analysis.md" in path_l:
++        role, action, target = "chair", "plan_draft", "artifacts/analysis.md"
++    elif "guardrails.md" in path_l:
++        role, action, target = "chair", "plan_draft", "artifacts/guardrails.md"
++    elif "diff.patch" in path_l:
++        if owner == "fixer":
++            role, action, target = "fixer", "fix_patch", "artifacts/diff.patch"
++        else:
++            role, action, target = "patchmaker", "make_patch", "artifacts/diff.patch"
++    else:
++        return None
++
++    return {
++        "role": role,
++        "action": action,
++        "target_path": target,
++        "missing_paths": _split_missing_paths(path_value),
++        "reason": reason,
++        "goal": goal,
++    }
++
++
++def _resolve_provider(config: dict[str, Any], role: str) -> tuple[str, str]:
++    role_providers = config.get("role_providers", {})
++    if not isinstance(role_providers, dict):
++        role_providers = {}
++    provider = _normalize_provider(str(role_providers.get(role, config.get("mode", "manual_outbox"))))
++    if provider == "local_exec" and role != "librarian":
++        return "manual_outbox", "local_exec restricted to librarian; fallback to manual_outbox"
++    return provider, ""
++
++
++def dispatch_preview(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str]) -> dict[str, Any]:
++    config, cfg_msg = load_dispatch_config(run_dir)
++    if config is None:
++        return {"status": "disabled", "reason": cfg_msg}
++
++    request = derive_request(gate, run_doc)
++    if request is None:
++        return {"status": "no_request"}
++
++    provider, note = _resolve_provider(config, str(request["role"]))
++    preview: dict[str, Any]
++    if provider == "manual_outbox":
++        preview = manual_outbox.preview(run_dir=run_dir, request=request, config=config)
++    elif provider == "local_exec":
++        preview = {"status": "can_exec"}
++    else:
++        preview = {"status": "unsupported_provider", "reason": provider}
++
++    preview["provider"] = provider
++    preview["role"] = request["role"]
++    preview["action"] = request["action"]
++    preview["target_path"] = request["target_path"]
++    if note:
++        preview["note"] = note
++    return preview
++
++
++def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], repo_root: Path) -> dict[str, Any]:
++    config, cfg_msg = load_dispatch_config(run_dir)
++    if config is None:
++        return {"status": "disabled", "reason": cfg_msg}
++
++    request = derive_request(gate, run_doc)
++    if request is None:
++        return {"status": "no_request"}
++
++    provider, note = _resolve_provider(config, str(request["role"]))
++    if provider == "manual_outbox":
++        result = manual_outbox.execute(
++            repo_root=repo_root,
++            run_dir=run_dir,
++            request=request,
++            config=config,
++            guardrails_budgets=_parse_guardrails_budgets(run_dir),
++        )
++    elif provider == "local_exec":
++        result = local_exec.execute(repo_root=repo_root, run_dir=run_dir, request=request)
++    else:
++        result = {"status": "unsupported_provider", "reason": provider}
++
++    result["provider"] = provider
++    result["role"] = request["role"]
++    result["action"] = request["action"]
++    result["target_path"] = request["target_path"]
++    if note:
++        result["note"] = note
++    return result
++
++
++def _read_events(run_dir: Path) -> list[dict[str, Any]]:
++    path = run_dir / "events.jsonl"
++    if not path.exists():
++        return []
++    out: list[dict[str, Any]] = []
++    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
++        text = line.strip()
++        if not text:
++            continue
++        try:
++            row = json.loads(text)
++        except Exception:
++            continue
++        if isinstance(row, dict):
++            out.append(row)
++    return out
++
++
++def latest_outbox_prompt_path(run_dir: Path) -> str:
++    events = _read_events(run_dir)
++    for row in reversed(events):
++        if str(row.get("event", "")) == "OUTBOX_PROMPT_CREATED":
++            return str(row.get("path", ""))
++    return ""
++
++
++def detect_fulfilled_prompts(run_dir: Path) -> list[dict[str, str]]:
++    events = _read_events(run_dir)
++    created: list[dict[str, str]] = []
++    already: set[str] = set()
++
++    for row in events:
++        event = str(row.get("event", ""))
++        if event == "OUTBOX_PROMPT_CREATED":
++            prompt_path = str(row.get("path", "")).strip()
++            target_path = str(row.get("target_path", "")).strip()
++            role = str(row.get("role", "")).strip()
++            if prompt_path and target_path:
++                created.append({"prompt_path": prompt_path, "target_path": target_path, "role": role})
++        elif event == "OUTBOX_PROMPT_FULFILLED":
++            key = str(row.get("path", "")).strip()
++            if key:
++                already.add(key)
++
++    todo: list[dict[str, str]] = []
++    for row in created:
++        if row["prompt_path"] in already:
++            continue
++        if (run_dir / row["target_path"]).exists():
++            todo.append(row)
++    return todo
++
+diff --git a/tools/providers/__init__.py b/tools/providers/__init__.py
+new file mode 100644
+index 0000000..d471b04
+--- /dev/null
++++ b/tools/providers/__init__.py
+@@ -0,0 +1,2 @@
++"""Provider implementations for TeamNet dispatch."""
++
+diff --git a/tools/providers/manual_outbox.py b/tools/providers/manual_outbox.py
+new file mode 100644
+index 0000000..a279868
+--- /dev/null
++++ b/tools/providers/manual_outbox.py
+@@ -0,0 +1,193 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++import re
++from pathlib import Path
++from typing import Any
++
++TEMPLATE_DIR = Path("agents") / "prompts"
++DEFAULT_MAX_OUTBOX_PROMPTS = 20
++
++TEMPLATE_BY_ROLE_ACTION = {
++    ("chair", "plan_draft"): "chair_plan_draft.md",
++    ("chair", "file_request"): "chair_file_request.md",
++    ("chair", "plan_signed"): "chair_plan_draft.md",
++    ("contract_guardian", "review_contract"): "contract_guardian_review.md",
++    ("cost_controller", "review_cost"): "cost_controller_review.md",
++    ("patchmaker", "make_patch"): "patchmaker_patch.md",
++    ("fixer", "fix_patch"): "fixer_patch.md",
++    ("researcher", "find_web"): "researcher_find_web.md",
++    ("librarian", "context_pack"): "librarian_context_pack.md",
++}
++
++
++def _sanitize(value: str) -> str:
++    text = re.sub(r"[^a-z0-9_]+", "_", (value or "").strip().lower())
++    text = re.sub(r"_+", "_", text).strip("_")
++    return text or "item"
++
++
++def _read_template(repo_root: Path, template_name: str) -> str:
++    p = repo_root / TEMPLATE_DIR / template_name
++    if p.exists():
++        return p.read_text(encoding="utf-8", errors="replace").strip()
++    return (
++        "## Task\n"
++        "- Follow the artifact contract and write the requested artifact only.\n"
++        "- Do not edit repo files.\n"
++    )
++
++
++def _outbox_files(outbox_dir: Path) -> list[Path]:
++    if not outbox_dir.exists():
++        return []
++    return sorted(p for p in outbox_dir.glob("*.md") if p.is_file())
++
++
++def _header_value(text: str, key: str) -> str:
++    prefix = f"{key.strip()}:"
++    for line in text.splitlines():
++        if line.startswith(prefix):
++            return line.split(":", 1)[1].strip()
++    return ""
++
++
++def _find_existing_prompt(outbox_dir: Path, role: str, action: str, target_path: str) -> Path | None:
++    for p in _outbox_files(outbox_dir):
++        txt = p.read_text(encoding="utf-8", errors="replace")
++        if _header_value(txt, "Role") != role:
++            continue
++        if _header_value(txt, "Action") != action:
++            continue
++        if _header_value(txt, "Target-Path") != target_path:
++            continue
++        return p
++    return None
++
++
++def _max_outbox_prompts(config: dict[str, Any]) -> int:
++    budgets = config.get("budgets", {})
++    if not isinstance(budgets, dict):
++        return DEFAULT_MAX_OUTBOX_PROMPTS
++    try:
++        value = int(budgets.get("max_outbox_prompts", DEFAULT_MAX_OUTBOX_PROMPTS))
++    except Exception:
++        return DEFAULT_MAX_OUTBOX_PROMPTS
++    return max(1, value)
++
++
++def _next_prompt_path(outbox_dir: Path, role: str, action: str) -> tuple[Path, str]:
++    max_idx = 0
++    for p in _outbox_files(outbox_dir):
++        m = re.match(r"^(\d+)_", p.name)
++        if m:
++            max_idx = max(max_idx, int(m.group(1)))
++    idx = max_idx + 1
++    name = f"{idx:03d}_{_sanitize(role)}_{_sanitize(action)}.md"
++    rel = Path("outbox") / name
++    return outbox_dir / name, rel.as_posix()
++
++
++def _render_prompt(
++    *,
++    repo_root: Path,
++    run_dir: Path,
++    request: dict[str, Any],
++    config: dict[str, Any],
++    guardrails_budgets: dict[str, str],
++) -> str:
++    role = str(request["role"])
++    action = str(request["action"])
++    target_path = str(request["target_path"])
++    missing_paths = [str(x) for x in request.get("missing_paths", [])]
++    goal = str(request.get("goal", ""))
++    reason = str(request.get("reason", ""))
++    template_name = TEMPLATE_BY_ROLE_ACTION.get((role, action), "chair_plan_draft.md")
++    template_body = _read_template(repo_root, template_name)
++    max_outbox_prompts = _max_outbox_prompts(config)
++
++    missing_lines = "\n".join(f"- {p}" for p in missing_paths) if missing_paths else "- (none)"
++    budget_lines = "\n".join(
++        [
++            f"- max_outbox_prompts: {max_outbox_prompts}",
++            f"- max_files: {guardrails_budgets.get('max_files', '') or 'n/a'}",
++            f"- max_total_bytes: {guardrails_budgets.get('max_total_bytes', '') or 'n/a'}",
++            f"- max_iterations: {guardrails_budgets.get('max_iterations', '') or 'n/a'}",
++        ]
++    )
++    run_target = (run_dir / target_path).resolve()
++    return (
++        "# OUTBOX PROMPT\n\n"
++        f"Run-Dir: {run_dir.resolve()}\n"
++        f"Repo-Root: {repo_root.resolve()}\n"
++        f"Goal: {goal}\n"
++        f"Role: {role}\n"
++        f"Action: {action}\n"
++        "Provider: manual_outbox\n"
++        f"Target-Path: {target_path}\n"
++        f"write to: {target_path}\n"
++        f"Write-Abs: {run_target}\n"
++        f"Reason: {reason}\n\n"
++        "Missing-Artifact-Paths:\n"
++        f"{missing_lines}\n\n"
++        "Budgets:\n"
++        f"{budget_lines}\n\n"
++        "Hard Rules:\n"
++        f"1. You may only write to `{run_target}`.\n"
++        "2. Do not modify any file under repo root.\n"
++        "3. Do not call network/API tools; manual offline execution only.\n"
++        "4. Follow docs/30_artifact_contracts.md output requirements exactly.\n\n"
++        "---\n\n"
++        f"{template_body}\n"
++    )
++
++
++def preview(*, run_dir: Path, request: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
++    outbox_dir = run_dir / "outbox"
++    outbox_dir.mkdir(parents=True, exist_ok=True)
++    role = str(request["role"])
++    action = str(request["action"])
++    target_path = str(request["target_path"])
++
++    existing = _find_existing_prompt(outbox_dir, role, action, target_path)
++    if existing is not None:
++        return {"status": "outbox_exists", "path": (Path("outbox") / existing.name).as_posix()}
++
++    count = len(_outbox_files(outbox_dir))
++    max_prompts = _max_outbox_prompts(config)
++    if count >= max_prompts:
++        return {
++            "status": "budget_exceeded",
++            "reason": f"outbox budget exceeded ({count}/{max_prompts})",
++            "count": count,
++            "max": max_prompts,
++        }
++    return {"status": "can_create"}
++
++
++def execute(
++    *,
++    repo_root: Path,
++    run_dir: Path,
++    request: dict[str, Any],
++    config: dict[str, Any],
++    guardrails_budgets: dict[str, str],
++) -> dict[str, Any]:
++    outbox_dir = run_dir / "outbox"
++    outbox_dir.mkdir(parents=True, exist_ok=True)
++
++    pre = preview(run_dir=run_dir, request=request, config=config)
++    if pre["status"] != "can_create":
++        return pre
++
++    prompt_path, rel_path = _next_prompt_path(outbox_dir, str(request["role"]), str(request["action"]))
++    prompt_text = _render_prompt(
++        repo_root=repo_root,
++        run_dir=run_dir,
++        request=request,
++        config=config,
++        guardrails_budgets=guardrails_budgets,
++    )
++    prompt_path.write_text(prompt_text, encoding="utf-8")
++    return {"status": "outbox_created", "path": rel_path}
++
+diff --git a/tools/providers/local_exec.py b/tools/providers/local_exec.py
+new file mode 100644
+index 0000000..f58cfcb
+--- /dev/null
++++ b/tools/providers/local_exec.py
+@@ -0,0 +1,57 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++import subprocess
++import sys
++from pathlib import Path
++from typing import Any
++
++
++def execute(*, repo_root: Path, run_dir: Path, request: dict[str, Any]) -> dict[str, Any]:
++    role = str(request.get("role", ""))
++    action = str(request.get("action", ""))
++    target_path = str(request.get("target_path", ""))
++    if role != "librarian" or action != "context_pack":
++        return {
++            "status": "forbidden",
++            "reason": "local_exec is restricted to role=librarian action=context_pack",
++        }
++
++    logs_dir = run_dir / "logs"
++    logs_dir.mkdir(parents=True, exist_ok=True)
++    stdout_log = logs_dir / "dispatch_local_exec_librarian.stdout.log"
++    stderr_log = logs_dir / "dispatch_local_exec_librarian.stderr.log"
++
++    cmd = [sys.executable, str(repo_root / "scripts" / "ctcp_librarian.py"), "--run-dir", str(run_dir)]
++    proc = subprocess.run(
++        cmd,
++        cwd=str(repo_root),
++        capture_output=True,
++        text=True,
++        encoding="utf-8",
++        errors="replace",
++    )
++    stdout_log.write_text(proc.stdout, encoding="utf-8")
++    stderr_log.write_text(proc.stderr, encoding="utf-8")
++
++    target = run_dir / target_path
++    if proc.returncode == 0 and target.exists():
++        return {
++            "status": "executed",
++            "target_path": target_path,
++            "cmd": " ".join(cmd),
++            "rc": proc.returncode,
++            "stdout_log": stdout_log.relative_to(run_dir).as_posix(),
++            "stderr_log": stderr_log.relative_to(run_dir).as_posix(),
++        }
++
++    return {
++        "status": "exec_failed",
++        "reason": f"local_exec command failed rc={proc.returncode}",
++        "target_path": target_path,
++        "cmd": " ".join(cmd),
++        "rc": proc.returncode,
++        "stdout_log": stdout_log.relative_to(run_dir).as_posix(),
++        "stderr_log": stderr_log.relative_to(run_dir).as_posix(),
++    }
++
+diff --git a/agents/prompts/chair_plan_draft.md b/agents/prompts/chair_plan_draft.md
+new file mode 100644
+index 0000000..65eb675
+--- /dev/null
++++ b/agents/prompts/chair_plan_draft.md
+@@ -0,0 +1,16 @@
++## Role
++You are Chair/Planner.
++
++## Allowed Write Path
++- Write exactly one file in run_dir: `artifacts/PLAN_draft.md` (or `artifacts/PLAN.md` when explicitly requested).
++
++## Forbidden
++- Do not modify repository files.
++- Do not write outside run_dir.
++- Do not delegate final decision authority.
++
++## Required Output Hints
++- If writing signed plan, include: `Status: SIGNED`.
++- Keep plan scope and stop conditions explicit.
++- Respect resolver authority: `find_result.json` is final workflow input.
++
+diff --git a/agents/prompts/chair_file_request.md b/agents/prompts/chair_file_request.md
+new file mode 100644
+index 0000000..078cf7f
+--- /dev/null
++++ b/agents/prompts/chair_file_request.md
+@@ -0,0 +1,15 @@
++## Role
++You are Chair/Planner.
++
++## Allowed Write Path
++- Write exactly one file in run_dir: `artifacts/file_request.json`.
++
++## Forbidden
++- Do not modify repository files.
++- Do not write outside run_dir.
++
++## Required Output Format
++- JSON only.
++- Include: `schema_version: "ctcp-file-request-v1"`.
++- Include: `goal`, `needs[]`, `budget.max_files`, `budget.max_total_bytes`, `reason`.
++
+diff --git a/agents/prompts/contract_guardian_review.md b/agents/prompts/contract_guardian_review.md
+new file mode 100644
+index 0000000..ca4842e
+--- /dev/null
++++ b/agents/prompts/contract_guardian_review.md
+@@ -0,0 +1,16 @@
++## Role
++You are ContractGuardian (adversarial review).
++
++## Allowed Write Path
++- Write exactly one file in run_dir: `reviews/review_contract.md`.
++
++## Forbidden
++- Do not modify repository files.
++- Do not write patches.
++- Do not write outside run_dir.
++
++## Required Key Lines
++- `Verdict: APPROVE|BLOCK`
++- `Blocking Reasons: ...`
++- `Required Fix/Artifacts: ...`
++
+diff --git a/agents/prompts/cost_controller_review.md b/agents/prompts/cost_controller_review.md
+new file mode 100644
+index 0000000..11743bf
+--- /dev/null
++++ b/agents/prompts/cost_controller_review.md
+@@ -0,0 +1,16 @@
++## Role
++You are CostController (adversarial budget review).
++
++## Allowed Write Path
++- Write exactly one file in run_dir: `reviews/review_cost.md`.
++
++## Forbidden
++- Do not modify repository files.
++- Do not write patches.
++- Do not write outside run_dir.
++
++## Required Key Lines
++- `Verdict: APPROVE|BLOCK`
++- `Blocking Reasons: ...`
++- `Required Fix/Artifacts: ...`
++
+diff --git a/agents/prompts/patchmaker_patch.md b/agents/prompts/patchmaker_patch.md
+new file mode 100644
+index 0000000..9303b30
+--- /dev/null
++++ b/agents/prompts/patchmaker_patch.md
+@@ -0,0 +1,14 @@
++## Role
++You are PatchMaker.
++
++## Allowed Write Path
++- Write exactly one file in run_dir: `artifacts/diff.patch`.
++
++## Forbidden
++- Do not modify repository files directly.
++- Do not write any file other than `diff.patch`.
++- Do not exceed signed PLAN scope.
++
++## Required Output
++- Unified diff patch only.
++
+diff --git a/agents/prompts/fixer_patch.md b/agents/prompts/fixer_patch.md
+new file mode 100644
+index 0000000..733835f
+--- /dev/null
++++ b/agents/prompts/fixer_patch.md
+@@ -0,0 +1,14 @@
++## Role
++You are Fixer.
++
++## Allowed Write Path
++- Write exactly one file in run_dir: `artifacts/diff.patch`.
++
++## Forbidden
++- Do not modify repository files directly.
++- Do not write any file other than `diff.patch`.
++- Do not expand scope outside PLAN and failure bundle evidence.
++
++## Required Output
++- Unified diff patch only.
++
+diff --git a/agents/prompts/researcher_find_web.md b/agents/prompts/researcher_find_web.md
+new file mode 100644
+index 0000000..0b7cdf9
+--- /dev/null
++++ b/agents/prompts/researcher_find_web.md
+@@ -0,0 +1,16 @@
++## Role
++You are Researcher (candidate evidence only).
++
++## Allowed Write Path
++- Write exactly one file in run_dir: `artifacts/find_web.json`.
++
++## Forbidden
++- Do not replace `artifacts/find_result.json` authority.
++- Do not modify repository files.
++- Do not write outside run_dir.
++
++## Required Output Format
++- JSON only.
++- Include: `schema_version: "ctcp-find-web-v1"`.
++- Include: `constraints`, `results[]`, `locator`, `risk_flags`.
++
+diff --git a/agents/prompts/librarian_context_pack.md b/agents/prompts/librarian_context_pack.md
+new file mode 100644
+index 0000000..c57afb4
+--- /dev/null
++++ b/agents/prompts/librarian_context_pack.md
+@@ -0,0 +1,16 @@
++## Role
++You are Librarian (read-only context supplier).
++
++## Allowed Write Path
++- Write exactly one file in run_dir: `artifacts/context_pack.json`.
++
++## Forbidden
++- Do not decide plan/strategy.
++- Do not modify repository files.
++- Do not write outside run_dir.
++
++## Required Output Format
++- JSON only.
++- Include: `schema_version: "ctcp-context-pack-v1"`.
++- Include: `goal`, `repo_slug`, `summary`, `files[]`, `omitted[]`.
++
+diff --git a/simlab/scenarios/S12_lite_orchestrate_context_gate.yaml b/simlab/scenarios/S12_lite_orchestrate_context_gate.yaml
+new file mode 100644
+index 0000000..e21440c
+--- /dev/null
++++ b/simlab/scenarios/S12_lite_orchestrate_context_gate.yaml
+@@ -0,0 +1,66 @@
++{
++  "id": "S12_lite_orchestrate_context_gate",
++  "name": "lite orchestrator blocks on missing context_pack with external run dir",
++  "suite": "lite",
++  "steps": [
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-orchestrate-lite > artifacts/_orch_newrun.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_orch_newrun.out.txt",
++        "includes": [
++          "[ctcp_orchestrate] run_dir="
++        ]
++      }
++    },
++    {
++      "expect_text": {
++        "path": "meta/run_pointers/LAST_RUN.txt",
++        "includes": [
++          "ctcp",
++          "runs"
++        ],
++        "excludes": [
++          "simlab_runs"
++        ]
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; art.mkdir(parents=True, exist_ok=True); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-orchestrate-lite','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':1,'max_total_bytes':2000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); cfg=Path(rd)/'artifacts'/'dispatch_config.json'; doc={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'manual_outbox','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; cfg.write_text(json.dumps(doc, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 8 > artifacts/_orch_advance.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py status > artifacts/_orch_status.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_orch_status.out.txt",
++        "includes": [
++          "blocked: waiting for context_pack.json",
++          "owner=Local Librarian"
++        ]
++      }
++    }
++  ]
++}
+diff --git a/simlab/scenarios/S13_lite_dispatch_outbox_on_missing_review.yaml b/simlab/scenarios/S13_lite_dispatch_outbox_on_missing_review.yaml
+new file mode 100644
+index 0000000..b57bc1b
+--- /dev/null
++++ b/simlab/scenarios/S13_lite_dispatch_outbox_on_missing_review.yaml
+@@ -0,0 +1,55 @@
++{
++  "id": "S13_lite_dispatch_outbox_on_missing_review",
++  "name": "lite dispatch creates outbox prompt when review_contract is missing",
++  "suite": "lite",
++  "steps": [
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-dispatch-review > artifacts/_dispatch_newrun.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; rev=Path(rd)/'reviews'; art.mkdir(parents=True, exist_ok=True); rev.mkdir(parents=True, exist_ok=True); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_minimal_patch_verify','selected_version':'1.0','candidates':[{'workflow_id':'wf_minimal_patch_verify','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-dispatch-review','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':1,'max_total_bytes':2000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); ctx={'schema_version':'ctcp-context-pack-v1','goal':'simlab-dispatch-review','repo_slug':'ctcp','summary':'simlab','files':[],'omitted':[]}; (art/'context_pack.json').write_text(json.dumps(ctx, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'PLAN_draft.md').write_text('# draft\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 8 > artifacts/_dispatch_advance.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); p=Path(rd)/'outbox'/'001_contract_guardian_review_contract.md'; assert p.exists(), str(p); Path('artifacts/_dispatch_prompt.md').write_text(p.read_text(encoding='utf-8'), encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py status > artifacts/_dispatch_status.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_dispatch_status.out.txt",
++        "includes": [
++          "blocked: waiting for review_contract.md",
++          "outbox prompt created: outbox/001_contract_guardian_review_contract.md"
++        ]
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_dispatch_prompt.md",
++        "includes": [
++          "Verdict: APPROVE|BLOCK",
++          "write to: reviews/review_contract.md"
++        ]
++      }
++    }
++  ]
++}
+diff --git a/simlab/scenarios/S14_lite_dispatch_local_exec_librarian.yaml b/simlab/scenarios/S14_lite_dispatch_local_exec_librarian.yaml
+new file mode 100644
+index 0000000..6420a24
+--- /dev/null
++++ b/simlab/scenarios/S14_lite_dispatch_local_exec_librarian.yaml
+@@ -0,0 +1,39 @@
++{
++  "id": "S14_lite_dispatch_local_exec_librarian",
++  "name": "lite dispatch runs librarian local_exec for missing context_pack",
++  "suite": "lite",
++  "steps": [
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-dispatch-librarian > artifacts/_localexec_newrun.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; art.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'local_exec','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_minimal_patch_verify','selected_version':'1.0','candidates':[{'workflow_id':'wf_minimal_patch_verify','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-dispatch-librarian','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':1,'max_total_bytes':5000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 8 > artifacts/_localexec_advance.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); p=Path(rd)/'artifacts'/'context_pack.json'; assert p.exists(), str(p); Path('artifacts/_localexec_context_pack.json').write_text(p.read_text(encoding='utf-8'), encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_localexec_context_pack.json",
++        "includes": [
++          "\"schema_version\": \"ctcp-context-pack-v1\""
++        ]
++      }
++    }
++  ]
++}

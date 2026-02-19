@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ctcp.local/specs/externals_pack.schema.json",
+  "title": "CTCP Externals Pack",
+  "description": "Offline web-research candidate pack for plan input. Output path must be meta/externals/<goal_slug>/externals_pack.json.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "goal_slug",
+    "output_path",
+    "constraints",
+    "sources"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "ctcp-externals-pack-v1"
+    },
+    "goal_slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$"
+    },
+    "output_path": {
+      "type": "string",
+      "pattern": "^meta/externals/[a-z0-9][a-z0-9_-]*/externals_pack\\.json$"
+    },
+    "constraints": {
+      "type": "object",
+      "required": [
+        "max_sources",
+        "allowed_domains",
+        "blocked_domains",
+        "no_login_required",
+        "no_dynamic_only"
+      ],
+      "properties": {
+        "max_sources": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        },
+        "allowed_domains": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "blocked_domains": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "no_login_required": {
+          "type": "boolean"
+        },
+        "no_dynamic_only": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "sources": {
+      "type": "array",
+      "maxItems": 200,
+      "items": {
+        "type": "object",
+        "required": [
+          "url",
+          "title",
+          "why_relevant",
+          "retrieved_at"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "why_relevant": {
+            "type": "string",
+            "minLength": 1
+          },
+          "license": {
+            "type": "string"
+          },
+          "retrieved_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "hash": {
+            "type": "string",
+            "pattern": "^(sha256:)?[a-fA-F0-9]{64}$"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

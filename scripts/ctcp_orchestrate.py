@@ -24,6 +24,12 @@ except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
     from tools.run_paths import get_repo_slug, make_run_dir
 
+try:
+    import ctcp_dispatch
+except ModuleNotFoundError:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import ctcp_dispatch
+
 
 def now_iso() -> str:
     return dt.datetime.now().isoformat(timespec="seconds")
@@ -81,15 +87,34 @@ def write_pointer(path: Path, target: Path) -> None:
     path.write_text(str(target.resolve()) + "\n", encoding="utf-8")
 
 
+def is_within(child: Path, parent: Path) -> bool:
+    try:
+        child.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def ensure_external_run_dir(run_dir: Path) -> None:
+    if is_within(run_dir, ROOT):
+        raise SystemExit(
+            f"[ctcp_orchestrate] run_dir must be outside repo root; got inside repo: {run_dir}"
+        )
+
+
 def resolve_run_dir(raw: str) -> Path:
     if raw.strip():
-        return Path(raw).expanduser().resolve()
+        run_dir = Path(raw).expanduser().resolve()
+        ensure_external_run_dir(run_dir)
+        return run_dir
     if not LAST_RUN_POINTER.exists():
         raise SystemExit("[ctcp_orchestrate] missing LAST_RUN pointer; pass --run-dir")
     pointed = LAST_RUN_POINTER.read_text(encoding="utf-8").strip()
     if not pointed:
         raise SystemExit("[ctcp_orchestrate] LAST_RUN pointer is empty; pass --run-dir")
-    return Path(pointed).expanduser().resolve()
+    run_dir = Path(pointed).expanduser().resolve()
+    ensure_external_run_dir(run_dir)
+    return run_dir
 
 
 def append_trace(run_dir: Path, text: str) -> None:
@@ -110,8 +135,20 @@ def append_event(run_dir: Path, role: str, event: str, path: str = "", **extra: 
 def ensure_layout(run_dir: Path) -> None:
     (run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
     (run_dir / "reviews").mkdir(parents=True, exist_ok=True)
+    (run_dir / "outbox").mkdir(parents=True, exist_ok=True)
     (run_dir / "logs").mkdir(parents=True, exist_ok=True)
     (run_dir / "snapshot").mkdir(parents=True, exist_ok=True)
+
+
+def sync_outbox_fulfilled_events(run_dir: Path) -> None:
+    for row in ctcp_dispatch.detect_fulfilled_prompts(run_dir):
+        append_event(
+            run_dir,
+            row.get("role", "") or "manual_outbox",
+            "OUTBOX_PROMPT_FULFILLED",
+            row["prompt_path"],
+            target_path=row["target_path"],
+        )
 
 
 def git_info() -> tuple[str, bool]:
@@ -170,6 +207,12 @@ def plan_signed(path: Path) -> bool:
     return False
 
 
+def goal_slug(goal: str) -> str:
+    text = re.sub(r"[^a-z0-9_-]+", "-", (goal or "").strip().lower())
+    text = re.sub(r"-{2,}", "-", text).strip("-_")
+    return text or "goal"
+
+
 def validate_find_web(path: Path) -> tuple[bool, str]:
     if not path.exists():
         return False, "missing artifacts/find_web.json"
@@ -210,6 +253,50 @@ def validate_find_web(path: Path) -> tuple[bool, str]:
     return True, "ok"
 
 
+def _validate_externals_pack(path: Path) -> tuple[bool, str]:
+    try:
+        doc = read_json(path)
+    except Exception as exc:
+        return False, f"invalid json: {exc}"
+
+    if doc.get("schema_version") != "ctcp-externals-pack-v1":
+        return False, "schema_version must be ctcp-externals-pack-v1"
+
+    constraints = doc.get("constraints")
+    if not isinstance(constraints, dict):
+        return False, "constraints must be object"
+    for k in ("max_sources", "allowed_domains", "blocked_domains", "no_login_required", "no_dynamic_only"):
+        if k not in constraints:
+            return False, f"constraints missing key: {k}"
+
+    sources = doc.get("sources")
+    if not isinstance(sources, list):
+        return False, "sources must be array"
+    for idx, item in enumerate(sources):
+        if not isinstance(item, dict):
+            return False, f"sources[{idx}] must be object"
+        for k in ("url", "title", "why_relevant", "retrieved_at"):
+            if k not in item:
+                return False, f"sources[{idx}] missing key: {k}"
+    return True, "ok"
+
+
+def validate_externals_pack(goal: str) -> tuple[bool, str, str]:
+    externals_root = ROOT / "meta" / "externals"
+    candidates: list[Path] = []
+    candidates.append(externals_root / goal_slug(goal) / "externals_pack.json")
+    if externals_root.exists():
+        candidates.extend(sorted(p for p in externals_root.glob("*/externals_pack.json") if p not in candidates))
+
+    for cand in candidates:
+        if not cand.exists():
+            continue
+        ok, msg = _validate_externals_pack(cand)
+        if ok:
+            return True, str(cand.resolve()), "ok"
+    return False, "", "missing valid externals_pack.json"
+
+
 def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
     if str(run_doc.get("status", "")).lower() == "pass":
         return {"state": "pass", "owner": "", "path": "", "reason": "run already pass"}
@@ -232,38 +319,48 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
     review_cost = reviews / "review_cost.md"
     patch_marker = artifacts / "patch_apply.json"
 
+    goal = str(run_doc.get("goal", ""))
+
     if not guardrails.exists():
-        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/guardrails.md", "reason": "missing guardrails"}
+        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/guardrails.md", "reason": "waiting for guardrails.md"}
 
     ok, msg, policy = parse_guardrails(guardrails)
     if not ok:
         return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/guardrails.md", "reason": msg}
 
     if not analysis.exists():
-        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/analysis.md", "reason": "missing analysis"}
+        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/analysis.md", "reason": "waiting for analysis.md"}
 
     if not find_result.exists():
         return {"state": "resolve_find_local", "owner": "Local Orchestrator", "path": "artifacts/find_result.json", "reason": "run local resolver"}
 
     if policy["find_mode"] == "resolver_plus_web":
         ok_web, msg_web = validate_find_web(find_web)
-        if not ok_web:
-            return {"state": "blocked", "owner": "Researcher", "path": "artifacts/find_web.json", "reason": msg_web}
+        ok_ext, ext_path, _ = validate_externals_pack(goal)
+        if not ok_web and not ok_ext:
+            return {
+                "state": "blocked",
+                "owner": "Researcher",
+                "path": "artifacts/find_web.json|meta/externals/<goal_slug>/externals_pack.json",
+                "reason": "waiting for find_web.json or externals_pack.json",
+            }
+        if not ok_web and ok_ext:
+            pass
 
     if not file_request.exists():
-        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/file_request.json", "reason": "missing file_request"}
+        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/file_request.json", "reason": "waiting for file_request.json"}
 
     if not context_pack.exists():
-        return {"state": "blocked", "owner": "Local Librarian", "path": "artifacts/context_pack.json", "reason": "missing context_pack"}
+        return {"state": "blocked", "owner": "Local Librarian", "path": "artifacts/context_pack.json", "reason": "waiting for context_pack.json"}
 
     if not plan_draft.exists():
-        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/PLAN_draft.md", "reason": "missing PLAN_draft"}
+        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/PLAN_draft.md", "reason": "waiting for PLAN_draft.md"}
 
     if not review_contract.exists():
-        return {"state": "blocked", "owner": "Contract Guardian", "path": "reviews/review_contract.md", "reason": "missing contract review"}
+        return {"state": "blocked", "owner": "Contract Guardian", "path": "reviews/review_contract.md", "reason": "waiting for review_contract.md"}
 
     if not review_cost.exists():
-        return {"state": "blocked", "owner": "Cost Controller", "path": "reviews/review_cost.md", "reason": "missing cost review"}
+        return {"state": "blocked", "owner": "Cost Controller", "path": "reviews/review_cost.md", "reason": "waiting for review_cost.md"}
 
     verdict_contract = parse_verdict(review_contract)
     verdict_cost = parse_verdict(review_cost)
@@ -272,14 +369,14 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
             "state": "blocked",
             "owner": "Chair/Planner",
             "path": "reviews/review_contract.md,reviews/review_cost.md",
-            "reason": f"review verdicts not APPROVE (contract={verdict_contract}, cost={verdict_cost})",
+            "reason": f"waiting for APPROVE reviews (contract={verdict_contract}, cost={verdict_cost})",
         }
 
     if not plan.exists() or not plan_signed(plan):
-        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/PLAN.md", "reason": "PLAN.md missing or not SIGNED"}
+        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/PLAN.md", "reason": "waiting for signed PLAN.md"}
 
     if not patch.exists():
-        return {"state": "blocked", "owner": "PatchMaker", "path": "artifacts/diff.patch", "reason": "missing diff.patch"}
+        return {"state": "blocked", "owner": "PatchMaker", "path": "artifacts/diff.patch", "reason": "waiting for diff.patch"}
 
     if patch_marker.exists():
         try:
@@ -310,6 +407,7 @@ def verify_cmd() -> list[str]:
 def cmd_new_run(goal: str, run_id: str) -> int:
     rid = run_id.strip() or default_run_id()
     run_dir = make_run_dir(ROOT, rid)
+    ensure_external_run_dir(run_dir)
     if run_dir.exists() and any(run_dir.iterdir()):
         print(f"[ctcp_orchestrate] run dir exists and not empty: {run_dir}")
         return 1
@@ -356,6 +454,7 @@ def cmd_new_run(goal: str, run_id: str) -> int:
         run_dir / "events.jsonl",
         "",
     )
+    ctcp_dispatch.ensure_dispatch_config(run_dir)
     write_text(
         run_dir / "artifacts" / "guardrails.template.md",
         "\n".join(
@@ -389,10 +488,19 @@ def save_run_doc(run_dir: Path, run_doc: dict[str, Any]) -> None:
 
 
 def cmd_status(run_dir: Path) -> int:
+    sync_outbox_fulfilled_events(run_dir)
     run_doc = load_run_doc(run_dir)
     gate = current_gate(run_dir, run_doc)
+    preview = ctcp_dispatch.dispatch_preview(run_dir, run_doc, gate)
+    latest_outbox = ctcp_dispatch.latest_outbox_prompt_path(run_dir)
     print(f"[ctcp_orchestrate] run_dir={run_dir}")
     print(f"[ctcp_orchestrate] run_status={run_doc.get('status')}")
+    if gate["state"] == "blocked":
+        print(f"[ctcp_orchestrate] blocked: {gate['reason']}")
+    if latest_outbox:
+        print(f"[ctcp_orchestrate] outbox prompt created: {latest_outbox}")
+    if preview.get("status") == "budget_exceeded":
+        print(f"[ctcp_orchestrate] STOP: budget_exceeded ({preview.get('reason', '')})")
     print(f"[ctcp_orchestrate] next={gate['state']}")
     print(f"[ctcp_orchestrate] owner={gate['owner']}")
     print(f"[ctcp_orchestrate] path={gate['path']}")
@@ -402,6 +510,7 @@ def cmd_status(run_dir: Path) -> int:
 
 def cmd_advance(run_dir: Path, max_steps: int) -> int:
     ensure_layout(run_dir)
+    sync_outbox_fulfilled_events(run_dir)
     run_doc = load_run_doc(run_dir)
     goal = str(run_doc.get("goal", "")).strip() or "unspecified-goal"
     steps = 0
@@ -411,9 +520,6 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
         if str(run_doc.get("status", "")).lower() == "pass":
             print("[ctcp_orchestrate] run already PASS")
             return 0
-        if str(run_doc.get("status", "")).lower() == "fail":
-            print("[ctcp_orchestrate] run already FAIL")
-            return 1
 
         gate = current_gate(run_dir, run_doc)
         state = gate["state"]
@@ -510,8 +616,87 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
             print("[ctcp_orchestrate] PASS: verify succeeded")
             return 0
 
-        if state in {"pass", "fail"}:
+        if state == "pass":
             return cmd_status(run_dir)
+
+        dispatch = ctcp_dispatch.dispatch_once(run_dir, run_doc, gate, ROOT)
+        dispatch_status = str(dispatch.get("status", ""))
+
+        if dispatch_status == "executed":
+            append_event(
+                run_dir,
+                str(dispatch.get("role", "librarian")),
+                "LOCAL_EXEC_COMPLETED",
+                str(dispatch.get("target_path", "")),
+                provider=str(dispatch.get("provider", "")),
+                cmd=str(dispatch.get("cmd", "")),
+                rc=int(dispatch.get("rc", 0)),
+            )
+            steps += 1
+            continue
+
+        if dispatch_status == "outbox_created":
+            outbox_path = str(dispatch.get("path", ""))
+            append_event(
+                run_dir,
+                str(dispatch.get("role", "manual_outbox")),
+                "OUTBOX_PROMPT_CREATED",
+                outbox_path,
+                target_path=str(dispatch.get("target_path", "")),
+                action=str(dispatch.get("action", "")),
+                provider=str(dispatch.get("provider", "")),
+            )
+            run_doc["status"] = "blocked"
+            run_doc["blocked_reason"] = reason
+            save_run_doc(run_dir, run_doc)
+            print(f"[ctcp_orchestrate] blocked: {reason} (owner={owner}, path={path})")
+            print(f"[ctcp_orchestrate] outbox prompt created: {outbox_path}")
+            return 0
+
+        if dispatch_status == "outbox_exists":
+            run_doc["status"] = "blocked"
+            run_doc["blocked_reason"] = reason
+            save_run_doc(run_dir, run_doc)
+            existing_path = str(dispatch.get("path", ""))
+            print(f"[ctcp_orchestrate] blocked: {reason} (owner={owner}, path={path})")
+            if existing_path:
+                print(f"[ctcp_orchestrate] waiting for outbox response: {existing_path}")
+            return 0
+
+        if dispatch_status == "budget_exceeded":
+            run_doc["status"] = "blocked"
+            run_doc["blocked_reason"] = "budget_exceeded"
+            save_run_doc(run_dir, run_doc)
+            append_event(
+                run_dir,
+                "Local Orchestrator",
+                "STOP_BUDGET_EXCEEDED",
+                "artifacts/dispatch_config.json",
+                reason=str(dispatch.get("reason", "")),
+                provider=str(dispatch.get("provider", "")),
+            )
+            print(f"[ctcp_orchestrate] STOP: budget_exceeded ({dispatch.get('reason', '')})")
+            return 0
+
+        if dispatch_status == "exec_failed":
+            run_doc["status"] = "blocked"
+            run_doc["blocked_reason"] = str(dispatch.get("reason", "local_exec_failed"))
+            save_run_doc(run_dir, run_doc)
+            append_event(
+                run_dir,
+                str(dispatch.get("role", "librarian")),
+                "LOCAL_EXEC_FAILED",
+                str(dispatch.get("target_path", "")),
+                provider=str(dispatch.get("provider", "")),
+                cmd=str(dispatch.get("cmd", "")),
+                rc=int(dispatch.get("rc", 1)),
+            )
+            print(f"[ctcp_orchestrate] blocked: {dispatch.get('reason', 'local_exec failed')}")
+            return 0
+
+        if state == "fail":
+            print("[ctcp_orchestrate] run already FAIL")
+            return 1
 
         run_doc["status"] = "blocked"
         run_doc["blocked_reason"] = reason

@@ -1,6 +1,24 @@
 {
   "schema_version": "ctcp-workflow-index-v1",
   "generated_at": "2026-02-18T00:00:00",
+  "resolver_policy": {
+    "summary": "find is resolver-first. It selects workflow from local registry + historical successful runs.",
+    "selection_signals": [
+      "goal_tag_match",
+      "supported_goals",
+      "dependency_level_preference",
+      "last_known_good",
+      "historical_success"
+    ],
+    "fallback_workflow_id": "wf_minimal_patch_verify",
+    "must_not_require_web": true
+  },
+  "externals_pack_policy": {
+    "input_path_pattern": "meta/externals/<goal_slug>/externals_pack.json",
+    "usage": "candidate_supplement_only",
+    "plan_integration": "may add implementation options in PLAN_draft but must not override selected_workflow_id from find_result.json",
+    "replace_resolver": false
+  },
   "workflows": [
     {
       "id": "wf_minimal_patch_verify",

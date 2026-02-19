@@ -1,0 +1,422 @@
+diff --git a/meta/reports/LAST.md b/meta/reports/LAST.md
+index 1f3b799..9f85d47 100644
+--- a/meta/reports/LAST.md
++++ b/meta/reports/LAST.md
+@@ -1,107 +1,72 @@
+-# Demo Report — LAST
++# Demo Report - LAST
+ 
+ ## Goal
+-- Implement Local Orchestrator artifact-driven progression with optional controlled web-find artifact gating, while keeping ADLC mainline unchanged and enforcing stricter repo hygiene gates.
++- Implement the documented TeamNet x ADLC execution skeleton in code:
++  - Local Orchestrator artifact progression + review gates
++  - Local Librarian read-only `context_pack` supply
++  - Resolver-first `find` with optional web candidate input boundary
++  - Lite SimLab regression to prevent orchestrator gate regressions
+ 
+ ## Readlist
++- `docs/00_CORE.md`
++- `docs/02_workflow.md`
++- `docs/22_agent_teamnet.md`
++- `docs/30_artifact_contracts.md`
++- `specs/externals_pack.schema.json`
++- `workflow_registry/index.json`
+ - `ai_context/00_AI_CONTRACT.md`
+-  - Enforce task-first, verify entrypoint, and auditable report output.
++- `AGENTS.md`
+ - `README.md`
+-  - Core execution defaults and verify entrypoints.
+ - `BUILD.md`
+-  - Headless lite build assumptions.
+ - `PATCH_README.md`
+-  - Minimal patch + verify requirements.
+ - `TREE.md`
+-  - Repository structure reference.
+ - `docs/03_quality_gates.md`
+-  - Lite replay and workflow/contract/doc-index gate obligations.
+ - `ai_context/problem_registry.md`
+-  - Evidence-first verify discipline.
+ - `ai_context/decision_log.md`
+-  - No bypass entries needed.
+-- `docs/00_CORE.md`
+-  - Canonical protocol source (updated to v0.1 contract text).
+ 
+ ## Plan
+-1) Write/update the 4 contract documents as the source of truth.
+-2) Refactor orchestrator into strict artifact-gated progression with review/signature gates.
+-3) Add optional `find_web` contract + offline validation and lite check scenario.
+-4) Tighten verify_repo anti-pollution gate for build/run outputs tracked or appearing in repo.
+-5) Run orchestrator checks + `scripts/verify_repo.ps1` and record evidence.
+-
+-## Timeline / Trace pointer
+-- Run pointer: `meta/run_pointers/LAST_RUN.txt`
+-- External run folder: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-152020-orchestrate`
+-- Trace: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-152020-orchestrate\TRACE.md`
++1. Authorize code changes in `meta/tasks/CURRENT.md`.
++2. Align `scripts/ctcp_orchestrate.py` with artifact-contract gates and resolver-first policy.
++3. Add `scripts/ctcp_librarian.py` as read-only context supplier with budget enforcement.
++4. Add a lite SimLab scenario for external run path + `context_pack` gate block assertion.
++5. Run `sync_doc_links --check` and `verify_repo` as final acceptance.
+ 
+ ## Changes
+-- Contract docs (source of truth)
+-  - `docs/00_CORE.md` rewritten to `CTCP Core Contract (v0.1)`.
+-  - `docs/21_paths_and_locations.md` rewritten to `Paths and Locations (v0.1)`.
+-  - Added `docs/22_teamnet_adlc.md` (`TeamNet x ADLC Overview (v0.1)`).
+-  - Added `docs/30_artifact_contracts.md` (`Artifact Contracts (v0.1)`).
+-- Workflow/docs integration
+-  - `docs/02_workflow.md` updated with Local Orchestrator artifact-progression + find mode notes.
+-  - `README.md` updated with controlled optional web-find note while default remains offline.
+-  - `scripts/sync_doc_links.py` updated curated index list to include new docs and README index resynced.
+-- Artifact schemas
+-  - Updated `specs/ctcp_file_request_v1.json` to `needs[] + budget + reason` contract.
+-  - Updated `specs/ctcp_context_pack_v1.json` to `omitted[]` structured objects with reason enum.
+-  - Added/updated `specs/ctcp_find_web_v1.json` with `constraints(max_queries,max_pages,allow_domains)` and structured locator.
+-- Orchestrator implementation
+-  - Rewrote `scripts/ctcp_orchestrate.py` as strict artifact-driven state machine.
+-  - `new-run`: creates external run layout (`repo_ref.json`, `events.jsonl`, `artifacts/`, `reviews/`, `logs/`, `snapshot/`, `TRACE.md`) and writes `meta/run_pointers/LAST_RUN.txt`.
+-  - `status`: shows missing artifact/block reason and responsible role.
+-  - `advance`: gates on `guardrails -> analysis -> find_result -> (optional find_web) -> file_request -> context_pack -> PLAN_draft -> reviews APPROVE -> PLAN signed -> diff.patch -> apply -> verify`.
+-  - `resolver_plus_web` mode now blocks on missing/invalid `artifacts/find_web.json` with owner `Researcher`.
+-  - verify output switched to `artifacts/verify_report.json` with required fields.
+-- Gate/quality updates
+-  - Added `tools/checks/find_web_contract.py` (offline find_web schema checker).
+-  - Added `simlab/scenarios/S11_lite_find_web_contract.yaml` (lite contract check scenario).
+-  - Existing `simlab/run.py` empty-suite fail behavior remains active (`no scenarios` => exit 1).
+-- Repo hygiene gate hardening
+-  - `scripts/verify_repo.ps1` and `scripts/verify_repo.sh` now fail on:
+-    - tracked build outputs
+-    - tracked run outputs (`meta/runs`, `simlab/_runs*`)
+-    - unignored build/run outputs in repo
+-  - Why this gate is mandatory:
+-    - tracked build/run artifacts break repo cleanliness and make `verify_repo` non-reproducible across machines.
+-    - in-repo run outputs violate the external blackboard contract (`CTCP_RUNS_ROOT`) and pollute review diffs.
+-  - lite replay default runs are now external (`python simlab/run.py --suite lite`); in-repo fixture path only when `CTCP_WRITE_FIXTURES=1`.
+-- Pollution cleanup to satisfy new gate
+-  - Removed tracked historical run outputs from git index:
+-    - `meta/runs/**`
+-    - `simlab/_runs/**`
++- `scripts/ctcp_orchestrate.py`
++  - Enforced external run directory (`CTCP_RUNS_ROOT` path must be outside repo).
++  - `status` now prints normalized blocked line: `blocked: waiting for ...`.
++  - Gate reasons normalized to artifact waits (`guardrails.md`, `analysis.md`, `file_request.json`, `context_pack.json`, `PLAN_draft.md`, reviews, signed `PLAN.md`, `diff.patch`).
++  - In `resolver_plus_web`, requires either:
++    - `artifacts/find_web.json`, or
++    - `meta/externals/<goal_slug>/externals_pack.json` (validated shape)
++  - Resolver output `artifacts/find_result.json` remains mandatory and authoritative.
++- `scripts/ctcp_librarian.py` (new)
++  - Reads `artifacts/file_request.json`.
++  - Emits `artifacts/context_pack.json` (`ctcp-context-pack-v1`).
++  - Enforces budget (`max_files`, `max_total_bytes`) and writes overflow/denied entries to `omitted[]` with reasons (`too_large`, `denied`, `irrelevant`).
++  - Read-only behavior: only reads repo files and writes run artifacts.
++- `simlab/scenarios/S12_lite_orchestrate_context_gate.yaml` (new)
++  - Runs `ctcp_orchestrate new-run`, seeds minimal artifacts, runs `advance`, runs `status`.
++  - Asserts `blocked: waiting for context_pack.json` and `owner=Local Librarian`.
++  - Asserts run pointer path is external (not in sandbox repo path).
++- `meta/tasks/CURRENT.md`
++  - Set `[x] Code changes allowed` and recorded final acceptance results.
+ 
+ ## Verify
+-- Syntax checks:
+-  - `python -m py_compile scripts/ctcp_orchestrate.py scripts/resolve_workflow.py simlab/run.py tools/checks/find_web_contract.py tools/run_paths.py`
+-  - Result: pass.
+-- Orchestrator creation:
+-  - `python scripts/ctcp_orchestrate.py new-run --goal "smoke"`
+-  - Result: pass; run created under external root and pointer updated.
+-- Orchestrator progression to librarian gate:
+-  - Prepared `artifacts/guardrails.md`, `artifacts/analysis.md`, `artifacts/file_request.json`, then ran:
+-  - `python scripts/ctcp_orchestrate.py advance --max-steps 8`
+-  - Result: blocked on `artifacts/context_pack.json` with owner `Local Librarian`.
+-- Optional web-find gate behavior (resolver_plus_web):
+-  - Switched guardrails to `find_mode: resolver_plus_web`, then ran:
+-  - `python scripts/ctcp_orchestrate.py advance --run-dir <last_run> --max-steps 4`
+-  - Result: blocked on `artifacts/find_web.json` with owner `Researcher`.
+-- Mandatory gate:
+-  - `powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1`
++- `python scripts/sync_doc_links.py --check`
++  - Result: `ok`
++- `python simlab/run.py --suite lite`
++  - Result: `passed: 4, failed: 0`
++- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
+   - Exit: `0`
+   - Key output:
+-    - anti-pollution gate passed
+-    - headless lite build + ctest passed
+-    - workflow/contract/doc-index checks passed
+-    - lite scenario replay passed with `passed: 3, failed: 0`
+-    - `[verify_repo] OK`
+-
+-## Open questions (if any)
+-- None.
++    - workflow gate: `ok`
++    - contract checks: pass
++    - ctest lite: `2/2` pass
++    - lite scenario replay: `passed: 4, failed: 0`
++    - final: `[verify_repo] OK`
+ 
+-## Next steps
+-- Commit the full contract + orchestrator + gate patch as a single focused change set.
+-- Optionally add a negative lite scenario for invalid `find_web.json` to assert expected fail path explicitly.
++## Demo
++- Run pointer: `meta/run_pointers/LAST_RUN.txt`
++- Current pointed run: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\manualweb-20260219-160239`
++- Trace: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\manualweb-20260219-160239\TRACE.md`
+diff --git a/meta/tasks/CURRENT.md b/meta/tasks/CURRENT.md
+index 60d09c1..6ac55d9 100644
+--- a/meta/tasks/CURRENT.md
++++ b/meta/tasks/CURRENT.md
+@@ -1,37 +1,34 @@
+-# Task — local-orchestrator-dual-find-protocol
++# Task - teamnet-adlc-execution-skeleton
+ 
+ ## Context
+-- Need to align repository contracts to a single authority set: `docs/00_CORE.md`, `docs/21_paths_and_locations.md`, `docs/22_teamnet_adlc.md`, and `docs/30_artifact_contracts.md`.
+-- Need Local Orchestrator to be artifact-driven (missing artifact => blocked) while keeping ADLC mainline unchanged.
+-- Need optional web-find channel (`resolver_plus_web`) without implementing any real network search in repo code.
+-- Need verify gates to fail on tracked/in-repo build/run pollution and keep lite scenario gate real.
++- Implement the documented TeamNet x ADLC execution skeleton in code:
++  - Local Orchestrator for artifact-driven progression and gate checks
++  - Local Librarian for read-only `context_pack.json` generation
++  - Review gates (`APPROVE` required) before execution
++- Add a minimal SimLab lite regression to keep this chain from regressing.
+ 
+ ## Acceptance (must be checkable)
+ - [x] DoD written (this file complete)
+-- [x] Research logged (if needed): N/A (repo-local contract + implementation task)
++- [x] Research logged (if needed): N/A (repo-local contract alignment)
+ - [x] Code changes allowed
+ - [x] Patch applies cleanly (`git apply ...`) OR overlay zip applies cleanly
+ - [x] `scripts/verify_repo.*` passes
+ - [x] Demo report updated: `meta/reports/LAST.md`
+ 
+ ## Plan
+-1) Replace/update the 4 contract docs as the primary source of truth.
+-2) Refactor `scripts/ctcp_orchestrate.py` to strict artifact-gated progression and review/signature gates.
+-3) Add optional `find_web` artifact contract + offline validator + lite scenario check.
+-4) Tighten verify_repo anti-pollution rules for tracked/in-repo build/run outputs.
+-5) Run orchestrator smoke checks and `scripts/verify_repo.ps1`, then record report.
++1) Implement/align `scripts/ctcp_orchestrate.py` (`new-run`, `status`, `advance`) with artifact contracts.
++2) Implement `scripts/ctcp_librarian.py` to read `artifacts/file_request.json` and emit budgeted `artifacts/context_pack.json`.
++3) Ensure resolver-first behavior (`scripts/resolve_workflow.py`) remains authoritative; web inputs are candidate-only.
++4) Add a SimLab lite scenario asserting orchestrator blocked status and external run location.
++5) Run `scripts/sync_doc_links.py --check` and `scripts/verify_repo.ps1`; update `meta/reports/LAST.md`.
+ 
+ ## Notes / Decisions
+-- No GUI changes.
+-- No new dependencies; stdlib only.
+-- No real web search implementation: web-find remains external artifact input only.
+-- Keep decision authority in Chair artifacts (`PLAN_draft.md` / signed `PLAN.md` + review adjudication).
++- Resolve conflicts by `docs/00_CORE.md` precedence.
++- No dependency additions.
+ 
+ ## Results
+-- Updated contract docs and path/team/artifact rules to v0.1 text.
+-- Implemented Local Orchestrator as artifact gate driver (no plan/review content generation).
+-- Added `ctcp_find_web_v1` schema and offline validator.
+-- Added lite scenario to validate `find_web.json` fields in `resolver_plus_web` mode.
+-- Updated verify gate to fail on tracked/unignored build and run outputs inside repo.
+-- Removed tracked historical run outputs from `meta/runs` and `simlab/_runs` to satisfy new gate.
+-- `powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1` passed.
++- Updated `scripts/ctcp_orchestrate.py` to enforce external run-dir, resolver-first gating, review gate, and blocked-stage progression text.
++- Added `scripts/ctcp_librarian.py` (read-only) to generate budgeted `artifacts/context_pack.json` from `artifacts/file_request.json`.
++- Added `simlab/scenarios/S12_lite_orchestrate_context_gate.yaml` to lock orchestrator external run + context_pack gate behavior.
++- `python scripts/sync_doc_links.py --check` passed.
++- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` passed.
+diff --git a/scripts/ctcp_orchestrate.py b/scripts/ctcp_orchestrate.py
+index f469643..1b1ca98 100644
+--- a/scripts/ctcp_orchestrate.py
++++ b/scripts/ctcp_orchestrate.py
+@@ -81,15 +81,34 @@ def write_pointer(path: Path, target: Path) -> None:
+     path.write_text(str(target.resolve()) + "\n", encoding="utf-8")
+ 
+ 
++def is_within(child: Path, parent: Path) -> bool:
++    try:
++        child.resolve().relative_to(parent.resolve())
++        return True
++    except ValueError:
++        return False
++
++
++def ensure_external_run_dir(run_dir: Path) -> None:
++    if is_within(run_dir, ROOT):
++        raise SystemExit(
++            f"[ctcp_orchestrate] run_dir must be outside repo root; got inside repo: {run_dir}"
++        )
++
++
+ def resolve_run_dir(raw: str) -> Path:
+     if raw.strip():
+-        return Path(raw).expanduser().resolve()
++        run_dir = Path(raw).expanduser().resolve()
++        ensure_external_run_dir(run_dir)
++        return run_dir
+     if not LAST_RUN_POINTER.exists():
+         raise SystemExit("[ctcp_orchestrate] missing LAST_RUN pointer; pass --run-dir")
+     pointed = LAST_RUN_POINTER.read_text(encoding="utf-8").strip()
+     if not pointed:
+         raise SystemExit("[ctcp_orchestrate] LAST_RUN pointer is empty; pass --run-dir")
+-    return Path(pointed).expanduser().resolve()
++    run_dir = Path(pointed).expanduser().resolve()
++    ensure_external_run_dir(run_dir)
++    return run_dir
+ 
+ 
+ def append_trace(run_dir: Path, text: str) -> None:
+@@ -170,6 +189,12 @@ def plan_signed(path: Path) -> bool:
+     return False
+ 
+ 
++def goal_slug(goal: str) -> str:
++    text = re.sub(r"[^a-z0-9_-]+", "-", (goal or "").strip().lower())
++    text = re.sub(r"-{2,}", "-", text).strip("-_")
++    return text or "goal"
++
++
+ def validate_find_web(path: Path) -> tuple[bool, str]:
+     if not path.exists():
+         return False, "missing artifacts/find_web.json"
+@@ -210,6 +235,50 @@ def validate_find_web(path: Path) -> tuple[bool, str]:
+     return True, "ok"
+ 
+ 
++def _validate_externals_pack(path: Path) -> tuple[bool, str]:
++    try:
++        doc = read_json(path)
++    except Exception as exc:
++        return False, f"invalid json: {exc}"
++
++    if doc.get("schema_version") != "ctcp-externals-pack-v1":
++        return False, "schema_version must be ctcp-externals-pack-v1"
++
++    constraints = doc.get("constraints")
++    if not isinstance(constraints, dict):
++        return False, "constraints must be object"
++    for k in ("max_sources", "allowed_domains", "blocked_domains", "no_login_required", "no_dynamic_only"):
++        if k not in constraints:
++            return False, f"constraints missing key: {k}"
++
++    sources = doc.get("sources")
++    if not isinstance(sources, list):
++        return False, "sources must be array"
++    for idx, item in enumerate(sources):
++        if not isinstance(item, dict):
++            return False, f"sources[{idx}] must be object"
++        for k in ("url", "title", "why_relevant", "retrieved_at"):
++            if k not in item:
++                return False, f"sources[{idx}] missing key: {k}"
++    return True, "ok"
++
++
++def validate_externals_pack(goal: str) -> tuple[bool, str, str]:
++    externals_root = ROOT / "meta" / "externals"
++    candidates: list[Path] = []
++    candidates.append(externals_root / goal_slug(goal) / "externals_pack.json")
++    if externals_root.exists():
++        candidates.extend(sorted(p for p in externals_root.glob("*/externals_pack.json") if p not in candidates))
++
++    for cand in candidates:
++        if not cand.exists():
++            continue
++        ok, msg = _validate_externals_pack(cand)
++        if ok:
++            return True, str(cand.resolve()), "ok"
++    return False, "", "missing valid externals_pack.json"
++
++
+ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
+     if str(run_doc.get("status", "")).lower() == "pass":
+         return {"state": "pass", "owner": "", "path": "", "reason": "run already pass"}
+@@ -232,38 +301,48 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
+     review_cost = reviews / "review_cost.md"
+     patch_marker = artifacts / "patch_apply.json"
+ 
++    goal = str(run_doc.get("goal", ""))
++
+     if not guardrails.exists():
+-        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/guardrails.md", "reason": "missing guardrails"}
++        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/guardrails.md", "reason": "waiting for guardrails.md"}
+ 
+     ok, msg, policy = parse_guardrails(guardrails)
+     if not ok:
+         return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/guardrails.md", "reason": msg}
+ 
+     if not analysis.exists():
+-        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/analysis.md", "reason": "missing analysis"}
++        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/analysis.md", "reason": "waiting for analysis.md"}
+ 
+     if not find_result.exists():
+         return {"state": "resolve_find_local", "owner": "Local Orchestrator", "path": "artifacts/find_result.json", "reason": "run local resolver"}
+ 
+     if policy["find_mode"] == "resolver_plus_web":
+         ok_web, msg_web = validate_find_web(find_web)
+-        if not ok_web:
+-            return {"state": "blocked", "owner": "Researcher", "path": "artifacts/find_web.json", "reason": msg_web}
++        ok_ext, ext_path, _ = validate_externals_pack(goal)
++        if not ok_web and not ok_ext:
++            return {
++                "state": "blocked",
++                "owner": "Researcher",
++                "path": "artifacts/find_web.json|meta/externals/<goal_slug>/externals_pack.json",
++                "reason": "waiting for find_web.json or externals_pack.json",
++            }
++        if not ok_web and ok_ext:
++            pass
+ 
+     if not file_request.exists():
+-        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/file_request.json", "reason": "missing file_request"}
++        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/file_request.json", "reason": "waiting for file_request.json"}
+ 
+     if not context_pack.exists():
+-        return {"state": "blocked", "owner": "Local Librarian", "path": "artifacts/context_pack.json", "reason": "missing context_pack"}
++        return {"state": "blocked", "owner": "Local Librarian", "path": "artifacts/context_pack.json", "reason": "waiting for context_pack.json"}
+ 
+     if not plan_draft.exists():
+-        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/PLAN_draft.md", "reason": "missing PLAN_draft"}
++        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/PLAN_draft.md", "reason": "waiting for PLAN_draft.md"}
+ 
+     if not review_contract.exists():
+-        return {"state": "blocked", "owner": "Contract Guardian", "path": "reviews/review_contract.md", "reason": "missing contract review"}
++        return {"state": "blocked", "owner": "Contract Guardian", "path": "reviews/review_contract.md", "reason": "waiting for review_contract.md"}
+ 
+     if not review_cost.exists():
+-        return {"state": "blocked", "owner": "Cost Controller", "path": "reviews/review_cost.md", "reason": "missing cost review"}
++        return {"state": "blocked", "owner": "Cost Controller", "path": "reviews/review_cost.md", "reason": "waiting for review_cost.md"}
+ 
+     verdict_contract = parse_verdict(review_contract)
+     verdict_cost = parse_verdict(review_cost)
+@@ -272,14 +351,14 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
+             "state": "blocked",
+             "owner": "Chair/Planner",
+             "path": "reviews/review_contract.md,reviews/review_cost.md",
+-            "reason": f"review verdicts not APPROVE (contract={verdict_contract}, cost={verdict_cost})",
++            "reason": f"waiting for APPROVE reviews (contract={verdict_contract}, cost={verdict_cost})",
+         }
+ 
+     if not plan.exists() or not plan_signed(plan):
+-        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/PLAN.md", "reason": "PLAN.md missing or not SIGNED"}
++        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/PLAN.md", "reason": "waiting for signed PLAN.md"}
+ 
+     if not patch.exists():
+-        return {"state": "blocked", "owner": "PatchMaker", "path": "artifacts/diff.patch", "reason": "missing diff.patch"}
++        return {"state": "blocked", "owner": "PatchMaker", "path": "artifacts/diff.patch", "reason": "waiting for diff.patch"}
+ 
+     if patch_marker.exists():
+         try:
+@@ -310,6 +389,7 @@ def verify_cmd() -> list[str]:
+ def cmd_new_run(goal: str, run_id: str) -> int:
+     rid = run_id.strip() or default_run_id()
+     run_dir = make_run_dir(ROOT, rid)
++    ensure_external_run_dir(run_dir)
+     if run_dir.exists() and any(run_dir.iterdir()):
+         print(f"[ctcp_orchestrate] run dir exists and not empty: {run_dir}")
+         return 1
+@@ -393,6 +473,8 @@ def cmd_status(run_dir: Path) -> int:
+     gate = current_gate(run_dir, run_doc)
+     print(f"[ctcp_orchestrate] run_dir={run_dir}")
+     print(f"[ctcp_orchestrate] run_status={run_doc.get('status')}")
++    if gate["state"] == "blocked":
++        print(f"[ctcp_orchestrate] blocked: {gate['reason']}")
+     print(f"[ctcp_orchestrate] next={gate['state']}")
+     print(f"[ctcp_orchestrate] owner={gate['owner']}")
+     print(f"[ctcp_orchestrate] path={gate['path']}")

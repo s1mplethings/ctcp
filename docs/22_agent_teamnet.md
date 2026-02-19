@@ -1,66 +1,68 @@
-# Agent TeamNet (ADLC Mainline)
+# Agent TeamNet Contract (v0.2)
 
-目标：给任意 AI 一个最小但完整的团队协作拓扑，明确谁负责什么、谁能决策、产物落在哪里。
+`docs/00_CORE.md` is authoritative. This file turns that contract into role wiring for multi-agent execution.
 
-## TeamNet role graph (mesh)
-
-```text
- +------------------+      +------------------+      +------------------+
- |  Local Librarian |----->|    Blackboard    |<-----|    Researcher    |
- | read-only supply |      | work + artifacts |      | externals summary|
- +---------+--------+      +---------+--------+      +---------+--------+
-           |                         |                         |
-           v                         v                         v
- +---------+--------+      +---------+--------+      +---------+--------+
- | ContractGuardian |----->| Chair/Planner    |<-----| CostController   |
- | adversarial DoD  |      | ONLY decision    |      | adversarial cost |
- +------------------+      +----+--------+----+      +------------------+
-                                 |        |
-                                 v        v
-                          +------+--+  +--+---------------+
-                          |PatchMaker|  |  Local Verifier |
-                          | execute  |  |  fact judge     |
-                          +----+-----+  +--------+--------+
-                               ^                 |
-                               |                 v
-                               |        +--------+--------+
-                               +--------+     Fixer       |
-                                        | execute (bundle)|
-                                        +-----------------+
-```
-
-角色要点：
-- Local Librarian：只读仓库，负责 context_pack/file_supply，减少 API 文件读取成本。
-- Researcher：仅补充 externals 摘要；`find` 主链路仍是本地 workflow resolver。
-- Blackboard：统一工作区与产物交换面。
-- ContractGuardian：对抗式检查 contract/DoD/gate。
-- CostController：对抗式限制 token、调用次数、读文件预算（通过 Chair 施加约束）。
-- Chair/Planner：唯一决策点。
-- PatchMaker/Fixer：执行角色，Fixer 只基于 failure bundle 修复。
-- Local Verifier：事实判定，运行 `verify_repo`/SimLab。
-
-## ADLC mainline with agent assists
+## TeamNet Mesh
 
 ```text
-doc -> analysis -> find -> plan -> build/verify -> contrast -> fix -> deploy/merge
-  |       |         |       |           |            |        |         |
-  |       |         |       |           |            |        |         +--> artifacts/release_report.md
-  |       |         |       |           |            |        +------------> artifacts/diff.patch (new)
-  |       |         |       |           |            +---------------------> failure_bundle.zip (input to Fixer)
-  |       |         |       |           +----------------------------------> TRACE.md + artifacts/verify_report.md
-  |       |         |       +-----------------------------------------------> artifacts/PLAN.md
-  |       |         +-------------------------------------------------------> artifacts/find_result.json
-  |       +-----------------------------------------------------------------> artifacts/analysis.md
-  +-------------------------------------------------------------------------> artifacts/guardrails.md
-
-* ONLY decision point across steps: Chair/Planner
+                     (adversarial reviews only)
+      +--------------------+         +--------------------+
+      | ContractGuardian   |-------->|                    |
+      | cost/contract gate |         |                    |
+      +--------------------+         |                    |
+                                     |   Chair/Planner    |
+      +--------------------+         | (ONLY decision)    |
+      | CostController     |-------->|                    |
+      | budget gate        |         |                    |
+      +--------------------+         +----------+---------+
+                                                |
+                                                v
+ +--------------------+    context_pack   +----+---------------+
+ | Local Librarian    |------------------>| PatchMaker / Fixer |
+ | read-only supplier |                   | execution only      |
+ +----------+---------+                   +----+----------------+
+            ^                                  |
+            | file_request                     | diff.patch
+            |                                  v
+ +----------+---------+                 +------+--------------+
+ | Local Orchestrator |---------------->| Local Verifier      |
+ | gate driver only   |<----------------| fact judge only     |
+ +----------+---------+   verify result +------+--------------+
+            ^
+            | externals_pack (optional candidate input)
+ +----------+---------+
+ | Web Researcher     |
+ | offline source pack|
+ +--------------------+
 ```
 
-产物映射（与 `docs/00_CORE.md` 第 4/5 节一致）：
-- doc -> `artifacts/guardrails.md`
-- analysis -> `artifacts/analysis.md`
-- find -> `artifacts/find_result.json`
-- plan -> `artifacts/PLAN.md`
-- build/verify -> `TRACE.md`, `artifacts/verify_report.md`
-- contrast/fix -> `failure_bundle.zip` -> `artifacts/diff.patch`
-- deploy/merge -> `artifacts/release_report.md`
+## Role Contract
+
+| Role | Inputs | Outputs | MUST NOT | ADLC Binding |
+|---|---|---|---|---|
+| Chair/Planner | `analysis.md`, `find_result.json`, reviews, context pack | `PLAN_draft.md`, signed `PLAN.md`, adjudication | Delegate final decision | `analysis`, `plan`, `deploy/merge` |
+| Local Orchestrator | artifact presence/state, signed plan, gate results | status transitions, run pointer updates, gate triggers | Decide workflow/plan, write patch, approve reviews | all steps as driver |
+| Local Librarian | `file_request.json` | `context_pack.json` | Decide solution, patch code | `analysis -> plan` support |
+| Web Researcher | guardrails + query budget | `meta/externals/<goal_slug>/externals_pack.json` | Replace resolver result, execute patch | optional input before `plan` |
+| ContractGuardian | `PLAN_draft.md`, contract docs | `reviews/review_contract.md` (`APPROVE/BLOCK`) | Edit source code or patch | `plan` gate |
+| CostController | `PLAN_draft.md`, budgets, stop conditions | `reviews/review_cost.md` (`APPROVE/BLOCK`) | Edit source code or patch | `plan` gate |
+| PatchMaker/Fixer | signed `PLAN.md`, failure bundle | `artifacts/diff.patch` | Expand scope outside plan, self-approve | `fix` and execute loop |
+| Local Verifier | repo/run state, verify entrypoint | `TRACE.md`, `artifacts/verify_report.json`, `failure_bundle.zip` (on fail) | Decide acceptance policy | `[build<->verify]`, `contrast` |
+
+## Hard Boundaries
+
+- Unique decision authority: `Chair/Planner` only.
+- Local Orchestrator/Librarian are low-cost context providers and gate drivers, not strategists.
+- Web Researcher provides offline, structured candidate evidence only; cannot become execution single point of failure.
+- Adversarial roles (`ContractGuardian`, `CostController`, optional red-team) exist to block unsafe plans; they cannot write code directly.
+
+## Dispatcher/Provider Wiring
+
+- Orchestrator MAY call a local dispatcher when blocked by missing artifacts.
+- Dispatcher input authority remains the same gate state; it does not change workflow selection authority.
+- Provider types:
+  - `local_exec`: local script execution, restricted to librarian context-pack generation.
+  - `manual_outbox`: writes standardized outbox prompts for external/manual agents.
+- `manual_outbox` prompts must constrain write scope to run_dir target artifacts only.
+- `manual_outbox` prompts must not instruct any direct repo edits.
+- When `max_outbox_prompts` budget is exceeded, dispatcher must stop creating prompts (`budget_exceeded`).

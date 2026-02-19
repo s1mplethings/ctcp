@@ -139,3 +139,46 @@ J) events.jsonl
 Each line:
 
 {"ts":"...","role":"...","event":"...","path":"..."}
+
+K) artifacts/dispatch_config.json
+
+Fields:
+
+schema_version: "ctcp-dispatch-config-v1"
+
+mode: "manual_outbox" | "local_exec"
+
+role_providers: {
+  "librarian": "local_exec|manual_outbox",
+  "chair": "manual_outbox",
+  "contract_guardian": "manual_outbox",
+  "cost_controller": "manual_outbox",
+  "patchmaker": "manual_outbox",
+  "fixer": "manual_outbox",
+  "researcher": "manual_outbox"
+}
+
+budgets: { "max_outbox_prompts": int }
+
+Rules:
+- `local_exec` MUST only auto-execute librarian context pack generation.
+- API-facing roles MUST use manual outbox prompts (no direct network/API call in local orchestrator).
+
+L) outbox/*.md (manual provider prompt)
+
+Prompt must include:
+
+Run-Dir (absolute path)
+
+Role / Action / Target-Path
+
+write to: <run-relative target path>
+
+missing artifacts list
+
+budget values (`max_outbox_prompts`, `max_files`, `max_total_bytes`, `max_iterations`)
+
+Hard constraints:
+- Only write requested target artifact in run_dir.
+- Do not modify repo files.
+- Follow role template output keys (for example `Verdict: APPROVE|BLOCK`, `Status: SIGNED`, patch only `artifacts/diff.patch`).
