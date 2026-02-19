@@ -23,6 +23,12 @@
     },
     {
       "run": {
+        "cmd": "python -c \"from pathlib import Path; import zipfile, shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); b=r/'failure_bundle.zip'; assert b.exists(), str(b); names=set(zipfile.ZipFile(b).namelist()); req={'TRACE.md','artifacts/verify_report.json','artifacts/PLAN.md','artifacts/diff.patch','events.jsonl','reviews/','reviews/.keep','outbox/','outbox/.keep'}; miss=sorted(req-names); assert not miss, str(miss); assert any(n.startswith('outbox/') and n.endswith('.md') for n in names), 'missing outbox prompt in bundle'; outbox_md=sorted((r/'outbox').glob('*.md')); assert outbox_md, 'missing outbox prompt file in run_dir'; shutil.copy2(b, 'artifacts/_s16_failure_bundle.zip')\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
         "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; shutil.copy2('tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch', art/'diff.patch')\"",
         "expect_exit": 0
       }
@@ -54,6 +60,9 @@
           "VERIFY_FAILED",
           "BUNDLE_CREATED",
           "VERIFY_PASSED"
+        ],
+        "excludes": [
+          "STOP_MAX_ITERATIONS"
         ]
       }
     }

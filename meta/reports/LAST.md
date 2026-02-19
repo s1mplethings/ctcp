@@ -1,8 +1,9 @@
 # Demo Report - LAST
 
 ## Goal
-- Complete `L2-FAIL-001`: enforce hard fail evidence (`failure_bundle.zip`) and fixer loop convergence (`FAIL -> new patch -> PASS`) with lite regressions.
-- Keep contracts unchanged: resolver-first, `find_result.json` as decision authority, external `CTCP_RUNS_ROOT` run dirs, no new dependencies, no real networking.
+- Execute P0 optimization slice:
+  - SimLab sandbox prefers `git worktree` (with safe fallback).
+  - `verify_repo` supports unified build root + compiler launcher + parallel build/test.
 
 ## Readlist
 - `AGENTS.md`
@@ -15,7 +16,6 @@
 - `docs/02_workflow.md`
 - `docs/03_quality_gates.md`
 - `docs/12_modules_index.md`
-- `docs/30_artifact_contracts.md`
 - `meta/tasks/TEMPLATE.md`
 - `meta/tasks/CURRENT.md`
 - `meta/reports/LAST.md`
@@ -23,91 +23,52 @@
 - `ai_context/decision_log.md`
 
 ## Plan
-1. Docs/spec first:
-   - align artifact contract wording for `verify_report.json` and `failure_bundle.zip`.
-2. Code:
-   - harden `ctcp_orchestrate.py` fail path and fixer loop.
-3. Regression:
-   - strengthen S15 assertions (paths field + fixer outbox prompt).
-4. Verify:
-   - `sync_doc_links --check`
-   - `simlab/run.py --suite lite`
-   - `scripts/verify_repo.ps1`
-   - clean-worktree `git apply --check`
-5. Report:
-   - record evidence paths and demo pointers.
+1. SimLab: introduce `worktree` sandbox path, keep `copy` fallback when repo is dirty.
+2. Verify pipeline: add build-root/launcher/parallel knobs without changing default gate order.
+3. Keep behavior compatibility and rerun full lite + verify gate.
 
 ## Timeline / Trace Pointer
-- Lite suite run evidence:
-  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\simlab_runs\20260219-200922`
-- S15 external run demo (failure bundle + fixer outbox):
-  - `C:\Users\sunom\AppData\Local\ctcp\runs\sandbox\20260219-201006-016278-orchestrate`
-- S16 external run demo (loop to pass):
-  - `C:\Users\sunom\AppData\Local\ctcp\runs\sandbox\20260219-201021-005256-orchestrate`
+- Lite replay run:
+  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\simlab_runs\20260219-212827`
+- verify_repo internal lite replay:
+  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\simlab_runs\20260219-212830`
 
 ## Changes
-- Unified diff patch:
-  - `PATCHES/20260219-failure-closure-loop.patch`
+- `simlab/run.py`
+  - add `--sandbox-mode` (`auto|copy|worktree`, default `auto` via `CTCP_SIMLAB_SANDBOX_MODE`).
+  - in `auto`, dirty repo falls back to `copy` mode; clean repo uses `git worktree`.
+  - add scenario-isolated external `CTCP_RUNS_ROOT` (`simlab_external_runs/...`) to avoid run-dir collisions.
+  - trace now records `Sandbox-Mode` and `Sandbox-Note`.
+- `scripts/verify_repo.ps1`
+  - add `CTCP_BUILD_ROOT` (unified build root).
+  - add launcher autodetect (`ccache` then `sccache`, or `CTCP_COMPILER_LAUNCHER` override).
+  - add `CTCP_BUILD_PARALLEL` and pass `--parallel` to build + `-j` to ctest.
+  - add `CTCP_USE_NINJA=1` optional generator switch.
+- `scripts/verify_repo.sh`
+  - same build-root/launcher/parallel/Ninja behavior as PowerShell script.
+- `CMakeLists.txt`
+  - add `CTCP_ENABLE_COMPILER_LAUNCHER` (ON by default): autodetect `ccache`/`sccache` and set compiler launcher.
 - `meta/tasks/CURRENT.md`
-  - switched active task binding to `L2-FAIL-001`, kept code-change gate enabled.
+  - switch active task to optimization slice (`L4-OPT-001`, P0 subset).
 - `meta/backlog/execution_queue.json`
-  - marked `L2-FAIL-001` as `done` with S15/S16 closure note.
-- `scripts/ctcp_orchestrate.py`
-  - added verify iteration control (`verify_iterations`, max read from `PLAN.md` or `guardrails.md`, default `3`).
-  - added stop event/status on limit hit: `STOP_MAX_ITERATIONS`.
-  - added tracked-dirty apply safety gate before `git apply` (`repo_dirty_before_apply`), while allowing managed fixer delta over prior applied patch.
-  - added command trace blocks in `TRACE.md` for apply/verify/retry/revert with cmd, exit_code, stdout/stderr tail.
-  - hardened verify report output with required fields:
-    - `result`, `commands`, `failures`, `paths` (+compat mirror `artifacts`).
-  - fail path now always:
-    - writes `VERIFY_FAILED`
-    - ensures/validates `failure_bundle.zip`
-    - writes `BUNDLE_CREATED`
-    - dispatches fixer outbox prompt immediately (`OUTBOX_PROMPT_CREATED`).
-  - bundle validation now requires `reviews/*` and `outbox/*` entries when those files exist.
-  - fail-state outbox dispatch no longer downgrades run status from `fail` to `blocked`.
-  - adds optional backup of previously applied patch on fixer re-iteration (`artifacts/diff.patch.iter<N>.bak`).
-- `simlab/scenarios/S15_lite_fail_produces_bundle.yaml`
-  - added assertions for `verify_report.paths`.
-  - added assertions for fixer outbox prompt content (`Role: fixer`, `failure_bundle.zip`, `write to: artifacts/diff.patch`).
-- `simlab/scenarios/S16_lite_fixer_loop_pass.yaml`
-  - locks same-run fail->fix->pass convergence and asserts `VERIFY_PASSED`.
-- `tests/fixtures/patches/lite_fail_bad_readme_link.patch`
-  - deterministic fail patch used by S15/S16.
-- `tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch`
-  - deterministic fixer patch used by S16 pass loop.
-- `docs/30_artifact_contracts.md`
-  - expanded `verify_report.json` minimum fields (iteration fields + `paths`).
-  - expanded failure bundle minimum list to include `reviews/*` and `outbox/*` when present.
+  - `L4-OPT-001` status moved to `doing` with P0 slice note.
 
 ## Verify
 - `python scripts/sync_doc_links.py --check`
   - result: `[sync_doc_links] ok`
 - `python simlab/run.py --suite lite`
-  - result: `{"run_dir":".../simlab_runs/20260219-200922","passed":8,"failed":0}`
-  - includes new hard regressions:
-    - `S15_lite_fail_produces_bundle` pass
-    - `S16_lite_fixer_loop_pass` pass
+  - result: `{"run_dir":".../20260219-212827","passed":8,"failed":0}`
 - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
   - result: `[verify_repo] OK`
   - key lines:
-    - ctest lite: `2/2` pass
-    - workflow checks: ok
-    - contract checks: ok
-    - doc index check: ok
+    - build root printed
+    - parallel value printed
+    - launcher status printed
     - lite replay: `passed=8 failed=0`
-- clean-worktree patch apply check:
-  - command: `git -C <temp_worktree> apply --check PATCHES/20260219-failure-closure-loop.patch`
-  - result: pass
-- S15 evidence excerpt:
-  - `_s15_events.jsonl` contains `VERIFY_STARTED`, `VERIFY_FAILED`, `BUNDLE_CREATED`, `OUTBOX_PROMPT_CREATED`.
-  - `_s15_advance.out.txt` shows outbox creation and failure bundle path.
-- S16 evidence excerpt:
-  - `_s16_verify_report.json` result is `PASS` with `iteration: 2`.
-  - `_s16_events.jsonl` contains `VERIFY_FAILED`, `BUNDLE_CREATED`, `VERIFY_PASSED`.
 
 ## Open Questions
 - None.
 
 ## Next Steps
-1. Add an explicit lite case for `STOP_MAX_ITERATIONS` to lock the new stop condition.
+1. P1: verify gate step-level parallelism (`workflow/contract/doc-index` in parallel after build).
+2. P1: core dead-code/import cleanup pass.

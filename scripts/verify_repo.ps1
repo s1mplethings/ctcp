@@ -5,7 +5,16 @@ Param(
 
 $ErrorActionPreference = "Stop"
 $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
-$BuildDirLite = Join-Path $Root "build_lite"
+$BuildRoot = if ($env:CTCP_BUILD_ROOT) { $env:CTCP_BUILD_ROOT } else { $Root }
+if (-not (Test-Path $BuildRoot)) {
+  New-Item -ItemType Directory -Path $BuildRoot -Force | Out-Null
+}
+$BuildRoot = Resolve-Path $BuildRoot
+$BuildDirLite = Join-Path $BuildRoot "build_lite"
+$UseNinja = ($env:CTCP_USE_NINJA -eq "1")
+$BuildParallel = $env:CTCP_BUILD_PARALLEL
+if (-not $BuildParallel) { $BuildParallel = [Environment]::ProcessorCount }
+$CompilerLauncher = $env:CTCP_COMPILER_LAUNCHER
 $RunFull = $Full -or ($env:CTCP_FULL_GATE -eq "1")
 $WriteFixtures = ($env:CTCP_WRITE_FIXTURES -eq "1")
 $SkipLiteReplay = ($env:CTCP_SKIP_LITE_REPLAY -eq "1")
@@ -13,6 +22,7 @@ $ModeName = "LITE"
 if ($RunFull) { $ModeName = "FULL" }
 
 Write-Host "[verify_repo] repo root: $Root"
+Write-Host "[verify_repo] build root: $BuildRoot"
 Write-Host "[verify_repo] mode: $ModeName"
 Write-Host "[verify_repo] write_fixtures: $WriteFixtures"
 $BuildArtifactsCommittedMessage = -join ([char[]](
@@ -69,6 +79,14 @@ function Get-CtestExe {
     if (Test-Path $cand) { return $cand }
   }
   return $null
+}
+
+function Get-CompilerLauncher {
+  $ccache = Get-Command ccache -ErrorAction SilentlyContinue
+  if ($ccache) { return "ccache" }
+  $sccache = Get-Command sccache -ErrorAction SilentlyContinue
+  if ($sccache) { return "sccache" }
+  return ""
 }
 
 function Invoke-BuildPollutionGate {
@@ -133,20 +151,48 @@ Invoke-BuildPollutionGate -RepoRoot $Root
 $CmakeExe = Get-CmakeExe
 $CtestExe = Get-CtestExe
 if ($CmakeExe) {
+  if (-not $CompilerLauncher) {
+    $CompilerLauncher = Get-CompilerLauncher
+  }
+  Write-Host "[verify_repo] build parallel: $BuildParallel"
+  if ($UseNinja) { Write-Host "[verify_repo] generator: Ninja" }
+  if ($CompilerLauncher) {
+    Write-Host "[verify_repo] compiler launcher: $CompilerLauncher"
+  } else {
+    Write-Host "[verify_repo] compiler launcher: none"
+  }
+
+  $configureArgs = @(
+    "-S", $Root,
+    "-B", $BuildDirLite,
+    "-DCMAKE_BUILD_TYPE=$Configuration",
+    "-DCTCP_ENABLE_GUI=OFF",
+    "-DBUILD_TESTING=ON"
+  )
+  if ($UseNinja) {
+    $configureArgs += @("-G", "Ninja")
+  }
+  if ($CompilerLauncher) {
+    $configureArgs += "-DCMAKE_CXX_COMPILER_LAUNCHER=$CompilerLauncher"
+  }
+
   Invoke-Step -Name "cmake configure (headless lite)" -Block {
     Invoke-ExternalChecked -Label "cmake configure (headless lite)" -Command {
-      & $CmakeExe -S $Root -B $BuildDirLite -DCMAKE_BUILD_TYPE=$Configuration "-DCTCP_ENABLE_GUI=OFF" "-DBUILD_TESTING=ON"
+      & $CmakeExe @configureArgs
     }
   }
+
+  $buildArgs = @("--build", $BuildDirLite, "--config", $Configuration, "--parallel", "$BuildParallel")
   Invoke-Step -Name "cmake build (headless lite)" -Block {
     Invoke-ExternalChecked -Label "cmake build (headless lite)" -Command {
-      & $CmakeExe --build $BuildDirLite --config $Configuration
+      & $CmakeExe @buildArgs
     }
   }
   if ((Test-Path (Join-Path $BuildDirLite "CTestTestfile.cmake")) -and $CtestExe) {
+    $ctestArgs = @("--test-dir", $BuildDirLite, "--output-on-failure", "-C", $Configuration, "-R", "headless_smoke|verify_tools_selftest", "-j", "$BuildParallel")
     Invoke-Step -Name "ctest lite" -Block {
       Invoke-ExternalChecked -Label "ctest lite" -Command {
-        & $CtestExe --test-dir $BuildDirLite --output-on-failure -C $Configuration -R "headless_smoke|verify_tools_selftest"
+        & $CtestExe @ctestArgs
       }
     }
   } else {

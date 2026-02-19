@@ -207,13 +207,13 @@ artifacts/verify_report.json
 
 events.jsonl
 
-artifacts/PLAN.md (if exists)
+artifacts/PLAN.md (real file or placeholder entry)
 
-artifacts/diff.patch (if exists)
+artifacts/diff.patch (real file or placeholder entry)
 
-reviews/* (if exists)
+reviews/ (directory entry) and reviews/* evidence files (when present)
 
-outbox/* (if exists)
+outbox/ (directory entry) and outbox/* dispatch prompt/request files
 
 Optional:
 

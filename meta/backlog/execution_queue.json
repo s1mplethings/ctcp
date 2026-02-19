@@ -308,8 +308,8 @@
           "full-gate timing and stability comparison"
         ]
       },
-      "status": "todo",
-      "notes": "Post-foundation optimization stage."
+      "status": "doing",
+      "notes": "P0 slice in progress: simlab worktree sandbox + unified build root/launcher/parallel verify path."
     }
   ]
 }

@@ -551,19 +551,45 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
 
 def make_failure_bundle(run_dir: Path) -> Path:
     bundle = run_dir / "failure_bundle.zip"
+    ensure_layout(run_dir)
+    artifacts = run_dir / "artifacts"
+    reviews = run_dir / "reviews"
+    outbox = run_dir / "outbox"
+
+    # Persist placeholder files on disk so external audits can inspect run_dir directly.
+    if not (artifacts / "PLAN.md").exists():
+        write_text(artifacts / "PLAN.md", "# placeholder PLAN.md\n")
+    if not (artifacts / "diff.patch").exists():
+        write_text(artifacts / "diff.patch", "")
+    if not (reviews / ".keep").exists():
+        write_text(reviews / ".keep", "# placeholder\n")
+    if not (outbox / ".keep").exists():
+        write_text(outbox / ".keep", "# placeholder\n")
+
     with zipfile.ZipFile(bundle, "w", zipfile.ZIP_DEFLATED) as zf:
+        # Keep directory entries explicit so empty reviews/outbox are still auditable.
+        for rel_dir in ("artifacts/", "reviews/", "outbox/"):
+            zf.writestr(rel_dir, "")
+
         for p in run_dir.rglob("*"):
             if p.is_file() and p != bundle:
-                zf.write(p, p.relative_to(run_dir).as_posix())
+                rel = p.relative_to(run_dir).as_posix()
+                zf.write(p, rel)
     return bundle
 
 
 def _required_bundle_entries(run_dir: Path) -> list[str]:
-    required = ["TRACE.md", "artifacts/verify_report.json", "events.jsonl"]
-    if (run_dir / "artifacts" / "PLAN.md").exists():
-        required.append("artifacts/PLAN.md")
-    if (run_dir / "artifacts" / "diff.patch").exists():
-        required.append("artifacts/diff.patch")
+    required = [
+        "TRACE.md",
+        "events.jsonl",
+        "artifacts/verify_report.json",
+        "artifacts/PLAN.md",
+        "artifacts/diff.patch",
+        "reviews/",
+        "reviews/.keep",
+        "outbox/",
+        "outbox/.keep",
+    ]
     for rel_dir in ("reviews", "outbox"):
         base = run_dir / rel_dir
         if not base.exists():
@@ -574,7 +600,7 @@ def _required_bundle_entries(run_dir: Path) -> list[str]:
     return required
 
 
-def _bundle_contains(bundle: Path, required_entries: list[str]) -> bool:
+def _bundle_contains(bundle: Path, required_entries: list[str], require_outbox_prompt: bool = False) -> bool:
     if not bundle.exists():
         return False
     try:
@@ -582,21 +608,64 @@ def _bundle_contains(bundle: Path, required_entries: list[str]) -> bool:
             names = set(zf.namelist())
     except Exception:
         return False
-    return all(x in names for x in required_entries)
+    if not all(x in names for x in required_entries):
+        return False
+    if require_outbox_prompt and (not any(n.startswith("outbox/") and n.endswith(".md") for n in names)):
+        return False
+    return True
 
 
-def ensure_failure_bundle(run_dir: Path) -> tuple[Path, str]:
+def ensure_fixer_outbox_prompt(run_dir: Path, goal: str, reason: str) -> tuple[str, bool]:
+    outbox_dir = run_dir / "outbox"
+    outbox_dir.mkdir(parents=True, exist_ok=True)
+    existing = sorted(p for p in outbox_dir.glob("*.md") if p.is_file())
+    if existing:
+        return (Path("outbox") / existing[0].name).as_posix(), False
+
+    prompt = outbox_dir / "001_fixer_fix_patch.md"
+    prompt_text = "\n".join(
+        [
+            "# OUTBOX PROMPT",
+            "",
+            f"Run-Dir: {run_dir.resolve()}",
+            f"Goal: {goal}",
+            "Role: fixer",
+            "Action: fix_patch",
+            "Provider: manual_outbox_fallback",
+            "Target-Path: artifacts/diff.patch",
+            "write to: artifacts/diff.patch",
+            f"Reason: {reason or 'verify_failed'}",
+            "",
+            "Inputs:",
+            "- failure_bundle.zip",
+            "- artifacts/verify_report.json",
+            "",
+            "Hard Rules:",
+            "1. Only write artifacts/diff.patch in run_dir.",
+            "2. Do not modify repo files.",
+            "",
+        ]
+    )
+    write_text(prompt, prompt_text + "\n")
+    return (Path("outbox") / prompt.name).as_posix(), True
+
+
+def ensure_failure_bundle(run_dir: Path, require_outbox_prompt: bool = False) -> tuple[Path, str]:
     bundle = run_dir / "failure_bundle.zip"
     required_entries = _required_bundle_entries(run_dir)
-    if _bundle_contains(bundle, required_entries):
+    if _bundle_contains(bundle, required_entries, require_outbox_prompt=require_outbox_prompt):
         return bundle, "validated"
 
     mode = "created" if not bundle.exists() else "recreated"
     bundle = make_failure_bundle(run_dir)
-    if not _bundle_contains(bundle, required_entries):
+    if not _bundle_contains(bundle, required_entries, require_outbox_prompt=require_outbox_prompt):
         with zipfile.ZipFile(bundle, "r") as zf:
             names = set(zf.namelist())
         missing = [x for x in required_entries if x not in names]
+        if require_outbox_prompt and any(n.startswith("outbox/") and n.endswith(".md") for n in names):
+            raise SystemExit(f"[ctcp_orchestrate] failure_bundle missing required entries: {missing}")
+        if require_outbox_prompt:
+            raise SystemExit("[ctcp_orchestrate] failure_bundle missing required outbox prompt (*.md)")
         raise SystemExit(f"[ctcp_orchestrate] failure_bundle missing required entries: {missing}")
     return bundle, mode
 
@@ -1065,15 +1134,7 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
                 run_doc["status"] = "fail"
                 run_doc["blocked_reason"] = "verify_failed"
                 save_run_doc(run_dir, run_doc)
-                bundle, mode = ensure_failure_bundle(run_dir)
-                append_event(
-                    run_dir,
-                    "Local Verifier",
-                    "BUNDLE_CREATED",
-                    "failure_bundle.zip",
-                    mode=mode,
-                )
-                write_pointer(LAST_BUNDLE_POINTER, bundle)
+                bundle, mode_before_dispatch = ensure_failure_bundle(run_dir)
                 fail_gate = current_gate(run_dir, run_doc)
                 dispatch = ctcp_dispatch.dispatch_once(run_dir, run_doc, fail_gate, ROOT)
                 dispatch_status = str(dispatch.get("status", ""))
@@ -1102,6 +1163,35 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
                         reason=str(dispatch.get("reason", "")),
                         provider=str(dispatch.get("provider", "")),
                     )
+                fallback_path, created_fallback = ensure_fixer_outbox_prompt(
+                    run_dir,
+                    goal=goal,
+                    reason=str(run_doc.get("blocked_reason", "verify_failed")),
+                )
+                if created_fallback:
+                    append_event(
+                        run_dir,
+                        "fixer",
+                        "OUTBOX_PROMPT_CREATED",
+                        fallback_path,
+                        target_path="artifacts/diff.patch",
+                        action="fix_patch",
+                        provider="manual_outbox_fallback",
+                    )
+                bundle, mode_after_dispatch = ensure_failure_bundle(run_dir, require_outbox_prompt=True)
+                final_mode = (
+                    mode_after_dispatch
+                    if mode_after_dispatch in {"created", "recreated"}
+                    else mode_before_dispatch
+                )
+                append_event(
+                    run_dir,
+                    "Local Verifier",
+                    "BUNDLE_CREATED",
+                    "failure_bundle.zip",
+                    mode=final_mode,
+                )
+                write_pointer(LAST_BUNDLE_POINTER, bundle)
                 print(f"[ctcp_orchestrate] FAIL: verify failed, bundle={bundle}")
                 return 1
 

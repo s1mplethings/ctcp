@@ -32,6 +32,8 @@ except ModuleNotFoundError:
 
 SCENARIOS_DIR = ROOT / "simlab" / "scenarios"
 DEFAULT_RUNS_ROOT = default_simlab_runs_root(ROOT)
+DEFAULT_CTCPP_RUNS_ROOT = DEFAULT_RUNS_ROOT.parent / "simlab_external_runs"
+DEFAULT_SANDBOX_MODE = "auto"
 
 
 @dataclass
@@ -42,10 +44,15 @@ class CmdResult:
     cmd: str
 
 
-def run_cmd(cmd: str, cwd: Path) -> CmdResult:
+def run_cmd(cmd: str, cwd: Path, env: dict[str, str] | None = None) -> CmdResult:
+    proc_env = os.environ.copy()
+    if env:
+        for k, v in env.items():
+            proc_env[str(k)] = str(v)
     proc = subprocess.run(
         cmd,
         cwd=str(cwd),
+        env=proc_env,
         shell=True,
         text=True,
         encoding="utf-8",
@@ -53,6 +60,20 @@ def run_cmd(cmd: str, cwd: Path) -> CmdResult:
         capture_output=True,
     )
     return CmdResult(rc=proc.returncode, stdout=proc.stdout, stderr=proc.stderr, cmd=cmd)
+
+
+def run_argv(argv: list[str], cwd: Path) -> CmdResult:
+    proc = subprocess.run(
+        argv,
+        cwd=str(cwd),
+        shell=False,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+    )
+    display = " ".join(argv)
+    return CmdResult(rc=proc.returncode, stdout=proc.stdout, stderr=proc.stderr, cmd=display)
 
 
 def _on_rm_error(func, path, exc_info) -> None:
@@ -104,6 +125,61 @@ def git_baseline(repo: Path) -> None:
     run_cmd("git commit -m baseline", repo)
 
 
+def _git_available(repo: Path) -> bool:
+    res = run_argv(["git", "rev-parse", "--is-inside-work-tree"], repo)
+    return res.rc == 0 and res.stdout.strip().lower() == "true"
+
+
+def _repo_is_dirty(repo: Path) -> bool:
+    res = run_argv(["git", "status", "--porcelain"], repo)
+    if res.rc != 0:
+        return True
+    return bool(res.stdout.strip())
+
+
+def _create_worktree_sandbox(src: Path, dst: Path) -> tuple[bool, str]:
+    run_argv(["git", "worktree", "prune"], src)
+    if dst.exists():
+        shutil.rmtree(dst, onerror=_on_rm_error)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    add = run_argv(["git", "worktree", "add", "--detach", "--force", str(dst), "HEAD"], src)
+    if add.rc != 0:
+        return False, f"git worktree add failed: {add.stderr.strip() or add.stdout.strip()}"
+    return True, "git worktree sandbox created"
+
+
+def prepare_sandbox(src: Path, dst: Path, mode: str) -> tuple[str, str]:
+    requested = (mode or DEFAULT_SANDBOX_MODE).strip().lower()
+    if requested not in {"auto", "copy", "worktree"}:
+        requested = DEFAULT_SANDBOX_MODE
+
+    if requested == "copy":
+        copy_repo(src, dst)
+        git_baseline(dst)
+        return "copy", "forced copy mode"
+
+    if not _git_available(src):
+        copy_repo(src, dst)
+        git_baseline(dst)
+        return "copy", "git unavailable; fallback to copy mode"
+
+    if requested == "auto" and _repo_is_dirty(src):
+        copy_repo(src, dst)
+        git_baseline(dst)
+        return "copy", "repo dirty; fallback to copy mode"
+
+    ok, reason = _create_worktree_sandbox(src, dst)
+    if ok:
+        return "worktree", reason
+
+    if requested == "worktree":
+        raise RuntimeError(reason)
+
+    copy_repo(src, dst)
+    git_baseline(dst)
+    return "copy", f"{reason}; fallback to copy mode"
+
+
 def parse_doc(path: Path) -> dict[str, Any]:
     txt = path.read_text(encoding="utf-8")
     try:
@@ -123,11 +199,12 @@ def parse_doc(path: Path) -> dict[str, Any]:
 
 
 class ScenarioRunner:
-    def __init__(self, doc: dict[str, Any], run_root: Path):
+    def __init__(self, doc: dict[str, Any], run_root: Path, sandbox_mode: str):
         self.doc = doc
         self.id = str(doc["id"])
         self.name = str(doc["name"])
         self.suite = str(doc.get("suite", "core"))
+        self.sandbox_mode = sandbox_mode
         self.scenario_dir = run_root / self.id
         self.sandbox = self.scenario_dir / "sandbox"
         self.logs_dir = self.scenario_dir / "logs"
@@ -145,14 +222,15 @@ class ScenarioRunner:
         self.scenario_dir.mkdir(parents=True, exist_ok=True)
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         self.artifacts_dir.mkdir(parents=True, exist_ok=True)
-        copy_repo(ROOT, self.sandbox)
-        git_baseline(self.sandbox)
+        resolved_mode, resolved_note = prepare_sandbox(ROOT, self.sandbox, self.sandbox_mode)
         self.trace_lines = [
             f"# SimLab Trace — {self.id}",
             "",
             f"- Name: {self.name}",
             f"- Started: {dt.datetime.now().isoformat(timespec='seconds')}",
             f"- Sandbox: `{self.sandbox.as_posix()}`",
+            f"- Sandbox-Mode: `{resolved_mode}`",
+            f"- Sandbox-Note: {resolved_note}",
             "",
             "## Steps",
         ]
@@ -195,11 +273,15 @@ class ScenarioRunner:
         cmd = str(payload["cmd"])
         cwd_rel = str(payload.get("cwd", "."))
         cwd = self.sandbox / cwd_rel
+        external_root = os.environ.get("CTCP_SIMLAB_EXTERNAL_RUNS_ROOT", str(DEFAULT_CTCPP_RUNS_ROOT))
+        scenario_runs_root = (Path(external_root).expanduser().resolve() / self.scenario_dir.parent.name / self.id)
+        scenario_runs_root.mkdir(parents=True, exist_ok=True)
+        step_env = {"CTCP_RUNS_ROOT": str(scenario_runs_root)}
         expected = payload.get("expect_exit", 0)
         includes = [str(x) for x in payload.get("expect_output_includes", [])]
         bundle_on_nonzero = bool(payload.get("bundle_on_nonzero", False))
 
-        res = run_cmd(cmd, cwd)
+        res = run_cmd(cmd, cwd, env=step_env)
         log_prefix = self.logs_dir / f"step_{idx:02d}"
         (log_prefix.with_suffix(".stdout.txt")).write_text(res.stdout, encoding="utf-8")
         (log_prefix.with_suffix(".stderr.txt")).write_text(res.stderr, encoding="utf-8")
@@ -359,6 +441,12 @@ def main() -> int:
     ap.add_argument("--suite", default="all", choices=["all", "lite", "core", "integration"])
     ap.add_argument("--runs-root", default=str(DEFAULT_RUNS_ROOT))
     ap.add_argument("--json-out", default="")
+    ap.add_argument(
+        "--sandbox-mode",
+        default=os.environ.get("CTCP_SIMLAB_SANDBOX_MODE", DEFAULT_SANDBOX_MODE),
+        choices=["auto", "copy", "worktree"],
+        help="sandbox preparation mode (default: env CTCP_SIMLAB_SANDBOX_MODE or auto)",
+    )
     args = ap.parse_args()
 
     run_id = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -392,7 +480,7 @@ def main() -> int:
 
     results: list[dict[str, Any]] = []
     for doc in scenarios:
-        runner = ScenarioRunner(doc, run_root)
+        runner = ScenarioRunner(doc, run_root, sandbox_mode=str(args.sandbox_mode))
         res = runner.run()
         results.append(res)
 

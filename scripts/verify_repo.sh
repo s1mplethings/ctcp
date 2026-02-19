@@ -2,16 +2,22 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BUILD_DIR_LITE="${ROOT}/build_lite"
+BUILD_ROOT="${CTCP_BUILD_ROOT:-${ROOT}}"
+mkdir -p "${BUILD_ROOT}"
+BUILD_DIR_LITE="${BUILD_ROOT}/build_lite"
 CTEST_EXE=""
 MODE="${CTCP_FULL_GATE:-0}"
 WRITE_FIXTURES="${CTCP_WRITE_FIXTURES:-0}"
 SKIP_LITE_REPLAY="${CTCP_SKIP_LITE_REPLAY:-0}"
+USE_NINJA="${CTCP_USE_NINJA:-0}"
+BUILD_PARALLEL="${CTCP_BUILD_PARALLEL:-}"
+COMPILER_LAUNCHER="${CTCP_COMPILER_LAUNCHER:-}"
 if [[ "${1:-}" == "--full" ]]; then
   MODE="1"
 fi
 
 echo "[verify_repo] repo root: ${ROOT}"
+echo "[verify_repo] build root: ${BUILD_ROOT}"
 if [[ "${MODE}" == "1" ]]; then
   echo "[verify_repo] mode: FULL"
 else
@@ -112,18 +118,49 @@ anti_pollution_gate
 
 if command -v cmake >/dev/null 2>&1; then
   CMAKE_EXE="$(command -v cmake)"
+  if [[ -z "${BUILD_PARALLEL}" ]]; then
+    if command -v nproc >/dev/null 2>&1; then
+      BUILD_PARALLEL="$(nproc)"
+    else
+      BUILD_PARALLEL="4"
+    fi
+  fi
+  if [[ -z "${COMPILER_LAUNCHER}" ]]; then
+    if command -v ccache >/dev/null 2>&1; then
+      COMPILER_LAUNCHER="ccache"
+    elif command -v sccache >/dev/null 2>&1; then
+      COMPILER_LAUNCHER="sccache"
+    fi
+  fi
   if command -v ctest >/dev/null 2>&1; then
     CTEST_EXE="$(command -v ctest)"
   elif [[ -x "$(dirname "${CMAKE_EXE}")/ctest" ]]; then
     CTEST_EXE="$(dirname "${CMAKE_EXE}")/ctest"
   fi
+  echo "[verify_repo] build parallel: ${BUILD_PARALLEL}"
+  if [[ "${USE_NINJA}" == "1" ]]; then
+    echo "[verify_repo] generator: Ninja"
+  fi
+  if [[ -n "${COMPILER_LAUNCHER}" ]]; then
+    echo "[verify_repo] compiler launcher: ${COMPILER_LAUNCHER}"
+  else
+    echo "[verify_repo] compiler launcher: none"
+  fi
+
+  CMAKE_ARGS=(-S "${ROOT}" -B "${BUILD_DIR_LITE}" -DCMAKE_BUILD_TYPE=Release -DCTCP_ENABLE_GUI=OFF -DBUILD_TESTING=ON)
+  if [[ "${USE_NINJA}" == "1" ]]; then
+    CMAKE_ARGS=(-G Ninja "${CMAKE_ARGS[@]}")
+  fi
+  if [[ -n "${COMPILER_LAUNCHER}" ]]; then
+    CMAKE_ARGS+=("-DCMAKE_CXX_COMPILER_LAUNCHER=${COMPILER_LAUNCHER}")
+  fi
   echo "[verify_repo] cmake configure (headless lite)"
-  cmake -S "${ROOT}" -B "${BUILD_DIR_LITE}" -DCMAKE_BUILD_TYPE=Release -DCTCP_ENABLE_GUI=OFF -DBUILD_TESTING=ON
+  cmake "${CMAKE_ARGS[@]}"
   echo "[verify_repo] cmake build (headless lite)"
-  cmake --build "${BUILD_DIR_LITE}" --config Release
+  cmake --build "${BUILD_DIR_LITE}" --config Release --parallel "${BUILD_PARALLEL}"
   if [[ -f "${BUILD_DIR_LITE}/CTestTestfile.cmake" ]] && [[ -n "${CTEST_EXE}" ]]; then
     echo "[verify_repo] ctest lite"
-    "${CTEST_EXE}" --test-dir "${BUILD_DIR_LITE}" --output-on-failure -R "headless_smoke|verify_tools_selftest"
+    "${CTEST_EXE}" --test-dir "${BUILD_DIR_LITE}" --output-on-failure -R "headless_smoke|verify_tools_selftest" -j "${BUILD_PARALLEL}"
   else
     echo "[verify_repo] no tests detected or ctest missing in lite build (skip ctest)"
   fi

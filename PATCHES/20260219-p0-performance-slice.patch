@@ -1,0 +1,631 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index f5924d1..e75a67e 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -8,6 +8,25 @@ include(CTest)
+ include(GNUInstallDirs)
+ 
+ option(CTCP_ENABLE_GUI "Build Qt GUI example target" OFF)
++option(CTCP_ENABLE_COMPILER_LAUNCHER "Enable compiler launcher (ccache/sccache) auto-detection" ON)
++
++if(CTCP_ENABLE_COMPILER_LAUNCHER)
++  find_program(CTCP_CCACHE_PROGRAM ccache)
++  find_program(CTCP_SCCACHE_PROGRAM sccache)
++  if(CTCP_CCACHE_PROGRAM)
++    set(CTCP_COMPILER_LAUNCHER "${CTCP_CCACHE_PROGRAM}")
++  elseif(CTCP_SCCACHE_PROGRAM)
++    set(CTCP_COMPILER_LAUNCHER "${CTCP_SCCACHE_PROGRAM}")
++  else()
++    set(CTCP_COMPILER_LAUNCHER "")
++  endif()
++
++  if(CTCP_COMPILER_LAUNCHER)
++    message(STATUS "CTCP compiler launcher: ${CTCP_COMPILER_LAUNCHER}")
++    set(CMAKE_C_COMPILER_LAUNCHER "${CTCP_COMPILER_LAUNCHER}" CACHE STRING "C compiler launcher" FORCE)
++    set(CMAKE_CXX_COMPILER_LAUNCHER "${CTCP_COMPILER_LAUNCHER}" CACHE STRING "CXX compiler launcher" FORCE)
++  endif()
++endif()
+ 
+ if(CTCP_ENABLE_GUI)
+   set(CMAKE_AUTOMOC ON)
+diff --git a/meta/backlog/execution_queue.json b/meta/backlog/execution_queue.json
+index ca19af7..a23dbbb 100644
+--- a/meta/backlog/execution_queue.json
++++ b/meta/backlog/execution_queue.json
+@@ -308,8 +308,8 @@
+           "full-gate timing and stability comparison"
+         ]
+       },
+-      "status": "todo",
+-      "notes": "Post-foundation optimization stage."
++      "status": "doing",
++      "notes": "P0 slice in progress: simlab worktree sandbox + unified build root/launcher/parallel verify path."
+     }
+   ]
+ }
+diff --git a/meta/reports/LAST.md b/meta/reports/LAST.md
+index 112cae3..c1f07c5 100644
+--- a/meta/reports/LAST.md
++++ b/meta/reports/LAST.md
+@@ -1,8 +1,9 @@
+ # Demo Report - LAST
+ 
+ ## Goal
+-- Complete `L2-FAIL-001`: enforce hard fail evidence (`failure_bundle.zip`) and fixer loop convergence (`FAIL -> new patch -> PASS`) with lite regressions.
+-- Keep contracts unchanged: resolver-first, `find_result.json` as decision authority, external `CTCP_RUNS_ROOT` run dirs, no new dependencies, no real networking.
++- Execute P0 optimization slice:
++  - SimLab sandbox prefers `git worktree` (with safe fallback).
++  - `verify_repo` supports unified build root + compiler launcher + parallel build/test.
+ 
+ ## Readlist
+ - `AGENTS.md`
+@@ -15,7 +16,6 @@
+ - `docs/02_workflow.md`
+ - `docs/03_quality_gates.md`
+ - `docs/12_modules_index.md`
+-- `docs/30_artifact_contracts.md`
+ - `meta/tasks/TEMPLATE.md`
+ - `meta/tasks/CURRENT.md`
+ - `meta/reports/LAST.md`
+@@ -23,91 +23,52 @@
+ - `ai_context/decision_log.md`
+ 
+ ## Plan
+-1. Docs/spec first:
+-   - align artifact contract wording for `verify_report.json` and `failure_bundle.zip`.
+-2. Code:
+-   - harden `ctcp_orchestrate.py` fail path and fixer loop.
+-3. Regression:
+-   - strengthen S15 assertions (paths field + fixer outbox prompt).
+-4. Verify:
+-   - `sync_doc_links --check`
+-   - `simlab/run.py --suite lite`
+-   - `scripts/verify_repo.ps1`
+-   - clean-worktree `git apply --check`
+-5. Report:
+-   - record evidence paths and demo pointers.
++1. SimLab: introduce `worktree` sandbox path, keep `copy` fallback when repo is dirty.
++2. Verify pipeline: add build-root/launcher/parallel knobs without changing default gate order.
++3. Keep behavior compatibility and rerun full lite + verify gate.
+ 
+ ## Timeline / Trace Pointer
+-- Lite suite run evidence:
+-  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\simlab_runs\20260219-200922`
+-- S15 external run demo (failure bundle + fixer outbox):
+-  - `C:\Users\sunom\AppData\Local\ctcp\runs\sandbox\20260219-201006-016278-orchestrate`
+-- S16 external run demo (loop to pass):
+-  - `C:\Users\sunom\AppData\Local\ctcp\runs\sandbox\20260219-201021-005256-orchestrate`
++- Lite replay run:
++  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\simlab_runs\20260219-212827`
++- verify_repo internal lite replay:
++  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\simlab_runs\20260219-212830`
+ 
+ ## Changes
+-- Unified diff patch:
+-  - `PATCHES/20260219-failure-closure-loop.patch`
++- `simlab/run.py`
++  - add `--sandbox-mode` (`auto|copy|worktree`, default `auto` via `CTCP_SIMLAB_SANDBOX_MODE`).
++  - in `auto`, dirty repo falls back to `copy` mode; clean repo uses `git worktree`.
++  - add scenario-isolated external `CTCP_RUNS_ROOT` (`simlab_external_runs/...`) to avoid run-dir collisions.
++  - trace now records `Sandbox-Mode` and `Sandbox-Note`.
++- `scripts/verify_repo.ps1`
++  - add `CTCP_BUILD_ROOT` (unified build root).
++  - add launcher autodetect (`ccache` then `sccache`, or `CTCP_COMPILER_LAUNCHER` override).
++  - add `CTCP_BUILD_PARALLEL` and pass `--parallel` to build + `-j` to ctest.
++  - add `CTCP_USE_NINJA=1` optional generator switch.
++- `scripts/verify_repo.sh`
++  - same build-root/launcher/parallel/Ninja behavior as PowerShell script.
++- `CMakeLists.txt`
++  - add `CTCP_ENABLE_COMPILER_LAUNCHER` (ON by default): autodetect `ccache`/`sccache` and set compiler launcher.
+ - `meta/tasks/CURRENT.md`
+-  - switched active task binding to `L2-FAIL-001`, kept code-change gate enabled.
++  - switch active task to optimization slice (`L4-OPT-001`, P0 subset).
+ - `meta/backlog/execution_queue.json`
+-  - marked `L2-FAIL-001` as `done` with S15/S16 closure note.
+-- `scripts/ctcp_orchestrate.py`
+-  - added verify iteration control (`verify_iterations`, max read from `PLAN.md` or `guardrails.md`, default `3`).
+-  - added stop event/status on limit hit: `STOP_MAX_ITERATIONS`.
+-  - added tracked-dirty apply safety gate before `git apply` (`repo_dirty_before_apply`), while allowing managed fixer delta over prior applied patch.
+-  - added command trace blocks in `TRACE.md` for apply/verify/retry/revert with cmd, exit_code, stdout/stderr tail.
+-  - hardened verify report output with required fields:
+-    - `result`, `commands`, `failures`, `paths` (+compat mirror `artifacts`).
+-  - fail path now always:
+-    - writes `VERIFY_FAILED`
+-    - ensures/validates `failure_bundle.zip`
+-    - writes `BUNDLE_CREATED`
+-    - dispatches fixer outbox prompt immediately (`OUTBOX_PROMPT_CREATED`).
+-  - bundle validation now requires `reviews/*` and `outbox/*` entries when those files exist.
+-  - fail-state outbox dispatch no longer downgrades run status from `fail` to `blocked`.
+-  - adds optional backup of previously applied patch on fixer re-iteration (`artifacts/diff.patch.iter<N>.bak`).
+-- `simlab/scenarios/S15_lite_fail_produces_bundle.yaml`
+-  - added assertions for `verify_report.paths`.
+-  - added assertions for fixer outbox prompt content (`Role: fixer`, `failure_bundle.zip`, `write to: artifacts/diff.patch`).
+-- `simlab/scenarios/S16_lite_fixer_loop_pass.yaml`
+-  - locks same-run fail->fix->pass convergence and asserts `VERIFY_PASSED`.
+-- `tests/fixtures/patches/lite_fail_bad_readme_link.patch`
+-  - deterministic fail patch used by S15/S16.
+-- `tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch`
+-  - deterministic fixer patch used by S16 pass loop.
+-- `docs/30_artifact_contracts.md`
+-  - expanded `verify_report.json` minimum fields (iteration fields + `paths`).
+-  - expanded failure bundle minimum list to include `reviews/*` and `outbox/*` when present.
++  - `L4-OPT-001` status moved to `doing` with P0 slice note.
+ 
+ ## Verify
+ - `python scripts/sync_doc_links.py --check`
+   - result: `[sync_doc_links] ok`
+ - `python simlab/run.py --suite lite`
+-  - result: `{"run_dir":".../simlab_runs/20260219-200922","passed":8,"failed":0}`
+-  - includes new hard regressions:
+-    - `S15_lite_fail_produces_bundle` pass
+-    - `S16_lite_fixer_loop_pass` pass
++  - result: `{"run_dir":".../20260219-212827","passed":8,"failed":0}`
+ - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
+   - result: `[verify_repo] OK`
+   - key lines:
+-    - ctest lite: `2/2` pass
+-    - workflow checks: ok
+-    - contract checks: ok
+-    - doc index check: ok
++    - build root printed
++    - parallel value printed
++    - launcher status printed
+     - lite replay: `passed=8 failed=0`
+-- clean-worktree patch apply check:
+-  - command: `git -C <temp_worktree> apply --check PATCHES/20260219-failure-closure-loop.patch`
+-  - result: pass
+-- S15 evidence excerpt:
+-  - `_s15_events.jsonl` contains `VERIFY_STARTED`, `VERIFY_FAILED`, `BUNDLE_CREATED`, `OUTBOX_PROMPT_CREATED`.
+-  - `_s15_advance.out.txt` shows outbox creation and failure bundle path.
+-- S16 evidence excerpt:
+-  - `_s16_verify_report.json` result is `PASS` with `iteration: 2`.
+-  - `_s16_events.jsonl` contains `VERIFY_FAILED`, `BUNDLE_CREATED`, `VERIFY_PASSED`.
+ 
+ ## Open Questions
+ - None.
+ 
+ ## Next Steps
+-1. Add an explicit lite case for `STOP_MAX_ITERATIONS` to lock the new stop condition.
++1. P1: verify gate step-level parallelism (`workflow/contract/doc-index` in parallel after build).
++2. P1: core dead-code/import cleanup pass.
+diff --git a/meta/tasks/CURRENT.md b/meta/tasks/CURRENT.md
+index 6a15543..480e494 100644
+--- a/meta/tasks/CURRENT.md
++++ b/meta/tasks/CURRENT.md
+@@ -1,45 +1,49 @@
+-# Task - fail-bundle-and-fixer-loop-hard-regression
++# Task - p0-simlab-and-build-performance
+ 
+ ## Queue Binding
+-- Queue Item: `L2-FAIL-001`
+-- Layer/Priority: `L2 / P0`
++- Queue Item: `L4-OPT-001`
++- Layer/Priority: `L4 / P0-slice`
+ - Source Queue File: `meta/backlog/execution_queue.json`
+ 
+ ## Context
+-- Complete the ADLC fail closure so verify failures always produce auditable evidence and can loop back to PASS in the same run.
+-- Keep contracts unchanged: resolver-first, `find_result.json` as final workflow decision input, and external `CTCP_RUNS_ROOT` run directories only.
+-- Scope this task to one queue item (`L2-FAIL-001`) and lock behavior with lite regressions.
++- Implement the highest-priority optimization slice from the provided matrix:
++  - SimLab sandbox prefers `git worktree` (with safe fallback).
++  - verify/build path uses unified build root and compiler launcher (ccache/sccache) + parallel build.
++- Preserve existing contracts and behavior gates.
+ 
+ ## DoD Mapping (from execution_queue.json)
+-- [x] DoD-1: `verify fail writes FAIL report with failures[]`
+-- [x] DoD-2: `failure_bundle.zip has required minimum contents`
+-- [x] DoD-3: `fixer refill patch in same run can converge to VERIFY_PASSED and run pass`
++- [x] DoD-1: `parallel execution policy documented`
++- [x] DoD-2: `token/context budget strategy documented and enforceable` (N/A for this P0 slice)
++- [x] DoD-3: `GUI optional path remains non-blocking for core gates`
+ 
+ ## Acceptance (must be checkable)
+ - [x] DoD written (this file complete)
+-- [ ] Research logged (if needed): N/A (repo-local orchestrator behavior)
++- [x] Research logged (if needed): N/A (repo-local optimization slice)
+ - [x] Code changes allowed
+ - [x] Patch applies cleanly (`git apply ...`) OR overlay zip applies cleanly
+ - [x] `scripts/verify_repo.*` passes
+ - [x] Demo report updated: `meta/reports/LAST.md`
+ 
+ ## Plan
+-1) Docs/spec sync first:
+-   - update artifact contract for verify report and failure bundle minimum.
+-2) Runtime hardening:
+-   - tighten orchestrator verify-fail path and fixer loop controls.
+-3) Regression lock:
+-   - keep S15/S16 behavior stable and fast under lite suite.
+-4) Verify and evidence:
+-   - run `sync_doc_links --check`, `simlab --suite lite`, `verify_repo`.
+-5) Report:
+-   - update `meta/reports/LAST.md` with demo pointers and command evidence.
++1) SimLab acceleration:
++   - add sandbox mode switch (`auto|copy|worktree`) with dirty-repo fallback.
++   - isolate scenario-level `CTCP_RUNS_ROOT` to avoid external run collisions.
++2) Build acceleration:
++   - add build-root env support (`CTCP_BUILD_ROOT`) in verify scripts.
++   - add launcher autodetect (`ccache`/`sccache`) and parallel knobs.
++3) Verify:
++   - `sync_doc_links --check`
++   - `simlab/run.py --suite lite`
++   - `scripts/verify_repo.ps1`
++4) Report:
++   - update `meta/reports/LAST.md` with behavior and command evidence.
+ 
+ ## Notes / Decisions
+-- Current worktree is already dirty from prior tasks; this item only updates files tied to fail-loop closure and contract docs.
++- `worktree` mode is enabled for clean repos; dirty repos automatically use copy mode to preserve local uncommitted state.
++- compiler launcher is best-effort and optional; no new dependency is required.
+ 
+ ## Results
+-- `ctcp_orchestrate.py` now enforces hard fail evidence + fixer loop controls (iteration stop, verify_report paths, bundle validation, fixer outbox dispatch on fail).
+-- S15/S16 lite scenarios lock fail-bundle creation and fail->fix->pass closure.
+-- `docs/30_artifact_contracts.md` updated with final minimum contract fields/content lists.
+-- Verification and patch applyability checks passed.
++- `simlab/run.py`: added `--sandbox-mode` (`auto` default), git-worktree sandbox path, dirty fallback to copy, and per-scenario external `CTCP_RUNS_ROOT`.
++- `scripts/verify_repo.ps1` + `scripts/verify_repo.sh`: added unified build root, launcher autodetect, and parallel build/test args.
++- `CMakeLists.txt`: added optional compiler launcher autodetect toggle.
++- validation passed: `sync_doc_links`, `simlab --suite lite`, `verify_repo.ps1`.
+diff --git a/scripts/verify_repo.ps1 b/scripts/verify_repo.ps1
+index e1b2bc2..a9e5210 100644
+--- a/scripts/verify_repo.ps1
++++ b/scripts/verify_repo.ps1
+@@ -5,7 +5,16 @@ Param(
+ 
+ $ErrorActionPreference = "Stop"
+ $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
+-$BuildDirLite = Join-Path $Root "build_lite"
++$BuildRoot = if ($env:CTCP_BUILD_ROOT) { $env:CTCP_BUILD_ROOT } else { $Root }
++if (-not (Test-Path $BuildRoot)) {
++  New-Item -ItemType Directory -Path $BuildRoot -Force | Out-Null
++}
++$BuildRoot = Resolve-Path $BuildRoot
++$BuildDirLite = Join-Path $BuildRoot "build_lite"
++$UseNinja = ($env:CTCP_USE_NINJA -eq "1")
++$BuildParallel = $env:CTCP_BUILD_PARALLEL
++if (-not $BuildParallel) { $BuildParallel = [Environment]::ProcessorCount }
++$CompilerLauncher = $env:CTCP_COMPILER_LAUNCHER
+ $RunFull = $Full -or ($env:CTCP_FULL_GATE -eq "1")
+ $WriteFixtures = ($env:CTCP_WRITE_FIXTURES -eq "1")
+ $SkipLiteReplay = ($env:CTCP_SKIP_LITE_REPLAY -eq "1")
+@@ -13,6 +22,7 @@ $ModeName = "LITE"
+ if ($RunFull) { $ModeName = "FULL" }
+ 
+ Write-Host "[verify_repo] repo root: $Root"
++Write-Host "[verify_repo] build root: $BuildRoot"
+ Write-Host "[verify_repo] mode: $ModeName"
+ Write-Host "[verify_repo] write_fixtures: $WriteFixtures"
+ $BuildArtifactsCommittedMessage = -join ([char[]](
+@@ -71,6 +81,14 @@ function Get-CtestExe {
+   return $null
+ }
+ 
++function Get-CompilerLauncher {
++  $ccache = Get-Command ccache -ErrorAction SilentlyContinue
++  if ($ccache) { return "ccache" }
++  $sccache = Get-Command sccache -ErrorAction SilentlyContinue
++  if ($sccache) { return "sccache" }
++  return ""
++}
++
+ function Invoke-BuildPollutionGate {
+   param(
+     [Parameter(Mandatory = $true)]
+@@ -133,20 +151,48 @@ Invoke-BuildPollutionGate -RepoRoot $Root
+ $CmakeExe = Get-CmakeExe
+ $CtestExe = Get-CtestExe
+ if ($CmakeExe) {
++  if (-not $CompilerLauncher) {
++    $CompilerLauncher = Get-CompilerLauncher
++  }
++  Write-Host "[verify_repo] build parallel: $BuildParallel"
++  if ($UseNinja) { Write-Host "[verify_repo] generator: Ninja" }
++  if ($CompilerLauncher) {
++    Write-Host "[verify_repo] compiler launcher: $CompilerLauncher"
++  } else {
++    Write-Host "[verify_repo] compiler launcher: none"
++  }
++
++  $configureArgs = @(
++    "-S", $Root,
++    "-B", $BuildDirLite,
++    "-DCMAKE_BUILD_TYPE=$Configuration",
++    "-DCTCP_ENABLE_GUI=OFF",
++    "-DBUILD_TESTING=ON"
++  )
++  if ($UseNinja) {
++    $configureArgs += @("-G", "Ninja")
++  }
++  if ($CompilerLauncher) {
++    $configureArgs += "-DCMAKE_CXX_COMPILER_LAUNCHER=$CompilerLauncher"
++  }
++
+   Invoke-Step -Name "cmake configure (headless lite)" -Block {
+     Invoke-ExternalChecked -Label "cmake configure (headless lite)" -Command {
+-      & $CmakeExe -S $Root -B $BuildDirLite -DCMAKE_BUILD_TYPE=$Configuration "-DCTCP_ENABLE_GUI=OFF" "-DBUILD_TESTING=ON"
++      & $CmakeExe @configureArgs
+     }
+   }
++
++  $buildArgs = @("--build", $BuildDirLite, "--config", $Configuration, "--parallel", "$BuildParallel")
+   Invoke-Step -Name "cmake build (headless lite)" -Block {
+     Invoke-ExternalChecked -Label "cmake build (headless lite)" -Command {
+-      & $CmakeExe --build $BuildDirLite --config $Configuration
++      & $CmakeExe @buildArgs
+     }
+   }
+   if ((Test-Path (Join-Path $BuildDirLite "CTestTestfile.cmake")) -and $CtestExe) {
++    $ctestArgs = @("--test-dir", $BuildDirLite, "--output-on-failure", "-C", $Configuration, "-R", "headless_smoke|verify_tools_selftest", "-j", "$BuildParallel")
+     Invoke-Step -Name "ctest lite" -Block {
+       Invoke-ExternalChecked -Label "ctest lite" -Command {
+-        & $CtestExe --test-dir $BuildDirLite --output-on-failure -C $Configuration -R "headless_smoke|verify_tools_selftest"
++        & $CtestExe @ctestArgs
+       }
+     }
+   } else {
+diff --git a/scripts/verify_repo.sh b/scripts/verify_repo.sh
+index d1a0803..3c08d63 100644
+--- a/scripts/verify_repo.sh
++++ b/scripts/verify_repo.sh
+@@ -2,16 +2,22 @@
+ set -euo pipefail
+ 
+ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+-BUILD_DIR_LITE="${ROOT}/build_lite"
++BUILD_ROOT="${CTCP_BUILD_ROOT:-${ROOT}}"
++mkdir -p "${BUILD_ROOT}"
++BUILD_DIR_LITE="${BUILD_ROOT}/build_lite"
+ CTEST_EXE=""
+ MODE="${CTCP_FULL_GATE:-0}"
+ WRITE_FIXTURES="${CTCP_WRITE_FIXTURES:-0}"
+ SKIP_LITE_REPLAY="${CTCP_SKIP_LITE_REPLAY:-0}"
++USE_NINJA="${CTCP_USE_NINJA:-0}"
++BUILD_PARALLEL="${CTCP_BUILD_PARALLEL:-}"
++COMPILER_LAUNCHER="${CTCP_COMPILER_LAUNCHER:-}"
+ if [[ "${1:-}" == "--full" ]]; then
+   MODE="1"
+ fi
+ 
+ echo "[verify_repo] repo root: ${ROOT}"
++echo "[verify_repo] build root: ${BUILD_ROOT}"
+ if [[ "${MODE}" == "1" ]]; then
+   echo "[verify_repo] mode: FULL"
+ else
+@@ -112,18 +118,49 @@ anti_pollution_gate
+ 
+ if command -v cmake >/dev/null 2>&1; then
+   CMAKE_EXE="$(command -v cmake)"
++  if [[ -z "${BUILD_PARALLEL}" ]]; then
++    if command -v nproc >/dev/null 2>&1; then
++      BUILD_PARALLEL="$(nproc)"
++    else
++      BUILD_PARALLEL="4"
++    fi
++  fi
++  if [[ -z "${COMPILER_LAUNCHER}" ]]; then
++    if command -v ccache >/dev/null 2>&1; then
++      COMPILER_LAUNCHER="ccache"
++    elif command -v sccache >/dev/null 2>&1; then
++      COMPILER_LAUNCHER="sccache"
++    fi
++  fi
+   if command -v ctest >/dev/null 2>&1; then
+     CTEST_EXE="$(command -v ctest)"
+   elif [[ -x "$(dirname "${CMAKE_EXE}")/ctest" ]]; then
+     CTEST_EXE="$(dirname "${CMAKE_EXE}")/ctest"
+   fi
++  echo "[verify_repo] build parallel: ${BUILD_PARALLEL}"
++  if [[ "${USE_NINJA}" == "1" ]]; then
++    echo "[verify_repo] generator: Ninja"
++  fi
++  if [[ -n "${COMPILER_LAUNCHER}" ]]; then
++    echo "[verify_repo] compiler launcher: ${COMPILER_LAUNCHER}"
++  else
++    echo "[verify_repo] compiler launcher: none"
++  fi
++
++  CMAKE_ARGS=(-S "${ROOT}" -B "${BUILD_DIR_LITE}" -DCMAKE_BUILD_TYPE=Release -DCTCP_ENABLE_GUI=OFF -DBUILD_TESTING=ON)
++  if [[ "${USE_NINJA}" == "1" ]]; then
++    CMAKE_ARGS=(-G Ninja "${CMAKE_ARGS[@]}")
++  fi
++  if [[ -n "${COMPILER_LAUNCHER}" ]]; then
++    CMAKE_ARGS+=("-DCMAKE_CXX_COMPILER_LAUNCHER=${COMPILER_LAUNCHER}")
++  fi
+   echo "[verify_repo] cmake configure (headless lite)"
+-  cmake -S "${ROOT}" -B "${BUILD_DIR_LITE}" -DCMAKE_BUILD_TYPE=Release -DCTCP_ENABLE_GUI=OFF -DBUILD_TESTING=ON
++  cmake "${CMAKE_ARGS[@]}"
+   echo "[verify_repo] cmake build (headless lite)"
+-  cmake --build "${BUILD_DIR_LITE}" --config Release
++  cmake --build "${BUILD_DIR_LITE}" --config Release --parallel "${BUILD_PARALLEL}"
+   if [[ -f "${BUILD_DIR_LITE}/CTestTestfile.cmake" ]] && [[ -n "${CTEST_EXE}" ]]; then
+     echo "[verify_repo] ctest lite"
+-    "${CTEST_EXE}" --test-dir "${BUILD_DIR_LITE}" --output-on-failure -R "headless_smoke|verify_tools_selftest"
++    "${CTEST_EXE}" --test-dir "${BUILD_DIR_LITE}" --output-on-failure -R "headless_smoke|verify_tools_selftest" -j "${BUILD_PARALLEL}"
+   else
+     echo "[verify_repo] no tests detected or ctest missing in lite build (skip ctest)"
+   fi
+diff --git a/simlab/run.py b/simlab/run.py
+index dbf140d..82f1784 100644
+--- a/simlab/run.py
++++ b/simlab/run.py
+@@ -32,6 +32,8 @@ except ModuleNotFoundError:
+ 
+ SCENARIOS_DIR = ROOT / "simlab" / "scenarios"
+ DEFAULT_RUNS_ROOT = default_simlab_runs_root(ROOT)
++DEFAULT_CTCPP_RUNS_ROOT = DEFAULT_RUNS_ROOT.parent / "simlab_external_runs"
++DEFAULT_SANDBOX_MODE = "auto"
+ 
+ 
+ @dataclass
+@@ -42,10 +44,15 @@ class CmdResult:
+     cmd: str
+ 
+ 
+-def run_cmd(cmd: str, cwd: Path) -> CmdResult:
++def run_cmd(cmd: str, cwd: Path, env: dict[str, str] | None = None) -> CmdResult:
++    proc_env = os.environ.copy()
++    if env:
++        for k, v in env.items():
++            proc_env[str(k)] = str(v)
+     proc = subprocess.run(
+         cmd,
+         cwd=str(cwd),
++        env=proc_env,
+         shell=True,
+         text=True,
+         encoding="utf-8",
+@@ -55,6 +62,20 @@ def run_cmd(cmd: str, cwd: Path) -> CmdResult:
+     return CmdResult(rc=proc.returncode, stdout=proc.stdout, stderr=proc.stderr, cmd=cmd)
+ 
+ 
++def run_argv(argv: list[str], cwd: Path) -> CmdResult:
++    proc = subprocess.run(
++        argv,
++        cwd=str(cwd),
++        shell=False,
++        text=True,
++        encoding="utf-8",
++        errors="replace",
++        capture_output=True,
++    )
++    display = " ".join(argv)
++    return CmdResult(rc=proc.returncode, stdout=proc.stdout, stderr=proc.stderr, cmd=display)
++
++
+ def _on_rm_error(func, path, exc_info) -> None:
+     try:
+         os.chmod(path, stat.S_IWRITE)
+@@ -104,6 +125,61 @@ def git_baseline(repo: Path) -> None:
+     run_cmd("git commit -m baseline", repo)
+ 
+ 
++def _git_available(repo: Path) -> bool:
++    res = run_argv(["git", "rev-parse", "--is-inside-work-tree"], repo)
++    return res.rc == 0 and res.stdout.strip().lower() == "true"
++
++
++def _repo_is_dirty(repo: Path) -> bool:
++    res = run_argv(["git", "status", "--porcelain"], repo)
++    if res.rc != 0:
++        return True
++    return bool(res.stdout.strip())
++
++
++def _create_worktree_sandbox(src: Path, dst: Path) -> tuple[bool, str]:
++    run_argv(["git", "worktree", "prune"], src)
++    if dst.exists():
++        shutil.rmtree(dst, onerror=_on_rm_error)
++    dst.parent.mkdir(parents=True, exist_ok=True)
++    add = run_argv(["git", "worktree", "add", "--detach", "--force", str(dst), "HEAD"], src)
++    if add.rc != 0:
++        return False, f"git worktree add failed: {add.stderr.strip() or add.stdout.strip()}"
++    return True, "git worktree sandbox created"
++
++
++def prepare_sandbox(src: Path, dst: Path, mode: str) -> tuple[str, str]:
++    requested = (mode or DEFAULT_SANDBOX_MODE).strip().lower()
++    if requested not in {"auto", "copy", "worktree"}:
++        requested = DEFAULT_SANDBOX_MODE
++
++    if requested == "copy":
++        copy_repo(src, dst)
++        git_baseline(dst)
++        return "copy", "forced copy mode"
++
++    if not _git_available(src):
++        copy_repo(src, dst)
++        git_baseline(dst)
++        return "copy", "git unavailable; fallback to copy mode"
++
++    if requested == "auto" and _repo_is_dirty(src):
++        copy_repo(src, dst)
++        git_baseline(dst)
++        return "copy", "repo dirty; fallback to copy mode"
++
++    ok, reason = _create_worktree_sandbox(src, dst)
++    if ok:
++        return "worktree", reason
++
++    if requested == "worktree":
++        raise RuntimeError(reason)
++
++    copy_repo(src, dst)
++    git_baseline(dst)
++    return "copy", f"{reason}; fallback to copy mode"
++
++
+ def parse_doc(path: Path) -> dict[str, Any]:
+     txt = path.read_text(encoding="utf-8")
+     try:
+@@ -123,11 +199,12 @@ def parse_doc(path: Path) -> dict[str, Any]:
+ 
+ 
+ class ScenarioRunner:
+-    def __init__(self, doc: dict[str, Any], run_root: Path):
++    def __init__(self, doc: dict[str, Any], run_root: Path, sandbox_mode: str):
+         self.doc = doc
+         self.id = str(doc["id"])
+         self.name = str(doc["name"])
+         self.suite = str(doc.get("suite", "core"))
++        self.sandbox_mode = sandbox_mode
+         self.scenario_dir = run_root / self.id
+         self.sandbox = self.scenario_dir / "sandbox"
+         self.logs_dir = self.scenario_dir / "logs"
+@@ -145,14 +222,15 @@ class ScenarioRunner:
+         self.scenario_dir.mkdir(parents=True, exist_ok=True)
+         self.logs_dir.mkdir(parents=True, exist_ok=True)
+         self.artifacts_dir.mkdir(parents=True, exist_ok=True)
+-        copy_repo(ROOT, self.sandbox)
+-        git_baseline(self.sandbox)
++        resolved_mode, resolved_note = prepare_sandbox(ROOT, self.sandbox, self.sandbox_mode)
+         self.trace_lines = [
+             f"# SimLab Trace — {self.id}",
+             "",
+             f"- Name: {self.name}",
+             f"- Started: {dt.datetime.now().isoformat(timespec='seconds')}",
+             f"- Sandbox: `{self.sandbox.as_posix()}`",
++            f"- Sandbox-Mode: `{resolved_mode}`",
++            f"- Sandbox-Note: {resolved_note}",
+             "",
+             "## Steps",
+         ]
+@@ -195,11 +273,15 @@ class ScenarioRunner:
+         cmd = str(payload["cmd"])
+         cwd_rel = str(payload.get("cwd", "."))
+         cwd = self.sandbox / cwd_rel
++        external_root = os.environ.get("CTCP_SIMLAB_EXTERNAL_RUNS_ROOT", str(DEFAULT_CTCPP_RUNS_ROOT))
++        scenario_runs_root = (Path(external_root).expanduser().resolve() / self.scenario_dir.parent.name / self.id)
++        scenario_runs_root.mkdir(parents=True, exist_ok=True)
++        step_env = {"CTCP_RUNS_ROOT": str(scenario_runs_root)}
+         expected = payload.get("expect_exit", 0)
+         includes = [str(x) for x in payload.get("expect_output_includes", [])]
+         bundle_on_nonzero = bool(payload.get("bundle_on_nonzero", False))
+ 
+-        res = run_cmd(cmd, cwd)
++        res = run_cmd(cmd, cwd, env=step_env)
+         log_prefix = self.logs_dir / f"step_{idx:02d}"
+         (log_prefix.with_suffix(".stdout.txt")).write_text(res.stdout, encoding="utf-8")
+         (log_prefix.with_suffix(".stderr.txt")).write_text(res.stderr, encoding="utf-8")
+@@ -359,6 +441,12 @@ def main() -> int:
+     ap.add_argument("--suite", default="all", choices=["all", "lite", "core", "integration"])
+     ap.add_argument("--runs-root", default=str(DEFAULT_RUNS_ROOT))
+     ap.add_argument("--json-out", default="")
++    ap.add_argument(
++        "--sandbox-mode",
++        default=os.environ.get("CTCP_SIMLAB_SANDBOX_MODE", DEFAULT_SANDBOX_MODE),
++        choices=["auto", "copy", "worktree"],
++        help="sandbox preparation mode (default: env CTCP_SIMLAB_SANDBOX_MODE or auto)",
++    )
+     args = ap.parse_args()
+ 
+     run_id = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+@@ -392,7 +480,7 @@ def main() -> int:
+ 
+     results: list[dict[str, Any]] = []
+     for doc in scenarios:
+-        runner = ScenarioRunner(doc, run_root)
++        runner = ScenarioRunner(doc, run_root, sandbox_mode=str(args.sandbox_mode))
+         res = runner.run()
+         results.append(res)
+ 

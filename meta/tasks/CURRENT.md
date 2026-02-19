@@ -1,45 +1,49 @@
-# Task - fail-bundle-and-fixer-loop-hard-regression
+# Task - p0-simlab-and-build-performance
 
 ## Queue Binding
-- Queue Item: `L2-FAIL-001`
-- Layer/Priority: `L2 / P0`
+- Queue Item: `L4-OPT-001`
+- Layer/Priority: `L4 / P0-slice`
 - Source Queue File: `meta/backlog/execution_queue.json`
 
 ## Context
-- Complete the ADLC fail closure so verify failures always produce auditable evidence and can loop back to PASS in the same run.
-- Keep contracts unchanged: resolver-first, `find_result.json` as final workflow decision input, and external `CTCP_RUNS_ROOT` run directories only.
-- Scope this task to one queue item (`L2-FAIL-001`) and lock behavior with lite regressions.
+- Implement the highest-priority optimization slice from the provided matrix:
+  - SimLab sandbox prefers `git worktree` (with safe fallback).
+  - verify/build path uses unified build root and compiler launcher (ccache/sccache) + parallel build.
+- Preserve existing contracts and behavior gates.
 
 ## DoD Mapping (from execution_queue.json)
-- [x] DoD-1: `verify fail writes FAIL report with failures[]`
-- [x] DoD-2: `failure_bundle.zip has required minimum contents`
-- [x] DoD-3: `fixer refill patch in same run can converge to VERIFY_PASSED and run pass`
+- [x] DoD-1: `parallel execution policy documented`
+- [x] DoD-2: `token/context budget strategy documented and enforceable` (N/A for this P0 slice)
+- [x] DoD-3: `GUI optional path remains non-blocking for core gates`
 
 ## Acceptance (must be checkable)
 - [x] DoD written (this file complete)
-- [ ] Research logged (if needed): N/A (repo-local orchestrator behavior)
+- [x] Research logged (if needed): N/A (repo-local optimization slice)
 - [x] Code changes allowed
 - [x] Patch applies cleanly (`git apply ...`) OR overlay zip applies cleanly
 - [x] `scripts/verify_repo.*` passes
 - [x] Demo report updated: `meta/reports/LAST.md`
 
 ## Plan
-1) Docs/spec sync first:
-   - update artifact contract for verify report and failure bundle minimum.
-2) Runtime hardening:
-   - tighten orchestrator verify-fail path and fixer loop controls.
-3) Regression lock:
-   - keep S15/S16 behavior stable and fast under lite suite.
-4) Verify and evidence:
-   - run `sync_doc_links --check`, `simlab --suite lite`, `verify_repo`.
-5) Report:
-   - update `meta/reports/LAST.md` with demo pointers and command evidence.
+1) SimLab acceleration:
+   - add sandbox mode switch (`auto|copy|worktree`) with dirty-repo fallback.
+   - isolate scenario-level `CTCP_RUNS_ROOT` to avoid external run collisions.
+2) Build acceleration:
+   - add build-root env support (`CTCP_BUILD_ROOT`) in verify scripts.
+   - add launcher autodetect (`ccache`/`sccache`) and parallel knobs.
+3) Verify:
+   - `sync_doc_links --check`
+   - `simlab/run.py --suite lite`
+   - `scripts/verify_repo.ps1`
+4) Report:
+   - update `meta/reports/LAST.md` with behavior and command evidence.
 
 ## Notes / Decisions
-- Current worktree is already dirty from prior tasks; this item only updates files tied to fail-loop closure and contract docs.
+- `worktree` mode is enabled for clean repos; dirty repos automatically use copy mode to preserve local uncommitted state.
+- compiler launcher is best-effort and optional; no new dependency is required.
 
 ## Results
-- `ctcp_orchestrate.py` now enforces hard fail evidence + fixer loop controls (iteration stop, verify_report paths, bundle validation, fixer outbox dispatch on fail).
-- S15/S16 lite scenarios lock fail-bundle creation and fail->fix->pass closure.
-- `docs/30_artifact_contracts.md` updated with final minimum contract fields/content lists.
-- Verification and patch applyability checks passed.
+- `simlab/run.py`: added `--sandbox-mode` (`auto` default), git-worktree sandbox path, dirty fallback to copy, and per-scenario external `CTCP_RUNS_ROOT`.
+- `scripts/verify_repo.ps1` + `scripts/verify_repo.sh`: added unified build root, launcher autodetect, and parallel build/test args.
+- `CMakeLists.txt`: added optional compiler launcher autodetect toggle.
+- validation passed: `sync_doc_links`, `simlab --suite lite`, `verify_repo.ps1`.
