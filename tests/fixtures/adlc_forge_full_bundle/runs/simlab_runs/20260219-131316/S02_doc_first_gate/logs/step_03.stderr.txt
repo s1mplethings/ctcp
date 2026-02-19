@@ -1,0 +1,14 @@
+CMake Warning:
+  Manually-specified variables were not used by the project:
+
+    CMAKE_BUILD_TYPE
+
+
+Invoke-ExternalChecked : [verify_repo] FAILED: workflow gate (workflow checks) (exit=1)
+At D:\.c_projects\adc\ctcp\tests\fixtures\adlc_forge_full_bundle\runs\simlab_runs\20260219-131316\S02_doc_first_gate\sa
+ndbox\scripts\verify_repo.ps1:94 char:3
++   Invoke-ExternalChecked -Label "workflow gate (workflow checks)" -Co ...
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException,Invoke-ExternalChecked
+ 

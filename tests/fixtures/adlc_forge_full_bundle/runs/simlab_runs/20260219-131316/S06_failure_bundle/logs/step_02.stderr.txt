@@ -1,0 +1,16 @@
+CMake Warning:
+  Manually-specified variables were not used by the project:
+
+    CMAKE_BUILD_TYPE
+
+
+[contract_checks] README contains broken local links:
+- README.md:136: broken link 'docs/NOPE_SIMLAB.md' -> 'docs/NOPE_SIMLAB.md'
+Invoke-ExternalChecked : [verify_repo] FAILED: contract checks (exit=1)
+At D:\.c_projects\adc\ctcp\tests\fixtures\adlc_forge_full_bundle\runs\simlab_runs\20260219-131316\S06_failure_bundle\sa
+ndbox\scripts\verify_repo.ps1:98 char:3
++   Invoke-ExternalChecked -Label "contract checks" -Command { python s ...
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException,Invoke-ExternalChecked
+ 

@@ -1,0 +1,39 @@
+[verify_repo] repo root: D:\.c_projects\adc\ctcp\tests\fixtures\adlc_forge_full_bundle\runs\simlab_runs\20260219-131316\S02_doc_first_gate\sandbox
+[verify_repo] mode: LITE
+[verify_repo] write_fixtures: False
+[verify_repo] cmake configure (headless lite)
+-- Building for: Visual Studio 17 2022
+-- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.26200.
+-- The CXX compiler identification is MSVC 19.44.35207.1
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done (2.7s)
+-- Generating done (0.1s)
+-- Build files have been written to: D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260219-131316/S02_doc_first_gate/sandbox/build_lite
+[verify_repo] cmake build (headless lite)
+适用于 .NET Framework MSBuild 版本 17.14.8+a7a4d5af0
+
+  1>Checking Build System
+  Building Custom Rule D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260219-131316/S02_doc_first_gate/sandbox/CMakeLists.txt
+  headless_main.cpp
+  ctcp_headless.vcxproj -> D:\.c_projects\adc\ctcp\tests\fixtures\adlc_forge_full_bundle\runs\simlab_runs\20260219-131316\S02_doc_first_gate\sandbox\build_lite\Release\ctcp_headless.exe
+  Building Custom Rule D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260219-131316/S02_doc_first_gate/sandbox/CMakeLists.txt
+[verify_repo] ctest lite
+Test project D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260219-131316/S02_doc_first_gate/sandbox/build_lite
+    Start 1: headless_smoke
+1/2 Test #1: headless_smoke ...................   Passed    0.22 sec
+    Start 2: verify_tools_selftest
+2/2 Test #2: verify_tools_selftest ............   Passed    0.15 sec
+
+100% tests passed, 0 tests failed out of 2
+
+Total Test time (real) =   0.37 sec
+[verify_repo] workflow gate (workflow checks)
+[workflow_checks][error] code changes detected but CURRENT.md does not allow code edits.
+Add and tick the checkbox in meta/tasks/CURRENT.md:
+  - [x] Code changes allowed
+Code changes:
+  - src/main.cpp

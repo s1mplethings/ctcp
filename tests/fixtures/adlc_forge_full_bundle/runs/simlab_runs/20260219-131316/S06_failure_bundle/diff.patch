@@ -1,0 +1,11 @@
+diff --git a/README.md b/README.md
+index 1bb3c7b..1c1f426 100644
+--- a/README.md
++++ b/README.md
+@@ -131,3 +131,6 @@ cmake --build build_gui --config Release
+ 
+ - 本仓库默认 **Spec-first**：先改 docs/spec/meta，再改代码。
+ - “禁止代码”由 `scripts/workflow_checks.py` 强制执行（不满足直接 fail）。
++
++
++- [simlab-broken-link](docs/NOPE_SIMLAB.md)

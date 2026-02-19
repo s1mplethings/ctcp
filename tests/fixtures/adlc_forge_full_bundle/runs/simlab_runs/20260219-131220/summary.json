@@ -1,0 +1,211 @@
+{
+  "run_id": "20260219-131220",
+  "generated_at": "2026-02-19T13:12:47",
+  "suite": "core",
+  "runs_root": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs",
+  "run_dir": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260219-131220",
+  "total": 6,
+  "passed": 6,
+  "failed": 0,
+  "scenarios": [
+    {
+      "id": "S01_init_task",
+      "name": "init task document with required checklist",
+      "suite": "core",
+      "status": "pass",
+      "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260219-131220/S01_init_task/TRACE.md",
+      "bundle": "",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python tools/ctcp_assistant.py init-task simlab-init --force",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "[ok] task: meta\\tasks\\20260219-131222-simlab-init.md\n[ok] current: meta\\tasks\\CURRENT.md\n",
+          "stderr_tail": ""
+        },
+        {
+          "type": "expect_path",
+          "path": "meta/tasks/CURRENT.md",
+          "exists": true,
+          "expect": true
+        },
+        {
+          "type": "expect_text",
+          "path": "meta/tasks/CURRENT.md",
+          "includes": [
+            "## Acceptance",
+            "Code changes allowed"
+          ],
+          "excludes": [],
+          "size": 610
+        }
+      ]
+    },
+    {
+      "id": "S02_doc_first_gate",
+      "name": "unauthorized code changes must fail verify gate",
+      "suite": "core",
+      "status": "pass",
+      "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260219-131220/S02_doc_first_gate/TRACE.md",
+      "bundle": "",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; p=Path('meta/tasks/CURRENT.md'); t=p.read_text(encoding='utf-8'); p.write_text(t.replace('[x] Code changes allowed','[ ] Code changes allowed').replace('[X] Code changes allowed','[ ] Code changes allowed'), encoding='utf-8')\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "write",
+          "path": "src/main.cpp",
+          "mode": "append",
+          "bytes": 15
+        },
+        {
+          "type": "run",
+          "cmd": "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1",
+          "cwd": ".",
+          "rc": 1,
+          "expect_exit": "nonzero",
+          "stdout_tail": ".c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260219-131220/S02_doc_first_gate/sandbox/CMakeLists.txt\n  headless_main.cpp\n  ctcp_headless.vcxproj -> D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\simlab_runs\\20260219-131220\\S02_doc_first_gate\\sandbox\\build_lite\\Release\\ctcp_headless.exe\n  Building Custom Rule D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260219-131220/S02_doc_first_gate/sandbox/CMakeLists.txt\n[verify_repo] ctest lite\nTest project D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260219-131220/S02_doc_first_gate/sandbox/build_lite\n    Start 1: headless_smoke\n1/2 Test #1: headless_smoke ...................   Passed    0.24 sec\n    Start 2: verify_tools_selftest\n2/2 Test #2: verify_tools_selftest ............   Passed    0.16 sec\n\n100% tests passed, 0 tests failed out of 2\n\nTotal Test time (real) =   0.40 sec\n[verify_repo] workflow gate (workflow checks)\n[workflow_checks][error] code changes detected but CURRENT.md does not allow code edits.\nAdd and tick the checkbox in meta/tasks/CURRENT.md:\n  - [x] Code changes allowed\nCode changes:\n  - src/main.cpp\n",
+          "stderr_tail": "CMake Warning:\n  Manually-specified variables were not used by the project:\n\n    CMAKE_BUILD_TYPE\n\n\nInvoke-ExternalChecked : [verify_repo] FAILED: workflow gate (workflow checks) (exit=1)\nAt D:\\.c_projects\\adc\\ctcp\\tests\\fixtures\\adlc_forge_full_bundle\\runs\\simlab_runs\\20260219-131220\\S02_doc_first_gate\\sa\nndbox\\scripts\\verify_repo.ps1:94 char:3\n+   Invoke-ExternalChecked -Label \"workflow gate (workflow checks)\" -Co ...\n+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException\n    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException,Invoke-ExternalChecked\n \n"
+        }
+      ]
+    },
+    {
+      "id": "S03_doc_index_check",
+      "name": "doc index check should pass and markers must exist",
+      "suite": "core",
+      "status": "pass",
+      "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260219-131220/S03_doc_index_check/TRACE.md",
+      "bundle": "",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python scripts/sync_doc_links.py --check",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "[sync_doc_links] ok\n",
+          "stderr_tail": ""
+        },
+        {
+          "type": "expect_text",
+          "path": "README.md",
+          "includes": [
+            "<!-- CTCP:DOC_INDEX:BEGIN -->",
+            "<!-- CTCP:DOC_INDEX:END -->"
+          ],
+          "excludes": [],
+          "size": 3167
+        }
+      ]
+    },
+    {
+      "id": "S04_assistant_force",
+      "name": "assistant commands accept --force",
+      "suite": "core",
+      "status": "pass",
+      "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260219-131220/S04_assistant_force/TRACE.md",
+      "bundle": "",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python tools/ctcp_assistant.py init-task simlab-force --force",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "[ok] task: meta\\tasks\\20260219-131235-simlab-force.md\n[ok] current: meta\\tasks\\CURRENT.md\n",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python tools/ctcp_assistant.py init-externals simlab-force --force",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "[ok] externals: meta\\externals\\20260219-simlab-force.md\n",
+          "stderr_tail": ""
+        },
+        {
+          "type": "expect_path",
+          "path": "meta/tasks/CURRENT.md",
+          "exists": true,
+          "expect": true
+        }
+      ]
+    },
+    {
+      "id": "S05_run_artifacts",
+      "name": "verify run should keep report artifact sections available",
+      "suite": "core",
+      "status": "pass",
+      "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260219-131220/S05_run_artifacts/TRACE.md",
+      "bundle": "",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260219-131220/S05_run_artifacts/sandbox/CMakeLists.txt\n[verify_repo] ctest lite\nTest project D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260219-131220/S05_run_artifacts/sandbox/build_lite\n    Start 1: headless_smoke\n1/2 Test #1: headless_smoke ...................   Passed    0.23 sec\n    Start 2: verify_tools_selftest\n2/2 Test #2: verify_tools_selftest ............   Passed    0.16 sec\n\n100% tests passed, 0 tests failed out of 2\n\nTotal Test time (real) =   0.52 sec\n[verify_repo] workflow gate (workflow checks)\n[workflow_checks] ok (no git diff detected)\n[verify_repo] contract checks\n[contract_checks] schema presence ok\n[contract_checks] meta schema_version ok\n[contract_checks] readme links ok\n[contract_checks] unique Graph Spider implementation ok\n[verify_repo] doc index check (sync doc links --check)\n[sync_doc_links] ok\n[verify_repo] lite scenario replay\n{\"run_dir\": \"D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260219-131220/S05_run_artifacts/sandbox/simlab/_runs_repo_gate/20260219-131244\", \"passed\": 1, \"failed\": 0}\n[verify_repo] OK\n",
+          "stderr_tail": "CMake Warning:\n  Manually-specified variables were not used by the project:\n\n    CMAKE_BUILD_TYPE\n\n\n"
+        },
+        {
+          "type": "expect_path",
+          "path": "meta/reports/LAST.md",
+          "exists": true,
+          "expect": true
+        },
+        {
+          "type": "expect_text",
+          "path": "meta/reports/LAST.md",
+          "includes": [
+            "## Readlist",
+            "## Changes",
+            "## Verify"
+          ],
+          "excludes": [],
+          "size": 6715
+        }
+      ]
+    },
+    {
+      "id": "S06_failure_bundle",
+      "name": "failure should produce evidence bundle",
+      "suite": "core",
+      "status": "pass",
+      "trace": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260219-131220/S06_failure_bundle/TRACE.md",
+      "bundle": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260219-131220/S06_failure_bundle/failure_bundle.zip",
+      "steps": [
+        {
+          "type": "write",
+          "path": "README.md",
+          "mode": "append",
+          "bytes": 46
+        },
+        {
+          "type": "run",
+          "cmd": "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1",
+          "cwd": ".",
+          "rc": 4294770688,
+          "expect_exit": "nonzero",
+          "stdout_tail": "Windows PowerShell\nCopyright (C) Microsoft Corporation. All rights reserved.\n\nInstall the latest PowerShell for new features and improvements! https://aka.ms/PSWindows\n\n",
+          "stderr_tail": "The argument 'scripts/verify_repo.ps1' to the -File parameter does not exist. Provide the path to an existing '.ps1' file as an argument to the -File parameter.\n"
+        },
+        {
+          "type": "expect_bundle",
+          "exists": true,
+          "expect": true,
+          "path": "D:/.c_projects/adc/ctcp/tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs/20260219-131220/S06_failure_bundle/failure_bundle.zip"
+        }
+      ]
+    }
+  ]
+}
