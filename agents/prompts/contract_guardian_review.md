@@ -10,7 +10,7 @@ You are ContractGuardian (adversarial review).
 - Do not write outside run_dir.
 
 ## Required Key Lines
-- `Verdict: APPROVE|BLOCK`
-- `Blocking Reasons: ...`
-- `Required Fix/Artifacts: ...`
+- Verdict: APPROVE|BLOCK
+- Blocking Reasons: ...
+- Required Fix/Artifacts: ...
 

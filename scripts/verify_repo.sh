@@ -6,6 +6,7 @@ BUILD_DIR_LITE="${ROOT}/build_lite"
 CTEST_EXE=""
 MODE="${CTCP_FULL_GATE:-0}"
 WRITE_FIXTURES="${CTCP_WRITE_FIXTURES:-0}"
+SKIP_LITE_REPLAY="${CTCP_SKIP_LITE_REPLAY:-0}"
 if [[ "${1:-}" == "--full" ]]; then
   MODE="1"
 fi
@@ -139,16 +140,20 @@ python3 "${ROOT}/scripts/contract_checks.py"
 echo "[verify_repo] doc index check (sync doc links --check)"
 python3 "${ROOT}/scripts/sync_doc_links.py" --check
 
-echo "[verify_repo] lite scenario replay"
-if [[ "${WRITE_FIXTURES}" == "1" ]]; then
-  RUNS_ROOT="${ROOT}/tests/fixtures/adlc_forge_full_bundle/runs/simlab_lite_runs"
-  SUMMARY_OUT="${ROOT}/tests/fixtures/adlc_forge_full_bundle/runs/_simlab_lite_summary.json"
-  python3 "${ROOT}/simlab/run.py" \
-    --suite lite \
-    --runs-root "${RUNS_ROOT}" \
-    --json-out "${SUMMARY_OUT}"
+if [[ "${SKIP_LITE_REPLAY}" == "1" ]]; then
+  echo "[verify_repo] lite scenario replay skipped (CTCP_SKIP_LITE_REPLAY=1)"
 else
-  python3 "${ROOT}/simlab/run.py" --suite lite
+  echo "[verify_repo] lite scenario replay"
+  if [[ "${WRITE_FIXTURES}" == "1" ]]; then
+    RUNS_ROOT="${ROOT}/tests/fixtures/adlc_forge_full_bundle/runs/simlab_lite_runs"
+    SUMMARY_OUT="${ROOT}/tests/fixtures/adlc_forge_full_bundle/runs/_simlab_lite_summary.json"
+    python3 "${ROOT}/simlab/run.py" \
+      --suite lite \
+      --runs-root "${RUNS_ROOT}" \
+      --json-out "${SUMMARY_OUT}"
+  else
+    python3 "${ROOT}/simlab/run.py" --suite lite
+  fi
 fi
 
 if [[ "${MODE}" == "1" ]]; then

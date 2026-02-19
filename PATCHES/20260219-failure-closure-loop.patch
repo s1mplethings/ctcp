@@ -1,0 +1,1249 @@
+diff --git a/docs/30_artifact_contracts.md b/docs/30_artifact_contracts.md
+index aca7f09..356f8ed 100644
+--- a/docs/30_artifact_contracts.md
++++ b/docs/30_artifact_contracts.md
+@@ -128,11 +128,25 @@ result: "PASS"|"FAIL"
+ 
+ gate: "lite"|"full"
+ 
++iteration: <int>
++
++max_iterations: <int>
++
+ commands[]: { "cmd": "...", "exit_code": int }
+ 
+ failures[]: { "kind": "...", "id": "...", "message": "..." }
+ 
+-artifacts: { "trace": "TRACE.md", "bundle": "failure_bundle.zip"? }
++paths: {
++  "trace": "TRACE.md",
++  "verify_report": "artifacts/verify_report.json",
++  "bundle": "failure_bundle.zip"?,
++  "stdout_log": "logs/verify.stdout.log",
++  "stderr_log": "logs/verify.stderr.log",
++  "plan": "artifacts/PLAN.md"?,
++  "patch": "artifacts/diff.patch"?
++}
++
++(compat) `artifacts` MAY mirror `paths`.
+ 
+ J) events.jsonl
+ 
+@@ -182,3 +196,33 @@ Hard constraints:
+ - Only write requested target artifact in run_dir.
+ - Do not modify repo files.
+ - Follow role template output keys (for example `Verdict: APPROVE|BLOCK`, `Status: SIGNED`, patch only `artifacts/diff.patch`).
++
++M) failure_bundle.zip (on verify FAIL)
++
++Minimum bundle content:
++
++TRACE.md
++
++artifacts/verify_report.json
++
++events.jsonl
++
++artifacts/PLAN.md (if exists)
++
++artifacts/diff.patch (if exists)
++
++reviews/* (if exists)
++
++outbox/* (if exists)
++
++Optional:
++
++logs/**
++
++snapshot/**
++
++Event requirements around verify/bundle:
++- `VERIFY_STARTED`
++- `VERIFY_FAILED` (on non-zero verify)
++- `BUNDLE_CREATED` (bundle created or validated/recreated)
++- `VERIFY_PASSED` (on zero verify)
+diff --git a/meta/reports/LAST.md b/meta/reports/LAST.md
+index 74fbd46..112cae3 100644
+--- a/meta/reports/LAST.md
++++ b/meta/reports/LAST.md
+@@ -1,108 +1,113 @@
+ # Demo Report - LAST
+ 
+ ## Goal
+-- Implement TeamNet dispatcher/provider auto-invocation for missing artifacts:
+-  - local `librarian` auto-exec
+-  - API-role `manual_outbox` prompt generation
+-  - outbox budget stop gate
+-  - outbox refill tracking events
+-- Add lite regressions for dispatcher behavior.
++- Complete `L2-FAIL-001`: enforce hard fail evidence (`failure_bundle.zip`) and fixer loop convergence (`FAIL -> new patch -> PASS`) with lite regressions.
++- Keep contracts unchanged: resolver-first, `find_result.json` as decision authority, external `CTCP_RUNS_ROOT` run dirs, no new dependencies, no real networking.
+ 
+ ## Readlist
++- `AGENTS.md`
+ - `ai_context/00_AI_CONTRACT.md`
+ - `README.md`
+ - `BUILD.md`
+ - `PATCH_README.md`
+ - `TREE.md`
+-- `docs/03_quality_gates.md`
+-- `ai_context/problem_registry.md`
+-- `ai_context/decision_log.md`
+ - `docs/00_CORE.md`
+ - `docs/02_workflow.md`
+-- `docs/22_agent_teamnet.md`
++- `docs/03_quality_gates.md`
++- `docs/12_modules_index.md`
+ - `docs/30_artifact_contracts.md`
+-- `meta/tasks/CURRENT.md`
+ - `meta/tasks/TEMPLATE.md`
++- `meta/tasks/CURRENT.md`
++- `meta/reports/LAST.md`
++- `ai_context/problem_registry.md`
++- `ai_context/decision_log.md`
+ 
+ ## Plan
+-1. Docs/Spec: add dispatcher/provider and outbox contract sections.
+-2. Code: add `ctcp_dispatch` + provider modules and orchestrator integration.
+-3. Tests: add lite scenarios for missing-review outbox and librarian local-exec.
+-4. Verify: run doc index check, simlab lite suite, and `verify_repo`.
+-5. Report: update LAST with demo pointers.
++1. Docs/spec first:
++   - align artifact contract wording for `verify_report.json` and `failure_bundle.zip`.
++2. Code:
++   - harden `ctcp_orchestrate.py` fail path and fixer loop.
++3. Regression:
++   - strengthen S15 assertions (paths field + fixer outbox prompt).
++4. Verify:
++   - `sync_doc_links --check`
++   - `simlab/run.py --suite lite`
++   - `scripts/verify_repo.ps1`
++   - clean-worktree `git apply --check`
++5. Report:
++   - record evidence paths and demo pointers.
+ 
+ ## Timeline / Trace Pointer
+-- External demo run dir:
+-  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-163807-orchestrate`
+-- Demo trace:
+-  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-163807-orchestrate\TRACE.md`
+-- Demo outbox prompt:
+-  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-163807-orchestrate\outbox\001_contract_guardian_review_contract.md`
+-- Demo pointer file:
+-  - `meta/run_pointers/LAST_RUN.txt`
++- Lite suite run evidence:
++  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\simlab_runs\20260219-200922`
++- S15 external run demo (failure bundle + fixer outbox):
++  - `C:\Users\sunom\AppData\Local\ctcp\runs\sandbox\20260219-201006-016278-orchestrate`
++- S16 external run demo (loop to pass):
++  - `C:\Users\sunom\AppData\Local\ctcp\runs\sandbox\20260219-201021-005256-orchestrate`
+ 
+ ## Changes
+-- Unified diff patch bundle:
+-  - `PATCHES/20260219-teamnet-dispatch.patch`
+-- Spec/contract docs:
+-  - `docs/22_agent_teamnet.md`: added dispatcher/provider wiring and boundaries.
+-  - `docs/30_artifact_contracts.md`: added `dispatch_config` and `outbox/*.md` contracts.
+-- Dispatcher/provider implementation:
+-  - `scripts/ctcp_dispatch.py` (new): gate->role/action mapping, config loading, provider dispatch, outbox fulfillment detection.
+-  - `tools/providers/manual_outbox.py` (new): template-based prompt generation, dedupe, budget stop.
+-  - `tools/providers/local_exec.py` (new): librarian-only local execution for `context_pack`.
+-  - `tools/providers/__init__.py` (new).
+-- Orchestrator integration:
+-  - `scripts/ctcp_orchestrate.py`:
+-    - creates `artifacts/dispatch_config.json` on `new-run`
+-    - includes `outbox/` in run layout
+-    - `advance` dispatches on blocked/fail gates:
+-      - `LOCAL_EXEC_COMPLETED` / `LOCAL_EXEC_FAILED`
+-      - `OUTBOX_PROMPT_CREATED`
+-      - `STOP_BUDGET_EXCEEDED`
+-    - `status` now prints:
+-      - `outbox prompt created: ...` (when present)
+-      - `STOP: budget_exceeded (...)` (when applicable)
+-    - tracks refill completion via `OUTBOX_PROMPT_FULFILLED`.
+-- Prompt templates (new):
+-  - `agents/prompts/chair_plan_draft.md`
+-  - `agents/prompts/chair_file_request.md`
+-  - `agents/prompts/contract_guardian_review.md`
+-  - `agents/prompts/cost_controller_review.md`
+-  - `agents/prompts/patchmaker_patch.md`
+-  - `agents/prompts/fixer_patch.md`
+-  - `agents/prompts/researcher_find_web.md`
+-  - `agents/prompts/librarian_context_pack.md`
+-- Lite regressions:
+-  - `simlab/scenarios/S12_lite_orchestrate_context_gate.yaml` (updated: pins librarian to manual_outbox for old gate assertion).
+-  - `simlab/scenarios/S13_lite_dispatch_outbox_on_missing_review.yaml` (new).
+-  - `simlab/scenarios/S14_lite_dispatch_local_exec_librarian.yaml` (new).
+-- Task tracking:
+-  - `meta/tasks/CURRENT.md` updated for this dispatcher task.
++- Unified diff patch:
++  - `PATCHES/20260219-failure-closure-loop.patch`
++- `meta/tasks/CURRENT.md`
++  - switched active task binding to `L2-FAIL-001`, kept code-change gate enabled.
++- `meta/backlog/execution_queue.json`
++  - marked `L2-FAIL-001` as `done` with S15/S16 closure note.
++- `scripts/ctcp_orchestrate.py`
++  - added verify iteration control (`verify_iterations`, max read from `PLAN.md` or `guardrails.md`, default `3`).
++  - added stop event/status on limit hit: `STOP_MAX_ITERATIONS`.
++  - added tracked-dirty apply safety gate before `git apply` (`repo_dirty_before_apply`), while allowing managed fixer delta over prior applied patch.
++  - added command trace blocks in `TRACE.md` for apply/verify/retry/revert with cmd, exit_code, stdout/stderr tail.
++  - hardened verify report output with required fields:
++    - `result`, `commands`, `failures`, `paths` (+compat mirror `artifacts`).
++  - fail path now always:
++    - writes `VERIFY_FAILED`
++    - ensures/validates `failure_bundle.zip`
++    - writes `BUNDLE_CREATED`
++    - dispatches fixer outbox prompt immediately (`OUTBOX_PROMPT_CREATED`).
++  - bundle validation now requires `reviews/*` and `outbox/*` entries when those files exist.
++  - fail-state outbox dispatch no longer downgrades run status from `fail` to `blocked`.
++  - adds optional backup of previously applied patch on fixer re-iteration (`artifacts/diff.patch.iter<N>.bak`).
++- `simlab/scenarios/S15_lite_fail_produces_bundle.yaml`
++  - added assertions for `verify_report.paths`.
++  - added assertions for fixer outbox prompt content (`Role: fixer`, `failure_bundle.zip`, `write to: artifacts/diff.patch`).
++- `simlab/scenarios/S16_lite_fixer_loop_pass.yaml`
++  - locks same-run fail->fix->pass convergence and asserts `VERIFY_PASSED`.
++- `tests/fixtures/patches/lite_fail_bad_readme_link.patch`
++  - deterministic fail patch used by S15/S16.
++- `tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch`
++  - deterministic fixer patch used by S16 pass loop.
++- `docs/30_artifact_contracts.md`
++  - expanded `verify_report.json` minimum fields (iteration fields + `paths`).
++  - expanded failure bundle minimum list to include `reviews/*` and `outbox/*` when present.
+ 
+ ## Verify
+-- `git worktree add d:\\.c_projects\\adc\\ctcp_patch_check_<ts> HEAD`
+-  - `git -C d:\\.c_projects\\adc\\ctcp_patch_check_<ts> apply --check d:/.c_projects/adc/ctcp/PATCHES/20260219-teamnet-dispatch.patch`
+-  - result: pass (then worktree removed)
+-- `python -m py_compile scripts/ctcp_orchestrate.py scripts/ctcp_dispatch.py scripts/ctcp_librarian.py tools/providers/manual_outbox.py tools/providers/local_exec.py`
+-  - result: pass
+ - `python scripts/sync_doc_links.py --check`
+   - result: `[sync_doc_links] ok`
+ - `python simlab/run.py --suite lite`
+-  - result: `{"passed": 6, "failed": 0, ...}`
++  - result: `{"run_dir":".../simlab_runs/20260219-200922","passed":8,"failed":0}`
++  - includes new hard regressions:
++    - `S15_lite_fail_produces_bundle` pass
++    - `S16_lite_fixer_loop_pass` pass
+ - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
+-  - result: pass
+-  - key output:
+-    - ctest lite: `2/2` passed
+-    - workflow gate: ok
++  - result: `[verify_repo] OK`
++  - key lines:
++    - ctest lite: `2/2` pass
++    - workflow checks: ok
+     - contract checks: ok
+     - doc index check: ok
+-    - lite scenario replay: `{"passed": 6, "failed": 0, ...}`
+-    - final: `[verify_repo] OK`
++    - lite replay: `passed=8 failed=0`
++- clean-worktree patch apply check:
++  - command: `git -C <temp_worktree> apply --check PATCHES/20260219-failure-closure-loop.patch`
++  - result: pass
++- S15 evidence excerpt:
++  - `_s15_events.jsonl` contains `VERIFY_STARTED`, `VERIFY_FAILED`, `BUNDLE_CREATED`, `OUTBOX_PROMPT_CREATED`.
++  - `_s15_advance.out.txt` shows outbox creation and failure bundle path.
++- S16 evidence excerpt:
++  - `_s16_verify_report.json` result is `PASS` with `iteration: 2`.
++  - `_s16_events.jsonl` contains `VERIFY_FAILED`, `BUNDLE_CREATED`, `VERIFY_PASSED`.
+ 
+ ## Open Questions
+ - None.
+ 
+ ## Next Steps
+-1. If needed, add a dedicated lite case for `budget_exceeded` stop behavior.
+-2. If needed, add richer chair/fixer templates for adjudication and post-failure fix loops.
++1. Add an explicit lite case for `STOP_MAX_ITERATIONS` to lock the new stop condition.
+diff --git a/meta/tasks/CURRENT.md b/meta/tasks/CURRENT.md
+index f6071d8..6a15543 100644
+--- a/meta/tasks/CURRENT.md
++++ b/meta/tasks/CURRENT.md
+@@ -1,50 +1,45 @@
+-# Task - teamnet-dispatcher-provider-manual-outbox
++# Task - fail-bundle-and-fixer-loop-hard-regression
++
++## Queue Binding
++- Queue Item: `L2-FAIL-001`
++- Layer/Priority: `L2 / P0`
++- Source Queue File: `meta/backlog/execution_queue.json`
+ 
+ ## Context
+-- Add TeamNet dispatcher/provider automation layer on top of the existing orchestrator state machine.
+-- Keep resolver-first and external-run constraints unchanged.
+-- Implement only local pluggable providers without network/API calls:
+-  - `manual_outbox` provider for API roles.
+-  - `local_exec` provider only for local librarian auto-execution.
+-- Add lite regression coverage for dispatcher behavior.
++- Complete the ADLC fail closure so verify failures always produce auditable evidence and can loop back to PASS in the same run.
++- Keep contracts unchanged: resolver-first, `find_result.json` as final workflow decision input, and external `CTCP_RUNS_ROOT` run directories only.
++- Scope this task to one queue item (`L2-FAIL-001`) and lock behavior with lite regressions.
++
++## DoD Mapping (from execution_queue.json)
++- [x] DoD-1: `verify fail writes FAIL report with failures[]`
++- [x] DoD-2: `failure_bundle.zip has required minimum contents`
++- [x] DoD-3: `fixer refill patch in same run can converge to VERIFY_PASSED and run pass`
+ 
+ ## Acceptance (must be checkable)
+ - [x] DoD written (this file complete)
+-- [x] Research logged (if needed): N/A (repo-local contract alignment)
++- [ ] Research logged (if needed): N/A (repo-local orchestrator behavior)
+ - [x] Code changes allowed
+ - [x] Patch applies cleanly (`git apply ...`) OR overlay zip applies cleanly
+ - [x] `scripts/verify_repo.*` passes
+ - [x] Demo report updated: `meta/reports/LAST.md`
+ 
+ ## Plan
+-1) Spec-first: update TeamNet/artifact docs for `dispatch_config` and outbox prompt contract.
+-2) Implement dispatcher core + providers (`manual_outbox`, `local_exec`) and orchestrator integration (`status`/`advance`).
+-3) Add prompt templates under `agents/prompts/` for Chair/Guardian/Cost/Patch/Fix/Research (+ librarian template compatibility).
+-4) Add 1-2 lite SimLab scenarios for dispatcher outbox and librarian local-exec behavior.
+-5) Run `python scripts/sync_doc_links.py --check` and `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`.
+-6) Update `meta/reports/LAST.md` with readlist/plan/verify/demo pointer.
++1) Docs/spec sync first:
++   - update artifact contract for verify report and failure bundle minimum.
++2) Runtime hardening:
++   - tighten orchestrator verify-fail path and fixer loop controls.
++3) Regression lock:
++   - keep S15/S16 behavior stable and fast under lite suite.
++4) Verify and evidence:
++   - run `sync_doc_links --check`, `simlab --suite lite`, `verify_repo`.
++5) Report:
++   - update `meta/reports/LAST.md` with demo pointers and command evidence.
+ 
+ ## Notes / Decisions
+-- `find_result.json` remains the only resolver authority; `find_web` is candidate input only.
+-- Runs remain outside repo under `CTCP_RUNS_ROOT`; repo keeps only run pointers.
+-- No new dependencies.
++- Current worktree is already dirty from prior tasks; this item only updates files tied to fail-loop closure and contract docs.
+ 
+ ## Results
+-- Added dispatcher/provider layer:
+-  - `scripts/ctcp_dispatch.py`
+-  - `tools/providers/manual_outbox.py`
+-  - `tools/providers/local_exec.py`
+-- Integrated dispatch into `scripts/ctcp_orchestrate.py` (`new-run/status/advance`) with:
+-  - auto-created `artifacts/dispatch_config.json`
+-  - `OUTBOX_PROMPT_CREATED` and `OUTBOX_PROMPT_FULFILLED` events
+-  - budget stop (`STOP_BUDGET_EXCEEDED`)
+-  - librarian local-exec path
+-- Added prompt templates under `agents/prompts/`.
+-- Added/updated lite scenarios:
+-  - `S12_lite_orchestrate_context_gate` (updated)
+-  - `S13_lite_dispatch_outbox_on_missing_review` (new)
+-  - `S14_lite_dispatch_local_exec_librarian` (new)
+-- Verification:
+-  - `python scripts/sync_doc_links.py --check` passed
+-  - `python simlab/run.py --suite lite` passed (`6/6`)
+-  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` passed
++- `ctcp_orchestrate.py` now enforces hard fail evidence + fixer loop controls (iteration stop, verify_report paths, bundle validation, fixer outbox dispatch on fail).
++- S15/S16 lite scenarios lock fail-bundle creation and fail->fix->pass closure.
++- `docs/30_artifact_contracts.md` updated with final minimum contract fields/content lists.
++- Verification and patch applyability checks passed.
+diff --git a/scripts/ctcp_orchestrate.py b/scripts/ctcp_orchestrate.py
+index 80647f0..b2856de 100644
+--- a/scripts/ctcp_orchestrate.py
++++ b/scripts/ctcp_orchestrate.py
+@@ -7,6 +7,7 @@ import hashlib
+ import json
+ import os
+ import re
++import shutil
+ import subprocess
+ import sys
+ import zipfile
+@@ -17,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
+ POINTERS_DIR = ROOT / "meta" / "run_pointers"
+ LAST_RUN_POINTER = POINTERS_DIR / "LAST_RUN.txt"
+ LAST_BUNDLE_POINTER = POINTERS_DIR / "LAST_BUNDLE.txt"
++DEFAULT_MAX_ITERATIONS = 3
+ 
+ try:
+     from tools.run_paths import get_repo_slug, make_run_dir
+@@ -35,10 +37,15 @@ def now_iso() -> str:
+     return dt.datetime.now().isoformat(timespec="seconds")
+ 
+ 
+-def run_cmd(cmd: list[str], cwd: Path) -> tuple[int, str, str]:
++def run_cmd(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> tuple[int, str, str]:
++    proc_env = os.environ.copy()
++    if env:
++        for k, v in env.items():
++            proc_env[str(k)] = str(v)
+     p = subprocess.run(
+         cmd,
+         cwd=str(cwd),
++        env=proc_env,
+         capture_output=True,
+         text=True,
+         encoding="utf-8",
+@@ -61,7 +68,7 @@ def read_json(path: Path) -> dict[str, Any]:
+ 
+ 
+ def default_run_id() -> str:
+-    return dt.datetime.now().strftime("%Y%m%d-%H%M%S-orchestrate")
++    return dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f-orchestrate")
+ 
+ 
+ def file_sha256(path: Path) -> str:
+@@ -75,6 +82,31 @@ def file_sha256(path: Path) -> str:
+     return h.hexdigest()
+ 
+ 
++def active_patch_candidate(run_dir: Path) -> Path | None:
++    artifacts = run_dir / "artifacts"
++    patch = artifacts / "diff.patch"
++    patch_v2 = artifacts / "diff.patch.v2"
++    if patch_v2.exists():
++        return patch_v2
++    if patch.exists():
++        return patch
++    return None
++
++
++def ensure_active_patch(run_dir: Path) -> tuple[Path | None, bool]:
++    artifacts = run_dir / "artifacts"
++    patch = artifacts / "diff.patch"
++    patch_v2 = artifacts / "diff.patch.v2"
++    if patch_v2.exists():
++        if (not patch.exists()) or file_sha256(patch) != file_sha256(patch_v2):
++            shutil.copy2(patch_v2, patch)
++            return patch, True
++        return patch, False
++    if patch.exists():
++        return patch, False
++    return None, False
++
++
+ def normalize_find_mode(value: str) -> str:
+     v = (value or "").strip().lower()
+     if v in {"resolver_only", "resolver_plus_web"}:
+@@ -186,6 +218,87 @@ def parse_guardrails(path: Path) -> tuple[bool, str, dict[str, Any]]:
+     return True, "ok", policy
+ 
+ 
++def _parse_positive_int(text: str) -> int | None:
++    raw = (text or "").strip()
++    if not raw:
++        return None
++    try:
++        value = int(raw)
++    except Exception:
++        return None
++    return value if value > 0 else None
++
++
++def _parse_plan_max_iterations(path: Path) -> int | None:
++    if not path.exists():
++        return None
++    raw = path.read_text(encoding="utf-8", errors="replace")
++    m = re.search(r"max_iterations\s*[:=]\s*(\d+)", raw, flags=re.IGNORECASE)
++    if not m:
++        return None
++    return _parse_positive_int(m.group(1))
++
++
++def resolve_max_iterations(run_dir: Path) -> tuple[int, str]:
++    plan_value = _parse_plan_max_iterations(run_dir / "artifacts" / "PLAN.md")
++    if plan_value is not None:
++        return plan_value, "PLAN.md"
++
++    guardrails = run_dir / "artifacts" / "guardrails.md"
++    ok, _, policy = parse_guardrails(guardrails)
++    if ok:
++        guard_value = _parse_positive_int(str(policy.get("max_iterations", "")))
++        if guard_value is not None:
++            return guard_value, "guardrails.md"
++
++    return DEFAULT_MAX_ITERATIONS, "default"
++
++
++def _tail_summary(text: str, *, max_lines: int = 8, max_chars: int = 500) -> str:
++    lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
++    if not lines:
++        return "(empty)"
++    tail = " | ".join(lines[-max_lines:])
++    tail = tail.replace("`", "'")
++    if len(tail) > max_chars:
++        tail = tail[-max_chars:]
++    return tail
++
++
++def append_command_trace(
++    run_dir: Path,
++    *,
++    phase: str,
++    cmd: list[str],
++    rc: int,
++    stdout: str,
++    stderr: str,
++    stdout_log: Path,
++    stderr_log: Path,
++) -> None:
++    lines = [
++        "",
++        f"### {phase}",
++        f"- ts: {now_iso()}",
++        f"- cmd: {' '.join(cmd)}",
++        f"- exit_code: {rc}",
++        f"- stdout_log: {stdout_log.relative_to(run_dir).as_posix()}",
++        f"- stderr_log: {stderr_log.relative_to(run_dir).as_posix()}",
++        f"- stdout_tail: {_tail_summary(stdout)}",
++        f"- stderr_tail: {_tail_summary(stderr)}",
++    ]
++    with (run_dir / "TRACE.md").open("a", encoding="utf-8") as fh:
++        fh.write("\n".join(lines) + "\n")
++
++
++def repo_dirty_status() -> tuple[bool, list[str]]:
++    rc, out, _ = run_cmd(["git", "status", "--porcelain", "--untracked-files=no"], ROOT)
++    if rc != 0:
++        return True, ["git status --porcelain failed"]
++    rows = [ln.rstrip() for ln in out.splitlines() if ln.strip()]
++    return bool(rows), rows
++
++
+ def parse_verdict(path: Path) -> str:
+     if not path.exists():
+         return "MISSING"
+@@ -298,14 +411,63 @@ def validate_externals_pack(goal: str) -> tuple[bool, str, str]:
+ 
+ 
+ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
++    artifacts = run_dir / "artifacts"
++    reviews = run_dir / "reviews"
++    patch = artifacts / "diff.patch"
++    patch_marker = artifacts / "patch_apply.json"
++    verify_report = artifacts / "verify_report.json"
++
+     if str(run_doc.get("status", "")).lower() == "pass":
+         return {"state": "pass", "owner": "", "path": "", "reason": "run already pass"}
+     if str(run_doc.get("status", "")).lower() == "fail":
++        candidate = active_patch_candidate(run_dir)
++        if candidate is not None:
++            candidate_sha = file_sha256(candidate)
++            marker_ok = False
++            marker_sha = ""
++            if patch_marker.exists():
++                try:
++                    marker_doc = read_json(patch_marker)
++                    marker_sha = str(marker_doc.get("patch_sha256", ""))
++                    marker_ok = int(marker_doc.get("rc", 1)) == 0
++                except Exception:
++                    marker_ok = False
++                    marker_sha = ""
++
++            if (not marker_ok) or (marker_sha != candidate_sha):
++                return {
++                    "state": "ready_apply",
++                    "owner": "Local Orchestrator",
++                    "path": "artifacts/diff.patch",
++                    "reason": "new fixer patch detected after failure",
++                }
++
++            if not verify_report.exists():
++                return {
++                    "state": "ready_verify",
++                    "owner": "Local Verifier",
++                    "path": "artifacts/verify_report.json",
++                    "reason": "applied fixer patch pending verify",
++                }
++            try:
++                report = read_json(verify_report)
++                report_sha = str(report.get("patch_sha256", ""))
++                if report_sha != candidate_sha:
++                    return {
++                        "state": "ready_verify",
++                        "owner": "Local Verifier",
++                        "path": "artifacts/verify_report.json",
++                        "reason": "applied fixer patch pending verify",
++                    }
++            except Exception:
++                return {
++                    "state": "ready_verify",
++                    "owner": "Local Verifier",
++                    "path": "artifacts/verify_report.json",
++                    "reason": "applied fixer patch pending verify",
++                }
+         return {"state": "fail", "owner": "Fixer", "path": "failure_bundle.zip", "reason": str(run_doc.get("blocked_reason", "run failed"))}
+ 
+-    artifacts = run_dir / "artifacts"
+-    reviews = run_dir / "reviews"
+-
+     guardrails = artifacts / "guardrails.md"
+     analysis = artifacts / "analysis.md"
+     find_result = artifacts / "find_result.json"
+@@ -314,10 +476,8 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
+     context_pack = artifacts / "context_pack.json"
+     plan_draft = artifacts / "PLAN_draft.md"
+     plan = artifacts / "PLAN.md"
+-    patch = artifacts / "diff.patch"
+     review_contract = reviews / "review_contract.md"
+     review_cost = reviews / "review_cost.md"
+-    patch_marker = artifacts / "patch_apply.json"
+ 
+     goal = str(run_doc.get("goal", ""))
+ 
+@@ -375,10 +535,10 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
+     if not plan.exists() or not plan_signed(plan):
+         return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/PLAN.md", "reason": "waiting for signed PLAN.md"}
+ 
+-    if not patch.exists():
++    if not patch.exists() and not (artifacts / "diff.patch.v2").exists():
+         return {"state": "blocked", "owner": "PatchMaker", "path": "artifacts/diff.patch", "reason": "waiting for diff.patch"}
+ 
+-    if patch_marker.exists():
++    if patch.exists() and patch_marker.exists():
+         try:
+             marker = read_json(patch_marker)
+             if marker.get("patch_sha256") == file_sha256(patch) and int(marker.get("rc", 1)) == 0:
+@@ -398,6 +558,73 @@ def make_failure_bundle(run_dir: Path) -> Path:
+     return bundle
+ 
+ 
++def _required_bundle_entries(run_dir: Path) -> list[str]:
++    required = ["TRACE.md", "artifacts/verify_report.json", "events.jsonl"]
++    if (run_dir / "artifacts" / "PLAN.md").exists():
++        required.append("artifacts/PLAN.md")
++    if (run_dir / "artifacts" / "diff.patch").exists():
++        required.append("artifacts/diff.patch")
++    for rel_dir in ("reviews", "outbox"):
++        base = run_dir / rel_dir
++        if not base.exists():
++            continue
++        for p in sorted(base.rglob("*")):
++            if p.is_file():
++                required.append(p.relative_to(run_dir).as_posix())
++    return required
++
++
++def _bundle_contains(bundle: Path, required_entries: list[str]) -> bool:
++    if not bundle.exists():
++        return False
++    try:
++        with zipfile.ZipFile(bundle, "r") as zf:
++            names = set(zf.namelist())
++    except Exception:
++        return False
++    return all(x in names for x in required_entries)
++
++
++def ensure_failure_bundle(run_dir: Path) -> tuple[Path, str]:
++    bundle = run_dir / "failure_bundle.zip"
++    required_entries = _required_bundle_entries(run_dir)
++    if _bundle_contains(bundle, required_entries):
++        return bundle, "validated"
++
++    mode = "created" if not bundle.exists() else "recreated"
++    bundle = make_failure_bundle(run_dir)
++    if not _bundle_contains(bundle, required_entries):
++        with zipfile.ZipFile(bundle, "r") as zf:
++            names = set(zf.namelist())
++        missing = [x for x in required_entries if x not in names]
++        raise SystemExit(f"[ctcp_orchestrate] failure_bundle missing required entries: {missing}")
++    return bundle, mode
++
++
++def _extract_verify_failures(stdout: str, stderr: str) -> list[dict[str, str]]:
++    lines: list[str] = []
++    merged = f"{stdout}\n{stderr}"
++    for raw in merged.splitlines():
++        line = raw.strip()
++        if not line:
++            continue
++        low = line.lower()
++        if ("error" in low) or ("failed" in low):
++            lines.append(line)
++        if len(lines) >= 8:
++            break
++    if not lines:
++        lines = ["verify_repo returned non-zero"]
++    return [
++        {
++            "kind": "verify",
++            "id": f"verify_repo_{idx+1}",
++            "message": line[:300],
++        }
++        for idx, line in enumerate(lines)
++    ]
++
++
+ def verify_cmd() -> list[str]:
+     if os.name == "nt":
+         return ["powershell", "-ExecutionPolicy", "Bypass", "-File", str(ROOT / "scripts" / "verify_repo.ps1")]
+@@ -419,6 +646,9 @@ def cmd_new_run(goal: str, run_id: str) -> int:
+         "run_id": rid,
+         "goal": goal,
+         "status": "running",
++        "verify_iterations": 0,
++        "max_iterations": DEFAULT_MAX_ITERATIONS,
++        "max_iterations_source": "default",
+         "repo_slug": get_repo_slug(ROOT),
+         "repo_root": str(ROOT.resolve()),
+         "git_sha": sha,
+@@ -491,16 +721,24 @@ def cmd_status(run_dir: Path) -> int:
+     sync_outbox_fulfilled_events(run_dir)
+     run_doc = load_run_doc(run_dir)
+     gate = current_gate(run_dir, run_doc)
++    max_iterations, max_iterations_source = resolve_max_iterations(run_dir)
++    verify_iterations = int(run_doc.get("verify_iterations", 0) or 0)
+     preview = ctcp_dispatch.dispatch_preview(run_dir, run_doc, gate)
+     latest_outbox = ctcp_dispatch.latest_outbox_prompt_path(run_dir)
+     print(f"[ctcp_orchestrate] run_dir={run_dir}")
+     print(f"[ctcp_orchestrate] run_status={run_doc.get('status')}")
++    print(
++        f"[ctcp_orchestrate] iterations={verify_iterations}/{max_iterations} "
++        f"(source={max_iterations_source})"
++    )
+     if gate["state"] == "blocked":
+         print(f"[ctcp_orchestrate] blocked: {gate['reason']}")
+     if latest_outbox:
+         print(f"[ctcp_orchestrate] outbox prompt created: {latest_outbox}")
+     if preview.get("status") == "budget_exceeded":
+         print(f"[ctcp_orchestrate] STOP: budget_exceeded ({preview.get('reason', '')})")
++    if str(run_doc.get("blocked_reason", "")) == "max_iterations_exceeded":
++        print("[ctcp_orchestrate] STOP: max_iterations_exceeded")
+     print(f"[ctcp_orchestrate] next={gate['state']}")
+     print(f"[ctcp_orchestrate] owner={gate['owner']}")
+     print(f"[ctcp_orchestrate] path={gate['path']}")
+@@ -548,17 +786,157 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
+             continue
+ 
+         if state == "ready_apply":
+-            patch = run_dir / "artifacts" / "diff.patch"
++            patch, promoted = ensure_active_patch(run_dir)
++            if patch is None:
++                run_doc["status"] = "blocked"
++                run_doc["blocked_reason"] = "missing diff.patch"
++                save_run_doc(run_dir, run_doc)
++                print("[ctcp_orchestrate] blocked: missing diff.patch for apply")
++                return 0
++
++            if promoted:
++                append_event(
++                    run_dir,
++                    "Local Orchestrator",
++                    "FIXER_PATCH_PROMOTED",
++                    "artifacts/diff.patch",
++                    source="artifacts/diff.patch.v2",
++                )
++
++            patch_marker_doc: dict[str, Any] = {}
++            patch_marker = run_dir / "artifacts" / "patch_apply.json"
++            if patch_marker.exists():
++                try:
++                    patch_marker_doc = read_json(patch_marker)
++                except Exception:
++                    patch_marker_doc = {}
++
++            patch_sha = file_sha256(patch)
++            prev_sha = str(patch_marker_doc.get("patch_sha256", ""))
++            prev_ok = int(patch_marker_doc.get("rc", 1)) == 0 if patch_marker_doc else False
++            last_applied_patch = run_dir / "artifacts" / "last_applied.patch"
++            allow_managed_dirty = (
++                str(run_doc.get("status", "")).lower() == "fail"
++                and prev_ok
++                and bool(prev_sha)
++                and prev_sha != patch_sha
++                and last_applied_patch.exists()
++            )
++
++            if allow_managed_dirty:
++                iteration_tag = max(1, int(run_doc.get("verify_iterations", 0) or 0))
++                backup = run_dir / "artifacts" / f"diff.patch.iter{iteration_tag}.bak"
++                if not backup.exists():
++                    shutil.copy2(last_applied_patch, backup)
++                    append_event(
++                        run_dir,
++                        "Local Orchestrator",
++                        "PATCH_BACKUP_CREATED",
++                        backup.relative_to(run_dir).as_posix(),
++                        source="artifacts/last_applied.patch",
++                    )
++
++            dirty, dirty_rows = repo_dirty_status()
++            if dirty and not allow_managed_dirty:
++                run_doc["status"] = "blocked"
++                run_doc["blocked_reason"] = "repo_dirty_before_apply"
++                save_run_doc(run_dir, run_doc)
++                append_event(
++                    run_dir,
++                    "Local Orchestrator",
++                    "APPLY_BLOCKED_DIRTY",
++                    "artifacts/diff.patch",
++                    dirty_count=len(dirty_rows),
++                )
++                append_trace(
++                    run_dir,
++                    "Local Orchestrator: blocked apply due to dirty repo; "
++                    f"dirty_preview={_tail_summary(chr(10).join(dirty_rows), max_lines=8, max_chars=320)}",
++                )
++                print("[ctcp_orchestrate] blocked: repo dirty before apply (clean workspace and retry)")
++                return 0
++
+             cmd = ["git", "apply", str(patch)]
+             rc, out, err = run_cmd(cmd, ROOT)
+             out_log = run_dir / "logs" / "patch_apply.stdout.log"
+             err_log = run_dir / "logs" / "patch_apply.stderr.log"
+             write_text(out_log, out)
+             write_text(err_log, err)
++            append_command_trace(
++                run_dir,
++                phase="patch_apply",
++                cmd=cmd,
++                rc=rc,
++                stdout=out,
++                stderr=err,
++                stdout_log=out_log,
++                stderr_log=err_log,
++            )
++
++            if rc != 0 and prev_ok and prev_sha and prev_sha != patch_sha:
++                if last_applied_patch.exists():
++                    append_event(
++                        run_dir,
++                        "Local Orchestrator",
++                        "PATCH_REVERT_STARTED",
++                        "artifacts/last_applied.patch",
++                        reason="retry apply after failure",
++                    )
++                    revert_cmd = ["git", "apply", "-R", str(last_applied_patch)]
++                    rr, rout, rerr = run_cmd(revert_cmd, ROOT)
++                    revert_out = run_dir / "logs" / "patch_revert.stdout.log"
++                    revert_err = run_dir / "logs" / "patch_revert.stderr.log"
++                    write_text(revert_out, rout)
++                    write_text(revert_err, rerr)
++                    append_command_trace(
++                        run_dir,
++                        phase="patch_revert",
++                        cmd=revert_cmd,
++                        rc=rr,
++                        stdout=rout,
++                        stderr=rerr,
++                        stdout_log=revert_out,
++                        stderr_log=revert_err,
++                    )
++                    if rr == 0:
++                        append_event(
++                            run_dir,
++                            "Local Orchestrator",
++                            "PATCH_REVERTED",
++                            "artifacts/last_applied.patch",
++                            cmd=" ".join(revert_cmd),
++                            rc=rr,
++                        )
++                        cmd = ["git", "apply", str(patch)]
++                        rc, out, err = run_cmd(cmd, ROOT)
++                        out_log = run_dir / "logs" / "patch_apply_retry.stdout.log"
++                        err_log = run_dir / "logs" / "patch_apply_retry.stderr.log"
++                        write_text(out_log, out)
++                        write_text(err_log, err)
++                        append_command_trace(
++                            run_dir,
++                            phase="patch_apply_retry",
++                            cmd=cmd,
++                            rc=rc,
++                            stdout=out,
++                            stderr=err,
++                            stdout_log=out_log,
++                            stderr_log=err_log,
++                        )
++                    else:
++                        append_event(
++                            run_dir,
++                            "Local Orchestrator",
++                            "PATCH_REVERT_FAILED",
++                            "artifacts/last_applied.patch",
++                            cmd=" ".join(revert_cmd),
++                            rc=rr,
++                        )
++
+             write_json(
+                 run_dir / "artifacts" / "patch_apply.json",
+                 {
+-                    "patch_sha256": file_sha256(patch),
++                    "patch_sha256": patch_sha,
+                     "cmd": " ".join(cmd),
+                     "rc": rc,
+                     "stdout_log": out_log.as_posix(),
+@@ -573,45 +951,171 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
+                 save_run_doc(run_dir, run_doc)
+                 print("[ctcp_orchestrate] blocked: patch apply failed (see logs/patch_apply.*.log)")
+                 return 0
++            shutil.copy2(patch, run_dir / "artifacts" / "last_applied.patch")
+             steps += 1
+             continue
+ 
+         if state == "ready_verify":
++            max_iterations, max_source = resolve_max_iterations(run_dir)
++            verify_iterations = int(run_doc.get("verify_iterations", 0) or 0)
++            if verify_iterations >= max_iterations:
++                run_doc["status"] = "blocked"
++                run_doc["blocked_reason"] = "max_iterations_exceeded"
++                run_doc["max_iterations"] = max_iterations
++                run_doc["max_iterations_source"] = max_source
++                save_run_doc(run_dir, run_doc)
++                append_event(
++                    run_dir,
++                    "Local Verifier",
++                    "STOP_MAX_ITERATIONS",
++                    "artifacts/verify_report.json",
++                    verify_iterations=verify_iterations,
++                    max_iterations=max_iterations,
++                    source=max_source,
++                )
++                print(
++                    f"[ctcp_orchestrate] STOP: max_iterations_exceeded "
++                    f"({verify_iterations}/{max_iterations}, source={max_source})"
++                )
++                return 0
++
++            iteration = verify_iterations + 1
++            run_doc["verify_iterations"] = iteration
++            run_doc["max_iterations"] = max_iterations
++            run_doc["max_iterations_source"] = max_source
++            save_run_doc(run_dir, run_doc)
++
+             cmd = verify_cmd()
+-            rc, out, err = run_cmd(cmd, ROOT)
++            append_event(
++                run_dir,
++                "Local Verifier",
++                "VERIFY_STARTED",
++                "artifacts/verify_report.json",
++                cmd=" ".join(cmd),
++                iteration=iteration,
++                max_iterations=max_iterations,
++            )
++            rc, out, err = run_cmd(cmd, ROOT, env={"CTCP_SKIP_LITE_REPLAY": "1"})
+             out_log = run_dir / "logs" / "verify.stdout.log"
+             err_log = run_dir / "logs" / "verify.stderr.log"
+             write_text(out_log, out)
+             write_text(err_log, err)
++            append_command_trace(
++                run_dir,
++                phase=f"verify(iteration={iteration})",
++                cmd=cmd,
++                rc=rc,
++                stdout=out,
++                stderr=err,
++                stdout_log=out_log,
++                stderr_log=err_log,
++            )
++
++            patch, _ = ensure_active_patch(run_dir)
++            patch_sha = file_sha256(patch) if patch is not None else ""
++            paths = {
++                "trace": "TRACE.md",
++                "verify_report": "artifacts/verify_report.json",
++                "bundle": "failure_bundle.zip" if rc != 0 else "",
++                "stdout_log": out_log.relative_to(run_dir).as_posix(),
++                "stderr_log": err_log.relative_to(run_dir).as_posix(),
++            }
++            if (run_dir / "artifacts" / "PLAN.md").exists():
++                paths["plan"] = "artifacts/PLAN.md"
++            if (run_dir / "artifacts" / "diff.patch").exists():
++                paths["patch"] = "artifacts/diff.patch"
+ 
+             report = {
+                 "result": "PASS" if rc == 0 else "FAIL",
+                 "gate": "lite",
+-                "commands": [{"cmd": " ".join(cmd), "exit_code": rc}],
+-                "failures": [] if rc == 0 else [{"kind": "verify", "id": "verify_repo", "message": "verify_repo returned non-zero"}],
+-                "artifacts": {
+-                    "trace": "TRACE.md",
+-                    "bundle": "failure_bundle.zip" if rc != 0 else "",
+-                    "stdout_log": out_log.as_posix(),
+-                    "stderr_log": err_log.as_posix(),
+-                },
++                "iteration": iteration,
++                "max_iterations": max_iterations,
++                "patch_sha256": patch_sha,
++                "commands": [
++                    {
++                        "cmd": " ".join(cmd),
++                        "exit_code": rc,
++                        "stdout_log": out_log.relative_to(run_dir).as_posix(),
++                        "stderr_log": err_log.relative_to(run_dir).as_posix(),
++                    }
++                ],
++                "failures": [] if rc == 0 else _extract_verify_failures(out, err),
++                "paths": paths,
++                "artifacts": paths,
+             }
+             write_json(run_dir / "artifacts" / "verify_report.json", report)
+-            append_event(run_dir, "Local Verifier", "verify_complete", "artifacts/verify_report.json", rc=rc)
++            append_event(
++                run_dir,
++                "Local Verifier",
++                "verify_complete",
++                "artifacts/verify_report.json",
++                rc=rc,
++                iteration=iteration,
++            )
+ 
+             if rc != 0:
++                append_event(
++                    run_dir,
++                    "Local Verifier",
++                    "VERIFY_FAILED",
++                    "artifacts/verify_report.json",
++                    rc=rc,
++                    iteration=iteration,
++                )
+                 run_doc["status"] = "fail"
+                 run_doc["blocked_reason"] = "verify_failed"
+                 save_run_doc(run_dir, run_doc)
+-                bundle = make_failure_bundle(run_dir)
++                bundle, mode = ensure_failure_bundle(run_dir)
++                append_event(
++                    run_dir,
++                    "Local Verifier",
++                    "BUNDLE_CREATED",
++                    "failure_bundle.zip",
++                    mode=mode,
++                )
+                 write_pointer(LAST_BUNDLE_POINTER, bundle)
+-                append_event(run_dir, "Local Verifier", "failure_bundle_created", "failure_bundle.zip")
++                fail_gate = current_gate(run_dir, run_doc)
++                dispatch = ctcp_dispatch.dispatch_once(run_dir, run_doc, fail_gate, ROOT)
++                dispatch_status = str(dispatch.get("status", ""))
++                if dispatch_status == "outbox_created":
++                    outbox_path = str(dispatch.get("path", ""))
++                    append_event(
++                        run_dir,
++                        str(dispatch.get("role", "fixer")),
++                        "OUTBOX_PROMPT_CREATED",
++                        outbox_path,
++                        target_path=str(dispatch.get("target_path", "")),
++                        action=str(dispatch.get("action", "")),
++                        provider=str(dispatch.get("provider", "")),
++                    )
++                    print(f"[ctcp_orchestrate] outbox prompt created: {outbox_path}")
++                elif dispatch_status == "outbox_exists":
++                    outbox_path = str(dispatch.get("path", ""))
++                    if outbox_path:
++                        print(f"[ctcp_orchestrate] waiting for outbox response: {outbox_path}")
++                elif dispatch_status == "budget_exceeded":
++                    append_event(
++                        run_dir,
++                        "Local Orchestrator",
++                        "STOP_BUDGET_EXCEEDED",
++                        "artifacts/dispatch_config.json",
++                        reason=str(dispatch.get("reason", "")),
++                        provider=str(dispatch.get("provider", "")),
++                    )
+                 print(f"[ctcp_orchestrate] FAIL: verify failed, bundle={bundle}")
+                 return 1
+ 
+             run_doc["status"] = "pass"
+             run_doc.pop("blocked_reason", None)
+             save_run_doc(run_dir, run_doc)
++            append_event(
++                run_dir,
++                "Local Verifier",
++                "VERIFY_PASSED",
++                "artifacts/verify_report.json",
++                rc=rc,
++                iteration=iteration,
++            )
+             append_event(run_dir, "Local Verifier", "run_pass", "artifacts/verify_report.json")
+             print("[ctcp_orchestrate] PASS: verify succeeded")
+             return 0
+@@ -646,7 +1150,7 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
+                 action=str(dispatch.get("action", "")),
+                 provider=str(dispatch.get("provider", "")),
+             )
+-            run_doc["status"] = "blocked"
++            run_doc["status"] = "fail" if state == "fail" else "blocked"
+             run_doc["blocked_reason"] = reason
+             save_run_doc(run_dir, run_doc)
+             print(f"[ctcp_orchestrate] blocked: {reason} (owner={owner}, path={path})")
+@@ -654,7 +1158,7 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
+             return 0
+ 
+         if dispatch_status == "outbox_exists":
+-            run_doc["status"] = "blocked"
++            run_doc["status"] = "fail" if state == "fail" else "blocked"
+             run_doc["blocked_reason"] = reason
+             save_run_doc(run_dir, run_doc)
+             existing_path = str(dispatch.get("path", ""))
+diff --git a/simlab/scenarios/S15_lite_fail_produces_bundle.yaml b/simlab/scenarios/S15_lite_fail_produces_bundle.yaml
+new file mode 100644
+index 0000000..ecf3466
+--- /dev/null
++++ b/simlab/scenarios/S15_lite_fail_produces_bundle.yaml
+@@ -0,0 +1,73 @@
++{
++  "id": "S15_lite_fail_produces_bundle",
++  "name": "lite orchestrator verify fail must produce valid failure bundle",
++  "suite": "lite",
++  "steps": [
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-fail-bundle > artifacts/_s15_newrun.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import shutil, json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; rev=r/'reviews'; art.mkdir(parents=True, exist_ok=True); rev.mkdir(parents=True, exist_ok=True); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_minimal_patch_verify','selected_version':'1.0','candidates':[{'workflow_id':'wf_minimal_patch_verify','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-fail-bundle','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':1,'max_total_bytes':5000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); ctx={'schema_version':'ctcp-context-pack-v1','goal':'simlab-fail-bundle','repo_slug':'ctcp','summary':'simlab','files':[],'omitted':[]}; (art/'context_pack.json').write_text(json.dumps(ctx, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'PLAN_draft.md').write_text('# draft\\n', encoding='utf-8'); (art/'PLAN.md').write_text('Status: SIGNED\\nScope-Allow: README.md\\nScope-Deny: none\\nGates: lite\\nStop: max_iterations=2\\nBudgets: max_files=5,max_total_bytes=20000\\nSteps: patch->verify\\n', encoding='utf-8'); (rev/'review_contract.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); (rev/'review_cost.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); shutil.copy2('tests/fixtures/patches/lite_fail_bad_readme_link.patch', art/'diff.patch')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 16 > artifacts/_s15_advance.out.txt 2>&1",
++        "expect_exit": "nonzero"
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import zipfile, shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); b=r/'failure_bundle.zip'; vr=r/'artifacts'/'verify_report.json'; ev=r/'events.jsonl'; ob=sorted((r/'outbox').glob('*.md')); assert b.exists(), str(b); assert vr.exists(), str(vr); assert ob, 'missing fixer outbox prompt'; req={'TRACE.md','artifacts/verify_report.json','artifacts/PLAN.md','artifacts/diff.patch','events.jsonl'}; names=set(zipfile.ZipFile(b).namelist()); miss=sorted(req-names); assert not miss, str(miss); shutil.copy2(b, 'artifacts/_s15_failure_bundle.zip'); shutil.copy2(vr, 'artifacts/_s15_verify_report.json'); shutil.copy2(ev, 'artifacts/_s15_events.jsonl'); shutil.copy2(ob[0], 'artifacts/_s15_outbox_prompt.md')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_path": {
++        "path": "artifacts/_s15_failure_bundle.zip",
++        "exists": true
++      }
++    },
++    {
++      "expect_path": {
++        "path": "artifacts/_s15_verify_report.json",
++        "exists": true
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s15_verify_report.json",
++        "includes": [
++          "\"result\": \"FAIL\"",
++          "\"failures\": [",
++          "\"paths\": {"
++        ]
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s15_outbox_prompt.md",
++        "includes": [
++          "Role: fixer",
++          "failure_bundle.zip",
++          "write to: artifacts/diff.patch"
++        ]
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s15_events.jsonl",
++        "includes": [
++          "VERIFY_STARTED",
++          "VERIFY_FAILED",
++          "BUNDLE_CREATED"
++        ]
++      }
++    }
++  ]
++}
+diff --git a/simlab/scenarios/S16_lite_fixer_loop_pass.yaml b/simlab/scenarios/S16_lite_fixer_loop_pass.yaml
+new file mode 100644
+index 0000000..3747603
+--- /dev/null
++++ b/simlab/scenarios/S16_lite_fixer_loop_pass.yaml
+@@ -0,0 +1,61 @@
++{
++  "id": "S16_lite_fixer_loop_pass",
++  "name": "lite fixer loop should pass after replacing failed patch",
++  "suite": "lite",
++  "steps": [
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-fixer-loop > artifacts/_s16_newrun.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import shutil, json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; rev=r/'reviews'; art.mkdir(parents=True, exist_ok=True); rev.mkdir(parents=True, exist_ok=True); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_minimal_patch_verify','selected_version':'1.0','candidates':[{'workflow_id':'wf_minimal_patch_verify','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-fixer-loop','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':1,'max_total_bytes':5000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); ctx={'schema_version':'ctcp-context-pack-v1','goal':'simlab-fixer-loop','repo_slug':'ctcp','summary':'simlab','files':[],'omitted':[]}; (art/'context_pack.json').write_text(json.dumps(ctx, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'PLAN_draft.md').write_text('# draft\\n', encoding='utf-8'); (art/'PLAN.md').write_text('Status: SIGNED\\nScope-Allow: README.md\\nScope-Deny: none\\nGates: lite\\nStop: max_iterations=2\\nBudgets: max_files=5,max_total_bytes=20000\\nSteps: patch->verify\\n', encoding='utf-8'); (rev/'review_contract.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); (rev/'review_cost.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); shutil.copy2('tests/fixtures/patches/lite_fail_bad_readme_link.patch', art/'diff.patch')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 16 > artifacts/_s16_advance_fail.out.txt 2>&1",
++        "expect_exit": "nonzero"
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; shutil.copy2('tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch', art/'diff.patch')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 16 > artifacts/_s16_advance_pass.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); shutil.copy2(r/'artifacts'/'verify_report.json', 'artifacts/_s16_verify_report.json'); shutil.copy2(r/'events.jsonl', 'artifacts/_s16_events.jsonl')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s16_verify_report.json",
++        "includes": [
++          "\"result\": \"PASS\""
++        ]
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s16_events.jsonl",
++        "includes": [
++          "VERIFY_FAILED",
++          "BUNDLE_CREATED",
++          "VERIFY_PASSED"
++        ]
++      }
++    }
++  ]
++}
+diff --git a/tests/fixtures/patches/lite_fail_bad_readme_link.patch b/tests/fixtures/patches/lite_fail_bad_readme_link.patch
+new file mode 100644
+index 0000000..b0fe23e
+--- /dev/null
++++ b/tests/fixtures/patches/lite_fail_bad_readme_link.patch
+@@ -0,0 +1,10 @@
++diff --git a/README.md b/README.md
++--- a/README.md
+++++ b/README.md
++@@ -1,4 +1,5 @@
++ # CTCP — ADLC + Multi-Agent Execution Engine
+++[simlab-broken-link](docs/NOPE_SIMLAB.md)
++ 
++ 本仓库核心定位：核心 = ADLC 执行引擎（证据链 + failure bundle），把“项目实现”变成可验证、可回放、可审计的执行闭环。
++ - 默认路径是 **headless**（不依赖 GUI/Qt）。
++
+diff --git a/tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch b/tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch
+new file mode 100644
+index 0000000..98988fc
+--- /dev/null
++++ b/tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch
+@@ -0,0 +1,10 @@
++diff --git a/README.md b/README.md
++--- a/README.md
+++++ b/README.md
++@@ -1,5 +1,4 @@
++ # CTCP — ADLC + Multi-Agent Execution Engine
++-[simlab-broken-link](docs/NOPE_SIMLAB.md)
++ 
++ 本仓库核心定位：核心 = ADLC 执行引擎（证据链 + failure bundle），把“项目实现”变成可验证、可回放、可审计的执行闭环。
++ - 默认路径是 **headless**（不依赖 GUI/Qt）。
++

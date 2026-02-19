@@ -1,0 +1,61 @@
+{
+  "id": "S16_lite_fixer_loop_pass",
+  "name": "lite fixer loop should pass after replacing failed patch",
+  "suite": "lite",
+  "steps": [
+    {
+      "run": {
+        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-fixer-loop > artifacts/_s16_newrun.out.txt 2>&1",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; import shutil, json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; rev=r/'reviews'; art.mkdir(parents=True, exist_ok=True); rev.mkdir(parents=True, exist_ok=True); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_minimal_patch_verify','selected_version':'1.0','candidates':[{'workflow_id':'wf_minimal_patch_verify','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-fixer-loop','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':1,'max_total_bytes':5000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); ctx={'schema_version':'ctcp-context-pack-v1','goal':'simlab-fixer-loop','repo_slug':'ctcp','summary':'simlab','files':[],'omitted':[]}; (art/'context_pack.json').write_text(json.dumps(ctx, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'PLAN_draft.md').write_text('# draft\\n', encoding='utf-8'); (art/'PLAN.md').write_text('Status: SIGNED\\nScope-Allow: README.md\\nScope-Deny: none\\nGates: lite\\nStop: max_iterations=2\\nBudgets: max_files=5,max_total_bytes=20000\\nSteps: patch->verify\\n', encoding='utf-8'); (rev/'review_contract.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); (rev/'review_cost.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); shutil.copy2('tests/fixtures/patches/lite_fail_bad_readme_link.patch', art/'diff.patch')\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 16 > artifacts/_s16_advance_fail.out.txt 2>&1",
+        "expect_exit": "nonzero"
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; shutil.copy2('tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch', art/'diff.patch')\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 16 > artifacts/_s16_advance_pass.out.txt 2>&1",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); shutil.copy2(r/'artifacts'/'verify_report.json', 'artifacts/_s16_verify_report.json'); shutil.copy2(r/'events.jsonl', 'artifacts/_s16_events.jsonl')\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "expect_text": {
+        "path": "artifacts/_s16_verify_report.json",
+        "includes": [
+          "\"result\": \"PASS\""
+        ]
+      }
+    },
+    {
+      "expect_text": {
+        "path": "artifacts/_s16_events.jsonl",
+        "includes": [
+          "VERIFY_FAILED",
+          "BUNDLE_CREATED",
+          "VERIFY_PASSED"
+        ]
+      }
+    }
+  ]
+}

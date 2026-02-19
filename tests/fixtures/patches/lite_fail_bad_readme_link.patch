@@ -1,0 +1,10 @@
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1,4 +1,5 @@
+ # CTCP — ADLC + Multi-Agent Execution Engine
++[simlab-broken-link](docs/NOPE_SIMLAB.md)
+ 
+ 本仓库核心定位：核心 = ADLC 执行引擎（证据链 + failure bundle），把“项目实现”变成可验证、可回放、可审计的执行闭环。
+ - 默认路径是 **headless**（不依赖 GUI/Qt）。
+

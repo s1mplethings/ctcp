@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import zipfile
@@ -17,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 POINTERS_DIR = ROOT / "meta" / "run_pointers"
 LAST_RUN_POINTER = POINTERS_DIR / "LAST_RUN.txt"
 LAST_BUNDLE_POINTER = POINTERS_DIR / "LAST_BUNDLE.txt"
+DEFAULT_MAX_ITERATIONS = 3
 
 try:
     from tools.run_paths import get_repo_slug, make_run_dir
@@ -35,10 +37,15 @@ def now_iso() -> str:
     return dt.datetime.now().isoformat(timespec="seconds")
 
 
-def run_cmd(cmd: list[str], cwd: Path) -> tuple[int, str, str]:
+def run_cmd(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> tuple[int, str, str]:
+    proc_env = os.environ.copy()
+    if env:
+        for k, v in env.items():
+            proc_env[str(k)] = str(v)
     p = subprocess.run(
         cmd,
         cwd=str(cwd),
+        env=proc_env,
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -61,7 +68,7 @@ def read_json(path: Path) -> dict[str, Any]:
 
 
 def default_run_id() -> str:
-    return dt.datetime.now().strftime("%Y%m%d-%H%M%S-orchestrate")
+    return dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f-orchestrate")
 
 
 def file_sha256(path: Path) -> str:
@@ -73,6 +80,31 @@ def file_sha256(path: Path) -> str:
                 break
             h.update(chunk)
     return h.hexdigest()
+
+
+def active_patch_candidate(run_dir: Path) -> Path | None:
+    artifacts = run_dir / "artifacts"
+    patch = artifacts / "diff.patch"
+    patch_v2 = artifacts / "diff.patch.v2"
+    if patch_v2.exists():
+        return patch_v2
+    if patch.exists():
+        return patch
+    return None
+
+
+def ensure_active_patch(run_dir: Path) -> tuple[Path | None, bool]:
+    artifacts = run_dir / "artifacts"
+    patch = artifacts / "diff.patch"
+    patch_v2 = artifacts / "diff.patch.v2"
+    if patch_v2.exists():
+        if (not patch.exists()) or file_sha256(patch) != file_sha256(patch_v2):
+            shutil.copy2(patch_v2, patch)
+            return patch, True
+        return patch, False
+    if patch.exists():
+        return patch, False
+    return None, False
 
 
 def normalize_find_mode(value: str) -> str:
@@ -184,6 +216,87 @@ def parse_guardrails(path: Path) -> tuple[bool, str, dict[str, Any]]:
         "max_pages": kv.get("max_pages", ""),
     }
     return True, "ok", policy
+
+
+def _parse_positive_int(text: str) -> int | None:
+    raw = (text or "").strip()
+    if not raw:
+        return None
+    try:
+        value = int(raw)
+    except Exception:
+        return None
+    return value if value > 0 else None
+
+
+def _parse_plan_max_iterations(path: Path) -> int | None:
+    if not path.exists():
+        return None
+    raw = path.read_text(encoding="utf-8", errors="replace")
+    m = re.search(r"max_iterations\s*[:=]\s*(\d+)", raw, flags=re.IGNORECASE)
+    if not m:
+        return None
+    return _parse_positive_int(m.group(1))
+
+
+def resolve_max_iterations(run_dir: Path) -> tuple[int, str]:
+    plan_value = _parse_plan_max_iterations(run_dir / "artifacts" / "PLAN.md")
+    if plan_value is not None:
+        return plan_value, "PLAN.md"
+
+    guardrails = run_dir / "artifacts" / "guardrails.md"
+    ok, _, policy = parse_guardrails(guardrails)
+    if ok:
+        guard_value = _parse_positive_int(str(policy.get("max_iterations", "")))
+        if guard_value is not None:
+            return guard_value, "guardrails.md"
+
+    return DEFAULT_MAX_ITERATIONS, "default"
+
+
+def _tail_summary(text: str, *, max_lines: int = 8, max_chars: int = 500) -> str:
+    lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
+    if not lines:
+        return "(empty)"
+    tail = " | ".join(lines[-max_lines:])
+    tail = tail.replace("`", "'")
+    if len(tail) > max_chars:
+        tail = tail[-max_chars:]
+    return tail
+
+
+def append_command_trace(
+    run_dir: Path,
+    *,
+    phase: str,
+    cmd: list[str],
+    rc: int,
+    stdout: str,
+    stderr: str,
+    stdout_log: Path,
+    stderr_log: Path,
+) -> None:
+    lines = [
+        "",
+        f"### {phase}",
+        f"- ts: {now_iso()}",
+        f"- cmd: {' '.join(cmd)}",
+        f"- exit_code: {rc}",
+        f"- stdout_log: {stdout_log.relative_to(run_dir).as_posix()}",
+        f"- stderr_log: {stderr_log.relative_to(run_dir).as_posix()}",
+        f"- stdout_tail: {_tail_summary(stdout)}",
+        f"- stderr_tail: {_tail_summary(stderr)}",
+    ]
+    with (run_dir / "TRACE.md").open("a", encoding="utf-8") as fh:
+        fh.write("\n".join(lines) + "\n")
+
+
+def repo_dirty_status() -> tuple[bool, list[str]]:
+    rc, out, _ = run_cmd(["git", "status", "--porcelain", "--untracked-files=no"], ROOT)
+    if rc != 0:
+        return True, ["git status --porcelain failed"]
+    rows = [ln.rstrip() for ln in out.splitlines() if ln.strip()]
+    return bool(rows), rows
 
 
 def parse_verdict(path: Path) -> str:
@@ -298,13 +411,62 @@ def validate_externals_pack(goal: str) -> tuple[bool, str, str]:
 
 
 def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
+    artifacts = run_dir / "artifacts"
+    reviews = run_dir / "reviews"
+    patch = artifacts / "diff.patch"
+    patch_marker = artifacts / "patch_apply.json"
+    verify_report = artifacts / "verify_report.json"
+
     if str(run_doc.get("status", "")).lower() == "pass":
         return {"state": "pass", "owner": "", "path": "", "reason": "run already pass"}
     if str(run_doc.get("status", "")).lower() == "fail":
-        return {"state": "fail", "owner": "Fixer", "path": "failure_bundle.zip", "reason": str(run_doc.get("blocked_reason", "run failed"))}
+        candidate = active_patch_candidate(run_dir)
+        if candidate is not None:
+            candidate_sha = file_sha256(candidate)
+            marker_ok = False
+            marker_sha = ""
+            if patch_marker.exists():
+                try:
+                    marker_doc = read_json(patch_marker)
+                    marker_sha = str(marker_doc.get("patch_sha256", ""))
+                    marker_ok = int(marker_doc.get("rc", 1)) == 0
+                except Exception:
+                    marker_ok = False
+                    marker_sha = ""
 
-    artifacts = run_dir / "artifacts"
-    reviews = run_dir / "reviews"
+            if (not marker_ok) or (marker_sha != candidate_sha):
+                return {
+                    "state": "ready_apply",
+                    "owner": "Local Orchestrator",
+                    "path": "artifacts/diff.patch",
+                    "reason": "new fixer patch detected after failure",
+                }
+
+            if not verify_report.exists():
+                return {
+                    "state": "ready_verify",
+                    "owner": "Local Verifier",
+                    "path": "artifacts/verify_report.json",
+                    "reason": "applied fixer patch pending verify",
+                }
+            try:
+                report = read_json(verify_report)
+                report_sha = str(report.get("patch_sha256", ""))
+                if report_sha != candidate_sha:
+                    return {
+                        "state": "ready_verify",
+                        "owner": "Local Verifier",
+                        "path": "artifacts/verify_report.json",
+                        "reason": "applied fixer patch pending verify",
+                    }
+            except Exception:
+                return {
+                    "state": "ready_verify",
+                    "owner": "Local Verifier",
+                    "path": "artifacts/verify_report.json",
+                    "reason": "applied fixer patch pending verify",
+                }
+        return {"state": "fail", "owner": "Fixer", "path": "failure_bundle.zip", "reason": str(run_doc.get("blocked_reason", "run failed"))}
 
     guardrails = artifacts / "guardrails.md"
     analysis = artifacts / "analysis.md"
@@ -314,10 +476,8 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
     context_pack = artifacts / "context_pack.json"
     plan_draft = artifacts / "PLAN_draft.md"
     plan = artifacts / "PLAN.md"
-    patch = artifacts / "diff.patch"
     review_contract = reviews / "review_contract.md"
     review_cost = reviews / "review_cost.md"
-    patch_marker = artifacts / "patch_apply.json"
 
     goal = str(run_doc.get("goal", ""))
 
@@ -375,10 +535,10 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
     if not plan.exists() or not plan_signed(plan):
         return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/PLAN.md", "reason": "waiting for signed PLAN.md"}
 
-    if not patch.exists():
+    if not patch.exists() and not (artifacts / "diff.patch.v2").exists():
         return {"state": "blocked", "owner": "PatchMaker", "path": "artifacts/diff.patch", "reason": "waiting for diff.patch"}
 
-    if patch_marker.exists():
+    if patch.exists() and patch_marker.exists():
         try:
             marker = read_json(patch_marker)
             if marker.get("patch_sha256") == file_sha256(patch) and int(marker.get("rc", 1)) == 0:
@@ -396,6 +556,73 @@ def make_failure_bundle(run_dir: Path) -> Path:
             if p.is_file() and p != bundle:
                 zf.write(p, p.relative_to(run_dir).as_posix())
     return bundle
+
+
+def _required_bundle_entries(run_dir: Path) -> list[str]:
+    required = ["TRACE.md", "artifacts/verify_report.json", "events.jsonl"]
+    if (run_dir / "artifacts" / "PLAN.md").exists():
+        required.append("artifacts/PLAN.md")
+    if (run_dir / "artifacts" / "diff.patch").exists():
+        required.append("artifacts/diff.patch")
+    for rel_dir in ("reviews", "outbox"):
+        base = run_dir / rel_dir
+        if not base.exists():
+            continue
+        for p in sorted(base.rglob("*")):
+            if p.is_file():
+                required.append(p.relative_to(run_dir).as_posix())
+    return required
+
+
+def _bundle_contains(bundle: Path, required_entries: list[str]) -> bool:
+    if not bundle.exists():
+        return False
+    try:
+        with zipfile.ZipFile(bundle, "r") as zf:
+            names = set(zf.namelist())
+    except Exception:
+        return False
+    return all(x in names for x in required_entries)
+
+
+def ensure_failure_bundle(run_dir: Path) -> tuple[Path, str]:
+    bundle = run_dir / "failure_bundle.zip"
+    required_entries = _required_bundle_entries(run_dir)
+    if _bundle_contains(bundle, required_entries):
+        return bundle, "validated"
+
+    mode = "created" if not bundle.exists() else "recreated"
+    bundle = make_failure_bundle(run_dir)
+    if not _bundle_contains(bundle, required_entries):
+        with zipfile.ZipFile(bundle, "r") as zf:
+            names = set(zf.namelist())
+        missing = [x for x in required_entries if x not in names]
+        raise SystemExit(f"[ctcp_orchestrate] failure_bundle missing required entries: {missing}")
+    return bundle, mode
+
+
+def _extract_verify_failures(stdout: str, stderr: str) -> list[dict[str, str]]:
+    lines: list[str] = []
+    merged = f"{stdout}\n{stderr}"
+    for raw in merged.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        low = line.lower()
+        if ("error" in low) or ("failed" in low):
+            lines.append(line)
+        if len(lines) >= 8:
+            break
+    if not lines:
+        lines = ["verify_repo returned non-zero"]
+    return [
+        {
+            "kind": "verify",
+            "id": f"verify_repo_{idx+1}",
+            "message": line[:300],
+        }
+        for idx, line in enumerate(lines)
+    ]
 
 
 def verify_cmd() -> list[str]:
@@ -419,6 +646,9 @@ def cmd_new_run(goal: str, run_id: str) -> int:
         "run_id": rid,
         "goal": goal,
         "status": "running",
+        "verify_iterations": 0,
+        "max_iterations": DEFAULT_MAX_ITERATIONS,
+        "max_iterations_source": "default",
         "repo_slug": get_repo_slug(ROOT),
         "repo_root": str(ROOT.resolve()),
         "git_sha": sha,
@@ -491,16 +721,24 @@ def cmd_status(run_dir: Path) -> int:
     sync_outbox_fulfilled_events(run_dir)
     run_doc = load_run_doc(run_dir)
     gate = current_gate(run_dir, run_doc)
+    max_iterations, max_iterations_source = resolve_max_iterations(run_dir)
+    verify_iterations = int(run_doc.get("verify_iterations", 0) or 0)
     preview = ctcp_dispatch.dispatch_preview(run_dir, run_doc, gate)
     latest_outbox = ctcp_dispatch.latest_outbox_prompt_path(run_dir)
     print(f"[ctcp_orchestrate] run_dir={run_dir}")
     print(f"[ctcp_orchestrate] run_status={run_doc.get('status')}")
+    print(
+        f"[ctcp_orchestrate] iterations={verify_iterations}/{max_iterations} "
+        f"(source={max_iterations_source})"
+    )
     if gate["state"] == "blocked":
         print(f"[ctcp_orchestrate] blocked: {gate['reason']}")
     if latest_outbox:
         print(f"[ctcp_orchestrate] outbox prompt created: {latest_outbox}")
     if preview.get("status") == "budget_exceeded":
         print(f"[ctcp_orchestrate] STOP: budget_exceeded ({preview.get('reason', '')})")
+    if str(run_doc.get("blocked_reason", "")) == "max_iterations_exceeded":
+        print("[ctcp_orchestrate] STOP: max_iterations_exceeded")
     print(f"[ctcp_orchestrate] next={gate['state']}")
     print(f"[ctcp_orchestrate] owner={gate['owner']}")
     print(f"[ctcp_orchestrate] path={gate['path']}")
@@ -548,17 +786,157 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
             continue
 
         if state == "ready_apply":
-            patch = run_dir / "artifacts" / "diff.patch"
+            patch, promoted = ensure_active_patch(run_dir)
+            if patch is None:
+                run_doc["status"] = "blocked"
+                run_doc["blocked_reason"] = "missing diff.patch"
+                save_run_doc(run_dir, run_doc)
+                print("[ctcp_orchestrate] blocked: missing diff.patch for apply")
+                return 0
+
+            if promoted:
+                append_event(
+                    run_dir,
+                    "Local Orchestrator",
+                    "FIXER_PATCH_PROMOTED",
+                    "artifacts/diff.patch",
+                    source="artifacts/diff.patch.v2",
+                )
+
+            patch_marker_doc: dict[str, Any] = {}
+            patch_marker = run_dir / "artifacts" / "patch_apply.json"
+            if patch_marker.exists():
+                try:
+                    patch_marker_doc = read_json(patch_marker)
+                except Exception:
+                    patch_marker_doc = {}
+
+            patch_sha = file_sha256(patch)
+            prev_sha = str(patch_marker_doc.get("patch_sha256", ""))
+            prev_ok = int(patch_marker_doc.get("rc", 1)) == 0 if patch_marker_doc else False
+            last_applied_patch = run_dir / "artifacts" / "last_applied.patch"
+            allow_managed_dirty = (
+                str(run_doc.get("status", "")).lower() == "fail"
+                and prev_ok
+                and bool(prev_sha)
+                and prev_sha != patch_sha
+                and last_applied_patch.exists()
+            )
+
+            if allow_managed_dirty:
+                iteration_tag = max(1, int(run_doc.get("verify_iterations", 0) or 0))
+                backup = run_dir / "artifacts" / f"diff.patch.iter{iteration_tag}.bak"
+                if not backup.exists():
+                    shutil.copy2(last_applied_patch, backup)
+                    append_event(
+                        run_dir,
+                        "Local Orchestrator",
+                        "PATCH_BACKUP_CREATED",
+                        backup.relative_to(run_dir).as_posix(),
+                        source="artifacts/last_applied.patch",
+                    )
+
+            dirty, dirty_rows = repo_dirty_status()
+            if dirty and not allow_managed_dirty:
+                run_doc["status"] = "blocked"
+                run_doc["blocked_reason"] = "repo_dirty_before_apply"
+                save_run_doc(run_dir, run_doc)
+                append_event(
+                    run_dir,
+                    "Local Orchestrator",
+                    "APPLY_BLOCKED_DIRTY",
+                    "artifacts/diff.patch",
+                    dirty_count=len(dirty_rows),
+                )
+                append_trace(
+                    run_dir,
+                    "Local Orchestrator: blocked apply due to dirty repo; "
+                    f"dirty_preview={_tail_summary(chr(10).join(dirty_rows), max_lines=8, max_chars=320)}",
+                )
+                print("[ctcp_orchestrate] blocked: repo dirty before apply (clean workspace and retry)")
+                return 0
+
             cmd = ["git", "apply", str(patch)]
             rc, out, err = run_cmd(cmd, ROOT)
             out_log = run_dir / "logs" / "patch_apply.stdout.log"
             err_log = run_dir / "logs" / "patch_apply.stderr.log"
             write_text(out_log, out)
             write_text(err_log, err)
+            append_command_trace(
+                run_dir,
+                phase="patch_apply",
+                cmd=cmd,
+                rc=rc,
+                stdout=out,
+                stderr=err,
+                stdout_log=out_log,
+                stderr_log=err_log,
+            )
+
+            if rc != 0 and prev_ok and prev_sha and prev_sha != patch_sha:
+                if last_applied_patch.exists():
+                    append_event(
+                        run_dir,
+                        "Local Orchestrator",
+                        "PATCH_REVERT_STARTED",
+                        "artifacts/last_applied.patch",
+                        reason="retry apply after failure",
+                    )
+                    revert_cmd = ["git", "apply", "-R", str(last_applied_patch)]
+                    rr, rout, rerr = run_cmd(revert_cmd, ROOT)
+                    revert_out = run_dir / "logs" / "patch_revert.stdout.log"
+                    revert_err = run_dir / "logs" / "patch_revert.stderr.log"
+                    write_text(revert_out, rout)
+                    write_text(revert_err, rerr)
+                    append_command_trace(
+                        run_dir,
+                        phase="patch_revert",
+                        cmd=revert_cmd,
+                        rc=rr,
+                        stdout=rout,
+                        stderr=rerr,
+                        stdout_log=revert_out,
+                        stderr_log=revert_err,
+                    )
+                    if rr == 0:
+                        append_event(
+                            run_dir,
+                            "Local Orchestrator",
+                            "PATCH_REVERTED",
+                            "artifacts/last_applied.patch",
+                            cmd=" ".join(revert_cmd),
+                            rc=rr,
+                        )
+                        cmd = ["git", "apply", str(patch)]
+                        rc, out, err = run_cmd(cmd, ROOT)
+                        out_log = run_dir / "logs" / "patch_apply_retry.stdout.log"
+                        err_log = run_dir / "logs" / "patch_apply_retry.stderr.log"
+                        write_text(out_log, out)
+                        write_text(err_log, err)
+                        append_command_trace(
+                            run_dir,
+                            phase="patch_apply_retry",
+                            cmd=cmd,
+                            rc=rc,
+                            stdout=out,
+                            stderr=err,
+                            stdout_log=out_log,
+                            stderr_log=err_log,
+                        )
+                    else:
+                        append_event(
+                            run_dir,
+                            "Local Orchestrator",
+                            "PATCH_REVERT_FAILED",
+                            "artifacts/last_applied.patch",
+                            cmd=" ".join(revert_cmd),
+                            rc=rr,
+                        )
+
             write_json(
                 run_dir / "artifacts" / "patch_apply.json",
                 {
-                    "patch_sha256": file_sha256(patch),
+                    "patch_sha256": patch_sha,
                     "cmd": " ".join(cmd),
                     "rc": rc,
                     "stdout_log": out_log.as_posix(),
@@ -573,45 +951,171 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
                 save_run_doc(run_dir, run_doc)
                 print("[ctcp_orchestrate] blocked: patch apply failed (see logs/patch_apply.*.log)")
                 return 0
+            shutil.copy2(patch, run_dir / "artifacts" / "last_applied.patch")
             steps += 1
             continue
 
         if state == "ready_verify":
+            max_iterations, max_source = resolve_max_iterations(run_dir)
+            verify_iterations = int(run_doc.get("verify_iterations", 0) or 0)
+            if verify_iterations >= max_iterations:
+                run_doc["status"] = "blocked"
+                run_doc["blocked_reason"] = "max_iterations_exceeded"
+                run_doc["max_iterations"] = max_iterations
+                run_doc["max_iterations_source"] = max_source
+                save_run_doc(run_dir, run_doc)
+                append_event(
+                    run_dir,
+                    "Local Verifier",
+                    "STOP_MAX_ITERATIONS",
+                    "artifacts/verify_report.json",
+                    verify_iterations=verify_iterations,
+                    max_iterations=max_iterations,
+                    source=max_source,
+                )
+                print(
+                    f"[ctcp_orchestrate] STOP: max_iterations_exceeded "
+                    f"({verify_iterations}/{max_iterations}, source={max_source})"
+                )
+                return 0
+
+            iteration = verify_iterations + 1
+            run_doc["verify_iterations"] = iteration
+            run_doc["max_iterations"] = max_iterations
+            run_doc["max_iterations_source"] = max_source
+            save_run_doc(run_dir, run_doc)
+
             cmd = verify_cmd()
-            rc, out, err = run_cmd(cmd, ROOT)
+            append_event(
+                run_dir,
+                "Local Verifier",
+                "VERIFY_STARTED",
+                "artifacts/verify_report.json",
+                cmd=" ".join(cmd),
+                iteration=iteration,
+                max_iterations=max_iterations,
+            )
+            rc, out, err = run_cmd(cmd, ROOT, env={"CTCP_SKIP_LITE_REPLAY": "1"})
             out_log = run_dir / "logs" / "verify.stdout.log"
             err_log = run_dir / "logs" / "verify.stderr.log"
             write_text(out_log, out)
             write_text(err_log, err)
+            append_command_trace(
+                run_dir,
+                phase=f"verify(iteration={iteration})",
+                cmd=cmd,
+                rc=rc,
+                stdout=out,
+                stderr=err,
+                stdout_log=out_log,
+                stderr_log=err_log,
+            )
+
+            patch, _ = ensure_active_patch(run_dir)
+            patch_sha = file_sha256(patch) if patch is not None else ""
+            paths = {
+                "trace": "TRACE.md",
+                "verify_report": "artifacts/verify_report.json",
+                "bundle": "failure_bundle.zip" if rc != 0 else "",
+                "stdout_log": out_log.relative_to(run_dir).as_posix(),
+                "stderr_log": err_log.relative_to(run_dir).as_posix(),
+            }
+            if (run_dir / "artifacts" / "PLAN.md").exists():
+                paths["plan"] = "artifacts/PLAN.md"
+            if (run_dir / "artifacts" / "diff.patch").exists():
+                paths["patch"] = "artifacts/diff.patch"
 
             report = {
                 "result": "PASS" if rc == 0 else "FAIL",
                 "gate": "lite",
-                "commands": [{"cmd": " ".join(cmd), "exit_code": rc}],
-                "failures": [] if rc == 0 else [{"kind": "verify", "id": "verify_repo", "message": "verify_repo returned non-zero"}],
-                "artifacts": {
-                    "trace": "TRACE.md",
-                    "bundle": "failure_bundle.zip" if rc != 0 else "",
-                    "stdout_log": out_log.as_posix(),
-                    "stderr_log": err_log.as_posix(),
-                },
+                "iteration": iteration,
+                "max_iterations": max_iterations,
+                "patch_sha256": patch_sha,
+                "commands": [
+                    {
+                        "cmd": " ".join(cmd),
+                        "exit_code": rc,
+                        "stdout_log": out_log.relative_to(run_dir).as_posix(),
+                        "stderr_log": err_log.relative_to(run_dir).as_posix(),
+                    }
+                ],
+                "failures": [] if rc == 0 else _extract_verify_failures(out, err),
+                "paths": paths,
+                "artifacts": paths,
             }
             write_json(run_dir / "artifacts" / "verify_report.json", report)
-            append_event(run_dir, "Local Verifier", "verify_complete", "artifacts/verify_report.json", rc=rc)
+            append_event(
+                run_dir,
+                "Local Verifier",
+                "verify_complete",
+                "artifacts/verify_report.json",
+                rc=rc,
+                iteration=iteration,
+            )
 
             if rc != 0:
+                append_event(
+                    run_dir,
+                    "Local Verifier",
+                    "VERIFY_FAILED",
+                    "artifacts/verify_report.json",
+                    rc=rc,
+                    iteration=iteration,
+                )
                 run_doc["status"] = "fail"
                 run_doc["blocked_reason"] = "verify_failed"
                 save_run_doc(run_dir, run_doc)
-                bundle = make_failure_bundle(run_dir)
+                bundle, mode = ensure_failure_bundle(run_dir)
+                append_event(
+                    run_dir,
+                    "Local Verifier",
+                    "BUNDLE_CREATED",
+                    "failure_bundle.zip",
+                    mode=mode,
+                )
                 write_pointer(LAST_BUNDLE_POINTER, bundle)
-                append_event(run_dir, "Local Verifier", "failure_bundle_created", "failure_bundle.zip")
+                fail_gate = current_gate(run_dir, run_doc)
+                dispatch = ctcp_dispatch.dispatch_once(run_dir, run_doc, fail_gate, ROOT)
+                dispatch_status = str(dispatch.get("status", ""))
+                if dispatch_status == "outbox_created":
+                    outbox_path = str(dispatch.get("path", ""))
+                    append_event(
+                        run_dir,
+                        str(dispatch.get("role", "fixer")),
+                        "OUTBOX_PROMPT_CREATED",
+                        outbox_path,
+                        target_path=str(dispatch.get("target_path", "")),
+                        action=str(dispatch.get("action", "")),
+                        provider=str(dispatch.get("provider", "")),
+                    )
+                    print(f"[ctcp_orchestrate] outbox prompt created: {outbox_path}")
+                elif dispatch_status == "outbox_exists":
+                    outbox_path = str(dispatch.get("path", ""))
+                    if outbox_path:
+                        print(f"[ctcp_orchestrate] waiting for outbox response: {outbox_path}")
+                elif dispatch_status == "budget_exceeded":
+                    append_event(
+                        run_dir,
+                        "Local Orchestrator",
+                        "STOP_BUDGET_EXCEEDED",
+                        "artifacts/dispatch_config.json",
+                        reason=str(dispatch.get("reason", "")),
+                        provider=str(dispatch.get("provider", "")),
+                    )
                 print(f"[ctcp_orchestrate] FAIL: verify failed, bundle={bundle}")
                 return 1
 
             run_doc["status"] = "pass"
             run_doc.pop("blocked_reason", None)
             save_run_doc(run_dir, run_doc)
+            append_event(
+                run_dir,
+                "Local Verifier",
+                "VERIFY_PASSED",
+                "artifacts/verify_report.json",
+                rc=rc,
+                iteration=iteration,
+            )
             append_event(run_dir, "Local Verifier", "run_pass", "artifacts/verify_report.json")
             print("[ctcp_orchestrate] PASS: verify succeeded")
             return 0
@@ -646,7 +1150,7 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
                 action=str(dispatch.get("action", "")),
                 provider=str(dispatch.get("provider", "")),
             )
-            run_doc["status"] = "blocked"
+            run_doc["status"] = "fail" if state == "fail" else "blocked"
             run_doc["blocked_reason"] = reason
             save_run_doc(run_dir, run_doc)
             print(f"[ctcp_orchestrate] blocked: {reason} (owner={owner}, path={path})")
@@ -654,7 +1158,7 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
             return 0
 
         if dispatch_status == "outbox_exists":
-            run_doc["status"] = "blocked"
+            run_doc["status"] = "fail" if state == "fail" else "blocked"
             run_doc["blocked_reason"] = reason
             save_run_doc(run_dir, run_doc)
             existing_path = str(dispatch.get("path", ""))

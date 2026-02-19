@@ -128,11 +128,25 @@ result: "PASS"|"FAIL"
 
 gate: "lite"|"full"
 
+iteration: <int>
+
+max_iterations: <int>
+
 commands[]: { "cmd": "...", "exit_code": int }
 
 failures[]: { "kind": "...", "id": "...", "message": "..." }
 
-artifacts: { "trace": "TRACE.md", "bundle": "failure_bundle.zip"? }
+paths: {
+  "trace": "TRACE.md",
+  "verify_report": "artifacts/verify_report.json",
+  "bundle": "failure_bundle.zip"?,
+  "stdout_log": "logs/verify.stdout.log",
+  "stderr_log": "logs/verify.stderr.log",
+  "plan": "artifacts/PLAN.md"?,
+  "patch": "artifacts/diff.patch"?
+}
+
+(compat) `artifacts` MAY mirror `paths`.
 
 J) events.jsonl
 
@@ -182,3 +196,33 @@ Hard constraints:
 - Only write requested target artifact in run_dir.
 - Do not modify repo files.
 - Follow role template output keys (for example `Verdict: APPROVE|BLOCK`, `Status: SIGNED`, patch only `artifacts/diff.patch`).
+
+M) failure_bundle.zip (on verify FAIL)
+
+Minimum bundle content:
+
+TRACE.md
+
+artifacts/verify_report.json
+
+events.jsonl
+
+artifacts/PLAN.md (if exists)
+
+artifacts/diff.patch (if exists)
+
+reviews/* (if exists)
+
+outbox/* (if exists)
+
+Optional:
+
+logs/**
+
+snapshot/**
+
+Event requirements around verify/bundle:
+- `VERIFY_STARTED`
+- `VERIFY_FAILED` (on non-zero verify)
+- `BUNDLE_CREATED` (bundle created or validated/recreated)
+- `VERIFY_PASSED` (on zero verify)

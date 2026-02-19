@@ -26,6 +26,10 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
 python scripts\adlc_run.py --goal "your-goal" --force
 ```
 
+项目级执行顺序（foundation-first）见：
+- `docs/25_project_plan.md`
+- `meta/backlog/execution_queue.json`
+
 1) 生成任务单（DoD/验收先行）
 ```powershell
 python tools\ctcp_assistant.py init-task "your-goal"

@@ -1,0 +1,315 @@
+{
+  "version": 1,
+  "principles": [
+    "foundation_first",
+    "doc_first",
+    "gated_by_verify"
+  ],
+  "layers": [
+    "L0",
+    "L1",
+    "L2",
+    "L3",
+    "L4"
+  ],
+  "items": [
+    {
+      "id": "L0-CONTRACT-001",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "Core contract and doc-index baseline",
+      "owner_role": "Chair/Planner",
+      "deps": [],
+      "dod": [
+        "docs/00_CORE.md and docs/02_workflow.md are consistent",
+        "README doc index check passes",
+        "workflow gate enforces CURRENT.md + AI contract presence"
+      ],
+      "artifacts": {
+        "produces": [
+          "docs/00_CORE.md",
+          "docs/02_workflow.md",
+          "README.md"
+        ],
+        "tests": [
+          "python scripts/sync_doc_links.py --check",
+          "python scripts/workflow_checks.py"
+        ]
+      },
+      "status": "done",
+      "notes": "Contract-first baseline already in repo and enforced by verify_repo."
+    },
+    {
+      "id": "L0-RUNPATH-001",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "External run_dir contract and pointer-only repo policy",
+      "owner_role": "Local Orchestrator",
+      "deps": [
+        "L0-CONTRACT-001"
+      ],
+      "dod": [
+        "run_dir is outside repo (CTCP_RUNS_ROOT)",
+        "repo stores only meta/run_pointers/*",
+        "anti-pollution gate fails on in-repo run/build outputs"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/run_pointers/LAST_RUN.txt",
+          "scripts/verify_repo.ps1",
+          "scripts/verify_repo.sh"
+        ],
+        "tests": [
+          "scripts/verify_repo.* anti-pollution gate"
+        ]
+      },
+      "status": "done",
+      "notes": "External run path and anti-pollution checks are active."
+    },
+    {
+      "id": "L0-PLAN-001",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "Project-level foundation-first queue and planning docs",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "L0-CONTRACT-001",
+        "L0-RUNPATH-001"
+      ],
+      "dod": [
+        "execution_queue.json exists and is current authority",
+        "docs/25_project_plan.md explains queue vs CURRENT vs run PLAN",
+        "meta/tasks/TEMPLATE.md contains queue item fields"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "docs/25_project_plan.md",
+          "meta/tasks/TEMPLATE.md"
+        ],
+        "tests": [
+          "python scripts/sync_doc_links.py --check",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "doing",
+      "notes": "This task updates long-horizon project planning and queue discipline."
+    },
+    {
+      "id": "L1-ORCH-001",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Artifact-driven orchestrator gates",
+      "owner_role": "Local Orchestrator",
+      "deps": [
+        "L0-CONTRACT-001",
+        "L0-RUNPATH-001"
+      ],
+      "dod": [
+        "new-run/status/advance follow artifact gates",
+        "find_result resolver-first gate exists",
+        "review approve gate enforced before signed PLAN execution"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_orchestrate.py",
+          "RUN.json",
+          "events.jsonl"
+        ],
+        "tests": [
+          "simlab lite orchestrator scenarios",
+          "scripts/verify_repo.*"
+        ]
+      },
+      "status": "done",
+      "notes": "Implemented and regression-covered in recent lite suites."
+    },
+    {
+      "id": "L1-LIB-001",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Librarian file_request to context_pack budget path",
+      "owner_role": "Local Librarian",
+      "deps": [
+        "L1-ORCH-001"
+      ],
+      "dod": [
+        "ctcp-file-request-v1 input accepted",
+        "ctcp-context-pack-v1 output produced with budget enforcement",
+        "omitted reasons include too_large/denied/irrelevant"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_librarian.py",
+          "artifacts/context_pack.json"
+        ],
+        "tests": [
+          "S12/S14 lite scenarios"
+        ]
+      },
+      "status": "done",
+      "notes": "Budgeted context_pack path is implemented and covered."
+    },
+    {
+      "id": "L1-DISP-001",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Dispatcher/provider bridge with manual outbox",
+      "owner_role": "Local Orchestrator",
+      "deps": [
+        "L1-ORCH-001",
+        "L1-LIB-001"
+      ],
+      "dod": [
+        "dispatch_config controls role providers",
+        "manual_outbox prompts generated with target-path constraints",
+        "local_exec is librarian-only",
+        "outbox budget limit enforced"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_dispatch.py",
+          "tools/providers/manual_outbox.py",
+          "tools/providers/local_exec.py",
+          "artifacts/dispatch_config.json"
+        ],
+        "tests": [
+          "S13/S14 lite scenarios"
+        ]
+      },
+      "status": "done",
+      "notes": "Manual outbox and local librarian auto-exec are active."
+    },
+    {
+      "id": "L2-FAIL-001",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "FAIL -> failure_bundle -> fix loop -> PASS hard closure",
+      "owner_role": "Local Verifier",
+      "deps": [
+        "L1-ORCH-001",
+        "L1-DISP-001"
+      ],
+      "dod": [
+        "verify fail writes FAIL report with failures[]",
+        "failure_bundle.zip has required minimum contents",
+        "fixer refill patch in same run can converge to VERIFY_PASSED and run pass"
+      ],
+      "artifacts": {
+        "produces": [
+          "failure_bundle.zip",
+          "artifacts/verify_report.json",
+          "events.jsonl"
+        ],
+        "tests": [
+          "S15_lite_fail_produces_bundle",
+          "S16_lite_fixer_loop_pass"
+        ]
+      },
+      "status": "done",
+      "notes": "S15/S16 now hard-lock failure bundle creation and fixer loop convergence to VERIFY_PASSED."
+    },
+    {
+      "id": "L2-CONTRAST-001",
+      "layer": "L2",
+      "priority": "P1",
+      "title": "Contrast artifact auto-summary from verify evidence",
+      "owner_role": "Local Verifier",
+      "deps": [
+        "L2-FAIL-001"
+      ],
+      "dod": [
+        "contrast summary generated from verify_report + trace",
+        "summary points to actionable failure classes",
+        "summary captured in run artifacts and LAST report references"
+      ],
+      "artifacts": {
+        "produces": [
+          "artifacts/contrast_summary.md"
+        ],
+        "tests": [
+          "new lite scenario for contrast generation"
+        ]
+      },
+      "status": "todo",
+      "notes": "Not yet implemented."
+    },
+    {
+      "id": "L3-RELEASE-001",
+      "layer": "L3",
+      "priority": "P1",
+      "title": "Deploy/merge and release report closure",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "L2-FAIL-001"
+      ],
+      "dod": [
+        "run pass can produce release report",
+        "report links signed plan, verify evidence, and scope summary",
+        "merge/deploy handoff checklist documented"
+      ],
+      "artifacts": {
+        "produces": [
+          "artifacts/release_report.md"
+        ],
+        "tests": [
+          "verify_repo contract check extension"
+        ]
+      },
+      "status": "todo",
+      "notes": "Pending."
+    },
+    {
+      "id": "L3-WF-HISTORY-001",
+      "layer": "L3",
+      "priority": "P1",
+      "title": "Workflow registry last-known-good and history sedimentation",
+      "owner_role": "Resolver",
+      "deps": [
+        "L2-FAIL-001",
+        "L3-RELEASE-001"
+      ],
+      "dod": [
+        "successful runs update reusable workflow evidence",
+        "externals candidate inputs can be promoted into registry with review",
+        "history is queryable by resolver without replacing find_result authority"
+      ],
+      "artifacts": {
+        "produces": [
+          "workflow_registry/history/*.json",
+          "workflow_registry/last_known_good.json"
+        ],
+        "tests": [
+          "resolver regression scenarios with history inputs"
+        ]
+      },
+      "status": "todo",
+      "notes": "Design and migration flow pending."
+    },
+    {
+      "id": "L4-OPT-001",
+      "layer": "L4",
+      "priority": "P2",
+      "title": "Global optimization: parallelism, budget strategy, optional GUI suspension",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "L3-WF-HISTORY-001"
+      ],
+      "dod": [
+        "parallel execution policy documented",
+        "token/context budget strategy documented and enforceable",
+        "GUI optional path remains non-blocking for core gates"
+      ],
+      "artifacts": {
+        "produces": [
+          "docs/optimization_plan.md"
+        ],
+        "tests": [
+          "full-gate timing and stability comparison"
+        ]
+      },
+      "status": "todo",
+      "notes": "Post-foundation optimization stage."
+    }
+  ]
+}

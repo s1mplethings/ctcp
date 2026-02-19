@@ -1,23 +1,9 @@
+# DEPRECATED: Module Spec Template (Legacy Path)
 
-# <Module Name>
+This template path is kept for backward compatibility with historical references.
 
-## Purpose
+Current authoritative module-analysis template:
+- `specs/modules/_template.md`
 
-## Inputs
-
-## Outputs
-
-## Process
-
-## Error Handling
-
-## Performance
-
-## Acceptance Criteria
-- Given
-- When
-- Then
-
-## Trace Links
-- docs/...
-- specs/contract_output/...
+Please create new module specs under:
+- `specs/modules/<module>.md`

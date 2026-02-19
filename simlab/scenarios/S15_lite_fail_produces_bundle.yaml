@@ -1,0 +1,73 @@
+{
+  "id": "S15_lite_fail_produces_bundle",
+  "name": "lite orchestrator verify fail must produce valid failure bundle",
+  "suite": "lite",
+  "steps": [
+    {
+      "run": {
+        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-fail-bundle > artifacts/_s15_newrun.out.txt 2>&1",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; import shutil, json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; rev=r/'reviews'; art.mkdir(parents=True, exist_ok=True); rev.mkdir(parents=True, exist_ok=True); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_minimal_patch_verify','selected_version':'1.0','candidates':[{'workflow_id':'wf_minimal_patch_verify','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-fail-bundle','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':1,'max_total_bytes':5000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); ctx={'schema_version':'ctcp-context-pack-v1','goal':'simlab-fail-bundle','repo_slug':'ctcp','summary':'simlab','files':[],'omitted':[]}; (art/'context_pack.json').write_text(json.dumps(ctx, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'PLAN_draft.md').write_text('# draft\\n', encoding='utf-8'); (art/'PLAN.md').write_text('Status: SIGNED\\nScope-Allow: README.md\\nScope-Deny: none\\nGates: lite\\nStop: max_iterations=2\\nBudgets: max_files=5,max_total_bytes=20000\\nSteps: patch->verify\\n', encoding='utf-8'); (rev/'review_contract.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); (rev/'review_cost.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); shutil.copy2('tests/fixtures/patches/lite_fail_bad_readme_link.patch', art/'diff.patch')\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 16 > artifacts/_s15_advance.out.txt 2>&1",
+        "expect_exit": "nonzero"
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; import zipfile, shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); b=r/'failure_bundle.zip'; vr=r/'artifacts'/'verify_report.json'; ev=r/'events.jsonl'; ob=sorted((r/'outbox').glob('*.md')); assert b.exists(), str(b); assert vr.exists(), str(vr); assert ob, 'missing fixer outbox prompt'; req={'TRACE.md','artifacts/verify_report.json','artifacts/PLAN.md','artifacts/diff.patch','events.jsonl'}; names=set(zipfile.ZipFile(b).namelist()); miss=sorted(req-names); assert not miss, str(miss); shutil.copy2(b, 'artifacts/_s15_failure_bundle.zip'); shutil.copy2(vr, 'artifacts/_s15_verify_report.json'); shutil.copy2(ev, 'artifacts/_s15_events.jsonl'); shutil.copy2(ob[0], 'artifacts/_s15_outbox_prompt.md')\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "expect_path": {
+        "path": "artifacts/_s15_failure_bundle.zip",
+        "exists": true
+      }
+    },
+    {
+      "expect_path": {
+        "path": "artifacts/_s15_verify_report.json",
+        "exists": true
+      }
+    },
+    {
+      "expect_text": {
+        "path": "artifacts/_s15_verify_report.json",
+        "includes": [
+          "\"result\": \"FAIL\"",
+          "\"failures\": [",
+          "\"paths\": {"
+        ]
+      }
+    },
+    {
+      "expect_text": {
+        "path": "artifacts/_s15_outbox_prompt.md",
+        "includes": [
+          "Role: fixer",
+          "failure_bundle.zip",
+          "write to: artifacts/diff.patch"
+        ]
+      }
+    },
+    {
+      "expect_text": {
+        "path": "artifacts/_s15_events.jsonl",
+        "includes": [
+          "VERIFY_STARTED",
+          "VERIFY_FAILED",
+          "BUNDLE_CREATED"
+        ]
+      }
+    }
+  ]
+}

@@ -8,6 +8,7 @@ $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $BuildDirLite = Join-Path $Root "build_lite"
 $RunFull = $Full -or ($env:CTCP_FULL_GATE -eq "1")
 $WriteFixtures = ($env:CTCP_WRITE_FIXTURES -eq "1")
+$SkipLiteReplay = ($env:CTCP_SKIP_LITE_REPLAY -eq "1")
 $ModeName = "LITE"
 if ($RunFull) { $ModeName = "FULL" }
 
@@ -169,16 +170,20 @@ Invoke-Step -Name "doc index check (sync doc links --check)" -Block {
   }
 }
 
-Invoke-Step -Name "lite scenario replay" -Block {
-  if ($WriteFixtures) {
-    $RunsRoot = Join-Path $Root "tests\fixtures\adlc_forge_full_bundle\runs\simlab_lite_runs"
-    $SummaryOut = Join-Path $Root "tests\fixtures\adlc_forge_full_bundle\runs\_simlab_lite_summary.json"
-    Invoke-ExternalChecked -Label "lite scenario replay" -Command {
-      python simlab\run.py --suite lite --runs-root $RunsRoot --json-out $SummaryOut
-    }
-  } else {
-    Invoke-ExternalChecked -Label "lite scenario replay" -Command {
-      python simlab\run.py --suite lite
+if ($SkipLiteReplay) {
+  Write-Host "[verify_repo] lite scenario replay skipped (CTCP_SKIP_LITE_REPLAY=1)"
+} else {
+  Invoke-Step -Name "lite scenario replay" -Block {
+    if ($WriteFixtures) {
+      $RunsRoot = Join-Path $Root "tests\fixtures\adlc_forge_full_bundle\runs\simlab_lite_runs"
+      $SummaryOut = Join-Path $Root "tests\fixtures\adlc_forge_full_bundle\runs\_simlab_lite_summary.json"
+      Invoke-ExternalChecked -Label "lite scenario replay" -Command {
+        python simlab\run.py --suite lite --runs-root $RunsRoot --json-out $SummaryOut
+      }
+    } else {
+      Invoke-ExternalChecked -Label "lite scenario replay" -Command {
+        python simlab\run.py --suite lite
+      }
     }
   }
 }

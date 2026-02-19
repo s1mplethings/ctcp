@@ -1,0 +1,1152 @@
+diff --git a/README.md b/README.md
+index bdfca06..5aea0db 100644
+--- a/README.md
++++ b/README.md
+@@ -26,6 +26,10 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
+ python scripts\adlc_run.py --goal "your-goal" --force
+ ```
+ 
++项目级执行顺序（foundation-first）见：
++- `docs/25_project_plan.md`
++- `meta/backlog/execution_queue.json`
++
+ 1) 生成任务单（DoD/验收先行）
+ ```powershell
+ python tools\ctcp_assistant.py init-task "your-goal"
+diff --git a/docs/12_modules_index.md b/docs/12_modules_index.md
+index 507262a..c445a12 100644
+--- a/docs/12_modules_index.md
++++ b/docs/12_modules_index.md
+@@ -1,11 +1,31 @@
++# Modules Index
+ 
+-# Modules Index（模块索引）
++Authoritative module map for CTCP execution flow.
++Contract precedence remains `docs/00_CORE.md`.
+ 
+-| Module | Spec | Trace Links |
+-|---|---|---|
+-| ProjectScanner | [spec](../specs/modules/project_scanner/spec.md) | [architecture](01_architecture.md), [project detection](04_project_detection.md) |
+-| GraphBuilder | [spec](../specs/modules/graph_builder/spec.md) | [architecture](01_architecture.md), [graph schema](../specs/contract_output/graph.schema.json) |
+-| MetaStore | [spec](../specs/modules/meta_store/spec.md) | [meta schema](../specs/contract_output/meta_pipeline_graph.schema.json) |
+-| RunLoader | [spec](../specs/modules/run_loader/spec.md) | [run events](../specs/contract_output/run_events.schema.json) |
+-| QWebChannel Bridge | [spec](../specs/modules/qwebchannel_bridge/spec.md) | [architecture](01_architecture.md) |
+-| Web Renderer | [spec](../specs/modules/web_renderer/spec.md) | [webengine resources](11_webengine_resources.md) |
++## Execution Modules
++
++| Module | Purpose | Inputs / Outputs | Dependencies | Spec |
++|---|---|---|---|---|
++| Orchestrator | Drive artifact-state progression and gates. | In: run artifacts + reviews; Out: `RUN.json`, `events.jsonl`, verify/failure transitions. | Core contract, run-path contract. | [specs/modules/orchestrator.md](../specs/modules/orchestrator.md) |
++| Dispatcher / Providers | Route blocked artifacts to local/manual role actions. | In: gate state + `dispatch_config`; Out: outbox prompts, local execution events. | Orchestrator, role contracts. | [specs/modules/dispatcher_providers.md](../specs/modules/dispatcher_providers.md) |
++| Librarian / Context Pack | Convert `file_request` into budgeted `context_pack`. | In: `artifacts/file_request.json`; Out: `artifacts/context_pack.json`. | Chair file_request and budget policy. | [specs/modules/librarian_context_pack.md](../specs/modules/librarian_context_pack.md) |
++| SimLab | Replay scenarios as deterministic regression evidence. | In: scenario docs; Out: trace, scenario summary, bundles on failure. | Verify entrypoint and scenario contracts. | [specs/modules/simlab.md](../specs/modules/simlab.md) |
++| Verify Repo / Quality Gates | Repository-level acceptance gate. | In: repo state + task contract; Out: pass/fail gate decision. | workflow checks, contract checks, doc-index check. | [specs/modules/verify_repo_quality_gates.md](../specs/modules/verify_repo_quality_gates.md) |
++| Workflow Registry / Resolver | Resolver-first workflow selection authority. | In: goal + `workflow_registry`; Out: `artifacts/find_result.json`. | Local registry/history and contract boundary. | [specs/modules/workflow_registry_resolver.md](../specs/modules/workflow_registry_resolver.md) |
++| Externals Pack / Research | Candidate-only external evidence intake. | In: guardrails + web constraints; Out: `artifacts/find_web.json` or externals pack. | Resolver-first boundary; web constraints. | [specs/modules/externals_pack_research.md](../specs/modules/externals_pack_research.md) |
++
++## Legacy/Supporting Engine Modules
++
++| Module | Purpose | Inputs / Outputs | Dependencies | Spec |
++|---|---|---|---|---|
++| ProjectScanner | Scan project files into a model input set. | In: repo tree; Out: scanned project metadata. | Core scanner conventions. | [specs/modules/project_scanner/spec.md](../specs/modules/project_scanner/spec.md) |
++| GraphBuilder | Build graph structure for visualization/pipeline metadata. | In: scanner/meta outputs; Out: graph contract outputs. | ProjectScanner + MetaStore. | [specs/modules/graph_builder/spec.md](../specs/modules/graph_builder/spec.md) |
++| MetaStore | Persist and expose pipeline metadata. | In: runtime/module metadata; Out: meta graph artifacts. | GraphBuilder consumers. | [specs/modules/meta_store/spec.md](../specs/modules/meta_store/spec.md) |
++| RunLoader | Load and normalize run/event artifacts. | In: run directories + JSONL events; Out: run view model. | External run-dir contract. | [specs/modules/run_loader/spec.md](../specs/modules/run_loader/spec.md) |
++| QWebChannel Bridge | Bridge native/runtime data to web view layer. | In: native model events; Out: bridged web channel payloads. | Web renderer. | [specs/modules/qwebchannel_bridge/spec.md](../specs/modules/qwebchannel_bridge/spec.md) |
++| Web Renderer | Render graph and run views. | In: graph/meta/run data; Out: UI/web representation. | Bridge + frontend assets. | [specs/modules/web_renderer/spec.md](../specs/modules/web_renderer/spec.md) |
++
++## Authoring Template
++
++- Module analysis template: [specs/modules/_template.md](../specs/modules/_template.md)
+diff --git a/meta/reports/LAST.md b/meta/reports/LAST.md
+index 74fbd46..56f763c 100644
+--- a/meta/reports/LAST.md
++++ b/meta/reports/LAST.md
+@@ -1,108 +1,121 @@
+ # Demo Report - LAST
+ 
+ ## Goal
+-- Implement TeamNet dispatcher/provider auto-invocation for missing artifacts:
+-  - local `librarian` auto-exec
+-  - API-role `manual_outbox` prompt generation
+-  - outbox budget stop gate
+-  - outbox refill tracking events
+-- Add lite regressions for dispatcher behavior.
++- Establish project-level layered execution planning (`foundation-first`) so CTCP can be understood, reproduced, and advanced from repo docs alone.
++- Recover missing/scattered planning structure from historical layout without changing runtime logic.
+ 
+ ## Readlist
++- `AGENTS.md`
+ - `ai_context/00_AI_CONTRACT.md`
++- `docs/00_CORE.md`
++- `docs/02_workflow.md`
++- `docs/12_modules_index.md`
++- `docs/03_quality_gates.md`
+ - `README.md`
++- `TREE.md`
++- `meta/tasks/TEMPLATE.md`
++- `meta/tasks/CURRENT.md`
++- `meta/reports/LAST.md`
+ - `BUILD.md`
+ - `PATCH_README.md`
+-- `TREE.md`
+-- `docs/03_quality_gates.md`
+ - `ai_context/problem_registry.md`
+ - `ai_context/decision_log.md`
+-- `docs/00_CORE.md`
+-- `docs/02_workflow.md`
+-- `docs/22_agent_teamnet.md`
+-- `docs/30_artifact_contracts.md`
+-- `meta/tasks/CURRENT.md`
+-- `meta/tasks/TEMPLATE.md`
+ 
+ ## Plan
+-1. Docs/Spec: add dispatcher/provider and outbox contract sections.
+-2. Code: add `ctcp_dispatch` + provider modules and orchestrator integration.
+-3. Tests: add lite scenarios for missing-review outbox and librarian local-exec.
+-4. Verify: run doc index check, simlab lite suite, and `verify_repo`.
+-5. Report: update LAST with demo pointers.
++1. Docs/Spec first:
++   - add project queue authority (`execution_queue.json`)
++   - add project-plan doc (`docs/25_project_plan.md`)
++   - rebuild modules index + module-analysis template/specs.
++2. Task workflow alignment:
++   - enforce queue item binding fields in `TEMPLATE.md` and `CURRENT.md`.
++3. History recovery:
++   - inspect historical planning/index paths and restore useful structure as canonical files or compatibility stub.
++4. Verify:
++   - `sync_doc_links --check`
++   - `verify_repo`
++5. Report:
++   - record evidence and patch path.
+ 
+ ## Timeline / Trace Pointer
+-- External demo run dir:
+-  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-163807-orchestrate`
+-- Demo trace:
+-  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-163807-orchestrate\TRACE.md`
+-- Demo outbox prompt:
+-  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-163807-orchestrate\outbox\001_contract_guardian_review_contract.md`
+-- Demo pointer file:
++- Gate run evidence:
++  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\simlab_runs\20260219-194336`
++- Repo pointer (latest external run pointer file):
+   - `meta/run_pointers/LAST_RUN.txt`
+ 
+ ## Changes
+-- Unified diff patch bundle:
+-  - `PATCHES/20260219-teamnet-dispatch.patch`
+-- Spec/contract docs:
+-  - `docs/22_agent_teamnet.md`: added dispatcher/provider wiring and boundaries.
+-  - `docs/30_artifact_contracts.md`: added `dispatch_config` and `outbox/*.md` contracts.
+-- Dispatcher/provider implementation:
+-  - `scripts/ctcp_dispatch.py` (new): gate->role/action mapping, config loading, provider dispatch, outbox fulfillment detection.
+-  - `tools/providers/manual_outbox.py` (new): template-based prompt generation, dedupe, budget stop.
+-  - `tools/providers/local_exec.py` (new): librarian-only local execution for `context_pack`.
+-  - `tools/providers/__init__.py` (new).
+-- Orchestrator integration:
+-  - `scripts/ctcp_orchestrate.py`:
+-    - creates `artifacts/dispatch_config.json` on `new-run`
+-    - includes `outbox/` in run layout
+-    - `advance` dispatches on blocked/fail gates:
+-      - `LOCAL_EXEC_COMPLETED` / `LOCAL_EXEC_FAILED`
+-      - `OUTBOX_PROMPT_CREATED`
+-      - `STOP_BUDGET_EXCEEDED`
+-    - `status` now prints:
+-      - `outbox prompt created: ...` (when present)
+-      - `STOP: budget_exceeded (...)` (when applicable)
+-    - tracks refill completion via `OUTBOX_PROMPT_FULFILLED`.
+-- Prompt templates (new):
+-  - `agents/prompts/chair_plan_draft.md`
+-  - `agents/prompts/chair_file_request.md`
+-  - `agents/prompts/contract_guardian_review.md`
+-  - `agents/prompts/cost_controller_review.md`
+-  - `agents/prompts/patchmaker_patch.md`
+-  - `agents/prompts/fixer_patch.md`
+-  - `agents/prompts/researcher_find_web.md`
+-  - `agents/prompts/librarian_context_pack.md`
+-- Lite regressions:
+-  - `simlab/scenarios/S12_lite_orchestrate_context_gate.yaml` (updated: pins librarian to manual_outbox for old gate assertion).
+-  - `simlab/scenarios/S13_lite_dispatch_outbox_on_missing_review.yaml` (new).
+-  - `simlab/scenarios/S14_lite_dispatch_local_exec_librarian.yaml` (new).
+-- Task tracking:
+-  - `meta/tasks/CURRENT.md` updated for this dispatcher task.
++- Unified diff patch:
++  - `PATCHES/20260219-foundation-plan-queue.patch`
++- Added project queue authority:
++  - `meta/backlog/execution_queue.json`
++  - layered items (`L0`..`L4`) with deps, dod, artifacts, status (`done/doing/todo/blocked`).
++  - backfilled done/doing items for already delivered components:
++    - orchestrator
++    - librarian context pack
++    - dispatcher/providers + outbox
++    - lite regressions + fail-loop hardening baseline.
++  - added pending key items:
++    - `L2-CONTRAST-001`
++    - `L3-RELEASE-001`
++    - `L3-WF-HISTORY-001`
++    - `L4-OPT-001`
++- Added project-level planning doc:
++  - `docs/25_project_plan.md`
++  - clarifies:
++    - queue vs CURRENT vs run-level PLAN
++    - layer semantics (`L0`..`L4`)
++    - agent scheduling rule (highest-priority item with deps done)
++    - unified DoD rule (`verify_repo` + `LAST.md` evidence)
++    - doc-only minimal reproduction flow.
++- Rebuilt modules authority doc:
++  - `docs/12_modules_index.md`
++  - each module includes: purpose, key IO, dependencies, spec link.
++  - explicitly covers:
++    - orchestrator
++    - dispatcher/providers
++    - librarian/context_pack
++    - simlab
++    - verify_repo/quality gates
++    - workflow_registry/resolver
++    - externals/web research candidate-only.
++- Added module-analysis template and module specs:
++  - `specs/modules/_template.md`
++  - `specs/modules/orchestrator.md`
++  - `specs/modules/dispatcher_providers.md`
++  - `specs/modules/librarian_context_pack.md`
++  - `specs/modules/simlab.md`
++  - `specs/modules/verify_repo_quality_gates.md`
++  - `specs/modules/workflow_registry_resolver.md`
++  - `specs/modules/externals_pack_research.md`
++- Historical structure recovery:
++  - history inspected via `git log --name-status` for planning/index files.
++  - legacy template path retained as compatibility stub:
++    - `specs/templates/module_spec_template.md` (DEPRECATED -> points to `specs/modules/_template.md`).
++  - in-repo historical run artifacts under `meta/runs/*` intentionally not restored (contract requires external runs under `CTCP_RUNS_ROOT`).
++- Updated task scaffolding:
++  - `meta/tasks/TEMPLATE.md` now requires queue binding fields.
++  - `meta/tasks/CURRENT.md` bound to one item (`L0-PLAN-001`) only.
++- Added project-plan discoverability in:
++  - `README.md` (quick-start area link to docs/25 and queue json).
+ 
+ ## Verify
+-- `git worktree add d:\\.c_projects\\adc\\ctcp_patch_check_<ts> HEAD`
+-  - `git -C d:\\.c_projects\\adc\\ctcp_patch_check_<ts> apply --check d:/.c_projects/adc/ctcp/PATCHES/20260219-teamnet-dispatch.patch`
+-  - result: pass (then worktree removed)
+-- `python -m py_compile scripts/ctcp_orchestrate.py scripts/ctcp_dispatch.py scripts/ctcp_librarian.py tools/providers/manual_outbox.py tools/providers/local_exec.py`
+-  - result: pass
+ - `python scripts/sync_doc_links.py --check`
+   - result: `[sync_doc_links] ok`
+-- `python simlab/run.py --suite lite`
+-  - result: `{"passed": 6, "failed": 0, ...}`
+ - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
+-  - result: pass
++  - result: `[verify_repo] OK`
+   - key output:
+-    - ctest lite: `2/2` passed
++    - ctest lite: `2/2` pass
+     - workflow gate: ok
+     - contract checks: ok
+     - doc index check: ok
+-    - lite scenario replay: `{"passed": 6, "failed": 0, ...}`
+-    - final: `[verify_repo] OK`
++    - lite replay: `{"run_dir":".../simlab_runs/20260219-194136","passed":8,"failed":0}`
++- Markdown link sanity scan (docs/meta/specs/README/TREE local links):
++  - result: no broken local links detected.
++- Patch applyability (clean worktree):
++  - `git -C <clean_worktree> apply --check PATCHES/20260219-foundation-plan-queue.patch` passed.
+ 
+ ## Open Questions
+ - None.
+ 
+ ## Next Steps
+-1. If needed, add a dedicated lite case for `budget_exceeded` stop behavior.
+-2. If needed, add richer chair/fixer templates for adjudication and post-failure fix loops.
++1. Move queue-selected item progression into assistant tooling (`ctcp_assistant` / `ctcp_team`) so `CURRENT.md` can be auto-bound from `execution_queue.json`.
++2. Add queue-consistency checks in `verify_repo` (optional hard gate for malformed queue items).
+diff --git a/meta/tasks/CURRENT.md b/meta/tasks/CURRENT.md
+index f6071d8..f7aaf61 100644
+--- a/meta/tasks/CURRENT.md
++++ b/meta/tasks/CURRENT.md
+@@ -1,50 +1,51 @@
+-# Task - teamnet-dispatcher-provider-manual-outbox
++# Task - foundation-first-project-plan-recovery
++
++## Queue Binding
++- Queue Item: `L0-PLAN-001`
++- Layer/Priority: `L0 / P0`
++- Source Queue File: `meta/backlog/execution_queue.json`
+ 
+ ## Context
+-- Add TeamNet dispatcher/provider automation layer on top of the existing orchestrator state machine.
+-- Keep resolver-first and external-run constraints unchanged.
+-- Implement only local pluggable providers without network/API calls:
+-  - `manual_outbox` provider for API roles.
+-  - `local_exec` provider only for local librarian auto-execution.
+-- Add lite regression coverage for dispatcher behavior.
++- Build a project-level layered execution queue and planning docs so CTCP can be understood and advanced from repository documentation alone.
++- Recover historical planning structure where useful, without violating current contracts (`docs/00_CORE.md` first).
++- Keep this task scoped to one queue item (`L0-PLAN-001`) only.
++
++## DoD Mapping (from execution_queue.json)
++- [x] DoD-1: `execution_queue.json exists and is current authority`
++- [x] DoD-2: `docs/25_project_plan.md explains queue vs CURRENT vs run PLAN`
++- [x] DoD-3: `meta/tasks/TEMPLATE.md contains queue item fields`
+ 
+ ## Acceptance (must be checkable)
+ - [x] DoD written (this file complete)
+-- [x] Research logged (if needed): N/A (repo-local contract alignment)
++- [x] Research logged (if needed): N/A (repo-local structure recovery)
+ - [x] Code changes allowed
+ - [x] Patch applies cleanly (`git apply ...`) OR overlay zip applies cleanly
+ - [x] `scripts/verify_repo.*` passes
+ - [x] Demo report updated: `meta/reports/LAST.md`
+ 
+ ## Plan
+-1) Spec-first: update TeamNet/artifact docs for `dispatch_config` and outbox prompt contract.
+-2) Implement dispatcher core + providers (`manual_outbox`, `local_exec`) and orchestrator integration (`status`/`advance`).
+-3) Add prompt templates under `agents/prompts/` for Chair/Guardian/Cost/Patch/Fix/Research (+ librarian template compatibility).
+-4) Add 1-2 lite SimLab scenarios for dispatcher outbox and librarian local-exec behavior.
+-5) Run `python scripts/sync_doc_links.py --check` and `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`.
+-6) Update `meta/reports/LAST.md` with readlist/plan/verify/demo pointer.
++1) Readlist and baseline scan (contracts, modules index, task/report templates).
++2) Spec/docs/meta updates:
++   - add `meta/backlog/execution_queue.json`
++   - add `docs/25_project_plan.md`
++   - upgrade `docs/12_modules_index.md`
++   - add `specs/modules/_template.md` and key module specs
++   - recover historical template path via DEPRECATED stub
++3) Update task template/current binding to queue-item-driven workflow.
++4) Verify and record evidence (`sync_doc_links`, `verify_repo`, clean-worktree patch apply check).
+ 
+ ## Notes / Decisions
+-- `find_result.json` remains the only resolver authority; `find_web` is candidate input only.
+-- Runs remain outside repo under `CTCP_RUNS_ROOT`; repo keeps only run pointers.
+-- No new dependencies.
++- Current worktree is already dirty from previous tasks; this task adds only docs/spec/meta planning structure and does not modify runtime execution logic.
++- Historical in-repo run artifacts (`meta/runs/*`) are intentionally not restored because current contract requires external runs (`CTCP_RUNS_ROOT`).
+ 
+ ## Results
+-- Added dispatcher/provider layer:
+-  - `scripts/ctcp_dispatch.py`
+-  - `tools/providers/manual_outbox.py`
+-  - `tools/providers/local_exec.py`
+-- Integrated dispatch into `scripts/ctcp_orchestrate.py` (`new-run/status/advance`) with:
+-  - auto-created `artifacts/dispatch_config.json`
+-  - `OUTBOX_PROMPT_CREATED` and `OUTBOX_PROMPT_FULFILLED` events
+-  - budget stop (`STOP_BUDGET_EXCEEDED`)
+-  - librarian local-exec path
+-- Added prompt templates under `agents/prompts/`.
+-- Added/updated lite scenarios:
+-  - `S12_lite_orchestrate_context_gate` (updated)
+-  - `S13_lite_dispatch_outbox_on_missing_review` (new)
+-  - `S14_lite_dispatch_local_exec_librarian` (new)
+-- Verification:
+-  - `python scripts/sync_doc_links.py --check` passed
+-  - `python simlab/run.py --suite lite` passed (`6/6`)
+-  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` passed
++- Added project queue authority: `meta/backlog/execution_queue.json`.
++- Added project-level execution plan doc: `docs/25_project_plan.md`.
++- Rebuilt module index as authoritative module map: `docs/12_modules_index.md`.
++- Added module analysis template and key execution module specs under `specs/modules/`.
++- Recovered historical template path with compatibility stub:
++  - `specs/templates/module_spec_template.md` -> points to `specs/modules/_template.md`.
++- Updated task template to enforce queue binding fields.
++- Verification passed:
++  - `python scripts/sync_doc_links.py --check`
++  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
+diff --git a/meta/tasks/TEMPLATE.md b/meta/tasks/TEMPLATE.md
+index f741bfd..9dac0b0 100644
+--- a/meta/tasks/TEMPLATE.md
++++ b/meta/tasks/TEMPLATE.md
+@@ -1,22 +1,33 @@
+-# Task — <topic>
++# Task - <topic>
++
++## Queue Binding
++- Queue Item: `<Lx-XXX-000>`
++- Layer/Priority: `<Lx / Px>`
++- Source Queue File: `meta/backlog/execution_queue.json`
+ 
+ ## Context
+-- Why are we doing this?
++- Why are we doing this item now?
++- Confirm all deps for the queue item are done (or explain blocker).
++
++## DoD Mapping (from execution_queue.json)
++- [ ] DoD-1: `<copy from queue item dod[0]>`
++- [ ] DoD-2: `<copy from queue item dod[1]>`
++- [ ] DoD-3: `<copy from queue item dod[2] or N/A>`
+ 
+ ## Acceptance (must be checkable)
+ - [ ] DoD written (this file complete)
+-- [ ] Research logged (if needed): meta/externals/YYYYMMDD-<topic>.md
++- [ ] Research logged (if needed): `meta/externals/YYYYMMDD-<topic>.md`
+ - [ ] Code changes allowed
+ - [ ] Patch applies cleanly (`git apply ...`) OR overlay zip applies cleanly
+ - [ ] `scripts/verify_repo.*` passes
+ - [ ] Demo report updated: `meta/reports/LAST.md`
+ 
+ ## Plan
+-1) Spec-first (docs/spec/meta)
+-2) Implement (code if allowed)
+-3) Verify (verify_repo)
+-4) Record (problem_registry / decision_log if needed)
+-5) Demo (LAST.md + TRACE)
++1) Docs/Spec first
++2) Implement (code only if allowed)
++3) Verify (`sync_doc_links --check` + `verify_repo`)
++4) Record (problem/decision logs if needed)
++5) Demo (`LAST.md` + run trace pointer)
+ 
+ ## Notes / Decisions
+ -
+diff --git a/specs/templates/module_spec_template.md b/specs/templates/module_spec_template.md
+index bf35f94..4b14566 100644
+--- a/specs/templates/module_spec_template.md
++++ b/specs/templates/module_spec_template.md
+@@ -1,23 +1,9 @@
++# DEPRECATED: Module Spec Template (Legacy Path)
+ 
+-# <Module Name>
++This template path is kept for backward compatibility with historical references.
+ 
+-## Purpose
++Current authoritative module-analysis template:
++- `specs/modules/_template.md`
+ 
+-## Inputs
+-
+-## Outputs
+-
+-## Process
+-
+-## Error Handling
+-
+-## Performance
+-
+-## Acceptance Criteria
+-- Given
+-- When
+-- Then
+-
+-## Trace Links
+-- docs/...
+-- specs/contract_output/...
++Please create new module specs under:
++- `specs/modules/<module>.md`
+diff --git a/docs/25_project_plan.md b/docs/25_project_plan.md
+new file mode 100644
+index 0000000..634e811
+--- /dev/null
++++ b/docs/25_project_plan.md
+@@ -0,0 +1,67 @@
++# Project Plan (Foundation-First)
++
++This document defines the project-level execution model for CTCP.
++Authoritative contract precedence remains:
++`docs/00_CORE.md` > other docs.
++
++## Three Planning Scopes
++
++1. Project queue (long-horizon): `meta/backlog/execution_queue.json`
++- Single source of truth for layered roadmap (`L0`..`L4`), dependencies, status, and DoD.
++- Used to choose what should be worked on next at project scale.
++
++2. Current task card (single work item): `meta/tasks/CURRENT.md`
++- One active queue item at a time.
++- Holds the concrete implementation/verification plan for this turn.
++- Must map to exactly one queue item id.
++
++3. Run-level execution plan (external run_dir): `${CTCP_RUNS_ROOT}/<repo_slug>/<run_id>/artifacts/PLAN.md`
++- Runtime plan for one ADLC execution loop.
++- Must follow run artifact contract and review gates.
++
++## Layering (Why Foundation First)
++
++- `L0` Foundation:
++  contracts, paths, gate semantics, project planning scaffolding.
++- `L1` Core execution plumbing:
++  orchestrator, librarian, dispatcher/providers, base lite regressions.
++- `L2` Reliability closure:
++  fail/bundle/fix/pass loop and contrast evidence quality.
++- `L3` Productization closure:
++  release reporting, workflow registry sedimentation from successful runs.
++- `L4` Optimization:
++  parallelism, budget policy tuning, optional GUI/non-core improvements.
++
++Working top-down by urgency but bottom-up by dependencies avoids unstable upper-layer work.
++
++## Agent Working Rule
++
++- Read `meta/backlog/execution_queue.json`.
++- Select the highest-priority item whose `deps` are all `done`.
++- Work exactly one queue item in `meta/tasks/CURRENT.md`.
++- If blocked, record blocker and keep queue status accurate (`blocked`).
++
++## Unified DoD Rule
++
++Every queue item is considered complete only when:
++- defined `dod` entries are satisfied,
++- `scripts/verify_repo.*` passes,
++- evidence is written to `meta/reports/LAST.md` with reproducible pointers.
++
++No evidence, no completion.
++
++## Minimal Documentation-Only Reproduction Flow
++
++1. Read `docs/00_CORE.md` (contract baseline).
++2. Read `docs/12_modules_index.md` (module map and dependencies).
++3. Read `meta/backlog/execution_queue.json` (choose next queue item).
++4. Fill `meta/tasks/CURRENT.md` for exactly one queue item.
++5. Run `scripts/verify_repo.ps1` (Windows) or `scripts/verify_repo.sh` (Unix).
++6. Write evidence and replay pointers into `meta/reports/LAST.md`.
++
++## Historical Structure Recovery Notes
++
++- Historical planning/template file `specs/templates/module_spec_template.md` is retained,
++  but module-analysis authority is moved to `specs/modules/_template.md`.
++- In-repo historical run plan artifacts under `meta/runs/*` are not restored by design,
++  because run outputs must remain external under `CTCP_RUNS_ROOT`.
+diff --git a/meta/backlog/execution_queue.json b/meta/backlog/execution_queue.json
+new file mode 100644
+index 0000000..f3d9744
+--- /dev/null
++++ b/meta/backlog/execution_queue.json
+@@ -0,0 +1,315 @@
++{
++  "version": 1,
++  "principles": [
++    "foundation_first",
++    "doc_first",
++    "gated_by_verify"
++  ],
++  "layers": [
++    "L0",
++    "L1",
++    "L2",
++    "L3",
++    "L4"
++  ],
++  "items": [
++    {
++      "id": "L0-CONTRACT-001",
++      "layer": "L0",
++      "priority": "P0",
++      "title": "Core contract and doc-index baseline",
++      "owner_role": "Chair/Planner",
++      "deps": [],
++      "dod": [
++        "docs/00_CORE.md and docs/02_workflow.md are consistent",
++        "README doc index check passes",
++        "workflow gate enforces CURRENT.md + AI contract presence"
++      ],
++      "artifacts": {
++        "produces": [
++          "docs/00_CORE.md",
++          "docs/02_workflow.md",
++          "README.md"
++        ],
++        "tests": [
++          "python scripts/sync_doc_links.py --check",
++          "python scripts/workflow_checks.py"
++        ]
++      },
++      "status": "done",
++      "notes": "Contract-first baseline already in repo and enforced by verify_repo."
++    },
++    {
++      "id": "L0-RUNPATH-001",
++      "layer": "L0",
++      "priority": "P0",
++      "title": "External run_dir contract and pointer-only repo policy",
++      "owner_role": "Local Orchestrator",
++      "deps": [
++        "L0-CONTRACT-001"
++      ],
++      "dod": [
++        "run_dir is outside repo (CTCP_RUNS_ROOT)",
++        "repo stores only meta/run_pointers/*",
++        "anti-pollution gate fails on in-repo run/build outputs"
++      ],
++      "artifacts": {
++        "produces": [
++          "meta/run_pointers/LAST_RUN.txt",
++          "scripts/verify_repo.ps1",
++          "scripts/verify_repo.sh"
++        ],
++        "tests": [
++          "scripts/verify_repo.* anti-pollution gate"
++        ]
++      },
++      "status": "done",
++      "notes": "External run path and anti-pollution checks are active."
++    },
++    {
++      "id": "L0-PLAN-001",
++      "layer": "L0",
++      "priority": "P0",
++      "title": "Project-level foundation-first queue and planning docs",
++      "owner_role": "Chair/Planner",
++      "deps": [
++        "L0-CONTRACT-001",
++        "L0-RUNPATH-001"
++      ],
++      "dod": [
++        "execution_queue.json exists and is current authority",
++        "docs/25_project_plan.md explains queue vs CURRENT vs run PLAN",
++        "meta/tasks/TEMPLATE.md contains queue item fields"
++      ],
++      "artifacts": {
++        "produces": [
++          "meta/backlog/execution_queue.json",
++          "docs/25_project_plan.md",
++          "meta/tasks/TEMPLATE.md"
++        ],
++        "tests": [
++          "python scripts/sync_doc_links.py --check",
++          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
++        ]
++      },
++      "status": "doing",
++      "notes": "This task updates long-horizon project planning and queue discipline."
++    },
++    {
++      "id": "L1-ORCH-001",
++      "layer": "L1",
++      "priority": "P0",
++      "title": "Artifact-driven orchestrator gates",
++      "owner_role": "Local Orchestrator",
++      "deps": [
++        "L0-CONTRACT-001",
++        "L0-RUNPATH-001"
++      ],
++      "dod": [
++        "new-run/status/advance follow artifact gates",
++        "find_result resolver-first gate exists",
++        "review approve gate enforced before signed PLAN execution"
++      ],
++      "artifacts": {
++        "produces": [
++          "scripts/ctcp_orchestrate.py",
++          "RUN.json",
++          "events.jsonl"
++        ],
++        "tests": [
++          "simlab lite orchestrator scenarios",
++          "scripts/verify_repo.*"
++        ]
++      },
++      "status": "done",
++      "notes": "Implemented and regression-covered in recent lite suites."
++    },
++    {
++      "id": "L1-LIB-001",
++      "layer": "L1",
++      "priority": "P0",
++      "title": "Librarian file_request to context_pack budget path",
++      "owner_role": "Local Librarian",
++      "deps": [
++        "L1-ORCH-001"
++      ],
++      "dod": [
++        "ctcp-file-request-v1 input accepted",
++        "ctcp-context-pack-v1 output produced with budget enforcement",
++        "omitted reasons include too_large/denied/irrelevant"
++      ],
++      "artifacts": {
++        "produces": [
++          "scripts/ctcp_librarian.py",
++          "artifacts/context_pack.json"
++        ],
++        "tests": [
++          "S12/S14 lite scenarios"
++        ]
++      },
++      "status": "done",
++      "notes": "Budgeted context_pack path is implemented and covered."
++    },
++    {
++      "id": "L1-DISP-001",
++      "layer": "L1",
++      "priority": "P0",
++      "title": "Dispatcher/provider bridge with manual outbox",
++      "owner_role": "Local Orchestrator",
++      "deps": [
++        "L1-ORCH-001",
++        "L1-LIB-001"
++      ],
++      "dod": [
++        "dispatch_config controls role providers",
++        "manual_outbox prompts generated with target-path constraints",
++        "local_exec is librarian-only",
++        "outbox budget limit enforced"
++      ],
++      "artifacts": {
++        "produces": [
++          "scripts/ctcp_dispatch.py",
++          "tools/providers/manual_outbox.py",
++          "tools/providers/local_exec.py",
++          "artifacts/dispatch_config.json"
++        ],
++        "tests": [
++          "S13/S14 lite scenarios"
++        ]
++      },
++      "status": "done",
++      "notes": "Manual outbox and local librarian auto-exec are active."
++    },
++    {
++      "id": "L2-FAIL-001",
++      "layer": "L2",
++      "priority": "P0",
++      "title": "FAIL -> failure_bundle -> fix loop -> PASS hard closure",
++      "owner_role": "Local Verifier",
++      "deps": [
++        "L1-ORCH-001",
++        "L1-DISP-001"
++      ],
++      "dod": [
++        "verify fail writes FAIL report with failures[]",
++        "failure_bundle.zip has required minimum contents",
++        "fixer refill patch in same run can converge to VERIFY_PASSED and run pass"
++      ],
++      "artifacts": {
++        "produces": [
++          "failure_bundle.zip",
++          "artifacts/verify_report.json",
++          "events.jsonl"
++        ],
++        "tests": [
++          "S15_lite_fail_produces_bundle",
++          "S16_lite_fixer_loop_pass"
++        ]
++      },
++      "status": "doing",
++      "notes": "Lite hard regression is in place; full-suite/long-run stabilization remains."
++    },
++    {
++      "id": "L2-CONTRAST-001",
++      "layer": "L2",
++      "priority": "P1",
++      "title": "Contrast artifact auto-summary from verify evidence",
++      "owner_role": "Local Verifier",
++      "deps": [
++        "L2-FAIL-001"
++      ],
++      "dod": [
++        "contrast summary generated from verify_report + trace",
++        "summary points to actionable failure classes",
++        "summary captured in run artifacts and LAST report references"
++      ],
++      "artifacts": {
++        "produces": [
++          "artifacts/contrast_summary.md"
++        ],
++        "tests": [
++          "new lite scenario for contrast generation"
++        ]
++      },
++      "status": "todo",
++      "notes": "Not yet implemented."
++    },
++    {
++      "id": "L3-RELEASE-001",
++      "layer": "L3",
++      "priority": "P1",
++      "title": "Deploy/merge and release report closure",
++      "owner_role": "Chair/Planner",
++      "deps": [
++        "L2-FAIL-001"
++      ],
++      "dod": [
++        "run pass can produce release report",
++        "report links signed plan, verify evidence, and scope summary",
++        "merge/deploy handoff checklist documented"
++      ],
++      "artifacts": {
++        "produces": [
++          "artifacts/release_report.md"
++        ],
++        "tests": [
++          "verify_repo contract check extension"
++        ]
++      },
++      "status": "todo",
++      "notes": "Pending."
++    },
++    {
++      "id": "L3-WF-HISTORY-001",
++      "layer": "L3",
++      "priority": "P1",
++      "title": "Workflow registry last-known-good and history sedimentation",
++      "owner_role": "Resolver",
++      "deps": [
++        "L2-FAIL-001",
++        "L3-RELEASE-001"
++      ],
++      "dod": [
++        "successful runs update reusable workflow evidence",
++        "externals candidate inputs can be promoted into registry with review",
++        "history is queryable by resolver without replacing find_result authority"
++      ],
++      "artifacts": {
++        "produces": [
++          "workflow_registry/history/*.json",
++          "workflow_registry/last_known_good.json"
++        ],
++        "tests": [
++          "resolver regression scenarios with history inputs"
++        ]
++      },
++      "status": "todo",
++      "notes": "Design and migration flow pending."
++    },
++    {
++      "id": "L4-OPT-001",
++      "layer": "L4",
++      "priority": "P2",
++      "title": "Global optimization: parallelism, budget strategy, optional GUI suspension",
++      "owner_role": "Chair/Planner",
++      "deps": [
++        "L3-WF-HISTORY-001"
++      ],
++      "dod": [
++        "parallel execution policy documented",
++        "token/context budget strategy documented and enforceable",
++        "GUI optional path remains non-blocking for core gates"
++      ],
++      "artifacts": {
++        "produces": [
++          "docs/optimization_plan.md"
++        ],
++        "tests": [
++          "full-gate timing and stability comparison"
++        ]
++      },
++      "status": "todo",
++      "notes": "Post-foundation optimization stage."
++    }
++  ]
++}
+diff --git a/specs/modules/_template.md b/specs/modules/_template.md
+new file mode 100644
+index 0000000..32f8ea2
+--- /dev/null
++++ b/specs/modules/_template.md
+@@ -0,0 +1,33 @@
++# <Module Name>
++
++## Purpose
++- What this module must achieve.
++
++## Scope
++- What is explicitly inside responsibility.
++
++## Non-Goals
++- What this module must not do.
++
++## Inputs
++- Runtime artifacts and/or interfaces consumed.
++- Include canonical paths where applicable.
++
++## Outputs
++- Artifacts, events, or interfaces produced.
++- Include canonical paths where applicable.
++
++## Dependencies
++- Upstream modules/contracts required before this module can be complete.
++- Include dep graph ids if tied to `meta/backlog/execution_queue.json`.
++
++## Gates
++- Minimum regression/lite checks.
++- Optional full checks.
++
++## Failure Evidence
++- Required trace/bundle/report evidence when module behavior fails.
++- Include `TRACE.md` / `failure_bundle.zip` expectations where relevant.
++
++## Owner Roles
++- Which TeamNet roles are allowed to write which artifacts for this module.
+diff --git a/specs/modules/orchestrator.md b/specs/modules/orchestrator.md
+new file mode 100644
+index 0000000..adb56cb
+--- /dev/null
++++ b/specs/modules/orchestrator.md
+@@ -0,0 +1,41 @@
++# Orchestrator
++
++## Purpose
++- Advance ADLC by artifact-state gates without taking planning authority.
++
++## Scope
++- `new-run`, `status`, `advance` lifecycle.
++- Gate transitions, event emission, verify triggering, failure closure.
++
++## Non-Goals
++- Decide workflow strategy.
++- Author business patch content.
++- Approve plans/reviews.
++
++## Inputs
++- `${run_dir}/artifacts/*`
++- `${run_dir}/reviews/*`
++- `${run_dir}/RUN.json`
++- repo contracts and verify entrypoint.
++
++## Outputs
++- `${run_dir}/RUN.json` status updates.
++- `${run_dir}/events.jsonl`, `${run_dir}/TRACE.md`.
++- verify and failure artifacts (`verify_report`, `failure_bundle`).
++
++## Dependencies
++- `docs/00_CORE.md`
++- `docs/02_workflow.md`
++- verify gate scripts.
++
++## Gates
++- SimLab lite orchestrator scenarios.
++- `scripts/verify_repo.*` pass.
++
++## Failure Evidence
++- Must preserve `TRACE.md`, `events.jsonl`, `artifacts/verify_report.json`.
++- Must generate/validate `failure_bundle.zip` on verify fail.
++
++## Owner Roles
++- Local Orchestrator (write control-plane artifacts/events).
++- Local Verifier (write verify and failure evidence events).
+diff --git a/specs/modules/dispatcher_providers.md b/specs/modules/dispatcher_providers.md
+new file mode 100644
+index 0000000..a72cba8
+--- /dev/null
++++ b/specs/modules/dispatcher_providers.md
+@@ -0,0 +1,39 @@
++# Dispatcher Providers
++
++## Purpose
++- Resolve blocked artifacts into role-appropriate provider actions.
++
++## Scope
++- Map gate state -> role/action/target artifact.
++- Invoke `manual_outbox` or constrained `local_exec`.
++
++## Non-Goals
++- Network/API execution.
++- Override artifact contract boundaries.
++- Replace resolver authority.
++
++## Inputs
++- `${run_dir}/artifacts/dispatch_config.json`
++- current gate state from orchestrator.
++- role templates under `agents/prompts/*` (manual provider).
++
++## Outputs
++- `${run_dir}/outbox/*.md` prompts for manual/API roles.
++- provider execution events in `${run_dir}/events.jsonl`.
++
++## Dependencies
++- Orchestrator state machine.
++- Role contract docs and artifact contracts.
++
++## Gates
++- Lite dispatch scenarios (missing review -> outbox, librarian local_exec path).
++- `scripts/verify_repo.*` pass.
++
++## Failure Evidence
++- Dispatcher failures must be visible in events and trace.
++- Budget-exceeded path must be explicit and reproducible.
++
++## Owner Roles
++- Local Orchestrator dispatches.
++- Local Librarian allowed for `local_exec`.
++- API roles are manual-outbox only.
+diff --git a/specs/modules/librarian_context_pack.md b/specs/modules/librarian_context_pack.md
+new file mode 100644
+index 0000000..dc9eb7a
+--- /dev/null
++++ b/specs/modules/librarian_context_pack.md
+@@ -0,0 +1,35 @@
++# Librarian Context Pack
++
++## Purpose
++- Provide minimal, budgeted repo context for planning/execution roles.
++
++## Scope
++- Read `ctcp-file-request-v1` and write `ctcp-context-pack-v1`.
++- Enforce file and byte budgets.
++
++## Non-Goals
++- Planning or strategy decisions.
++- Repo mutation.
++
++## Inputs
++- `${run_dir}/artifacts/file_request.json`
++- repo files referenced by request `needs[]`.
++
++## Outputs
++- `${run_dir}/artifacts/context_pack.json`
++- budget summary and omission reasons.
++
++## Dependencies
++- File-request contract.
++- Repo path safety checks.
++
++## Gates
++- Lite context-pack scenarios (blocked and local_exec paths).
++- `scripts/verify_repo.*` pass.
++
++## Failure Evidence
++- Invalid request schema or budget errors must be explicit in stderr/logs.
++- Omitted files must include reason categories.
++
++## Owner Roles
++- Local Librarian only.
+diff --git a/specs/modules/simlab.md b/specs/modules/simlab.md
+new file mode 100644
+index 0000000..448d13d
+--- /dev/null
++++ b/specs/modules/simlab.md
+@@ -0,0 +1,33 @@
++# SimLab
++
++## Purpose
++- Replay deterministic scenarios to lock repository behavior with evidence.
++
++## Scope
++- Scenario parsing, sandbox copy, step execution, assertions, summary output.
++
++## Non-Goals
++- Production execution orchestration.
++- Replacing verify gates.
++
++## Inputs
++- `simlab/scenarios/*.yaml` (JSON-or-YAML docs).
++- repository sandbox copy.
++
++## Outputs
++- `${CTCP_RUNS_ROOT}/<repo_slug>/simlab_runs/<id>/summary.json`
++- per-scenario `TRACE.md`, logs, optional failure bundle.
++
++## Dependencies
++- Scenario schema/assertion utilities.
++- External runs-root path contract.
++
++## Gates
++- `python simlab/run.py --suite lite`
++- optional full/integration suites.
++
++## Failure Evidence
++- Failed scenario must emit trace and bundle with logs/artifacts snapshots.
++
++## Owner Roles
++- Local Verifier / local test harness.
+diff --git a/specs/modules/verify_repo_quality_gates.md b/specs/modules/verify_repo_quality_gates.md
+new file mode 100644
+index 0000000..6eaf749
+--- /dev/null
++++ b/specs/modules/verify_repo_quality_gates.md
+@@ -0,0 +1,33 @@
++# Verify Repo Quality Gates
++
++## Purpose
++- Provide the single repository acceptance gate for merge-quality decisions.
++
++## Scope
++- Build/test (where available), workflow checks, contract checks, doc index check, lite replay.
++
++## Non-Goals
++- Replacing run-level verify evidence in external run_dir.
++
++## Inputs
++- repository working tree.
++- `meta/tasks/CURRENT.md`, contract docs, scripts.
++
++## Outputs
++- process exit status (pass/fail) and actionable logs.
++
++## Dependencies
++- `scripts/workflow_checks.py`
++- `scripts/contract_checks.py`
++- `scripts/sync_doc_links.py --check`
++- `simlab/run.py`.
++
++## Gates
++- `scripts/verify_repo.ps1` (Windows)
++- `scripts/verify_repo.sh` (Unix)
++
++## Failure Evidence
++- Failures must pinpoint gate step and command-level cause.
++
++## Owner Roles
++- Local Verifier.
+diff --git a/specs/modules/workflow_registry_resolver.md b/specs/modules/workflow_registry_resolver.md
+new file mode 100644
+index 0000000..b848dbf
+--- /dev/null
++++ b/specs/modules/workflow_registry_resolver.md
+@@ -0,0 +1,31 @@
++# Workflow Registry Resolver
++
++## Purpose
++- Select the best local workflow candidate for execution planning.
++
++## Scope
++- Resolver-first lookup from `workflow_registry` and local historical evidence.
++
++## Non-Goals
++- Replacing decision authority with web research output.
++
++## Inputs
++- goal text.
++- `workflow_registry/index.json`
++- optional local success history snapshots.
++
++## Outputs
++- `${run_dir}/artifacts/find_result.json` (`ctcp-find-result-v1`).
++
++## Dependencies
++- Resolver contract boundary in `docs/02_workflow.md`.
++
++## Gates
++- Lite resolver scenario.
++- contract checks + verify_repo.
++
++## Failure Evidence
++- Missing or invalid resolver output blocks planning and must be explicit in gate state.
++
++## Owner Roles
++- Resolver under Chair policy.
+diff --git a/specs/modules/externals_pack_research.md b/specs/modules/externals_pack_research.md
+new file mode 100644
+index 0000000..3347548
+--- /dev/null
++++ b/specs/modules/externals_pack_research.md
+@@ -0,0 +1,32 @@
++# Externals Pack Research (Candidate-Only)
++
++## Purpose
++- Capture optional external evidence under strict guardrails as candidate input.
++
++## Scope
++- Generate `find_web`/externals pack artifacts when enabled by guardrails.
++
++## Non-Goals
++- Replace resolver-selected `find_result.json`.
++- Become mandatory in resolver-only mode.
++
++## Inputs
++- `${run_dir}/artifacts/guardrails.md` (`find_mode`, web constraints).
++- approved web policy constraints.
++
++## Outputs
++- `${run_dir}/artifacts/find_web.json` (optional),
++- `meta/externals/<goal_slug>/externals_pack.json` (candidate evidence path).
++
++## Dependencies
++- Resolver-first workflow contract.
++- Research role boundaries.
++
++## Gates
++- find-web contract checks and lite web-contract scenario.
++
++## Failure Evidence
++- Invalid web artifacts must not override resolver result and must surface as blocked reason.
++
++## Owner Roles
++- Researcher (manual/API role) and Chair adjudication.

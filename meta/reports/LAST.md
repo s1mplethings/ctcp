@@ -1,108 +1,113 @@
 # Demo Report - LAST
 
 ## Goal
-- Implement TeamNet dispatcher/provider auto-invocation for missing artifacts:
-  - local `librarian` auto-exec
-  - API-role `manual_outbox` prompt generation
-  - outbox budget stop gate
-  - outbox refill tracking events
-- Add lite regressions for dispatcher behavior.
+- Complete `L2-FAIL-001`: enforce hard fail evidence (`failure_bundle.zip`) and fixer loop convergence (`FAIL -> new patch -> PASS`) with lite regressions.
+- Keep contracts unchanged: resolver-first, `find_result.json` as decision authority, external `CTCP_RUNS_ROOT` run dirs, no new dependencies, no real networking.
 
 ## Readlist
+- `AGENTS.md`
 - `ai_context/00_AI_CONTRACT.md`
 - `README.md`
 - `BUILD.md`
 - `PATCH_README.md`
 - `TREE.md`
-- `docs/03_quality_gates.md`
-- `ai_context/problem_registry.md`
-- `ai_context/decision_log.md`
 - `docs/00_CORE.md`
 - `docs/02_workflow.md`
-- `docs/22_agent_teamnet.md`
+- `docs/03_quality_gates.md`
+- `docs/12_modules_index.md`
 - `docs/30_artifact_contracts.md`
-- `meta/tasks/CURRENT.md`
 - `meta/tasks/TEMPLATE.md`
+- `meta/tasks/CURRENT.md`
+- `meta/reports/LAST.md`
+- `ai_context/problem_registry.md`
+- `ai_context/decision_log.md`
 
 ## Plan
-1. Docs/Spec: add dispatcher/provider and outbox contract sections.
-2. Code: add `ctcp_dispatch` + provider modules and orchestrator integration.
-3. Tests: add lite scenarios for missing-review outbox and librarian local-exec.
-4. Verify: run doc index check, simlab lite suite, and `verify_repo`.
-5. Report: update LAST with demo pointers.
+1. Docs/spec first:
+   - align artifact contract wording for `verify_report.json` and `failure_bundle.zip`.
+2. Code:
+   - harden `ctcp_orchestrate.py` fail path and fixer loop.
+3. Regression:
+   - strengthen S15 assertions (paths field + fixer outbox prompt).
+4. Verify:
+   - `sync_doc_links --check`
+   - `simlab/run.py --suite lite`
+   - `scripts/verify_repo.ps1`
+   - clean-worktree `git apply --check`
+5. Report:
+   - record evidence paths and demo pointers.
 
 ## Timeline / Trace Pointer
-- External demo run dir:
-  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-163807-orchestrate`
-- Demo trace:
-  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-163807-orchestrate\TRACE.md`
-- Demo outbox prompt:
-  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260219-163807-orchestrate\outbox\001_contract_guardian_review_contract.md`
-- Demo pointer file:
-  - `meta/run_pointers/LAST_RUN.txt`
+- Lite suite run evidence:
+  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\simlab_runs\20260219-200922`
+- S15 external run demo (failure bundle + fixer outbox):
+  - `C:\Users\sunom\AppData\Local\ctcp\runs\sandbox\20260219-201006-016278-orchestrate`
+- S16 external run demo (loop to pass):
+  - `C:\Users\sunom\AppData\Local\ctcp\runs\sandbox\20260219-201021-005256-orchestrate`
 
 ## Changes
-- Unified diff patch bundle:
-  - `PATCHES/20260219-teamnet-dispatch.patch`
-- Spec/contract docs:
-  - `docs/22_agent_teamnet.md`: added dispatcher/provider wiring and boundaries.
-  - `docs/30_artifact_contracts.md`: added `dispatch_config` and `outbox/*.md` contracts.
-- Dispatcher/provider implementation:
-  - `scripts/ctcp_dispatch.py` (new): gate->role/action mapping, config loading, provider dispatch, outbox fulfillment detection.
-  - `tools/providers/manual_outbox.py` (new): template-based prompt generation, dedupe, budget stop.
-  - `tools/providers/local_exec.py` (new): librarian-only local execution for `context_pack`.
-  - `tools/providers/__init__.py` (new).
-- Orchestrator integration:
-  - `scripts/ctcp_orchestrate.py`:
-    - creates `artifacts/dispatch_config.json` on `new-run`
-    - includes `outbox/` in run layout
-    - `advance` dispatches on blocked/fail gates:
-      - `LOCAL_EXEC_COMPLETED` / `LOCAL_EXEC_FAILED`
-      - `OUTBOX_PROMPT_CREATED`
-      - `STOP_BUDGET_EXCEEDED`
-    - `status` now prints:
-      - `outbox prompt created: ...` (when present)
-      - `STOP: budget_exceeded (...)` (when applicable)
-    - tracks refill completion via `OUTBOX_PROMPT_FULFILLED`.
-- Prompt templates (new):
-  - `agents/prompts/chair_plan_draft.md`
-  - `agents/prompts/chair_file_request.md`
-  - `agents/prompts/contract_guardian_review.md`
-  - `agents/prompts/cost_controller_review.md`
-  - `agents/prompts/patchmaker_patch.md`
-  - `agents/prompts/fixer_patch.md`
-  - `agents/prompts/researcher_find_web.md`
-  - `agents/prompts/librarian_context_pack.md`
-- Lite regressions:
-  - `simlab/scenarios/S12_lite_orchestrate_context_gate.yaml` (updated: pins librarian to manual_outbox for old gate assertion).
-  - `simlab/scenarios/S13_lite_dispatch_outbox_on_missing_review.yaml` (new).
-  - `simlab/scenarios/S14_lite_dispatch_local_exec_librarian.yaml` (new).
-- Task tracking:
-  - `meta/tasks/CURRENT.md` updated for this dispatcher task.
+- Unified diff patch:
+  - `PATCHES/20260219-failure-closure-loop.patch`
+- `meta/tasks/CURRENT.md`
+  - switched active task binding to `L2-FAIL-001`, kept code-change gate enabled.
+- `meta/backlog/execution_queue.json`
+  - marked `L2-FAIL-001` as `done` with S15/S16 closure note.
+- `scripts/ctcp_orchestrate.py`
+  - added verify iteration control (`verify_iterations`, max read from `PLAN.md` or `guardrails.md`, default `3`).
+  - added stop event/status on limit hit: `STOP_MAX_ITERATIONS`.
+  - added tracked-dirty apply safety gate before `git apply` (`repo_dirty_before_apply`), while allowing managed fixer delta over prior applied patch.
+  - added command trace blocks in `TRACE.md` for apply/verify/retry/revert with cmd, exit_code, stdout/stderr tail.
+  - hardened verify report output with required fields:
+    - `result`, `commands`, `failures`, `paths` (+compat mirror `artifacts`).
+  - fail path now always:
+    - writes `VERIFY_FAILED`
+    - ensures/validates `failure_bundle.zip`
+    - writes `BUNDLE_CREATED`
+    - dispatches fixer outbox prompt immediately (`OUTBOX_PROMPT_CREATED`).
+  - bundle validation now requires `reviews/*` and `outbox/*` entries when those files exist.
+  - fail-state outbox dispatch no longer downgrades run status from `fail` to `blocked`.
+  - adds optional backup of previously applied patch on fixer re-iteration (`artifacts/diff.patch.iter<N>.bak`).
+- `simlab/scenarios/S15_lite_fail_produces_bundle.yaml`
+  - added assertions for `verify_report.paths`.
+  - added assertions for fixer outbox prompt content (`Role: fixer`, `failure_bundle.zip`, `write to: artifacts/diff.patch`).
+- `simlab/scenarios/S16_lite_fixer_loop_pass.yaml`
+  - locks same-run fail->fix->pass convergence and asserts `VERIFY_PASSED`.
+- `tests/fixtures/patches/lite_fail_bad_readme_link.patch`
+  - deterministic fail patch used by S15/S16.
+- `tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch`
+  - deterministic fixer patch used by S16 pass loop.
+- `docs/30_artifact_contracts.md`
+  - expanded `verify_report.json` minimum fields (iteration fields + `paths`).
+  - expanded failure bundle minimum list to include `reviews/*` and `outbox/*` when present.
 
 ## Verify
-- `git worktree add d:\\.c_projects\\adc\\ctcp_patch_check_<ts> HEAD`
-  - `git -C d:\\.c_projects\\adc\\ctcp_patch_check_<ts> apply --check d:/.c_projects/adc/ctcp/PATCHES/20260219-teamnet-dispatch.patch`
-  - result: pass (then worktree removed)
-- `python -m py_compile scripts/ctcp_orchestrate.py scripts/ctcp_dispatch.py scripts/ctcp_librarian.py tools/providers/manual_outbox.py tools/providers/local_exec.py`
-  - result: pass
 - `python scripts/sync_doc_links.py --check`
   - result: `[sync_doc_links] ok`
 - `python simlab/run.py --suite lite`
-  - result: `{"passed": 6, "failed": 0, ...}`
+  - result: `{"run_dir":".../simlab_runs/20260219-200922","passed":8,"failed":0}`
+  - includes new hard regressions:
+    - `S15_lite_fail_produces_bundle` pass
+    - `S16_lite_fixer_loop_pass` pass
 - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
-  - result: pass
-  - key output:
-    - ctest lite: `2/2` passed
-    - workflow gate: ok
+  - result: `[verify_repo] OK`
+  - key lines:
+    - ctest lite: `2/2` pass
+    - workflow checks: ok
     - contract checks: ok
     - doc index check: ok
-    - lite scenario replay: `{"passed": 6, "failed": 0, ...}`
-    - final: `[verify_repo] OK`
+    - lite replay: `passed=8 failed=0`
+- clean-worktree patch apply check:
+  - command: `git -C <temp_worktree> apply --check PATCHES/20260219-failure-closure-loop.patch`
+  - result: pass
+- S15 evidence excerpt:
+  - `_s15_events.jsonl` contains `VERIFY_STARTED`, `VERIFY_FAILED`, `BUNDLE_CREATED`, `OUTBOX_PROMPT_CREATED`.
+  - `_s15_advance.out.txt` shows outbox creation and failure bundle path.
+- S16 evidence excerpt:
+  - `_s16_verify_report.json` result is `PASS` with `iteration: 2`.
+  - `_s16_events.jsonl` contains `VERIFY_FAILED`, `BUNDLE_CREATED`, `VERIFY_PASSED`.
 
 ## Open Questions
 - None.
 
 ## Next Steps
-1. If needed, add a dedicated lite case for `budget_exceeded` stop behavior.
-2. If needed, add richer chair/fixer templates for adjudication and post-failure fix loops.
+1. Add an explicit lite case for `STOP_MAX_ITERATIONS` to lock the new stop condition.
