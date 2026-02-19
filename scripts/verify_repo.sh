@@ -14,9 +14,59 @@ echo "[verify_repo] repo root: ${ROOT}"
 if [[ "${MODE}" == "1" ]]; then
   echo "[verify_repo] mode: FULL"
 else
-  echo "[verify_repo] mode: LITE"
+echo "[verify_repo] mode: LITE"
 fi
 echo "[verify_repo] write_fixtures: ${WRITE_FIXTURES}"
+BUILD_ARTIFACTS_COMMITTED_MESSAGE="$(printf '\u6784\u5efa\u4ea7\u7269\u88ab\u63d0\u4ea4\u4e86\uff0c\u8bf7\u4ece git \u4e2d\u79fb\u9664\u5e76\u66f4\u65b0 .gitignore')"
+
+anti_pollution_gate() {
+  echo "[verify_repo] anti-pollution gate (build artifacts)"
+  local tracked_build=()
+  local path=""
+  while IFS= read -r path; do
+    if [[ "${path}" == build*/* ]]; then
+      tracked_build+=("${path}")
+    fi
+  done < <(git -C "${ROOT}" ls-files)
+
+  if (( ${#tracked_build[@]} > 0 )); then
+    echo "[verify_repo] tracked build artifacts detected (showing up to 20):"
+    local i=0
+    for path in "${tracked_build[@]}"; do
+      echo "  ${path}"
+      ((i += 1))
+      if (( i >= 20 )); then
+        break
+      fi
+    done
+    echo "[verify_repo] ${BUILD_ARTIFACTS_COMMITTED_MESSAGE}"
+    echo "[verify_repo] suggested cleanup commands:"
+    echo "  git rm -r --cached build_lite build_verify"
+    echo '  git commit -m "Stop tracking build outputs"'
+    exit 1
+  fi
+
+  local unignored_build=()
+  while IFS= read -r path; do
+    if [[ -n "${path}" ]]; then
+      unignored_build+=("${path}")
+    fi
+  done < <(git -C "${ROOT}" ls-files --others --exclude-standard -- 'build*/**')
+  if (( ${#unignored_build[@]} > 0 )); then
+    echo "[verify_repo] warning: detected unignored files under build*/ (showing up to 20)."
+    local j=0
+    for path in "${unignored_build[@]}"; do
+      echo "  ${path}"
+      ((j += 1))
+      if (( j >= 20 )); then
+        break
+      fi
+    done
+    echo "[verify_repo] warning: Please confirm .gitignore covers build outputs."
+  fi
+}
+
+anti_pollution_gate
 
 if command -v cmake >/dev/null 2>&1; then
   CMAKE_EXE="$(command -v cmake)"

@@ -1,0 +1,76 @@
+{
+  "spec_id": "ctcp_find_web_v1",
+  "schema_version": "ctcp-find-web-v1",
+  "type": "object",
+  "description": "Optional Researcher web-find artifact consumed under resolver_plus_web mode.",
+  "required": [
+    "schema_version",
+    "constraints",
+    "results"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "ctcp-find-web-v1"
+    },
+    "constraints": {
+      "type": "object",
+      "required": [
+        "allow_domains",
+        "max_queries"
+      ],
+      "properties": {
+        "allow_domains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "max_queries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "url",
+          "locator",
+          "fetched_at",
+          "excerpt",
+          "why_relevant",
+          "risk_flags"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "locator": {
+            "type": "string"
+          },
+          "fetched_at": {
+            "type": "string"
+          },
+          "excerpt": {
+            "type": "string"
+          },
+          "why_relevant": {
+            "type": "string"
+          },
+          "risk_flags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

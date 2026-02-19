@@ -4,6 +4,7 @@
 - 默认路径是 **headless**（不依赖 GUI/Qt）。
 - GUI 仅作为示例/可视化器，可选开启，不影响核心流程。
 - find = workflow resolver（从本地 `workflow_registry/` + 历史成功记录解析最佳 workflow，不依赖联网检索）。
+- 可选开启受控 web find（`resolver_plus_web`，由外部 Researcher 提供 `find_web.json`），默认仍不依赖联网。
 - GUI 可选/默认挂起（不影响核心 gate）。
 
 系统目标：

@@ -1,9 +1,0 @@
-D:/.c_projects/adc/ctcp/build_lite/CMakeFiles/Experimental.dir
-D:/.c_projects/adc/ctcp/build_lite/CMakeFiles/Nightly.dir
-D:/.c_projects/adc/ctcp/build_lite/CMakeFiles/Continuous.dir
-D:/.c_projects/adc/ctcp/build_lite/CMakeFiles/NightlyMemoryCheck.dir
-D:/.c_projects/adc/ctcp/build_lite/CMakeFiles/ctcp_headless.dir
-D:/.c_projects/adc/ctcp/build_lite/CMakeFiles/RUN_TESTS.dir
-D:/.c_projects/adc/ctcp/build_lite/CMakeFiles/INSTALL.dir
-D:/.c_projects/adc/ctcp/build_lite/CMakeFiles/ALL_BUILD.dir
-D:/.c_projects/adc/ctcp/build_lite/CMakeFiles/ZERO_CHECK.dir

@@ -195,6 +195,25 @@ meta/run_pointers/LAST_QUESTIONS.txt
 meta/run_pointers/*.bak
 meta/run_pointers/*.tmp
 meta/run_pointers/*.old
+# Build/test artifact pollution guard
+build*/
 build_*/
 build_lite/
 build_verify/
+**/CMakeCache.txt
+**/CMakeFiles/
+**/Testing/
+**/*.dir/
+**/*.vcxproj*
+**/*.sln
+**/*.obj
+**/*.pdb
+**/*.ilk
+**/*.log
+**/*.tlog
+**/.ninja_*
+**/compile_commands.json
+
+# Fixture run temp sandboxes
+tests/fixtures/adlc_forge_full_bundle/runs/_gate_matrix_sandbox*/
+tests/fixtures/adlc_forge_full_bundle/runs/**/sandbox/

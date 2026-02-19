@@ -1,0 +1,11 @@
+{
+  "spec_id": "ctcp_review_cost_v1",
+  "schema_version": "ctcp-review-cost-v1",
+  "artifact_path": "reviews/review_cost.md",
+  "format": "markdown",
+  "required_rules": [
+    "Must contain line: Verdict: APPROVE or Verdict: BLOCK",
+    "If Verdict: BLOCK, must include blocking reason and required artifacts",
+    "Review checks cost/read budget and execution scope before patch/verify"
+  ]
+}

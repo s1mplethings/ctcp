@@ -1,0 +1,28 @@
+{
+  "id": "S10_lite_resolve_workflow",
+  "name": "lite resolver artifact sanity",
+  "suite": "lite",
+  "steps": [
+    {
+      "run": {
+        "cmd": "python scripts/resolve_workflow.py --goal headless-lite --out artifacts/_simlab_find.json",
+        "expect_exit": 0
+      }
+    },
+    {
+      "expect_path": {
+        "path": "artifacts/_simlab_find.json",
+        "exists": true
+      }
+    },
+    {
+      "expect_text": {
+        "path": "artifacts/_simlab_find.json",
+        "includes": [
+          "\"schema_version\": \"ctcp-find-result-v1\"",
+          "\"selected_workflow_id\""
+        ]
+      }
+    }
+  ]
+}

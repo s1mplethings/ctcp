@@ -14,6 +14,11 @@ if ($RunFull) { $ModeName = "FULL" }
 Write-Host "[verify_repo] repo root: $Root"
 Write-Host "[verify_repo] mode: $ModeName"
 Write-Host "[verify_repo] write_fixtures: $WriteFixtures"
+$BuildArtifactsCommittedMessage = -join ([char[]](
+  0x6784,0x5efa,0x4ea7,0x7269,0x88ab,0x63d0,0x4ea4,0x4e86,0xff0c,0x8bf7,0x4ece,
+  0x20,0x67,0x69,0x74,0x20,0x4e2d,0x79fb,0x9664,0x5e76,0x66f4,0x65b0,0x20,
+  0x2e,0x67,0x69,0x74,0x69,0x67,0x6e,0x6f,0x72,0x65
+))
 
 function Invoke-ExternalChecked {
   param(
@@ -63,6 +68,44 @@ function Get-CtestExe {
   }
   return $null
 }
+
+function Invoke-BuildPollutionGate {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$RepoRoot
+  )
+
+  Write-Host "[verify_repo] anti-pollution gate (build artifacts)"
+  $trackedFiles = @(git -C $RepoRoot ls-files)
+  if ($LASTEXITCODE -ne 0) {
+    Write-Error "[verify_repo] FAILED: anti-pollution gate (git ls-files) (exit=$LASTEXITCODE)"
+    exit $LASTEXITCODE
+  }
+
+  $trackedBuild = @($trackedFiles | Where-Object { $_ -like "build*/*" })
+  if ($trackedBuild.Count -gt 0) {
+    Write-Host "[verify_repo] tracked build artifacts detected (showing up to 20):"
+    $trackedBuild | Select-Object -First 20 | ForEach-Object { Write-Host "  $_" }
+    Write-Host "[verify_repo] $BuildArtifactsCommittedMessage"
+    Write-Host "[verify_repo] suggested cleanup commands:"
+    Write-Host "  git rm -r --cached build_lite build_verify"
+    Write-Host '  git commit -m "Stop tracking build outputs"'
+    exit 1
+  }
+
+  $unignoredBuild = @(git -C $RepoRoot ls-files --others --exclude-standard -- 'build*/**')
+  if ($LASTEXITCODE -ne 0) {
+    Write-Error "[verify_repo] FAILED: anti-pollution gate (git ls-files --others) (exit=$LASTEXITCODE)"
+    exit $LASTEXITCODE
+  }
+  if ($unignoredBuild.Count -gt 0) {
+    Write-Warning "[verify_repo] detected unignored files under build*/ (showing up to 20)."
+    $unignoredBuild | Select-Object -First 20 | ForEach-Object { Write-Warning "  $_" }
+    Write-Warning "[verify_repo] Please confirm .gitignore covers build outputs."
+  }
+}
+
+Invoke-BuildPollutionGate -RepoRoot $Root
 
 $CmakeExe = Get-CmakeExe
 $CtestExe = Get-CtestExe

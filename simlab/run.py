@@ -368,6 +368,28 @@ def main() -> int:
     run_root.mkdir(parents=True, exist_ok=True)
 
     scenarios = load_scenarios(args.suite)
+    if not scenarios:
+        msg = f"no scenarios for suite={args.suite}"
+        summary = {
+            "run_id": run_id,
+            "generated_at": dt.datetime.now().isoformat(timespec="seconds"),
+            "suite": args.suite,
+            "runs_root": runs_root.as_posix(),
+            "run_dir": run_root.as_posix(),
+            "total": 0,
+            "passed": 0,
+            "failed": 0,
+            "error": msg,
+            "scenarios": [],
+        }
+        summary_path = run_root / "summary.json"
+        summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+        if args.json_out:
+            Path(args.json_out).write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(msg, file=sys.stderr)
+        print(json.dumps({"run_dir": run_root.as_posix(), "passed": 0, "failed": 0, "error": msg}, ensure_ascii=False))
+        return 1
+
     results: list[dict[str, Any]] = []
     for doc in scenarios:
         runner = ScenarioRunner(doc, run_root)

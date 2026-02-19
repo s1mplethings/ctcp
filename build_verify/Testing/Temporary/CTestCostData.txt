@@ -1,3 +1,0 @@
-headless_smoke 6 0.0188616
-verify_tools_selftest 6 0.0307776
----

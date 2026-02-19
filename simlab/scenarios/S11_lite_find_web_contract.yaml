@@ -1,0 +1,32 @@
+{
+  "id": "S11_lite_find_web_contract",
+  "name": "lite resolver_plus_web find_web contract check",
+  "suite": "lite",
+  "steps": [
+    {
+      "write": {
+        "path": "artifacts/_simlab_find_web.json",
+        "mode": "overwrite",
+        "content": "{\n  \"schema_version\": \"ctcp-find-web-v1\",\n  \"constraints\": {\n    \"allow_domains\": [\n      \"docs.python.org\"\n    ],\n    \"max_queries\": 2\n  },\n  \"results\": [\n    {\n      \"url\": \"https://docs.python.org/3/library/pathlib.html\",\n      \"locator\": \"pathlib docs\",\n      \"fetched_at\": \"2026-02-19T00:00:00\",\n      \"excerpt\": \"Path objects represent filesystem paths.\",\n      \"why_relevant\": \"Example controlled web-find input artifact\",\n      \"risk_flags\": []\n    }\n  ]\n}\n"
+      }
+    },
+    {
+      "run": {
+        "cmd": "python tools/checks/find_web_contract.py --mode resolver_plus_web --path artifacts/_simlab_find_web.json",
+        "expect_exit": 0,
+        "expect_output_includes": [
+          "[find_web_contract] ok:"
+        ]
+      }
+    },
+    {
+      "expect_text": {
+        "path": "artifacts/_simlab_find_web.json",
+        "includes": [
+          "\"schema_version\": \"ctcp-find-web-v1\"",
+          "\"risk_flags\""
+        ]
+      }
+    }
+  ]
+}

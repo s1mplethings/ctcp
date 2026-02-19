@@ -1,7 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"D:/.c_projects/adc/ctcp/build_lite/cmake_install.cmake"
-	],
-	"Parallel" : false
-}

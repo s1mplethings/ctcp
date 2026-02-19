@@ -1,0 +1,45 @@
+{
+  "spec_id": "ctcp_file_request_v1",
+  "schema_version": "ctcp-file-request-v1",
+  "type": "object",
+  "description": "Chair/Planner -> Local Librarian artifact request contract.",
+  "required": [
+    "schema_version",
+    "goal",
+    "requested_paths",
+    "deny_paths",
+    "max_total_bytes",
+    "notes"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "ctcp-file-request-v1"
+    },
+    "goal": {
+      "type": "string"
+    },
+    "requested_paths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Explicit file/dir paths requested from Local Librarian."
+    },
+    "deny_paths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Paths that must not be included in context_pack."
+    },
+    "max_total_bytes": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Read budget cap for supplied file contents."
+    },
+    "notes": {
+      "type": "string"
+    }
+  }
+}

@@ -7,6 +7,17 @@
 - `find` 的含义是 workflow resolver（从本地流程库/历史成功记录选 recipe），不是上网检索。
 - 默认 headless，GUI 仅可选示例路径，不进入默认验收链路。
 
+## Orchestrator 工件推进（Local Orchestrator 唯一驱动）
+- Local agent 角色定义为 Local Orchestrator：基于 run_dir 工件存在性推进状态，不直接承担 Researcher/Librarian/Reviewer 的内容生产。
+- 默认 run 目录使用外置 `CTCP_RUNS_ROOT`，仓库内只保留 `meta/run_pointers/LAST_RUN.txt` 指针。
+- `find` 双通道：
+  - `find_local`（必做）：resolver 产出 `artifacts/find_result.json`
+  - `find_web`（可选）：Researcher 产出 `artifacts/find_web.json`
+- 模式门禁：
+  - `resolver_only`：`find_result.json` 必须存在即可通过 find gate
+  - `resolver_plus_web`：`find_result.json` 与 `find_web.json` 均必须存在，缺任一项状态为 blocked（等待 Researcher）
+- 注意：`find_web.json` 仅作为输入补充，最终用于 plan 的决策工件仍是 `find_result.json`。
+
 ## 使用流程（用户视角）
 1. 打开工程目录
    - GUI 扫描并识别 SDDAI 结构（docs/specs/scripts/ai_context/runs）

@@ -27,9 +27,15 @@ CTCP 的核心不是 GUI。CTCP 的核心是一个可执行、可验收、可迭
 
 ### 1.2 Find 的真实含义（非常重要）
 
-- find 不是上网找资料
-- find 是 Workflow Resolver：从已有流程库/历史成功记录中，挑选最适合当前 goal 的现成 workflow（recipe）作为依赖来执行
-- Web 只能作为更新流程库的离线输入，不允许成为主链路硬依赖
+- find 不是“必须联网检索”
+- 默认模式：`resolver_only`
+  - 必须执行本地 resolver（`workflow_registry` + 历史成功记录）
+  - 必须产出 `artifacts/find_result.json`
+- 可选模式：`resolver_plus_web`
+  - 在 `resolver_only` 基础上，允许引入外部 Researcher 产物 `artifacts/find_web.json`
+  - `find_web.json` 只是输入补充，最终决策产物仍必须是 `artifacts/find_result.json`
+  - 必须受 guardrails 的 `find_mode` / `web_find_policy` 约束
+- 无论模式如何，主链路不以联网能力作为硬依赖
 
 ### 1.3 GUI 的定位
 
@@ -91,6 +97,7 @@ GUI 默认不参与：
 ## 4. 执行角色（多 agent 最小组织）
 
 可单 agent 实现，但接口输出需兼容以下角色：
+- Local Orchestrator（唯一驱动器）: 仅依据工件存在性推进 run 状态，不替代 Researcher/Librarian/Reviewer 内容生产
 
 - DocGatekeeper: `artifacts/guardrails.md`
 - Analyzer: `artifacts/analysis.md`
@@ -123,11 +130,26 @@ GUI 默认不参与：
   - `top_candidates`(<=3)
   - `decision`
 - 判定：找不到 workflow 时必须输出 `selected_workflow_id=null`，并在 plan 走 fallback minimal workflow
+- 双通道说明：
+  - `find_local`（必做）：本地 resolver 产出 `find_result.json`
+  - `find_web`（可选）：Researcher 产出 `find_web.json`（格式见 `specs/ctcp_find_web_v1.json`）
+  - `resolver_plus_web` 模式下，`find_web.json` 缺失或不合规时流程必须 blocked
 
 ### 5.4 plan
 - 输入：`find_result.json` + guardrails + analysis
 - 输出：`artifacts/PLAN.md`
 - 必须包含：workflow id/version、参数填充、gates、预计改动路径
+
+### 5.4A Local Librarian context gate（硬门禁）
+- `artifacts/file_request.json`：Chair/Planner 发给 Local Librarian 的输入，格式见 `specs/ctcp_file_request_v1.json`
+- `artifacts/context_pack.json`：Local Librarian 的输出，格式见 `specs/ctcp_context_pack_v1.json`
+- 判定：`context_pack.json` 缺失时，流程 `MUST` 停在 plan 前；禁止跳过到 patch/apply/verify
+
+### 5.4B TeamNet adversarial reviews（硬门禁）
+- `reviews/review_contract.md`：ContractGuardian 审查结论
+- `reviews/review_cost.md`：CostController 审查结论
+- 每份 review `MUST` 包含一行：`Verdict: APPROVE` 或 `Verdict: BLOCK`
+- 判定：任一 review 非 APPROVE，流程 `MUST` 保持 blocked，不得进入 patch/apply/verify
 
 ### 5.5 build <-> verify
 - 输入：`PLAN.md` + repo state

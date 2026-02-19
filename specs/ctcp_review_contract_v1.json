@@ -1,0 +1,11 @@
+{
+  "spec_id": "ctcp_review_contract_v1",
+  "schema_version": "ctcp-review-contract-v1",
+  "artifact_path": "reviews/review_contract.md",
+  "format": "markdown",
+  "required_rules": [
+    "Must contain line: Verdict: APPROVE or Verdict: BLOCK",
+    "If Verdict: BLOCK, must include blocking reason and required artifacts",
+    "Review checks plan/find/context artifacts consistency with core contract"
+  ]
+}
