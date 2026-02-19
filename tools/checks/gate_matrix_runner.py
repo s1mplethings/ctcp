@@ -165,12 +165,19 @@ def copy_repo_for_sandbox(dst: Path) -> Path:
             )
 
     def ignore(dir_path: str, names: list[str]) -> set[str]:
-        rel = Path(dir_path).resolve().relative_to(ROOT.resolve())
-        rel_posix = rel.as_posix()
+        # Avoid expensive/fragile .resolve() here; nested artifact trees can
+        # create very deep paths and trigger recursion on Windows.
+        try:
+            rel_posix = Path(os.path.relpath(dir_path, ROOT)).as_posix()
+        except Exception:
+            rel_posix = ""
         ignored: set[str] = set()
 
         for name in names:
-            child = (rel / name).as_posix()
+            if rel_posix in (".", ""):
+                child = name
+            else:
+                child = f"{rel_posix}/{name}"
             if name in {
                 ".git",
                 ".venv",
@@ -184,7 +191,13 @@ def copy_repo_for_sandbox(dst: Path) -> Path:
             }:
                 ignored.add(name)
                 continue
-            if child.startswith("runs/") or child.startswith("tests/fixtures/adlc_forge_full_bundle/runs/"):
+            if (
+                child.startswith("runs/")
+                or child.startswith("meta/runs/")
+                or child.startswith("simlab/_runs")
+                or child.startswith("tests/fixtures/adlc_forge_full_bundle/runs/")
+                or child.startswith("artifacts/verify/")
+            ):
                 ignored.add(name)
                 continue
             if name == "__pycache__":

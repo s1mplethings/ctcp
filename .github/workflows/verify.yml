@@ -21,18 +21,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: "6.6.3"
-          modules: "qtwebengine"
-          cache: true
-
       - name: Linux deps
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb ninja-build
+          sudo apt-get install -y xvfb ninja-build cmake build-essential
 
       - name: Run verify (Linux)
         if: runner.os == 'Linux'
@@ -52,4 +45,3 @@ jobs:
           name: verify-artifacts-${{ matrix.os }}
           path: |
             artifacts/verify/**
-

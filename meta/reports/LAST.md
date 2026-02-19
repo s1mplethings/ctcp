@@ -134,3 +134,31 @@
 - Optional: set explicit enterprise runs root before team runs:
   - Windows: `$env:CTCP_RUNS_ROOT = "D:\\ctcp-runs"`
   - Linux/macOS: `export CTCP_RUNS_ROOT=/data/ctcp-runs`
+
+---
+
+## Follow-up (CI job stabilization)
+
+### Goal
+- Address fast-fail CI jobs:
+  - `gate-matrix / preflight-and-matrix`
+  - `verify-evidence / verify (ubuntu-latest)`
+  - `verify-evidence / verify (windows-latest)`
+
+### Changes
+- `tools/checks/gate_matrix_runner.py`
+  - Hardened sandbox copy ignore logic:
+    - removed fragile `.resolve()` on recursive artifact trees
+    - added ignores for `simlab/_runs*`, `meta/runs/`, `artifacts/verify/`
+  - Result: `python tools/checks/gate_matrix_runner.py` now completes successfully.
+- `.github/workflows/verify.yml`
+  - Removed external Qt install action (verify is headless, GUI optional).
+  - Added explicit Linux build deps: `cmake`, `build-essential`, `ninja-build`, `xvfb`.
+
+### Verify
+- `python tools/checks/gate_matrix_runner.py`
+  - exit: `0`
+- `powershell -ExecutionPolicy Bypass -File scripts/verify.ps1`
+  - exit: `0`
+- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
+  - exit: `0`

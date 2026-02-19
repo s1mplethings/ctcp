@@ -29,3 +29,4 @@
 - Repo-internal outputs restricted to lightweight pointers and path metadata.
 - Added `docs/21_paths_and_locations.md` and `docs/22_agent_teamnet.md`.
 - `scripts/verify_repo.ps1` passed; Team Mode smoke passed with external run pointer.
+- CI follow-up: fixed `tools/checks/gate_matrix_runner.py` sandbox ignore recursion and simplified `verify.yml` to headless verify dependency set.
