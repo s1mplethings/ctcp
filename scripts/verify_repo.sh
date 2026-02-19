@@ -5,6 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR_LITE="${ROOT}/build_lite"
 CTEST_EXE=""
 MODE="${CTCP_FULL_GATE:-0}"
+WRITE_FIXTURES="${CTCP_WRITE_FIXTURES:-0}"
 if [[ "${1:-}" == "--full" ]]; then
   MODE="1"
 fi
@@ -15,6 +16,7 @@ if [[ "${MODE}" == "1" ]]; then
 else
   echo "[verify_repo] mode: LITE"
 fi
+echo "[verify_repo] write_fixtures: ${WRITE_FIXTURES}"
 
 if command -v cmake >/dev/null 2>&1; then
   CMAKE_EXE="$(command -v cmake)"
@@ -47,10 +49,16 @@ echo "[verify_repo] doc index check (sync doc links --check)"
 python3 "${ROOT}/scripts/sync_doc_links.py" --check
 
 echo "[verify_repo] lite scenario replay"
+RUNS_ROOT="${ROOT}/simlab/_runs_repo_gate"
+SUMMARY_OUT="${ROOT}/simlab/_runs_repo_gate/_lite_summary.json"
+if [[ "${WRITE_FIXTURES}" == "1" ]]; then
+  RUNS_ROOT="${ROOT}/tests/fixtures/adlc_forge_full_bundle/runs/simlab_lite_runs"
+  SUMMARY_OUT="${ROOT}/tests/fixtures/adlc_forge_full_bundle/runs/_simlab_lite_summary.json"
+fi
 python3 "${ROOT}/simlab/run.py" \
   --suite lite \
-  --runs-root "${ROOT}/tests/fixtures/adlc_forge_full_bundle/runs/simlab_lite_runs" \
-  --json-out "${ROOT}/tests/fixtures/adlc_forge_full_bundle/runs/_simlab_lite_summary.json"
+  --runs-root "${RUNS_ROOT}" \
+  --json-out "${SUMMARY_OUT}"
 
 if [[ "${MODE}" == "1" ]]; then
   echo "[verify_repo] FULL mode enabled"

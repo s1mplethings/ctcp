@@ -185,3 +185,16 @@ _tmp_patch.py
 patch_debug.txt
 *.bak
 artifacts/verify/
+simlab/_runs/
+simlab/_runs*/
+simlab/_runs_repo_gate/
+meta/runs/
+meta/run_pointers/LAST_RUN.txt
+meta/run_pointers/LAST_TRACE.txt
+meta/run_pointers/LAST_QUESTIONS.txt
+meta/run_pointers/*.bak
+meta/run_pointers/*.tmp
+meta/run_pointers/*.old
+build_*/
+build_lite/
+build_verify/

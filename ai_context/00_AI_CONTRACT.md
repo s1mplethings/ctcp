@@ -18,10 +18,11 @@
 
 - 任务单：`meta/tasks/CURRENT.md`
 - 调研记录（如需要）：`meta/externals/<date>-*.md`
-- 运行包：`meta/runs/<timestamp>/`
+- 运行包：`${CTCP_RUNS_ROOT:-~/.ctcp/runs}/<repo_slug>/<run_id>/`
   - `PROMPT.md`：给 coding agent 的输入（唯一）
   - `QUESTIONS.md`：阻塞问题（唯一允许提问渠道）
   - `TRACE.md`：全过程日志（演示）
+- 运行指针：`meta/run_pointers/LAST_RUN.txt`（仓库内，仅存绝对路径）
 - 演示报告：`meta/reports/LAST.md`
 - 问题记忆：`ai_context/problem_registry.md`
 - 决策记录：`ai_context/decision_log.md`
@@ -51,7 +52,7 @@
 2) 需要你在互斥方案中拍板  
 3) 缺少关键约束导致无法继续
 
-提问必须写到 `meta/runs/<ts>/QUESTIONS.md`，并包含：
+提问必须写到外部 run 包的 `QUESTIONS.md`（通过 `meta/run_pointers/LAST_RUN.txt` 可定位），并包含：
 - 问题
 - 可选项 A/B/C（带利弊）
 - 默认建议（如果你不回，系统将按默认继续）
@@ -70,4 +71,3 @@
 6. Verify (commands + output)
 7. Open questions (if any)
 8. Next steps
-

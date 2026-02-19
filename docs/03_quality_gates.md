@@ -30,6 +30,11 @@ verify_repo 必须保证：
 5) full checks（可选）
 - `CTCP_FULL_GATE=1` 时才跑更重测试（如 GUI 相关）
 
+附加约束（forge full suite preflight）：
+- 入口脚本必须存在：`tools/checks/suite_gate.py`
+- live suite 清单必须存在：`tests/fixtures/adlc_forge_full_bundle/suites/forge_full_suite.live.yaml`
+- 若入口缺失，必须在预检中给出明确缺失路径，避免误判为功能通过
+
 如果你发现 verify_repo 没覆盖到某类失败，就把它补进 verify_repo，并新增一个 tests/cases 用例。
 
 证据闭环工具：

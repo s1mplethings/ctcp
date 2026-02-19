@@ -7,11 +7,13 @@ $ErrorActionPreference = "Stop"
 $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $BuildDirLite = Join-Path $Root "build_lite"
 $RunFull = $Full -or ($env:CTCP_FULL_GATE -eq "1")
+$WriteFixtures = ($env:CTCP_WRITE_FIXTURES -eq "1")
 $ModeName = "LITE"
 if ($RunFull) { $ModeName = "FULL" }
 
 Write-Host "[verify_repo] repo root: $Root"
 Write-Host "[verify_repo] mode: $ModeName"
+Write-Host "[verify_repo] write_fixtures: $WriteFixtures"
 
 function Invoke-ExternalChecked {
   param(
@@ -103,8 +105,14 @@ Invoke-Step -Name "doc index check (sync doc links --check)" -Block {
 }
 
 Invoke-Step -Name "lite scenario replay" -Block {
+  $RunsRoot = Join-Path $Root "simlab\_runs_repo_gate"
+  $SummaryOut = Join-Path $Root "simlab\_runs_repo_gate\_lite_summary.json"
+  if ($WriteFixtures) {
+    $RunsRoot = Join-Path $Root "tests\fixtures\adlc_forge_full_bundle\runs\simlab_lite_runs"
+    $SummaryOut = Join-Path $Root "tests\fixtures\adlc_forge_full_bundle\runs\_simlab_lite_summary.json"
+  }
   Invoke-ExternalChecked -Label "lite scenario replay" -Command {
-    python simlab\run.py --suite lite --runs-root tests\fixtures\adlc_forge_full_bundle\runs\simlab_lite_runs --json-out tests\fixtures\adlc_forge_full_bundle\runs\_simlab_lite_summary.json
+    python simlab\run.py --suite lite --runs-root $RunsRoot --json-out $SummaryOut
   }
 }
 

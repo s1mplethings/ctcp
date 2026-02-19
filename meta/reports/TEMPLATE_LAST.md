@@ -13,8 +13,9 @@
 - Report
 
 ## Timeline / Trace
-- Run folder: `meta/runs/<timestamp>/`
-- Trace file: `meta/runs/<timestamp>/TRACE.md`
+- Run pointer: `meta/run_pointers/LAST_RUN.txt`
+- Run folder (external): `${CTCP_RUNS_ROOT:-~/.ctcp/runs}/<repo_slug>/<run_id>/`
+- Trace file (external): `${CTCP_RUNS_ROOT:-~/.ctcp/runs}/<repo_slug>/<run_id>/TRACE.md`
 
 ## Changes
 - Files changed:
@@ -26,7 +27,7 @@
 -
 
 ## Questions (only if blocking)
-- (write to meta/runs/<ts>/QUESTIONS.md too)
+- (write to external run bundle QUESTIONS.md; locate via meta/run_pointers/LAST_RUN.txt)
 
 ## Next steps
 -

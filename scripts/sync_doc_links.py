@@ -24,6 +24,8 @@ CURATED_DOCS = [
     "docs/02_workflow.md",
     "docs/03_quality_gates.md",
     "docs/10_team_mode.md",
+    "docs/21_paths_and_locations.md",
+    "docs/22_agent_teamnet.md",
     "docs/12_modules_index.md",
     "docs/13_contracts_index.md",
     "docs/SELF_CHECK_SYSTEM.md",

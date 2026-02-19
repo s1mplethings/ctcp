@@ -1,66 +1,136 @@
 # Demo Report — LAST
 
 ## Goal
-- 将仓库主路径收敛为 headless ADLC 执行闭环，GUI 改为可选构建；并保证 verify/SimLab/gate matrix 可复现通过。
+- Move default Team Mode / ADLC / SimLab run artifacts to external runs root, keep repo-internal files as pointers/path logic, and add clear ADLC-first multi-agent teamnet docs.
 
 ## Readlist
+- `docs/00_CORE.md`
+  - Conflict resolution source of truth; core remains ADLC + verifiable loop, GUI optional, find is local resolver mainline.
+- `README.md`
+  - Team Mode deliverables and quick-start contract must stay externally consistent.
 - `AGENTS.md`
-- `BUILD.md`
-- `PATCH_README.md`
-- `TREE.md`
+  - Execution order and allowed-question gate; output format and verify gate requirements.
 - `ai_context/00_AI_CONTRACT.md`
-- `ai_context/problem_registry.md`
-- `docs/02_workflow.md`
+  - Required report structure and run-bundle/question channel contract.
+- `docs/10_team_mode.md`
+  - Current team packet location contract needed migration.
+- `BUILD.md`
+  - Headless-first build constraints.
+- `PATCH_README.md`
+  - Unified diff delivery requirement.
+- `TREE.md`
+  - Existing doc/spec tree context.
 - `docs/03_quality_gates.md`
+  - `verify_repo` as mandatory gate.
+- `ai_context/problem_registry.md`
+  - Evidence-first verification precedent.
+- `ai_context/decision_log.md`
+  - No exemption required this run.
+- `tools/ctcp_team.py`
+  - Team Mode run packet creation logic.
+- `scripts/adlc_run.py`
+  - ADLC run output/history default paths.
+- `simlab/run.py`
+  - SimLab default runs root behavior.
+- `.gitignore`
+  - Repo hygiene for run artifacts and pointer temp files.
+- `scripts/sync_doc_links.py`
+  - README Doc Index curated list sync behavior.
 
 ## Plan
-1) 修复 verify 脚本参数与硬失败路径。
-2) 让 verify_repo 在 headless 下稳定执行 build + ctest + workflow/contract/docindex + lite scenario。
-3) 修复 sandbox 复制污染（build cache 泄漏）导致的矩阵误判。
-4) 验证 ADLC headless 入口成功路径与失败 bundle 路径。
-5) 重跑 gate matrix 并更新结果。
+1) Docs/Spec
+- Rewrite path policy to external `CTCP_RUNS_ROOT` + repo pointer model.
+- Add path authority doc and ADLC-first agent teamnet doc.
+2) Code
+- Add unified run path resolver module.
+- Switch Team Mode / ADLC / SimLab defaults to external run directories.
+- Keep `verify_repo` replay behavior unchanged.
+3) Verify
+- Run `scripts/verify_repo.ps1`.
+- Run Team Mode smoke and pointer checks.
+4) Report
+- Update LAST report and produce `artifacts/diff.patch`.
 
 ## Timeline / Trace pointer
-- Verify proof: `artifacts/verify/20260218-224104/proof.json`
-- Verify contrast: `artifacts/verify/20260218-224104/contrast_report.md`
-- ADLC success run: `meta/runs/20260218-223255-adlc-headless/TRACE.md`
-- ADLC failure bundle run: `meta/runs/20260218-223335-adlc-headless/failure_bundle.zip`
-- Gate matrix summary: `tests/fixtures/adlc_forge_full_bundle/runs/_suite_eval_summary.json`
+- Run pointer file: `meta/run_pointers/LAST_RUN.txt`
+- Run folder (external): `C:\Users\sunom\.ctcp\runs\ctcp\20260219-121343-smoke-goal`
+- Trace file (external): `C:\Users\sunom\.ctcp\runs\ctcp\20260219-121343-smoke-goal\TRACE.md`
 
-## Changes (file list)
-- `CMakeLists.txt`: `CMAKE_AUTOMOC` 仅在 `CTCP_ENABLE_GUI=ON` 时启用，避免 headless 无意义 Qt 警告。
-- `scripts/verify.ps1`: 修复 `--cmake-arg` 传参，增加 `-DBUILD_TESTING=ON`。
-- `scripts/verify.sh`: 同步修复 `--cmake-arg`，增加 `-DBUILD_TESTING=ON`。
-- `scripts/verify_repo.ps1`: 增加 `ctest` 回退探测（从 cmake 同目录），并在 lite configure 中显式 `BUILD_TESTING=ON`。
-- `scripts/verify_repo.sh`: 同步 `ctest` 回退探测与 `BUILD_TESTING=ON`。
-- `scripts/adlc_run.py`: 当 `meta/tasks/CURRENT.md` 已存在时自动 `--force`，保证单命令可重复执行。
-- `simlab/run.py`: sandbox 复制忽略 `build_lite/build_verify/build_gui/.pytest_cache`，避免 CMake cache 污染。
-- `tools/checks/gate_matrix_runner.py`: 同步 sandbox 忽略规则，修复矩阵 case 被构建缓存误伤。
-- `meta/tasks/CURRENT.md`: 勾选 `[x] Code changes allowed` 以通过 workflow gate。
+## Changes
+- `meta/tasks/CURRENT.md`
+  - Switched to current task topic and recorded default decisions.
+- `docs/00_CORE.md`
+  - Rewrote 2.1/2.2 to enforce external runs root and repo pointer-only internal policy.
+- `README.md`
+  - Updated Team Mode output section to `${CTCP_RUNS_ROOT}/ctcp/<run_id>` and `meta/run_pointers/LAST_RUN.txt`.
+  - Doc Index now includes `docs/21_paths_and_locations.md` and `docs/22_agent_teamnet.md`.
+- `docs/10_team_mode.md`
+  - Updated run package location and pointer-based usage flow.
+- `ai_context/00_AI_CONTRACT.md`
+  - Updated run package and question-channel location to external run bundle + repo pointer.
+- `AGENTS.md`
+  - Updated allowed question and demo trace path wording for external run bundles.
+- `meta/reports/TEMPLATE_LAST.md`
+  - Updated timeline/questions template to pointer + external run paths.
+- `meta/paths.json`
+  - Added authoritative path logic metadata (`runs_root_env`, fallback, slug rule, run pattern, pointer dir).
+- `docs/21_paths_and_locations.md`
+  - Added authoritative repo-internal vs repo-external path rules and Windows/Linux env setup examples.
+- `docs/22_agent_teamnet.md`
+  - Added required two ASCII diagrams (teamnet mesh + ADLC mainline with artifacts and unique decision point).
+- `meta/run_pointers/README.md`
+  - Added pointer directory contract.
+- `tools/run_paths.py`
+  - Added unified path resolver (`get_repo_slug`, `get_runs_root`, `make_run_dir`, `default_simlab_runs_root`).
+- `tools/ctcp_team.py`
+  - Team runs now default to external run dir.
+  - Writes `meta/run_pointers/LAST_RUN.txt`.
+  - LAST report append entries now reference external absolute paths.
+- `scripts/adlc_run.py`
+  - Default run dir moved to external run root (`CTCP_RUNS_ROOT` fallback `~/.ctcp/runs`).
+  - Writes `meta/run_pointers/LAST_RUN.txt`.
+  - Run history moved from repo `meta/runs` to external repo-scope history file.
+- `simlab/run.py`
+  - Kept `--runs-root`; changed default to external `<runs_root>/<repo_slug>/simlab_runs`.
+- `simlab/README.md`
+  - Updated default output path documentation to external runs root.
+- `scripts/sync_doc_links.py`
+  - Added new docs to curated Doc Index.
+- `tests/cases/08-team-start生成运行包.md`
+  - Updated expected Team Mode output path and pointer behavior.
+- `.gitignore`
+  - Added run artifact/pointer-temp ignore rules for repo hygiene.
+- `artifacts/diff.patch`
+  - Wrote unified diff artifact for this patch theme.
 
-## Verify (commands + output)
-- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
+## Verify
+- `powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1`
   - exit: `0`
-  - 结果: configure/build/ctest(2 tests)/workflow/contract/docindex/lite scenario 全通过。
-- `powershell -ExecutionPolicy Bypass -File scripts/verify.ps1`
+  - key output:
+    - `100% tests passed, 0 tests failed out of 2`
+    - `[workflow_checks] ok`
+    - `[contract_checks] ... ok`
+    - `[sync_doc_links] ok`
+    - `lite scenario replay ... "passed": 1, "failed": 0`
+    - `[verify_repo] OK`
+- `python tools/ctcp_team.py start "smoke goal"`
   - exit: `0`
-  - 结果: `run_verify` PASS + `adlc_gate` PASS + `contrast_proof` 生成成功。
-- `python simlab/run.py --suite core --runs-root tests/fixtures/adlc_forge_full_bundle/runs/simlab_runs --json-out tests/fixtures/adlc_forge_full_bundle/runs/_simlab_suite_summary.json`
+  - key output:
+    - created run: `C:\Users\sunom\.ctcp\runs\ctcp\20260219-121343-smoke-goal`
+    - pointer: `meta/run_pointers/LAST_RUN.txt`
+- smoke path checks:
+  - `meta/run_pointers/LAST_RUN.txt` points to external absolute directory
+  - external run dir contains: `PROMPT.md`, `TRACE.md`, `QUESTIONS.md`, `RUN.json`
+- extra default check:
+  - `python simlab/run.py --suite lite`
   - exit: `0`
-  - 结果: passed `6`, failed `0`。
-- `python scripts/adlc_run.py --goal "headless-lite-check"`
-  - exit: `0`
-  - 结果: 生成 `TRACE.md` + `RUN.json`。
-- `python scripts/adlc_run.py --goal headless-lite-fail --verify-cmd "python -m module_that_does_not_exist"`
-  - exit: `1`
-  - 结果: 生成 `failure_bundle.zip`（含 `TRACE.md`/`diff.patch`/`logs`）。
-- `python tools/checks/gate_matrix_runner.py`
-  - exit: `0`
-  - 结果: `PASS 26 / FAIL 0 / SKIP 1`。
+  - key output:
+    - run_dir under external root: `C:/Users/sunom/.ctcp/runs/ctcp/simlab_runs/...`
 
-## Open questions
+## Questions (only if blocking)
 - None
 
 ## Next steps
-- 若需要 Full gate，将 `CTCP_FULL_GATE=1` 纳入 CI 的发布分支流程。
-- 若要消除 T12 的 SKIP，需要在执行环境补齐 C++ 编译器工具链并确保 PATH 可见。
+- Optional: set explicit enterprise runs root before team runs:
+  - Windows: `$env:CTCP_RUNS_ROOT = "D:\\ctcp-runs"`
+  - Linux/macOS: `export CTCP_RUNS_ROOT=/data/ctcp-runs`

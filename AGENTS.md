@@ -8,7 +8,7 @@
 
 ## 0) 允许提问的唯一条件（否则不要问）
 
-你只能在下面场景提问（写入 `meta/runs/<ts>/QUESTIONS.md`）：
+你只能在下面场景提问（写入外部 run 包的 `QUESTIONS.md`，通过 `meta/run_pointers/LAST_RUN.txt` 定位）：
 
 1. 需要用户提供 **密钥/账号/外部权限**（例如 API key、访问令牌）
 2. 需要用户在 **互斥方案** 中拍板（例如“重命名项目/大重构/破坏兼容”）
@@ -68,7 +68,7 @@
 3. Changes（文件清单 + 关键 diff 摘要）
 4. Verify（命令 + 关键输出 / 失败原因）
 5. Questions（若有：阻塞问题 + 选项 + 默认建议）
-6. Demo（指出 `meta/reports/LAST.md` 与 `meta/runs/<ts>/TRACE.md`）
+6. Demo（指出 `meta/reports/LAST.md` 与外部 run 包 `TRACE.md` 路径）
 
 ---
 
@@ -77,4 +77,3 @@
 - 一个 patch 只做一件事（一个主题）
 - 新依赖必须记录到 `third_party/THIRD_PARTY.md`（若目录存在）
 - 任何绕过 gate 的行为必须写入 `ai_context/decision_log.md`
-

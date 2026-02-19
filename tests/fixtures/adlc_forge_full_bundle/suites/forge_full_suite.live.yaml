@@ -1,0 +1,18 @@
+{
+  "_comment": "Live / Integration suite - only runs when env gate passes (API key present + network allowed).",
+  "suite": {
+    "id": "forge-full-v1-live",
+    "title": "ADLC Forge Full - LIVE (real API, network allowed)",
+    "tier": "live",
+    "env_gate": {
+      "required_env": [
+        "OPENAI_API_KEY"
+      ],
+      "require_network": true,
+      "allow_network_env": [
+        "CTCP_ALLOW_NETWORK",
+        "ALLOW_NETWORK"
+      ]
+    }
+  }
+}

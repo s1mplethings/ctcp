@@ -11,7 +11,7 @@ python simlab/run.py --suite all
 Optional outputs:
 
 ```powershell
-python simlab/run.py --suite core --runs-root simlab/_runs --json-out simlab/_runs/last_summary.json
+python simlab/run.py --suite core --runs-root "$env:CTCP_RUNS_ROOT\\ctcp\\simlab_runs" --json-out "$env:CTCP_RUNS_ROOT\\ctcp\\simlab_runs\\last_summary.json"
 ```
 
 ## Scene format
@@ -34,7 +34,7 @@ Run-step keys:
 
 ## Output
 
-Every run creates `simlab/_runs/<run_id>/`:
+By default, every run creates `${CTCP_RUNS_ROOT:-~/.ctcp/runs}/<repo_slug>/simlab_runs/<run_id>/`:
 
 - `<scenario>/TRACE.md`
 - `<scenario>/logs/*`
@@ -42,4 +42,3 @@ Every run creates `simlab/_runs/<run_id>/`:
 - `<scenario>/artifacts/*` (snapshots)
 - `<scenario>/failure_bundle.zip` (when generated)
 - `summary.json`
-

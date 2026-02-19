@@ -14,17 +14,24 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+ROOT = Path(__file__).resolve().parents[1]
+
 try:
     from simlab.assertions import ensure_excludes, ensure_includes, read_text
     from simlab.schema import validate_scenario
 except ModuleNotFoundError:
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    sys.path.insert(0, str(ROOT))
     from simlab.assertions import ensure_excludes, ensure_includes, read_text
     from simlab.schema import validate_scenario
 
-ROOT = Path(__file__).resolve().parents[1]
+try:
+    from tools.run_paths import default_simlab_runs_root
+except ModuleNotFoundError:
+    sys.path.insert(0, str(ROOT))
+    from tools.run_paths import default_simlab_runs_root
+
 SCENARIOS_DIR = ROOT / "simlab" / "scenarios"
-DEFAULT_RUNS_ROOT = ROOT / "simlab" / "_runs"
+DEFAULT_RUNS_ROOT = default_simlab_runs_root(ROOT)
 
 
 @dataclass
@@ -81,7 +88,7 @@ def copy_repo(src: Path, dst: Path) -> None:
             if child.startswith("tests/fixtures/adlc_forge_full_bundle/runs/"):
                 ignored.add(name)
                 continue
-            if child.startswith("simlab/_runs/"):
+            if child.startswith("simlab/_runs"):
                 ignored.add(name)
                 continue
         return ignored

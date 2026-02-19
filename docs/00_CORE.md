@@ -49,19 +49,34 @@ GUI 默认不参与：
 - `workflow_registry/`: 流程库（find 的主要输入）
 - `scripts/`: 入口脚本（workflow dispatch、verify）
 - `simlab/`: 最小回放/验收框架（scenarios + run engine）
-- `runs/` 或 `simlab/_runs/`: 所有执行产物（TRACE、bundle、events）
+- 外部 runs root（`CTCP_RUNS_ROOT`）: 所有默认执行产物（TRACE、bundle、events）
+- `meta/run_pointers/`: 仓库内轻量指针（只记录外部 run 目录路径）
 - `meta/`: 工程关系/视图/配置
 - `specs/`: 契约与 schema
 - `docs/`: 核心规则与 DoD
+- `meta/runs/`、`simlab/_runs/`: deprecated，非默认产物目录
 
 ### 2.2 运行产物目录（固定）
 
+标准落点（默认）：
+- `runs_root = env(CTCP_RUNS_ROOT)`；若未设置，默认 `~/.ctcp/runs`
+- `repo_slug = <repo 根目录名归一化>`
+- `run_dir = <runs_root>/<repo_slug>/<run_id>/`
+- Team Mode / ADLC / SimLab 默认 `MUST` 写入该外部 `run_dir`
+
+仓库内允许写入（轻量）：
+- `meta/run_pointers/LAST_RUN.txt`（绝对路径）
+- 可选 pointer（例如 `LAST_QUESTIONS.txt`、`LAST_TRACE.txt`）
+
+例外（门禁回放）：
+- `verify_repo` 的 Lite replay 可继续写入仓库内 gate 目录（如 `simlab/_runs_repo_gate/<run_id>/...` 或 fixtures），用于固定验收流程。
+
 每次运行 `MUST` 写入：
-- `simlab/_runs/<run_id>/TRACE.md`
-- `simlab/_runs/<run_id>/artifacts/`
+- `TRACE.md`
+- `artifacts/`（至少包含 find/plan/verify 相关产物）
 
 失败时 `MUST` 写入：
-- `simlab/_runs/<run_id>/failure_bundle.zip`
+- `failure_bundle.zip`
 
 ## 3. 核心不变量（任何 agent 不得违反）
 
@@ -180,5 +195,6 @@ GUI 默认不参与：
 ## 10. 核心一句话（系统提示）
 
 - find = 从本地流程库/历史成功中解析并选择 workflow
-- verify = 必须在沙盒里跑出 TRACE
+- patch = 外部 agent 产物输入，runner 负责吸收并应用
+- verify = 唯一判定步骤，必须在可回放环境里产出 TRACE
 - fail = 必须产出 failure_bundle，修复只能依据 bundle

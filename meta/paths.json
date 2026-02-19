@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "runs_root_env": "CTCP_RUNS_ROOT",
+  "default_runs_root": "~/.ctcp/runs",
+  "repo_slug": {
+    "rule": "derive from repo root directory name, normalized to lowercase slug"
+  },
+  "run_dir_pattern": "<runs_root>/<repo_slug>/<run_id>/",
+  "pointers_dir": "meta/run_pointers/"
+}

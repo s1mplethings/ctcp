@@ -4,10 +4,11 @@
 
 ## 核心目录
 - `meta/tasks/CURRENT.md`：任务单（验收/计划/是否允许改代码）
-- `meta/runs/<timestamp>/`：一次“团队运行包”
+- `${CTCP_RUNS_ROOT:-~/.ctcp/runs}/ctcp/<run_id>/`：一次“团队运行包”（真实路径）
   - `PROMPT.md`：给 coding agent 的输入（唯一入口）
   - `QUESTIONS.md`：阻塞问题（唯一允许提问渠道）
   - `TRACE.md`：全过程日志（演示）
+- `meta/run_pointers/LAST_RUN.txt`：仓库内指针（记录最新 run 包绝对路径）
 - `meta/reports/LAST.md`：面向你的演示报告（可回放）
 
 ## 使用
@@ -16,7 +17,7 @@
 python tools\ctcp_team.py start "your goal"
 ```
 
-2) 把 `meta/runs/<ts>/PROMPT.md` 交给你的 coding agent（Codex/Claude/你自己的 agent 都行）
+2) 读取 `meta/run_pointers/LAST_RUN.txt`，把对应目录下的 `PROMPT.md` 交给 coding agent（Codex/Claude/你自己的 agent 都行）
 
 3) agent 产出 patch/改动后，跑：
 ```powershell
@@ -25,6 +26,6 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
 
 4) 演示：
 - 打开 `meta/reports/LAST.md`
-- 跟着 Trace 指针回放 `meta/runs/<ts>/TRACE.md`
+- 跟着 Trace 指针回放外部 run 包中的 `TRACE.md`
 
 > 下一步想做到“全自动”，就在 `ctcp_team.py` 里加 provider：直接调用 codex CLI 或 OpenAI Agents SDK。

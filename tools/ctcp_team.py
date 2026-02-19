@@ -4,15 +4,24 @@ from __future__ import annotations
 import argparse
 import datetime as _dt
 import json
-import os
 import re
 import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-RUNS = ROOT / "meta" / "runs"
+
+try:
+    from tools.run_paths import make_run_dir
+except ModuleNotFoundError:
+    import sys
+
+    sys.path.insert(0, str(ROOT))
+    from tools.run_paths import make_run_dir
+
 REPORTS = ROOT / "meta" / "reports"
 TASK_CURRENT = ROOT / "meta" / "tasks" / "CURRENT.md"
+POINTERS_DIR = ROOT / "meta" / "run_pointers"
+LAST_RUN_POINTER = POINTERS_DIR / "LAST_RUN.txt"
 
 def _slug(s: str) -> str:
     s = s.strip().lower()
@@ -61,7 +70,10 @@ def _ensure_last_report(goal: str) -> Path:
         raise SystemExit(out)
     return last
 
-def _prompt_text(goal: str, run_rel: str) -> str:
+def _prompt_text(goal: str, run_dir: Path) -> str:
+    run_abs = str(run_dir.resolve())
+    trace_abs = str((run_dir / "TRACE.md").resolve())
+    questions_abs = str((run_dir / "QUESTIONS.md").resolve())
     return f"""# CTCP Team Packet — PROMPT
 
 ## Goal
@@ -75,13 +87,13 @@ You are the internal coding team. Follow repo contract strictly.
 - Spec-first: docs/spec/meta before code
 - Code changes only if meta/tasks/CURRENT.md ticks: [x] Code changes allowed
 - Always run verify: scripts/verify_repo.* and paste key results into meta/reports/LAST.md
-- If blocked, write questions ONLY to: {run_rel}/QUESTIONS.md
+- If blocked, write questions ONLY to: {questions_abs}
 
 ## Delivery
 Prefer one patch per theme. Put patches under PATCHES/ (create if missing), and list them in meta/reports/LAST.md.
 
 ## Trace / Demo
-Write a short running log to: {run_rel}/TRACE.md
+Write a short running log to: {trace_abs}
 Include:
 - decisions
 - commands run
@@ -90,34 +102,46 @@ Include:
 ## Expected finish state
 - verify_repo passes
 - README Doc Index is in sync (scripts/sync_doc_links.py --check passes)
-- meta/reports/LAST.md updated and points to {run_rel}
+- meta/reports/LAST.md updated and points to {run_abs}
 
 """
 
 def start(goal: str) -> Path:
-    RUNS.mkdir(parents=True, exist_ok=True)
     stamp = _now_stamp()
-    run_dir = RUNS / f"{stamp}-{_slug(goal)}"
+    run_id = f"{stamp}-{_slug(goal)}"
+    run_dir = make_run_dir(ROOT, run_id)
     run_dir.mkdir(parents=True, exist_ok=True)
 
     _ensure_task(goal)
     last = _ensure_last_report(goal)
 
-    rel = run_dir.relative_to(ROOT).as_posix()
-    _write(run_dir / "PROMPT.md", _prompt_text(goal, rel))
+    _write(run_dir / "PROMPT.md", _prompt_text(goal, run_dir))
     _write(run_dir / "QUESTIONS.md", "# Questions (only if blocking)\n\n-\n")
     _write(run_dir / "TRACE.md", f"# Trace — {stamp}\n\n## Goal\n{goal}\n\n")
+    _write(LAST_RUN_POINTER, str(run_dir.resolve()) + "\n")
 
     state = {
         "goal": goal,
         "created": stamp,
-        "run_dir": rel,
+        "run_dir": str(run_dir.resolve()),
+        "run_pointer": LAST_RUN_POINTER.relative_to(ROOT).as_posix(),
         "status": "started",
     }
     _write(run_dir / "RUN.json", json.dumps(state, indent=2, ensure_ascii=False) + "\n")
 
     # Append pointers to LAST report (non-destructive)
-    _append(last, f"\n\n---\n\n## CTCP Team Run\n- Run folder: `{rel}`\n- Prompt: `{rel}/PROMPT.md`\n- Trace: `{rel}/TRACE.md`\n- Questions: `{rel}/QUESTIONS.md`\n")
+    run_abs = str(run_dir.resolve())
+    _append(
+        last,
+        (
+            "\n\n---\n\n## CTCP Team Run\n"
+            f"- Run pointer: `{LAST_RUN_POINTER.relative_to(ROOT).as_posix()}`\n"
+            f"- Run folder (external): `{run_abs}`\n"
+            f"- Prompt: `{run_abs}/PROMPT.md`\n"
+            f"- Trace: `{run_abs}/TRACE.md`\n"
+            f"- Questions: `{run_abs}/QUESTIONS.md`\n"
+        ),
+    )
     return run_dir
 
 def main() -> int:
@@ -133,22 +157,18 @@ def main() -> int:
 
     if args.cmd == "start":
         run_dir = start(args.goal)
-        rel = run_dir.relative_to(ROOT).as_posix()
-        print(f"[ok] created run: {rel}")
-        print(f"[next] feed the prompt to your coding agent: {rel}/PROMPT.md")
+        run_abs = str(run_dir.resolve())
+        print(f"[ok] created run: {run_abs}")
+        print(f"[ok] pointer: {LAST_RUN_POINTER.relative_to(ROOT).as_posix()}")
+        print(f"[next] feed the prompt to your coding agent: {run_abs}/PROMPT.md")
         print("[next] then run verify: scripts/verify_repo.*")
         return 0
 
     if args.cmd == "status":
-        if not RUNS.exists():
-            print("[status] no runs")
+        if LAST_RUN_POINTER.exists():
+            print(LAST_RUN_POINTER.read_text(encoding="utf-8").strip())
             return 0
-        runs = sorted([p for p in RUNS.iterdir() if p.is_dir()])
-        if not runs:
-            print("[status] no runs")
-            return 0
-        latest = runs[-1]
-        print(latest.relative_to(ROOT).as_posix())
+        print("[status] no runs")
         return 0
 
     return 1

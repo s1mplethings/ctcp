@@ -69,10 +69,11 @@ bash scripts/verify_repo.sh
 
 - `meta/tasks/CURRENT.md`：本次任务单（验收、计划、是否允许改代码）
 - `meta/externals/*`：外部方案对比（如果需要）
-- `meta/runs/<timestamp>/`：一次运行的“团队包”
+- `${CTCP_RUNS_ROOT:-~/.ctcp/runs}/ctcp/<run_id>/`：一次运行的“团队包”（真实产物目录）
   - `PROMPT.md`：给 coding agent 的唯一输入
   - `QUESTIONS.md`：只允许写阻塞性问题
   - `TRACE.md`：全过程记录（演示用）
+- `meta/run_pointers/LAST_RUN.txt`：仓库内指针，指向最新外部 run 包绝对路径
 - `meta/reports/LAST.md`：面向你的最终演示报告（可回放/可审计）
 
 ---
@@ -115,6 +116,8 @@ cmake --build build_gui --config Release
 - [docs/02_workflow.md](docs/02_workflow.md)
 - [docs/03_quality_gates.md](docs/03_quality_gates.md)
 - [docs/10_team_mode.md](docs/10_team_mode.md)
+- [docs/21_paths_and_locations.md](docs/21_paths_and_locations.md)
+- [docs/22_agent_teamnet.md](docs/22_agent_teamnet.md)
 - [docs/12_modules_index.md](docs/12_modules_index.md)
 - [docs/13_contracts_index.md](docs/13_contracts_index.md)
 - [docs/SELF_CHECK_SYSTEM.md](docs/SELF_CHECK_SYSTEM.md)
