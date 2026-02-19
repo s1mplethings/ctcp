@@ -19,6 +19,7 @@ $BuildArtifactsCommittedMessage = -join ([char[]](
   0x20,0x67,0x69,0x74,0x20,0x4e2d,0x79fb,0x9664,0x5e76,0x66f4,0x65b0,0x20,
   0x2e,0x67,0x69,0x74,0x69,0x67,0x6e,0x6f,0x72,0x65
 ))
+$RunArtifactsCommittedMessage = "Run outputs exist or are tracked inside repo; move them to external CTCP_RUNS_ROOT."
 
 function Invoke-ExternalChecked {
   param(
@@ -75,7 +76,7 @@ function Invoke-BuildPollutionGate {
     [string]$RepoRoot
   )
 
-  Write-Host "[verify_repo] anti-pollution gate (build artifacts)"
+  Write-Host "[verify_repo] anti-pollution gate (build/run artifacts)"
   $trackedFiles = @(git -C $RepoRoot ls-files)
   if ($LASTEXITCODE -ne 0) {
     Write-Error "[verify_repo] FAILED: anti-pollution gate (git ls-files) (exit=$LASTEXITCODE)"
@@ -93,15 +94,36 @@ function Invoke-BuildPollutionGate {
     exit 1
   }
 
+  $trackedRuns = @($trackedFiles | Where-Object { $_ -like "simlab/_runs*/*" -or $_ -like "meta/runs/*" })
+  if ($trackedRuns.Count -gt 0) {
+    Write-Host "[verify_repo] tracked run outputs detected (showing up to 20):"
+    $trackedRuns | Select-Object -First 20 | ForEach-Object { Write-Host "  $_" }
+    Write-Host "[verify_repo] $RunArtifactsCommittedMessage"
+    exit 1
+  }
+
   $unignoredBuild = @(git -C $RepoRoot ls-files --others --exclude-standard -- 'build*/**')
   if ($LASTEXITCODE -ne 0) {
     Write-Error "[verify_repo] FAILED: anti-pollution gate (git ls-files --others) (exit=$LASTEXITCODE)"
     exit $LASTEXITCODE
   }
   if ($unignoredBuild.Count -gt 0) {
-    Write-Warning "[verify_repo] detected unignored files under build*/ (showing up to 20)."
-    $unignoredBuild | Select-Object -First 20 | ForEach-Object { Write-Warning "  $_" }
-    Write-Warning "[verify_repo] Please confirm .gitignore covers build outputs."
+    Write-Host "[verify_repo] unignored build outputs detected (showing up to 20):"
+    $unignoredBuild | Select-Object -First 20 | ForEach-Object { Write-Host "  $_" }
+    Write-Host "[verify_repo] Build outputs appear inside repo; clean them or update ignore rules."
+    exit 1
+  }
+
+  $unignoredRuns = @(git -C $RepoRoot ls-files --others --exclude-standard -- 'simlab/_runs*/**' 'meta/runs/**')
+  if ($LASTEXITCODE -ne 0) {
+    Write-Error "[verify_repo] FAILED: anti-pollution gate (git ls-files run outputs) (exit=$LASTEXITCODE)"
+    exit $LASTEXITCODE
+  }
+  if ($unignoredRuns.Count -gt 0) {
+    Write-Host "[verify_repo] unignored run outputs detected (showing up to 20):"
+    $unignoredRuns | Select-Object -First 20 | ForEach-Object { Write-Host "  $_" }
+    Write-Host "[verify_repo] $RunArtifactsCommittedMessage"
+    exit 1
   }
 }
 
@@ -148,14 +170,16 @@ Invoke-Step -Name "doc index check (sync doc links --check)" -Block {
 }
 
 Invoke-Step -Name "lite scenario replay" -Block {
-  $RunsRoot = Join-Path $Root "simlab\_runs_repo_gate"
-  $SummaryOut = Join-Path $Root "simlab\_runs_repo_gate\_lite_summary.json"
   if ($WriteFixtures) {
     $RunsRoot = Join-Path $Root "tests\fixtures\adlc_forge_full_bundle\runs\simlab_lite_runs"
     $SummaryOut = Join-Path $Root "tests\fixtures\adlc_forge_full_bundle\runs\_simlab_lite_summary.json"
-  }
-  Invoke-ExternalChecked -Label "lite scenario replay" -Command {
-    python simlab\run.py --suite lite --runs-root $RunsRoot --json-out $SummaryOut
+    Invoke-ExternalChecked -Label "lite scenario replay" -Command {
+      python simlab\run.py --suite lite --runs-root $RunsRoot --json-out $SummaryOut
+    }
+  } else {
+    Invoke-ExternalChecked -Label "lite scenario replay" -Command {
+      python simlab\run.py --suite lite
+    }
   }
 }
 

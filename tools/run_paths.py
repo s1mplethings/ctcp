@@ -3,10 +3,21 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 from pathlib import Path
 
 RUNS_ROOT_ENV = "CTCP_RUNS_ROOT"
-DEFAULT_RUNS_ROOT = Path.home() / ".ctcp" / "runs"
+
+
+def _default_runs_root() -> Path:
+    if os.name == "nt":
+        localapp = os.environ.get("LOCALAPPDATA", "").strip()
+        if localapp:
+            return Path(localapp) / "ctcp" / "runs"
+        return Path.home() / "AppData" / "Local" / "ctcp" / "runs"
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "ctcp" / "runs"
+    return Path.home() / ".local" / "share" / "ctcp" / "runs"
 
 
 def _slugify(value: str) -> str:
@@ -24,7 +35,7 @@ def get_runs_root() -> Path:
     raw = os.environ.get(RUNS_ROOT_ENV, "").strip()
     if raw:
         return Path(raw).expanduser().resolve()
-    return DEFAULT_RUNS_ROOT.resolve()
+    return _default_runs_root().resolve()
 
 
 def get_repo_runs_root(root: Path) -> Path:

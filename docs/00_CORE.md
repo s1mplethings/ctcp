@@ -1,222 +1,168 @@
-# CTCP Core Protocol
+CTCP Core Contract (v0.1)
+0. Purpose
 
-若本文件与其它文档冲突，以本文件为准。
+CTCP is a contract-first engineering loop:
+doc -> analysis -> find -> plan -> [build <-> verify] -> contrast -> fix -> deploy/merge
+All progress is driven by artifacts stored in the run directory ("Blackboard").
 
-## 0.1 规范关键字
+1. Definitions
 
-本文件使用 RFC 风格关键字：
-- `MUST` / `SHALL`：强制要求，不满足即不合规
-- `SHOULD`：强建议，允许有限例外但必须记录原因
-- `MAY`：可选项
+Repo: the git repository (must remain clean; no run/build outputs tracked).
 
-## 0. 北极星定义
+Run Directory (Blackboard): an external folder (NOT inside repo) that contains artifacts, traces, reviews, logs.
 
-CTCP 的核心不是 GUI。CTCP 的核心是一个可执行、可验收、可迭代的工程执行机：
+Orchestrator: local driver that advances the run by checking artifact presence and running verification. It does not decide plans.
 
-- 以 ADLC 作为契约化流水线：`doc -> analysis -> find -> plan -> build/verify -> contrast -> fix -> deploy/merge`
-- 以 `workflow_registry` + resolver(`find`) 作为“复用最佳流程”的更新机制
-- 以 SimLab（回放/验收/证据链）作为“可运行的证明”
-- 以 failure bundle 作为“失败的唯一事实来源”
-- GUI 仅作为可选示例/可视化器，不属于默认构建/默认验收链路
+TeamNet: multi-agent team roles that write specific artifacts before execution begins.
 
-## 1. 术语与边界
+ADLC: the execution lifecycle; only enters execution after plan is signed.
 
-### 1.1 ADLC 流程（唯一权威执行链）
+2. Locations (must)
 
-`doc -> analysis -> find -> plan -> [build <-> verify] -> contrast -> fix -> deploy/merge`
+Run directory root MUST be outside the repo, controlled by CTCP_RUNS_ROOT.
 
-### 1.2 Find 的真实含义（非常重要）
+Repo MUST only contain lightweight pointers to last run (meta/run_pointers/LAST_RUN.txt).
 
-- find 不是“必须联网检索”
-- 默认模式：`resolver_only`
-  - 必须执行本地 resolver（`workflow_registry` + 历史成功记录）
-  - 必须产出 `artifacts/find_result.json`
-- 可选模式：`resolver_plus_web`
-  - 在 `resolver_only` 基础上，允许引入外部 Researcher 产物 `artifacts/find_web.json`
-  - `find_web.json` 只是输入补充，最终决策产物仍必须是 `artifacts/find_result.json`
-  - 必须受 guardrails 的 `find_mode` / `web_find_policy` 约束
-- 无论模式如何，主链路不以联网能力作为硬依赖
+See docs/21_paths_and_locations.md.
 
-### 1.3 GUI 的定位
+3. Roles and Permissions (must)
+Local roles
 
-GUI（Qt/Cytoscape）用于：
-- 展示工程结构示例（docs/specs/modules/contracts/gates/runs）
-- 可选可视化 runs、graph、流程关系
+Local Orchestrator (driver)
 
-GUI 默认不参与：
-- `verify_repo` 默认 gate
-- Lite scenarios
-- 核心 runner 执行链
+MUST: create run_dir, emit events, gate on artifact presence, run verify, generate failure bundle.
 
-## 2. 仓库结构约定（AI 必须遵守）
+MUST NOT: choose workflow strategy, write patch content, approve plan.
 
-### 2.1 核心目录
+Local Librarian (read-only)
 
-- `workflow_registry/`: 流程库（find 的主要输入）
-- `scripts/`: 入口脚本（workflow dispatch、verify）
-- `simlab/`: 最小回放/验收框架（scenarios + run engine）
-- 外部 runs root（`CTCP_RUNS_ROOT`）: 所有默认执行产物（TRACE、bundle、events）
-- `meta/run_pointers/`: 仓库内轻量指针（只记录外部 run 目录路径）
-- `meta/`: 工程关系/视图/配置
-- `specs/`: 契约与 schema
-- `docs/`: 核心规则与 DoD
-- `meta/runs/`、`simlab/_runs/`: deprecated，非默认产物目录
+MUST: provide minimal context packs based on Chair's file_request.
 
-### 2.2 运行产物目录（固定）
+MUST NOT: decide, propose solutions, modify code.
 
-标准落点（默认）：
-- `runs_root = env(CTCP_RUNS_ROOT)`；若未设置，默认 `~/.ctcp/runs`
-- `repo_slug = <repo 根目录名归一化>`
-- `run_dir = <runs_root>/<repo_slug>/<run_id>/`
-- Team Mode / ADLC / SimLab 默认 `MUST` 写入该外部 `run_dir`
+Local Verifier (fact judge)
 
-仓库内允许写入（轻量）：
-- `meta/run_pointers/LAST_RUN.txt`（绝对路径）
-- 可选 pointer（例如 `LAST_QUESTIONS.txt`、`LAST_TRACE.txt`）
+MUST: run gates, produce TRACE + verify_report, produce failure bundle on failure.
 
-例外（门禁回放）：
-- `verify_repo` 的 Lite replay 可继续写入仓库内 gate 目录（如 `simlab/_runs_repo_gate/<run_id>/...` 或 fixtures），用于固定验收流程。
+MUST NOT: decide.
 
-每次运行 `MUST` 写入：
-- `TRACE.md`
-- `artifacts/`（至少包含 find/plan/verify 相关产物）
+API roles
 
-失败时 `MUST` 写入：
-- `failure_bundle.zip`
+Chair / Planner (only decision authority)
 
-## 3. 核心不变量（任何 agent 不得违反）
+MUST: write analysis, file_request, PLAN_draft, sign PLAN.
 
-- Doc-first：任何实质改动前 `MUST` 读取 `docs/00_CORE.md` + `AGENTS.md` + 相关 specs
-- 默认 headless：默认验收 `SHALL` 不依赖 GUI/Qt
-- 最小变更：修复 `SHALL` 只针对失败证据，禁止顺手重构
-- 失败唯一事实源：Fixer `MUST` 只依据 `failure_bundle.zip`
-- 交付可应用：补丁 `MUST` 为 unified diff（`diff.patch` 可 `git apply`）
-- find 可消费：find 输出 `MUST` 结构化，plan `MUST` 消费它
-- 两级 gate：默认 `SHALL` 只跑 Lite；Full `MUST` 显式开启
+MUST: adjudicate adversarial reviews.
 
-## 4. 执行角色（多 agent 最小组织）
+Researcher (optional web-find)
 
-可单 agent 实现，但接口输出需兼容以下角色：
-- Local Orchestrator（唯一驱动器）: 仅依据工件存在性推进 run 状态，不替代 Researcher/Librarian/Reviewer 内容生产
+MAY: produce find_web.json if enabled by guardrails.
 
-- DocGatekeeper: `artifacts/guardrails.md`
-- Analyzer: `artifacts/analysis.md`
-- Resolver(Find): `artifacts/find_result.json`
-- Planner: `artifacts/PLAN.md`
-- PatchMaker: `artifacts/diff.patch`
-- Verifier: `TRACE.md` + `artifacts/verify_report.md`
-- Fixer: 输入 `failure_bundle.zip`，输出新 `diff.patch`
-- ReleaseReporter: `artifacts/release_report.md`
+MUST follow web policy (allowlist/budget/locator).
 
-## 5. 每一步必须输入/输出（MUST）
+Contract Guardian (adversarial)
 
-### 5.1 doc
-- 输入：repo tree、`docs/00_CORE.md`、`AGENTS.md`、相关 specs
-- 输出：`artifacts/guardrails.md`
-- 判定：未生成 guardrails 直接 FAIL
+MUST: produce reviews/review_contract.md (APPROVE/BLOCK).
 
-### 5.2 analysis
-- 输入：goal + guardrails + 关键文件摘要
-- 输出：`artifacts/analysis.md`
-- 判定：只做问题定义/约束确认，不写大段计划细节
+Cost Controller (adversarial)
 
-### 5.3 find（Resolver）
-- 输入：goal + analysis + `workflow_registry/index.json` + 历史成功记录
-- 输出：`artifacts/find_result.json`
-- 最小字段：
-  - `selected_workflow_id`
-  - `selected_version`
-  - `params`
-  - `top_candidates`(<=3)
-  - `decision`
-- 判定：找不到 workflow 时必须输出 `selected_workflow_id=null`，并在 plan 走 fallback minimal workflow
-- 双通道说明：
-  - `find_local`（必做）：本地 resolver 产出 `find_result.json`
-  - `find_web`（可选）：Researcher 产出 `find_web.json`（格式见 `specs/ctcp_find_web_v1.json`）
-  - `resolver_plus_web` 模式下，`find_web.json` 缺失或不合规时流程必须 blocked
+MUST: produce reviews/review_cost.md (APPROVE/BLOCK).
 
-### 5.4 plan
-- 输入：`find_result.json` + guardrails + analysis
-- 输出：`artifacts/PLAN.md`
-- 必须包含：workflow id/version、参数填充、gates、预计改动路径
+Red Team (adversarial, optional)
 
-### 5.4A Local Librarian context gate（硬门禁）
-- `artifacts/file_request.json`：Chair/Planner 发给 Local Librarian 的输入，格式见 `specs/ctcp_file_request_v1.json`
-- `artifacts/context_pack.json`：Local Librarian 的输出，格式见 `specs/ctcp_context_pack_v1.json`
-- 判定：`context_pack.json` 缺失时，流程 `MUST` 停在 plan 前；禁止跳过到 patch/apply/verify
+MAY: produce reviews/review_break.md.
 
-### 5.4B TeamNet adversarial reviews（硬门禁）
-- `reviews/review_contract.md`：ContractGuardian 审查结论
-- `reviews/review_cost.md`：CostController 审查结论
-- 每份 review `MUST` 包含一行：`Verdict: APPROVE` 或 `Verdict: BLOCK`
-- 判定：任一 review 非 APPROVE，流程 `MUST` 保持 blocked，不得进入 patch/apply/verify
+PatchMaker / Fixer (execute)
 
-### 5.5 build <-> verify
-- 输入：`PLAN.md` + repo state
-- 输出：`TRACE.md` + `artifacts/verify_report.md`
-- 失败：必须产出 `failure_bundle.zip` 并进入 contrast/fix
+MUST: write only diff.patch within plan scope.
 
-### 5.6 contrast -> fix
-- 输入（唯一可信）：`failure_bundle.zip`
-- 输出：新 `diff.patch`，可选 `artifacts/fix_notes.md`
-- 判定：修复后必须重新 build/verify，直到 Lite gate 绿或预算耗尽
+4. Artifacts (must exist before execution)
 
-### 5.7 deploy/merge
-- 输入：最后一次 PASS verify_report + diff.patch
-- 输出：`artifacts/release_report.md`
+All artifacts live under the external run directory.
 
-## 6. Workflow Registry（find 核心依赖）
+4.1 Required artifacts (pre-execution)
 
-### 6.1 目录规范
-- `workflow_registry/<workflow_id>/recipe.yaml` 需声明：输入/输出/steps/gates/cost hints
-- `workflow_registry/index.json` 需支持：tags、supported goals、dependency level、last_known_good
+artifacts/guardrails.md
 
-### 6.2 Fallback Minimal Workflow（保底）
+artifacts/analysis.md
 
-必须存在最小 workflow（例如 `wf_minimal_patch_verify`）：
-- 只做：plan -> patch -> Lite verify -> 证据打包
-- 目标：find 找不到时仍可继续执行而不阻塞
+artifacts/find_result.json
 
-## 7. SimLab（证据链规则）
+artifacts/file_request.json
 
-### 7.1 最小 step 类型（MVP）
-- `run`
-- `write`
-- `expect_path`
-- `expect_text`
-- 可选：`expect_bundle`
+artifacts/context_pack.json
 
-### 7.2 TRACE.md 必须记录
-- 每一步命令、cwd、返回码
-- stdout/stderr 摘要
-- 关键产物路径
+artifacts/PLAN_draft.md
 
-### 7.3 failure_bundle.zip 最小内容
-- `TRACE.md`
-- `diff.patch`（若有）
-- `logs/*`
-- `snapshot/*`（至少关键文件/目录快照）
+reviews/review_contract.md
 
-## 8. Gate Matrix（默认 Lite，Full 可选）
+reviews/review_cost.md
 
-### 8.1 Lite（默认必须）
-- headless build（不需要 Qt）
-- 跑 1~2 个最小 scenario（如 `S01_init_task` / `S02_doc_first_gate`）
-- 输出 TRACE 与 verify_report
+artifacts/PLAN.md (signed)
 
-### 8.2 Full（显式开启）
-- GUI build（仅 `CTCP_ENABLE_GUI=ON` 且依赖满足）
-- 更完整 scenarios 与更严格检查
+4.2 Required artifacts (execution)
 
-## 9. GUI 挂起策略（可选化原则）
+artifacts/diff.patch
 
-- 构建开关：`CTCP_ENABLE_GUI`（默认 `OFF`）
-- `verify_repo` 默认不触发 GUI
-- 仅在显式要求 GUI 或 Full gate 开启且环境具备 Qt 时，GUI 参与 build/verify
+TRACE.md
 
-## 10. 核心一句话（系统提示）
+artifacts/verify_report.json
 
-- find = 从本地流程库/历史成功中解析并选择 workflow
-- patch = 外部 agent 产物输入，runner 负责吸收并应用
-- verify = 唯一判定步骤，必须在可回放环境里产出 TRACE
-- fail = 必须产出 failure_bundle，修复只能依据 bundle
+failure_bundle.zip (only on failure)
+
+5. Find (resolver-first; web-find optional)
+5.1 Default: resolver-only (must)
+
+find MUST resolve the best existing workflow from local sources:
+
+workflow_registry/
+
+historical successful runs (if present)
+
+Output MUST be artifacts/find_result.json.
+
+5.2 Optional: resolver + web-find (may)
+
+If guardrails.md sets find_mode: resolver_plus_web:
+
+Researcher MUST produce artifacts/find_web.json before plan can be signed.
+
+Web-find MUST be constrained by allow_domains, budget, and locator rules.
+
+Web-find is input only; final decision MUST still be find_result.json.
+
+6. Plan and Reviews (must)
+
+Chair MUST write PLAN_draft.md.
+
+Contract Guardian and Cost Controller MUST review and write:
+
+Verdict: APPROVE or Verdict: BLOCK
+
+Chair MUST sign PLAN.md only after both are APPROVE.
+
+7. Gates and Verification (must)
+
+Lite verification MUST exist and MUST NOT be a "no-scenarios PASS".
+
+verify_repo MUST fail if:
+
+build outputs are tracked by git
+
+run outputs appear inside repo
+
+verify_repo MUST produce actionable output for fix loop.
+
+8. Stop Conditions (must)
+
+Chair MUST specify in plan:
+
+max iterations
+
+max files/bytes requested
+
+max api calls (if relevant)
+
+stop on repeated same failure
+
+stop on scope violation

@@ -102,6 +102,15 @@ def resolve(goal: str, repo: Path) -> dict[str, Any]:
         "selected_workflow_id": selected["id"] if selected else None,
         "selected_version": selected["version"] if selected else None,
         "selected_path": selected["path"] if selected else None,
+        "candidates": [
+            {
+                "workflow_id": r["id"],
+                "version": r["version"],
+                "score": r["score"],
+                "why": json.dumps(r.get("detail", {}), ensure_ascii=False),
+            }
+            for r in ranked[:3]
+        ],
         "params_schema": {
             "goal": "string",
             "constraints": "object",

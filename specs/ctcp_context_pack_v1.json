@@ -2,7 +2,6 @@
   "spec_id": "ctcp_context_pack_v1",
   "schema_version": "ctcp-context-pack-v1",
   "type": "object",
-  "description": "Local Librarian -> Chair/Planner context artifact contract.",
   "required": [
     "schema_version",
     "goal",
@@ -23,8 +22,7 @@
       "type": "string"
     },
     "summary": {
-      "type": "string",
-      "description": "One to two paragraphs summarizing selected context."
+      "type": "string"
     },
     "files": {
       "type": "array",
@@ -51,9 +49,25 @@
     "omitted": {
       "type": "array",
       "items": {
-        "type": "string"
-      },
-      "description": "Rejected / oversized / irrelevant paths."
+        "type": "object",
+        "required": [
+          "path",
+          "reason"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "too_large",
+              "denied",
+              "irrelevant"
+            ]
+          }
+        }
+      }
     }
   }
 }

@@ -23,10 +23,13 @@ def validate_find_web(path: Path) -> tuple[bool, str]:
         return False, "constraints must be object"
     allow_domains = constraints.get("allow_domains")
     max_queries = constraints.get("max_queries")
+    max_pages = constraints.get("max_pages")
     if not isinstance(allow_domains, list) or any(not isinstance(x, str) for x in allow_domains):
         return False, "constraints.allow_domains must be string array"
     if not isinstance(max_queries, int):
         return False, "constraints.max_queries must be integer"
+    if not isinstance(max_pages, int):
+        return False, "constraints.max_pages must be integer"
 
     results = doc.get("results")
     if not isinstance(results, list):
@@ -38,6 +41,11 @@ def validate_find_web(path: Path) -> tuple[bool, str]:
         missing = sorted(required - set(row.keys()))
         if missing:
             return False, f"results[{idx}] missing fields: {', '.join(missing)}"
+        locator = row.get("locator")
+        if not isinstance(locator, dict):
+            return False, f"results[{idx}].locator must be object"
+        if not isinstance(locator.get("type"), str) or not isinstance(locator.get("value"), str):
+            return False, f"results[{idx}].locator must include string type/value"
         if not isinstance(row.get("risk_flags"), list):
             return False, f"results[{idx}].risk_flags must be array"
     return True, "ok"

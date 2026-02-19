@@ -2,14 +2,12 @@
   "spec_id": "ctcp_file_request_v1",
   "schema_version": "ctcp-file-request-v1",
   "type": "object",
-  "description": "Chair/Planner -> Local Librarian artifact request contract.",
   "required": [
     "schema_version",
     "goal",
-    "requested_paths",
-    "deny_paths",
-    "max_total_bytes",
-    "notes"
+    "needs",
+    "budget",
+    "reason"
   ],
   "properties": {
     "schema_version": {
@@ -19,26 +17,55 @@
     "goal": {
       "type": "string"
     },
-    "requested_paths": {
+    "needs": {
       "type": "array",
       "items": {
-        "type": "string"
-      },
-      "description": "Explicit file/dir paths requested from Local Librarian."
+        "type": "object",
+        "required": [
+          "path",
+          "mode"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "full",
+              "snippets"
+            ]
+          },
+          "line_ranges": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          }
+        }
+      }
     },
-    "deny_paths": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "Paths that must not be included in context_pack."
+    "budget": {
+      "type": "object",
+      "required": [
+        "max_files",
+        "max_total_bytes"
+      ],
+      "properties": {
+        "max_files": {
+          "type": "integer"
+        },
+        "max_total_bytes": {
+          "type": "integer"
+        }
+      }
     },
-    "max_total_bytes": {
-      "type": "integer",
-      "minimum": 1,
-      "description": "Read budget cap for supplied file contents."
-    },
-    "notes": {
+    "reason": {
       "type": "string"
     }
   }

@@ -1,2 +1,0 @@
-[ok] task: meta\tasks\20260218-225515-lite-headless.md
-[ok] current: meta\tasks\CURRENT.md

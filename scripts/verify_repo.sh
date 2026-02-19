@@ -18,16 +18,23 @@ echo "[verify_repo] mode: LITE"
 fi
 echo "[verify_repo] write_fixtures: ${WRITE_FIXTURES}"
 BUILD_ARTIFACTS_COMMITTED_MESSAGE="$(printf '\u6784\u5efa\u4ea7\u7269\u88ab\u63d0\u4ea4\u4e86\uff0c\u8bf7\u4ece git \u4e2d\u79fb\u9664\u5e76\u66f4\u65b0 .gitignore')"
+RUN_ARTIFACTS_COMMITTED_MESSAGE="Run outputs exist or are tracked inside repo; move them to external CTCP_RUNS_ROOT."
 
 anti_pollution_gate() {
-  echo "[verify_repo] anti-pollution gate (build artifacts)"
+  echo "[verify_repo] anti-pollution gate (build/run artifacts)"
+  local tracked_files=()
+  mapfile -t tracked_files < <(git -C "${ROOT}" ls-files)
   local tracked_build=()
+  local tracked_runs=()
   local path=""
-  while IFS= read -r path; do
+  for path in "${tracked_files[@]}"; do
     if [[ "${path}" == build*/* ]]; then
       tracked_build+=("${path}")
     fi
-  done < <(git -C "${ROOT}" ls-files)
+    if [[ "${path}" == simlab/_runs*/* || "${path}" == meta/runs/* ]]; then
+      tracked_runs+=("${path}")
+    fi
+  done
 
   if (( ${#tracked_build[@]} > 0 )); then
     echo "[verify_repo] tracked build artifacts detected (showing up to 20):"
@@ -45,6 +52,19 @@ anti_pollution_gate() {
     echo '  git commit -m "Stop tracking build outputs"'
     exit 1
   fi
+  if (( ${#tracked_runs[@]} > 0 )); then
+    echo "[verify_repo] tracked run outputs detected (showing up to 20):"
+    local r=0
+    for path in "${tracked_runs[@]}"; do
+      echo "  ${path}"
+      ((r += 1))
+      if (( r >= 20 )); then
+        break
+      fi
+    done
+    echo "[verify_repo] ${RUN_ARTIFACTS_COMMITTED_MESSAGE}"
+    exit 1
+  fi
 
   local unignored_build=()
   while IFS= read -r path; do
@@ -53,7 +73,7 @@ anti_pollution_gate() {
     fi
   done < <(git -C "${ROOT}" ls-files --others --exclude-standard -- 'build*/**')
   if (( ${#unignored_build[@]} > 0 )); then
-    echo "[verify_repo] warning: detected unignored files under build*/ (showing up to 20)."
+    echo "[verify_repo] unignored build outputs detected (showing up to 20)."
     local j=0
     for path in "${unignored_build[@]}"; do
       echo "  ${path}"
@@ -62,7 +82,28 @@ anti_pollution_gate() {
         break
       fi
     done
-    echo "[verify_repo] warning: Please confirm .gitignore covers build outputs."
+    echo "[verify_repo] Build outputs appear inside repo; clean them or update ignore rules."
+    exit 1
+  fi
+
+  local unignored_runs=()
+  while IFS= read -r path; do
+    if [[ -n "${path}" ]]; then
+      unignored_runs+=("${path}")
+    fi
+  done < <(git -C "${ROOT}" ls-files --others --exclude-standard -- 'simlab/_runs*/**' 'meta/runs/**')
+  if (( ${#unignored_runs[@]} > 0 )); then
+    echo "[verify_repo] unignored run outputs detected (showing up to 20)."
+    local k=0
+    for path in "${unignored_runs[@]}"; do
+      echo "  ${path}"
+      ((k += 1))
+      if (( k >= 20 )); then
+        break
+      fi
+    done
+    echo "[verify_repo] ${RUN_ARTIFACTS_COMMITTED_MESSAGE}"
+    exit 1
   fi
 }
 
@@ -99,16 +140,16 @@ echo "[verify_repo] doc index check (sync doc links --check)"
 python3 "${ROOT}/scripts/sync_doc_links.py" --check
 
 echo "[verify_repo] lite scenario replay"
-RUNS_ROOT="${ROOT}/simlab/_runs_repo_gate"
-SUMMARY_OUT="${ROOT}/simlab/_runs_repo_gate/_lite_summary.json"
 if [[ "${WRITE_FIXTURES}" == "1" ]]; then
   RUNS_ROOT="${ROOT}/tests/fixtures/adlc_forge_full_bundle/runs/simlab_lite_runs"
   SUMMARY_OUT="${ROOT}/tests/fixtures/adlc_forge_full_bundle/runs/_simlab_lite_summary.json"
+  python3 "${ROOT}/simlab/run.py" \
+    --suite lite \
+    --runs-root "${RUNS_ROOT}" \
+    --json-out "${SUMMARY_OUT}"
+else
+  python3 "${ROOT}/simlab/run.py" --suite lite
 fi
-python3 "${ROOT}/simlab/run.py" \
-  --suite lite \
-  --runs-root "${RUNS_ROOT}" \
-  --json-out "${SUMMARY_OUT}"
 
 if [[ "${MODE}" == "1" ]]; then
   echo "[verify_repo] FULL mode enabled"
