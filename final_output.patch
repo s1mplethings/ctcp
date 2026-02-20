@@ -1,0 +1,2151 @@
+diff --git a/README.md b/README.md
+index 5aea0db..6775b07 100644
+--- a/README.md
++++ b/README.md
+@@ -114,6 +114,7 @@ cmake --build build_gui --config Release
+ - [README.md](README.md)
+ - [BUILD.md](BUILD.md)
+ - [PATCH_README.md](PATCH_README.md)
++- [docs/PATCH_CONTRACT.md](docs/PATCH_CONTRACT.md)
+ - [TREE.md](TREE.md)
+ - [docs/00_CORE.md](docs/00_CORE.md)
+ - [docs/00_overview.md](docs/00_overview.md)
+diff --git a/contracts/allowed_changes.yaml b/contracts/allowed_changes.yaml
+new file mode 100644
+index 0000000..692e9aa
+--- /dev/null
++++ b/contracts/allowed_changes.yaml
+@@ -0,0 +1,20 @@
++allowed_paths:
++  - scripts/
++  - tools/
++  - docs/
++  - workflow_registry/
++  - simlab/
++  - tests/
++  - contracts/
++  - README.md
++
++blocked_paths:
++  - .github/
++  - runs/
++  - build/
++  - dist/
++
++max_files: 10
++max_added_lines: 800
++max_deleted_lines: 800
++max_total_lines: 800
+diff --git a/docs/PATCH_CONTRACT.md b/docs/PATCH_CONTRACT.md
+new file mode 100644
+index 0000000..5d53908
+--- /dev/null
++++ b/docs/PATCH_CONTRACT.md
+@@ -0,0 +1,45 @@
++# Patch Contract
++
++This repository accepts patch outputs only when they satisfy all required rules below.
++
++## Required Format
++
++1. The patch must be unified diff text.
++2. The patch must start with `diff --git`.
++3. Each changed file section must include:
++   - `--- a/<path>`
++   - `+++ b/<path>`
++   - unified hunks (`@@ ... @@`)
++4. The patch must be directly applicable with:
++   - `git apply <patch-file>`
++
++## Required Evidence
++
++Every patch request/response must include evidence references for each intended change:
++
++- file path
++- line number or line range
++- short evidence snippet
++
++Evidence references should come from Local Librarian search results when available.
++
++## Intent Statement
++
++For each file change, include one short intent statement:
++
++- what is being changed
++- why this is the minimal safe change
++
++## Scope and Safety
++
++1. Patch scope must stay within the approved contract guard limits.
++2. If contract guard fails, patch application is rejected.
++3. Any rejected patch must produce:
++   - `reviews/contract_review.json`
++   - brief reason summary in run artifacts
++
++## Non-Goals
++
++1. No prose-only output in place of patch.
++2. No opaque binary edits without textual diff metadata.
++3. No bypass of `verify_repo` or workflow/contract/doc gates.
+diff --git a/meta/reports/LAST.md b/meta/reports/LAST.md
+index c1f07c5..25ee883 100644
+--- a/meta/reports/LAST.md
++++ b/meta/reports/LAST.md
+@@ -1,74 +1,93 @@
+ # Demo Report - LAST
+ 
+ ## Goal
+-- Execute P0 optimization slice:
+-  - SimLab sandbox prefers `git worktree` (with safe fallback).
+-  - `verify_repo` supports unified build root + compiler launcher + parallel build/test.
++- Land a minimal ADLC + multi-agent + local Local Librarian self-improve core loop:
++  `doc -> analysis -> find -> plan -> build -> verify -> contrast -> fix(loop) -> stop`
++- Register the workflow in registry/dispatch and keep `verify_repo` (PowerShell + shell) passing.
+ 
+ ## Readlist
+-- `AGENTS.md`
+ - `ai_context/00_AI_CONTRACT.md`
+ - `README.md`
+ - `BUILD.md`
+ - `PATCH_README.md`
+ - `TREE.md`
+-- `docs/00_CORE.md`
+-- `docs/02_workflow.md`
+ - `docs/03_quality_gates.md`
+-- `docs/12_modules_index.md`
+-- `meta/tasks/TEMPLATE.md`
+-- `meta/tasks/CURRENT.md`
+-- `meta/reports/LAST.md`
+ - `ai_context/problem_registry.md`
+ - `ai_context/decision_log.md`
++- `docs/00_CORE.md`
++- `scripts/verify_repo.ps1`
++- `scripts/verify_repo.sh`
++- `scripts/resolve_workflow.py`
++- `scripts/ctcp_dispatch.py`
++- `scripts/ctcp_orchestrate.py`
++- `meta/tasks/TEMPLATE.md`
++- `meta/reports/TEMPLATE_LAST.md`
+ 
+ ## Plan
+-1. SimLab: introduce `worktree` sandbox path, keep `copy` fallback when repo is dirty.
+-2. Verify pipeline: add build-root/launcher/parallel knobs without changing default gate order.
+-3. Keep behavior compatibility and rerun full lite + verify gate.
++1. Docs/Spec first:
++   - add patch protocol contract doc
++   - update doc index generator and README index
++2. Implement core modules:
++   - run state persistence
++   - deterministic local librarian
++   - contract guard
++   - verify contrast rule classifier
++3. Implement workflow and dispatch wiring:
++   - add `adlc_self_improve_core` workflow script
++   - register workflow recipe/index
++   - add workflow dispatch entry
++4. Add tests and integrate into verify_repo:
++   - unittest suite for librarian/guard/contrast/dispatch
++   - run via `python -m unittest discover -s tests -p "test_*.py"`
++5. Validate:
++   - run PowerShell verify gate
++   - run bash verify gate
+ 
+ ## Timeline / Trace Pointer
+-- Lite replay run:
+-  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\simlab_runs\20260219-212827`
+-- verify_repo internal lite replay:
+-  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\simlab_runs\20260219-212830`
++- Run pointer file: `meta/run_pointers/LAST_RUN.txt`
++- verify_repo.ps1 lite replay run:
++  - `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260219-232753`
++- verify_repo.sh lite replay run:
++  - `/home/sunom/.local/share/ctcp/runs/ctcp/simlab_runs/20260219-232756`
+ 
+ ## Changes
+-- `simlab/run.py`
+-  - add `--sandbox-mode` (`auto|copy|worktree`, default `auto` via `CTCP_SIMLAB_SANDBOX_MODE`).
+-  - in `auto`, dirty repo falls back to `copy` mode; clean repo uses `git worktree`.
+-  - add scenario-isolated external `CTCP_RUNS_ROOT` (`simlab_external_runs/...`) to avoid run-dir collisions.
+-  - trace now records `Sandbox-Mode` and `Sandbox-Note`.
+-- `scripts/verify_repo.ps1`
+-  - add `CTCP_BUILD_ROOT` (unified build root).
+-  - add launcher autodetect (`ccache` then `sccache`, or `CTCP_COMPILER_LAUNCHER` override).
+-  - add `CTCP_BUILD_PARALLEL` and pass `--parallel` to build + `-j` to ctest.
+-  - add `CTCP_USE_NINJA=1` optional generator switch.
+-- `scripts/verify_repo.sh`
+-  - same build-root/launcher/parallel/Ninja behavior as PowerShell script.
+-- `CMakeLists.txt`
+-  - add `CTCP_ENABLE_COMPILER_LAUNCHER` (ON by default): autodetect `ccache`/`sccache` and set compiler launcher.
+-- `meta/tasks/CURRENT.md`
+-  - switch active task to optimization slice (`L4-OPT-001`, P0 subset).
+-- `meta/backlog/execution_queue.json`
+-  - `L4-OPT-001` status moved to `doing` with P0 slice note.
++- Added:
++  - `contracts/allowed_changes.yaml`
++  - `docs/PATCH_CONTRACT.md`
++  - `tools/run_state.py`
++  - `tools/local_librarian.py`
++  - `tools/contract_guard.py`
++  - `tools/contrast_rules.py`
++  - `scripts/workflow_dispatch.py`
++  - `scripts/workflows/adlc_self_improve_core.py`
++  - `workflow_registry/adlc_self_improve_core/recipe.yaml`
++  - `tests/test_local_librarian.py`
++  - `tests/test_contract_guard.py`
++  - `tests/test_contrast_rules.py`
++  - `tests/test_workflow_dispatch.py`
++- Updated:
++  - `workflow_registry/index.json` (register new workflow)
++  - `scripts/verify_repo.ps1` (run unittest discover)
++  - `scripts/verify_repo.sh` (run unittest discover + python shim for shell envs with python3 only)
++  - `scripts/sync_doc_links.py` (include patch contract doc)
++  - `README.md` (doc index sync)
++  - `meta/tasks/CURRENT.md`
+ 
+ ## Verify
+-- `python scripts/sync_doc_links.py --check`
+-  - result: `[sync_doc_links] ok`
+-- `python simlab/run.py --suite lite`
+-  - result: `{"run_dir":".../20260219-212827","passed":8,"failed":0}`
++- `python -m unittest discover -s tests -p "test_*.py"`
++  - `Ran 9 tests ... OK`
+ - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
+-  - result: `[verify_repo] OK`
+-  - key lines:
+-    - build root printed
+-    - parallel value printed
+-    - launcher status printed
+-    - lite replay: `passed=8 failed=0`
++  - `[verify_repo] OK`
++  - lite replay: `passed=8 failed=0`
++  - unittest discover executed and passed
++- `bash scripts/verify_repo.sh`
++  - `[verify_repo] OK`
++  - lite replay: `passed=8 failed=0`
++  - unittest discover executed and passed
+ 
+ ## Open Questions
+ - None.
+ 
+ ## Next Steps
+-1. P1: verify gate step-level parallelism (`workflow/contract/doc-index` in parallel after build).
+-2. P1: core dead-code/import cleanup pass.
++1. Add a focused simlab scenario for `adlc_self_improve_core` workflow state-resume behavior.
++2. Expand contrast rules with per-gate regex diagnostics once more failure corpora are collected.
+diff --git a/meta/tasks/CURRENT.md b/meta/tasks/CURRENT.md
+index 480e494..8cc2c2a 100644
+--- a/meta/tasks/CURRENT.md
++++ b/meta/tasks/CURRENT.md
+@@ -1,49 +1,66 @@
+-# Task - p0-simlab-and-build-performance
++# Task - adlc-self-improve-core-loop
+ 
+ ## Queue Binding
+-- Queue Item: `L4-OPT-001`
+-- Layer/Priority: `L4 / P0-slice`
+-- Source Queue File: `meta/backlog/execution_queue.json`
++- Queue Item: `N/A (user-directed hotfix task)`
++- Layer/Priority: `L1 / P0`
++- Source Queue File: `meta/backlog/execution_queue.json` (reference only)
+ 
+ ## Context
+-- Implement the highest-priority optimization slice from the provided matrix:
+-  - SimLab sandbox prefers `git worktree` (with safe fallback).
+-  - verify/build path uses unified build root and compiler launcher (ccache/sccache) + parallel build.
+-- Preserve existing contracts and behavior gates.
++- Implement one minimal, runnable self-improve core loop workflow:
++  `doc -> analysis -> find(local librarian) -> plan -> build -> verify -> contrast -> fix(loop) -> stop`
++- Keep all existing quality gates enabled and passing.
+ 
+ ## DoD Mapping (from execution_queue.json)
+-- [x] DoD-1: `parallel execution policy documented`
+-- [x] DoD-2: `token/context budget strategy documented and enforceable` (N/A for this P0 slice)
+-- [x] DoD-3: `GUI optional path remains non-blocking for core gates`
++- [x] DoD-1: workflow and evidence artifacts are explicit and auditable
++- [x] DoD-2: quality gates remain enabled (no bypass)
++- [x] DoD-3: cross-platform scripts and tests pass in repo gate
+ 
+ ## Acceptance (must be checkable)
+ - [x] DoD written (this file complete)
+-- [x] Research logged (if needed): N/A (repo-local optimization slice)
++- [x] Research logged (if needed): N/A (repo-local implementation)
+ - [x] Code changes allowed
+ - [x] Patch applies cleanly (`git apply ...`) OR overlay zip applies cleanly
+ - [x] `scripts/verify_repo.*` passes
+ - [x] Demo report updated: `meta/reports/LAST.md`
+ 
+ ## Plan
+-1) SimLab acceleration:
+-   - add sandbox mode switch (`auto|copy|worktree`) with dirty-repo fallback.
+-   - isolate scenario-level `CTCP_RUNS_ROOT` to avoid external run collisions.
+-2) Build acceleration:
+-   - add build-root env support (`CTCP_BUILD_ROOT`) in verify scripts.
+-   - add launcher autodetect (`ccache`/`sccache`) and parallel knobs.
+-3) Verify:
+-   - `sync_doc_links --check`
+-   - `simlab/run.py --suite lite`
+-   - `scripts/verify_repo.ps1`
+-4) Report:
+-   - update `meta/reports/LAST.md` with behavior and command evidence.
++1) Docs/Spec first
++   - add `docs/PATCH_CONTRACT.md`
++   - update workflow registry spec artifacts
++2) Implement core modules
++   - add run state/local librarian/contract guard/contrast rules tools
++3) Implement workflow + dispatch wiring
++   - add `scripts/workflows/adlc_self_improve_core.py`
++   - register in `workflow_registry/index.json`
++   - add workflow dispatch entry script
++4) Verify and report
++   - run unit tests + `scripts/verify_repo.*`
++   - update `meta/reports/LAST.md` with command evidence
+ 
+ ## Notes / Decisions
+-- `worktree` mode is enabled for clean repos; dirty repos automatically use copy mode to preserve local uncommitted state.
+-- compiler launcher is best-effort and optional; no new dependency is required.
++- No new third-party dependency; Python stdlib only.
++- `rg` is optional accelerator; pure Python fallback required.
+ 
+ ## Results
+-- `simlab/run.py`: added `--sandbox-mode` (`auto` default), git-worktree sandbox path, dirty fallback to copy, and per-scenario external `CTCP_RUNS_ROOT`.
+-- `scripts/verify_repo.ps1` + `scripts/verify_repo.sh`: added unified build root, launcher autodetect, and parallel build/test args.
+-- `CMakeLists.txt`: added optional compiler launcher autodetect toggle.
+-- validation passed: `sync_doc_links`, `simlab --suite lite`, `verify_repo.ps1`.
++- Added core modules:
++  - `tools/run_state.py`
++  - `tools/local_librarian.py`
++  - `tools/contract_guard.py`
++  - `tools/contrast_rules.py`
++- Added workflow and dispatch integration:
++  - `scripts/workflows/adlc_self_improve_core.py`
++  - `scripts/workflow_dispatch.py`
++  - `workflow_registry/adlc_self_improve_core/recipe.yaml`
++  - `workflow_registry/index.json` registration
++- Added contract and patch protocol docs:
++  - `contracts/allowed_changes.yaml`
++  - `docs/PATCH_CONTRACT.md`
++- Added unit tests and verify integration:
++  - `tests/test_local_librarian.py`
++  - `tests/test_contract_guard.py`
++  - `tests/test_contrast_rules.py`
++  - `tests/test_workflow_dispatch.py`
++  - `scripts/verify_repo.ps1` / `scripts/verify_repo.sh` now run unittest discover
++- Validation passed:
++  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
++  - `bash scripts/verify_repo.sh`
+diff --git a/scripts/sync_doc_links.py b/scripts/sync_doc_links.py
+index f6bee9e..cdd009c 100644
+--- a/scripts/sync_doc_links.py
++++ b/scripts/sync_doc_links.py
+@@ -17,6 +17,7 @@ CURATED_DOCS = [
+     "README.md",
+     "BUILD.md",
+     "PATCH_README.md",
++    "docs/PATCH_CONTRACT.md",
+     "TREE.md",
+     "docs/00_CORE.md",
+     "docs/00_overview.md",
+diff --git a/scripts/verify_repo.ps1 b/scripts/verify_repo.ps1
+index a9e5210..f9266bc 100644
+--- a/scripts/verify_repo.ps1
++++ b/scripts/verify_repo.ps1
+@@ -234,6 +234,12 @@ if ($SkipLiteReplay) {
+   }
+ }
+ 
++Invoke-Step -Name "python unit tests" -Block {
++  Invoke-ExternalChecked -Label "python unit tests" -Command {
++    python -m unittest discover -s tests -p "test_*.py"
++  }
++}
++
+ if ($RunFull) {
+   Write-Host "[verify_repo] FULL mode enabled via --Full / CTCP_FULL_GATE=1"
+   $TestAll = Join-Path $Root "scripts\test_all.ps1"
+diff --git a/scripts/verify_repo.sh b/scripts/verify_repo.sh
+index 3c08d63..51e12d9 100644
+--- a/scripts/verify_repo.sh
++++ b/scripts/verify_repo.sh
+@@ -26,6 +26,28 @@ fi
+ echo "[verify_repo] write_fixtures: ${WRITE_FIXTURES}"
+ BUILD_ARTIFACTS_COMMITTED_MESSAGE="$(printf '\u6784\u5efa\u4ea7\u7269\u88ab\u63d0\u4ea4\u4e86\uff0c\u8bf7\u4ece git \u4e2d\u79fb\u9664\u5e76\u66f4\u65b0 .gitignore')"
+ RUN_ARTIFACTS_COMMITTED_MESSAGE="Run outputs exist or are tracked inside repo; move them to external CTCP_RUNS_ROOT."
++PY_SHIM_DIR=""
++
++cleanup_python_alias() {
++  if [[ -n "${PY_SHIM_DIR}" && -d "${PY_SHIM_DIR}" ]]; then
++    rm -rf "${PY_SHIM_DIR}"
++  fi
++}
++
++trap cleanup_python_alias EXIT
++
++ensure_python_alias() {
++  if command -v python >/dev/null 2>&1; then
++    return
++  fi
++  if ! command -v python3 >/dev/null 2>&1; then
++    return
++  fi
++  PY_SHIM_DIR="$(mktemp -d)"
++  ln -s "$(command -v python3)" "${PY_SHIM_DIR}/python"
++  export PATH="${PY_SHIM_DIR}:${PATH}"
++  echo "[verify_repo] python shim enabled: python -> python3"
++}
+ 
+ anti_pollution_gate() {
+   echo "[verify_repo] anti-pollution gate (build/run artifacts)"
+@@ -115,6 +137,7 @@ anti_pollution_gate() {
+ }
+ 
+ anti_pollution_gate
++ensure_python_alias
+ 
+ if command -v cmake >/dev/null 2>&1; then
+   CMAKE_EXE="$(command -v cmake)"
+@@ -193,6 +216,9 @@ else
+   fi
+ fi
+ 
++echo "[verify_repo] python unit tests"
++python3 -m unittest discover -s tests -p "test_*.py"
++
+ if [[ "${MODE}" == "1" ]]; then
+   echo "[verify_repo] FULL mode enabled"
+   if [[ -f "${ROOT}/scripts/test_all.sh" ]]; then
+diff --git a/scripts/workflow_dispatch.py b/scripts/workflow_dispatch.py
+new file mode 100644
+index 0000000..797e8bd
+--- /dev/null
++++ b/scripts/workflow_dispatch.py
+@@ -0,0 +1,107 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++import argparse
++import json
++import subprocess
++import sys
++from pathlib import Path
++from typing import Any
++
++ROOT = Path(__file__).resolve().parents[1]
++INDEX_PATH = ROOT / "workflow_registry" / "index.json"
++
++try:
++    import resolve_workflow
++except ModuleNotFoundError:
++    sys.path.insert(0, str(ROOT / "scripts"))
++    import resolve_workflow
++
++
++def _load_index(path: Path) -> dict[str, Any]:
++    return json.loads(path.read_text(encoding="utf-8"))
++
++
++def _resolve_workflow_id(repo_root: Path, goal: str, workflow: str) -> str:
++    explicit = workflow.strip()
++    if explicit:
++        return explicit
++    result = resolve_workflow.resolve(goal=goal, repo=repo_root)
++    selected = str(result.get("selected_workflow_id", "")).strip()
++    if selected:
++        return selected
++    index = _load_index(INDEX_PATH)
++    fallback = str(index.get("resolver_policy", {}).get("fallback_workflow_id", "")).strip()
++    return fallback or "wf_minimal_patch_verify"
++
++
++def _dispatch_command(
++    *,
++    workflow_id: str,
++    repo_root: Path,
++    goal: str,
++    max_rounds: int,
++    patch_cmd: str,
++    verify_cmd: str,
++) -> list[str]:
++    if workflow_id == "adlc_self_improve_core":
++        cmd = [
++            sys.executable,
++            str(ROOT / "scripts" / "workflows" / "adlc_self_improve_core.py"),
++            "--repo",
++            str(repo_root),
++            "--goal",
++            goal,
++            "--max-rounds",
++            str(max_rounds),
++        ]
++        if patch_cmd.strip():
++            cmd += ["--patch-cmd", patch_cmd]
++        if verify_cmd.strip():
++            cmd += ["--verify-cmd", verify_cmd]
++        return cmd
++
++    if workflow_id == "wf_minimal_patch_verify":
++        cmd = [
++            sys.executable,
++            str(ROOT / "scripts" / "adlc_run.py"),
++            "--goal",
++            goal,
++        ]
++        if verify_cmd.strip():
++            cmd += ["--verify-cmd", verify_cmd]
++        return cmd
++
++    raise SystemExit(f"[workflow_dispatch] unsupported workflow: {workflow_id}")
++
++
++def main() -> int:
++    ap = argparse.ArgumentParser(description="Dispatch workflow by workflow_registry id")
++    ap.add_argument("--workflow", default="")
++    ap.add_argument("--repo", default=".")
++    ap.add_argument("--goal", required=True)
++    ap.add_argument("--max-rounds", type=int, default=2)
++    ap.add_argument("--patch-cmd", default="")
++    ap.add_argument("--verify-cmd", default="")
++    args = ap.parse_args()
++
++    repo_root = Path(args.repo).resolve()
++    workflow_id = _resolve_workflow_id(repo_root, args.goal, args.workflow)
++    _ = _load_index(INDEX_PATH)
++    cmd = _dispatch_command(
++        workflow_id=workflow_id,
++        repo_root=repo_root,
++        goal=str(args.goal),
++        max_rounds=max(1, int(args.max_rounds)),
++        patch_cmd=str(args.patch_cmd),
++        verify_cmd=str(args.verify_cmd),
++    )
++    print(f"[workflow_dispatch] workflow={workflow_id}")
++    print(f"[workflow_dispatch] cmd={' '.join(cmd)}")
++    proc = subprocess.run(cmd, cwd=str(repo_root))
++    return int(proc.returncode)
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
++
+diff --git a/scripts/workflows/adlc_self_improve_core.py b/scripts/workflows/adlc_self_improve_core.py
+new file mode 100644
+index 0000000..293efd1
+--- /dev/null
++++ b/scripts/workflows/adlc_self_improve_core.py
+@@ -0,0 +1,505 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++import argparse
++import json
++import os
++import re
++import shlex
++import subprocess
++import sys
++from pathlib import Path
++from typing import Any
++
++ROOT = Path(__file__).resolve().parents[2]
++
++try:
++    from tools import contract_guard, contrast_rules, local_librarian, run_state
++except ModuleNotFoundError:
++    sys.path.insert(0, str(ROOT))
++    from tools import contract_guard, contrast_rules, local_librarian, run_state
++
++PATCH_START_RE = re.compile(r"^diff --git .*$", re.M)
++
++
++def _run(
++    cmd: list[str] | str,
++    *,
++    cwd: Path,
++    shell: bool = False,
++) -> tuple[int, str, str]:
++    proc = subprocess.run(
++        cmd,
++        cwd=str(cwd),
++        shell=shell,
++        capture_output=True,
++        text=True,
++        encoding="utf-8",
++        errors="replace",
++    )
++    return proc.returncode, proc.stdout, proc.stderr
++
++
++def _write(path: Path, text: str) -> None:
++    path.parent.mkdir(parents=True, exist_ok=True)
++    path.write_text(text, encoding="utf-8")
++
++
++def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
++    path.parent.mkdir(parents=True, exist_ok=True)
++    with path.open("a", encoding="utf-8") as fh:
++        fh.write(json.dumps(row, ensure_ascii=False) + "\n")
++
++
++def _extract_patch(text: str) -> str:
++    match = PATCH_START_RE.search(text or "")
++    if not match:
++        return ""
++    return text[match.start() :].strip() + "\n"
++
++
++def _summarize_file(path: Path, max_lines: int = 10) -> str:
++    if not path.exists():
++        return f"- `{path.as_posix()}`: missing"
++    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
++    picked = lines[:max_lines]
++    summary = "\n".join(f"  {line}" for line in picked)
++    return f"- `{path.as_posix()}`:\n{summary}"
++
++
++def _write_analysis(repo_root: Path, out_path: Path, goal: str) -> None:
++    readlist = [
++        repo_root / "README.md",
++        repo_root / "docs" / "03_quality_gates.md",
++        repo_root / "docs" / "SELF_CHECK_SYSTEM.md",
++        repo_root / "ai_context" / "00_AI_CONTRACT.md",
++    ]
++    lines = [
++        "# Analysis",
++        "",
++        f"- Goal: {goal}",
++        "- Flow: doc -> analysis -> find -> plan -> build -> verify -> contrast -> fix -> stop",
++        "",
++        "## Read Summary",
++    ]
++    for path in readlist:
++        lines.append(_summarize_file(path))
++    lines.append("")
++    _write(out_path, "\n".join(lines))
++
++
++def _write_context(
++    *,
++    out_path: Path,
++    goal: str,
++    references: list[dict[str, Any]],
++) -> None:
++    lines = [
++        "# Context Evidence",
++        "",
++        f"- query: `{goal}`",
++        "",
++    ]
++    if not references:
++        lines += ["- No references found by Local Librarian.", ""]
++    else:
++        for idx, row in enumerate(references, start=1):
++            path = str(row.get("path", ""))
++            start_line = int(row.get("start_line", 0) or 0)
++            end_line = int(row.get("end_line", 0) or 0)
++            snippet = str(row.get("snippet", "")).strip()
++            lines += [
++                f"## Ref {idx}",
++                f"- path: `{path}`",
++                f"- lines: `{start_line}-{end_line}`",
++                "```text",
++                snippet,
++                "```",
++                "",
++            ]
++    _write(out_path, "\n".join(lines))
++
++
++def _write_plan(
++    *,
++    out_path: Path,
++    goal: str,
++    current_round: int,
++    references: list[dict[str, Any]],
++) -> None:
++    candidate_files: list[str] = []
++    for row in references:
++        path = str(row.get("path", "")).strip()
++        if path and path not in candidate_files:
++            candidate_files.append(path)
++        if len(candidate_files) >= 3:
++            break
++
++    while len(candidate_files) < 3:
++        fallback = [
++            "scripts/workflows/adlc_self_improve_core.py",
++            "tools/contrast_rules.py",
++            "tools/contract_guard.py",
++        ][len(candidate_files)]
++        if fallback not in candidate_files:
++            candidate_files.append(fallback)
++
++    lines = [
++        "# PLAN",
++        "",
++        f"- Goal: {goal}",
++        f"- Round: {current_round}",
++        "- Task limit: <= 5",
++        "- File change limit: <= 3 files",
++        "",
++        "## Tasks",
++        "1. Confirm failure class from latest verify logs.",
++        "2. Use Local Librarian references to scope one minimal fix.",
++        "3. Generate unified diff patch with evidence references.",
++        "4. Run contract guard before/after patch apply.",
++        "5. Run verify_repo and update fix brief if failed.",
++        "",
++        "## Candidate Files (max 3)",
++    ]
++    for path in candidate_files[:3]:
++        lines.append(f"- `{path}`")
++
++    lines += [
++        "",
++        "## Acceptance Commands",
++        "- `python -m unittest discover -s tests -p \"test_*.py\"`",
++        "- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` (Windows)",
++        "- `bash scripts/verify_repo.sh` (Linux/macOS)",
++        "",
++    ]
++    _write(out_path, "\n".join(lines))
++
++
++def _verify_command(repo_root: Path, override: str) -> list[str]:
++    if override.strip():
++        if os.name == "nt":
++            return shlex.split(override, posix=False)
++        return shlex.split(override)
++    if os.name == "nt":
++        return ["powershell", "-ExecutionPolicy", "Bypass", "-File", str(repo_root / "scripts" / "verify_repo.ps1")]
++    return ["bash", str(repo_root / "scripts" / "verify_repo.sh")]
++
++
++def _query_for_label(label: str, goal: str) -> str:
++    mapping = {
++        "DOC_FAIL": "sync_doc_links.py",
++        "CONTRACT_FAIL": "contract_checks.py",
++        "SIMLAB_FAIL": "simlab",
++        "PY_IMPORT_FAIL": "import",
++    }
++    return mapping.get(label, goal)
++
++
++def _save_state(state_path_root: Path, state: dict[str, Any], **updates: Any) -> dict[str, Any]:
++    for key, value in updates.items():
++        if key == "artifacts" and isinstance(value, dict):
++            artifacts = state.get("artifacts", {})
++            if not isinstance(artifacts, dict):
++                artifacts = {}
++            artifacts.update(value)
++            state["artifacts"] = artifacts
++        elif key == "last_verify" and isinstance(value, dict):
++            state["last_verify"] = value
++        elif value is not None:
++            state[key] = value
++    return run_state.save_state(state_path_root, state)
++
++
++def _generate_patch_via_cmd(
++    *,
++    repo_root: Path,
++    run_dir: Path,
++    patch_cmd_tpl: str,
++    plan_path: Path,
++    context_path: Path,
++) -> str:
++    prompt_path = run_dir / "outbox" / "PATCH_PROMPT.md"
++    prompt = "\n".join(
++        [
++            "# Patch Request",
++            "",
++            "Generate a unified diff patch only.",
++            "The output must start with `diff --git`.",
++            "",
++            f"PLAN: {plan_path.as_posix()}",
++            f"CONTEXT: {context_path.as_posix()}",
++        ]
++    )
++    _write(prompt_path, prompt)
++    cmd = patch_cmd_tpl.format(
++        PROMPT_PATH=str(prompt_path),
++        PLAN_PATH=str(plan_path),
++        CONTEXT_PATH=str(context_path),
++        REPO_ROOT=str(repo_root),
++    )
++    rc, out, err = _run(cmd, cwd=repo_root, shell=True)
++    _write(run_dir / "logs" / "patch_cmd.stdout.txt", out)
++    _write(run_dir / "logs" / "patch_cmd.stderr.txt", err)
++    if rc != 0:
++        return ""
++    return _extract_patch(out)
++
++
++def _diff_text(repo_root: Path) -> str:
++    _, out, err = _run(["git", "diff"], cwd=repo_root)
++    return (out or "") + (err or "")
++
++
++def _mechanical_patch(repo_root: Path, run_dir: Path, label: str) -> str:
++    if label == "DOC_FAIL":
++        rc, out, err = _run([sys.executable, str(repo_root / "scripts" / "sync_doc_links.py")], cwd=repo_root)
++        _write(run_dir / "logs" / "mechanical_patch.stdout.txt", out)
++        _write(run_dir / "logs" / "mechanical_patch.stderr.txt", err)
++        if rc != 0:
++            return ""
++        return _diff_text(repo_root)
++    return _diff_text(repo_root)
++
++
++def _apply_patch_if_any(repo_root: Path, patch_path: Path, run_dir: Path) -> tuple[bool, str]:
++    patch_text = patch_path.read_text(encoding="utf-8", errors="replace")
++    if not patch_text.strip():
++        return True, "empty patch; apply skipped"
++    rc, out, err = _run(["git", "apply", str(patch_path)], cwd=repo_root)
++    _write(run_dir / "logs" / "patch_apply.stdout.txt", out)
++    _write(run_dir / "logs" / "patch_apply.stderr.txt", err)
++    if rc != 0:
++        return False, "git apply failed"
++    return True, "ok"
++
++
++def _rollback_patch(repo_root: Path, patch_path: Path, run_dir: Path) -> None:
++    rc, out, err = _run(["git", "apply", "-R", str(patch_path)], cwd=repo_root)
++    _write(run_dir / "logs" / "patch_rollback.stdout.txt", out)
++    _write(run_dir / "logs" / "patch_rollback.stderr.txt", err)
++    if rc != 0:
++        _write(
++            run_dir / "logs" / "patch_rollback.note.txt",
++            "Rollback failed. Manual cleanup may be required.\n",
++        )
++
++
++def run_workflow(
++    *,
++    repo_root: Path,
++    goal: str,
++    max_rounds: int,
++    run_id: str,
++    patch_cmd_tpl: str,
++    verify_cmd: str,
++) -> int:
++    run_dir = repo_root / "runs" / "adlc_self_improve_core" / run_id
++    outbox_dir = run_dir / "outbox"
++    reviews_dir = run_dir / "reviews"
++    logs_dir = run_dir / "logs"
++    for path in (outbox_dir, reviews_dir, logs_dir):
++        path.mkdir(parents=True, exist_ok=True)
++
++    state = run_state.load_state(run_dir)
++    state["run_id"] = run_id
++    state = _save_state(
++        run_dir,
++        state,
++        phase="doc",
++        artifacts={"run_dir": str(run_dir.relative_to(repo_root).as_posix())},
++    )
++
++    analysis_path = outbox_dir / "analysis.md"
++    _write_analysis(repo_root, analysis_path, goal)
++    state = _save_state(
++        run_dir,
++        state,
++        phase="analysis",
++        artifacts={"analysis": str(analysis_path.relative_to(run_dir).as_posix())},
++    )
++
++    next_query = goal
++    start_round = int(state.get("round", 1) or 1)
++    for current_round in range(start_round, max_rounds + 1):
++        state = _save_state(run_dir, state, phase="find", round=current_round)
++        references = local_librarian.search(repo_root=repo_root, query=next_query, k=8)
++        context_path = outbox_dir / "CONTEXT.md"
++        _write_context(out_path=context_path, goal=next_query, references=references)
++        state = _save_state(
++            run_dir,
++            state,
++            artifacts={
++                "context": str(context_path.relative_to(run_dir).as_posix()),
++            },
++        )
++
++        state = _save_state(run_dir, state, phase="plan")
++        plan_path = outbox_dir / "PLAN.md"
++        _write_plan(
++            out_path=plan_path,
++            goal=goal,
++            current_round=current_round,
++            references=references,
++        )
++        state = _save_state(
++            run_dir,
++            state,
++            artifacts={"plan": str(plan_path.relative_to(run_dir).as_posix())},
++        )
++
++        state = _save_state(run_dir, state, phase="build")
++        pre_review = contract_guard.evaluate(
++            repo_root,
++            policy_path=repo_root / "contracts" / "allowed_changes.yaml",
++            out_path=reviews_dir / "contract_review.json",
++        )
++        if not bool(pre_review.get("contract_guard", {}).get("pass", False)):
++            _append_jsonl(
++                run_dir / "events.jsonl",
++                {"event": "CONTRACT_FAIL_PRE", "round": current_round},
++            )
++            _save_state(
++                run_dir,
++                state,
++                phase="stop",
++                artifacts={"contract_review": "reviews/contract_review.json"},
++            )
++            return 2
++
++        label_hint = str(state.get("last_verify", {}).get("label", "UNKNOWN"))
++        patch_text = ""
++        if patch_cmd_tpl.strip():
++            patch_text = _generate_patch_via_cmd(
++                repo_root=repo_root,
++                run_dir=run_dir,
++                patch_cmd_tpl=patch_cmd_tpl,
++                plan_path=plan_path,
++                context_path=context_path,
++            )
++        if not patch_text:
++            patch_text = _mechanical_patch(repo_root=repo_root, run_dir=run_dir, label=label_hint)
++        patch_path = run_dir / "diff.patch"
++        _write(patch_path, patch_text)
++        state = _save_state(
++            run_dir,
++            state,
++            artifacts={"patch": str(patch_path.relative_to(run_dir).as_posix())},
++        )
++
++        ok_apply, apply_reason = _apply_patch_if_any(repo_root, patch_path, run_dir)
++        if not ok_apply:
++            _append_jsonl(
++                run_dir / "events.jsonl",
++                {"event": "PATCH_APPLY_FAIL", "round": current_round, "reason": apply_reason},
++            )
++            _save_state(run_dir, state, phase="stop")
++            return 3
++
++        post_review = contract_guard.evaluate(
++            repo_root,
++            policy_path=repo_root / "contracts" / "allowed_changes.yaml",
++            out_path=reviews_dir / "contract_review.json",
++        )
++        if not bool(post_review.get("contract_guard", {}).get("pass", False)):
++            _rollback_patch(repo_root, patch_path, run_dir)
++            _append_jsonl(
++                run_dir / "events.jsonl",
++                {"event": "CONTRACT_FAIL_POST", "round": current_round},
++            )
++            _save_state(
++                run_dir,
++                state,
++                phase="stop",
++                artifacts={"contract_review": "reviews/contract_review.json"},
++            )
++            return 4
++
++        state = _save_state(run_dir, state, phase="verify")
++        cmd = _verify_command(repo_root, verify_cmd)
++        rc, stdout, stderr = _run(cmd, cwd=repo_root)
++        verify_stdout_path = logs_dir / "verify_stdout.txt"
++        verify_stderr_path = logs_dir / "verify_stderr.txt"
++        _write(verify_stdout_path, stdout)
++        _write(verify_stderr_path, stderr)
++        state = _save_state(
++            run_dir,
++            state,
++            last_verify={
++                "rc": rc,
++                "paths": {
++                    "stdout": str(verify_stdout_path.relative_to(run_dir).as_posix()),
++                    "stderr": str(verify_stderr_path.relative_to(run_dir).as_posix()),
++                },
++                "summary": (stdout + "\n" + stderr)[-1200:],
++            },
++            artifacts={
++                "verify_stdout": str(verify_stdout_path.relative_to(run_dir).as_posix()),
++                "verify_stderr": str(verify_stderr_path.relative_to(run_dir).as_posix()),
++                "contract_review": "reviews/contract_review.json",
++            },
++        )
++        if rc == 0:
++            _save_state(run_dir, state, phase="done")
++            print(json.dumps({"run_id": run_id, "run_dir": str(run_dir), "status": "done"}, ensure_ascii=False))
++            return 0
++
++        state = _save_state(run_dir, state, phase="contrast")
++        contrast = contrast_rules.classify_verify(rc=rc, stdout=stdout, stderr=stderr)
++        label = str(contrast.get("label", "UNKNOWN"))
++        next_query = _query_for_label(label, goal)
++        fix_refs = local_librarian.search(repo_root=repo_root, query=next_query, k=6)
++        fix_brief_path = outbox_dir / "fix_brief.md"
++        contrast_rules.write_fix_brief(
++            out_path=fix_brief_path,
++            rc=rc,
++            stdout=stdout,
++            stderr=stderr,
++            references=fix_refs,
++        )
++        _save_state(
++            run_dir,
++            state,
++            phase="fix",
++            last_verify={
++                "rc": rc,
++                "paths": {
++                    "stdout": str(verify_stdout_path.relative_to(run_dir).as_posix()),
++                    "stderr": str(verify_stderr_path.relative_to(run_dir).as_posix()),
++                },
++                "summary": (stdout + "\n" + stderr)[-1200:],
++                "label": label,
++            },
++            artifacts={"fix_brief": str(fix_brief_path.relative_to(run_dir).as_posix())},
++        )
++
++    _save_state(run_dir, state, phase="stop", round=max_rounds)
++    print(json.dumps({"run_id": run_id, "run_dir": str(run_dir), "status": "stop"}, ensure_ascii=False))
++    return 1
++
++
++def main() -> int:
++    ap = argparse.ArgumentParser(description="ADLC self improve core workflow")
++    ap.add_argument("--repo", default=".")
++    ap.add_argument("--goal", required=True)
++    ap.add_argument("--max-rounds", type=int, default=2)
++    ap.add_argument("--run-id", default="")
++    ap.add_argument("--patch-cmd", default="")
++    ap.add_argument("--verify-cmd", default="")
++    args = ap.parse_args()
++
++    repo_root = Path(args.repo).resolve()
++    run_id = args.run_id.strip() or run_state.create_run_id()
++    patch_cmd_tpl = (args.patch_cmd or os.environ.get("SDDAI_PATCH_CMD", "")).strip()
++    return run_workflow(
++        repo_root=repo_root,
++        goal=str(args.goal),
++        max_rounds=max(1, int(args.max_rounds)),
++        run_id=run_id,
++        patch_cmd_tpl=patch_cmd_tpl,
++        verify_cmd=str(args.verify_cmd),
++    )
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
++
+diff --git a/tests/test_contract_guard.py b/tests/test_contract_guard.py
+new file mode 100644
+index 0000000..0ae6dca
+--- /dev/null
++++ b/tests/test_contract_guard.py
+@@ -0,0 +1,99 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++import shutil
++import subprocess
++import tempfile
++import unittest
++from pathlib import Path
++
++import sys
++
++ROOT = Path(__file__).resolve().parents[1]
++if str(ROOT) not in sys.path:
++    sys.path.insert(0, str(ROOT))
++
++from tools import contract_guard
++
++
++def _run(cmd: list[str], cwd: Path) -> None:
++    subprocess.run(cmd, cwd=str(cwd), check=True, capture_output=True, text=True)
++
++
++def _init_repo(base: Path) -> None:
++    _run(["git", "init"], base)
++    _run(["git", "config", "user.email", "test@example.com"], base)
++    _run(["git", "config", "user.name", "ctcp-test"], base)
++    (base / "README.md").write_text("seed\n", encoding="utf-8")
++    _run(["git", "add", "README.md"], base)
++    _run(["git", "commit", "-m", "init"], base)
++
++
++def _write_policy(path: Path) -> None:
++    path.parent.mkdir(parents=True, exist_ok=True)
++    path.write_text(
++        "\n".join(
++            [
++                "allowed_paths:",
++                "  - scripts/",
++                "  - tests/",
++                "  - contracts/",
++                "blocked_paths:",
++                "  - .github/",
++                "max_files: 10",
++                "max_added_lines: 200",
++                "max_deleted_lines: 200",
++                "max_total_lines: 200",
++                "",
++            ]
++        ),
++        encoding="utf-8",
++    )
++
++
++@unittest.skipUnless(shutil.which("git"), "git is required")
++class ContractGuardTests(unittest.TestCase):
++    def test_pass_for_allowed_change(self) -> None:
++        with tempfile.TemporaryDirectory() as td:
++            repo = Path(td)
++            _init_repo(repo)
++            policy = repo / "contracts" / "allowed_changes.yaml"
++            _write_policy(policy)
++
++            target = repo / "scripts" / "x.py"
++            target.parent.mkdir(parents=True, exist_ok=True)
++            target.write_text("print('ok')\n", encoding="utf-8")
++            _run(["git", "add", "scripts/x.py"], repo)
++
++            review = contract_guard.evaluate(
++                repo,
++                policy_path=policy,
++                out_path=repo / "reviews" / "contract_review.json",
++            )
++            self.assertTrue(review["contract_guard"]["pass"])
++
++    def test_fail_for_blocked_path(self) -> None:
++        with tempfile.TemporaryDirectory() as td:
++            repo = Path(td)
++            _init_repo(repo)
++            policy = repo / "contracts" / "allowed_changes.yaml"
++            _write_policy(policy)
++
++            target = repo / ".github" / "workflows" / "ci.yml"
++            target.parent.mkdir(parents=True, exist_ok=True)
++            target.write_text("name: ci\n", encoding="utf-8")
++            _run(["git", "add", ".github/workflows/ci.yml"], repo)
++
++            review = contract_guard.evaluate(
++                repo,
++                policy_path=policy,
++                out_path=repo / "reviews" / "contract_review.json",
++            )
++            self.assertFalse(review["contract_guard"]["pass"])
++            reasons = "\n".join(review["contract_guard"]["reasons"])
++            self.assertIn("blocked path touched", reasons)
++
++
++if __name__ == "__main__":
++    unittest.main()
++
+diff --git a/tests/test_contrast_rules.py b/tests/test_contrast_rules.py
+new file mode 100644
+index 0000000..6241a5d
+--- /dev/null
++++ b/tests/test_contrast_rules.py
+@@ -0,0 +1,44 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++import unittest
++from pathlib import Path
++
++import sys
++
++ROOT = Path(__file__).resolve().parents[1]
++if str(ROOT) not in sys.path:
++    sys.path.insert(0, str(ROOT))
++
++from tools import contrast_rules
++
++
++class ContrastRulesTests(unittest.TestCase):
++    def test_doc_fail_classification(self) -> None:
++        result = contrast_rules.classify_verify(
++            rc=1,
++            stdout="[verify_repo] doc index check (sync doc links --check)\n[sync_doc_links][error] out of sync",
++            stderr="",
++        )
++        self.assertEqual(result["label"], "DOC_FAIL")
++
++    def test_import_fail_classification(self) -> None:
++        result = contrast_rules.classify_verify(
++            rc=1,
++            stdout="",
++            stderr="ModuleNotFoundError: No module named 'foo'",
++        )
++        self.assertEqual(result["label"], "PY_IMPORT_FAIL")
++
++    def test_unknown_classification(self) -> None:
++        result = contrast_rules.classify_verify(
++            rc=2,
++            stdout="random failure text",
++            stderr="no known gate keyword",
++        )
++        self.assertEqual(result["label"], "UNKNOWN")
++
++
++if __name__ == "__main__":
++    unittest.main()
++
+diff --git a/tests/test_local_librarian.py b/tests/test_local_librarian.py
+new file mode 100644
+index 0000000..03ec5e7
+--- /dev/null
++++ b/tests/test_local_librarian.py
+@@ -0,0 +1,46 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++import tempfile
++import unittest
++from pathlib import Path
++from unittest import mock
++
++import sys
++
++ROOT = Path(__file__).resolve().parents[1]
++if str(ROOT) not in sys.path:
++    sys.path.insert(0, str(ROOT))
++
++from tools import local_librarian
++
++
++class LocalLibrarianTests(unittest.TestCase):
++    def test_search_returns_expected_fields(self) -> None:
++        rows = local_librarian.search(ROOT, "def search(repo_root", k=8)
++        self.assertTrue(rows, "expected at least one search result")
++        first = rows[0]
++        self.assertIn("path", first)
++        self.assertIn("start_line", first)
++        self.assertIn("end_line", first)
++        self.assertIn("snippet", first)
++        self.assertTrue(str(first["path"]).strip())
++        self.assertGreaterEqual(int(first["start_line"]), 1)
++        self.assertGreaterEqual(int(first["end_line"]), int(first["start_line"]))
++        self.assertTrue(str(first["snippet"]).strip())
++
++    def test_python_fallback_when_rg_missing(self) -> None:
++        with tempfile.TemporaryDirectory() as td:
++            repo = Path(td)
++            (repo / "docs").mkdir(parents=True, exist_ok=True)
++            (repo / "docs" / "sample.md").write_text("alpha\nMATCH_TOKEN\nomega\n", encoding="utf-8")
++            with mock.patch("tools.local_librarian.shutil.which", return_value=None):
++                rows = local_librarian.search(repo, "MATCH_TOKEN", k=8)
++            self.assertEqual(len(rows), 1)
++            self.assertEqual(rows[0]["path"], "docs/sample.md")
++            self.assertIn("MATCH_TOKEN", rows[0]["snippet"])
++
++
++if __name__ == "__main__":
++    unittest.main()
++
+diff --git a/tests/test_workflow_dispatch.py b/tests/test_workflow_dispatch.py
+new file mode 100644
+index 0000000..c29f0d6
+--- /dev/null
++++ b/tests/test_workflow_dispatch.py
+@@ -0,0 +1,43 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++import json
++import unittest
++from pathlib import Path
++
++import sys
++
++ROOT = Path(__file__).resolve().parents[1]
++SCRIPTS_DIR = ROOT / "scripts"
++if str(ROOT) not in sys.path:
++    sys.path.insert(0, str(ROOT))
++if str(SCRIPTS_DIR) not in sys.path:
++    sys.path.insert(0, str(SCRIPTS_DIR))
++
++import workflow_dispatch
++
++
++class WorkflowDispatchTests(unittest.TestCase):
++    def test_registry_contains_self_improve_workflow(self) -> None:
++        index_path = ROOT / "workflow_registry" / "index.json"
++        doc = json.loads(index_path.read_text(encoding="utf-8"))
++        ids = {str(row.get("id", "")) for row in doc.get("workflows", [])}
++        self.assertIn("adlc_self_improve_core", ids)
++
++    def test_dispatch_command_points_to_self_improve_entry(self) -> None:
++        cmd = workflow_dispatch._dispatch_command(
++            workflow_id="adlc_self_improve_core",
++            repo_root=ROOT,
++            goal="Self improve core loop",
++            max_rounds=2,
++            patch_cmd="",
++            verify_cmd="",
++        )
++        text = " ".join(cmd)
++        self.assertIn("adlc_self_improve_core.py", text)
++        self.assertIn("--max-rounds", cmd)
++
++
++if __name__ == "__main__":
++    unittest.main()
++
+diff --git a/tools/contract_guard.py b/tools/contract_guard.py
+new file mode 100644
+index 0000000..f7bb4f6
+--- /dev/null
++++ b/tools/contract_guard.py
+@@ -0,0 +1,228 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++import argparse
++import json
++import subprocess
++from pathlib import Path
++from typing import Any
++
++
++def _normalize_prefix(value: str) -> str:
++    text = str(value or "").strip().replace("\\", "/")
++    if not text:
++        return ""
++    return text if text.endswith("/") else text + "/"
++
++
++def _parse_scalar(value: str) -> Any:
++    text = value.strip().strip("'").strip('"')
++    if text.lower() in {"true", "false"}:
++        return text.lower() == "true"
++    try:
++        return int(text)
++    except Exception:
++        return text
++
++
++def load_policy(path: str | Path) -> dict[str, Any]:
++    p = Path(path)
++    if not p.exists():
++        return {}
++
++    doc: dict[str, Any] = {}
++    current_list_key = ""
++    for raw in p.read_text(encoding="utf-8", errors="replace").splitlines():
++        line = raw.split("#", 1)[0].rstrip()
++        if not line.strip():
++            continue
++        stripped = line.strip()
++        if stripped.startswith("- "):
++            if not current_list_key:
++                continue
++            doc.setdefault(current_list_key, [])
++            doc[current_list_key].append(stripped[2:].strip().strip("'").strip('"'))
++            continue
++
++        current_list_key = ""
++        if ":" not in stripped:
++            continue
++        key, value = stripped.split(":", 1)
++        key = key.strip()
++        value = value.strip()
++        if value == "":
++            doc[key] = []
++            current_list_key = key
++        else:
++            doc[key] = _parse_scalar(value)
++    return doc
++
++
++def _run_git(repo_root: Path, args: list[str]) -> tuple[int, str]:
++    proc = subprocess.run(
++        ["git", *args],
++        cwd=str(repo_root),
++        capture_output=True,
++        text=True,
++        encoding="utf-8",
++        errors="replace",
++    )
++    text = (proc.stdout or "") + (proc.stderr or "")
++    return proc.returncode, text
++
++
++def _collect_diff(repo_root: Path) -> tuple[list[str], dict[str, Any], list[str]]:
++    touched: set[str] = set()
++    stats = {
++        "files": {},
++        "total_files": 0,
++        "added_lines": 0,
++        "deleted_lines": 0,
++        "total_lines": 0,
++    }
++    errors: list[str] = []
++
++    for args in (["diff", "--name-only"], ["diff", "--cached", "--name-only"]):
++        rc, out = _run_git(repo_root, args)
++        if rc != 0:
++            errors.append(f"git {' '.join(args)} failed")
++            continue
++        for row in out.splitlines():
++            rel = row.strip().replace("\\", "/")
++            if rel:
++                touched.add(rel)
++
++    def parse_numstat(output: str) -> None:
++        for row in output.splitlines():
++            parts = row.split("\t")
++            if len(parts) < 3:
++                continue
++            added_raw, deleted_raw, path_raw = parts[0], parts[1], parts[2]
++            rel = path_raw.strip().replace("\\", "/")
++            if not rel:
++                continue
++            try:
++                added = int(added_raw)
++            except Exception:
++                added = 0
++            try:
++                deleted = int(deleted_raw)
++            except Exception:
++                deleted = 0
++            touched.add(rel)
++            file_stats = stats["files"].setdefault(rel, {"added": 0, "deleted": 0})
++            file_stats["added"] += added
++            file_stats["deleted"] += deleted
++            stats["added_lines"] += added
++            stats["deleted_lines"] += deleted
++
++    for args in (["diff", "--numstat"], ["diff", "--cached", "--numstat"]):
++        rc, out = _run_git(repo_root, args)
++        if rc != 0:
++            errors.append(f"git {' '.join(args)} failed")
++            continue
++        parse_numstat(out)
++
++    stats["total_files"] = len(touched)
++    stats["total_lines"] = int(stats["added_lines"]) + int(stats["deleted_lines"])
++    return sorted(touched), stats, errors
++
++
++def _path_matches_prefix(path: str, prefixes: list[str]) -> bool:
++    rel = path.strip().replace("\\", "/")
++    for pref in prefixes:
++        norm = _normalize_prefix(pref)
++        if not norm:
++            continue
++        raw = norm[:-1]
++        if rel == raw or rel.startswith(norm):
++            return True
++    return False
++
++
++def evaluate(
++    repo_root: str | Path,
++    *,
++    policy_path: str | Path | None = None,
++    out_path: str | Path | None = None,
++) -> dict[str, Any]:
++    root = Path(repo_root).resolve()
++    policy_file = Path(policy_path) if policy_path else (root / "contracts" / "allowed_changes.yaml")
++    policy = load_policy(policy_file)
++
++    allowed_paths = [str(x) for x in policy.get("allowed_paths", []) if str(x).strip()]
++    blocked_paths = [str(x) for x in policy.get("blocked_paths", []) if str(x).strip()]
++    max_files = int(policy.get("max_files", 10))
++    max_added = int(policy.get("max_added_lines", 800))
++    max_deleted = int(policy.get("max_deleted_lines", 800))
++    max_total = int(policy.get("max_total_lines", 800))
++
++    touched_files, stats, git_errors = _collect_diff(root)
++    reasons: list[str] = []
++    reasons.extend(git_errors)
++
++    for rel in touched_files:
++        if blocked_paths and _path_matches_prefix(rel, blocked_paths):
++            reasons.append(f"blocked path touched: {rel}")
++        if allowed_paths and not _path_matches_prefix(rel, allowed_paths):
++            reasons.append(f"path outside allowlist: {rel}")
++
++    if stats["total_files"] > max_files:
++        reasons.append(f"changed file count {stats['total_files']} exceeds max_files={max_files}")
++    if stats["added_lines"] > max_added:
++        reasons.append(f"added lines {stats['added_lines']} exceeds max_added_lines={max_added}")
++    if stats["deleted_lines"] > max_deleted:
++        reasons.append(f"deleted lines {stats['deleted_lines']} exceeds max_deleted_lines={max_deleted}")
++    if stats["total_lines"] > max_total:
++        reasons.append(f"total changed lines {stats['total_lines']} exceeds max_total_lines={max_total}")
++
++    passed = len(reasons) == 0
++    review = {
++        "contract_guard": {
++            "pass": passed,
++            "policy_path": str(policy_file.resolve()),
++            "reasons": reasons,
++            "touched_files": touched_files,
++            "stats": stats,
++            "limits": {
++                "max_files": max_files,
++                "max_added_lines": max_added,
++                "max_deleted_lines": max_deleted,
++                "max_total_lines": max_total,
++                "allowed_paths": allowed_paths,
++                "blocked_paths": blocked_paths,
++            },
++        }
++    }
++
++    target = Path(out_path) if out_path else (root / "reviews" / "contract_review.json")
++    target.parent.mkdir(parents=True, exist_ok=True)
++    target.write_text(json.dumps(review, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
++    return review
++
++
++def main() -> int:
++    ap = argparse.ArgumentParser(description="Contract guard for local diff scope and size")
++    ap.add_argument("--repo-root", default=".")
++    ap.add_argument("--policy", default="")
++    ap.add_argument("--out", default="")
++    args = ap.parse_args()
++
++    doc = evaluate(
++        args.repo_root,
++        policy_path=args.policy or None,
++        out_path=args.out or None,
++    )
++    guard = doc.get("contract_guard", {})
++    if bool(guard.get("pass", False)):
++        print("[contract_guard] PASS")
++        return 0
++    print("[contract_guard] FAIL")
++    for reason in guard.get("reasons", []):
++        print(f"- {reason}")
++    return 1
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
++
+diff --git a/tools/contrast_rules.py b/tools/contrast_rules.py
+new file mode 100644
+index 0000000..4bd9553
+--- /dev/null
++++ b/tools/contrast_rules.py
+@@ -0,0 +1,174 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++import argparse
++import json
++from pathlib import Path
++from typing import Any
++
++
++RULES: list[tuple[str, list[str], list[str]]] = [
++    (
++        "DOC_FAIL",
++        ["sync_doc_links", "doc index check", "out of sync", "doc index"],
++        [
++            "Run `python scripts/sync_doc_links.py` to resync README doc index.",
++            "Re-run `scripts/verify_repo.*` and confirm doc index gate is green.",
++        ],
++    ),
++    (
++        "CONTRACT_FAIL",
++        ["contract checks", "contract_checks.py", "contract_guard", "workflow_checks"],
++        [
++            "Inspect contract gate output and keep edits inside allowed directories.",
++            "Fix contract/doc link violations before the next verify run.",
++        ],
++    ),
++    (
++        "SIMLAB_FAIL",
++        ["simlab", "suite_gate.py", "forge_full_suite", "lite scenario replay"],
++        [
++            "Open simlab logs and isolate the first failing scenario.",
++            "Apply the smallest fix for that scenario and rerun lite replay.",
++        ],
++    ),
++    (
++        "PY_IMPORT_FAIL",
++        ["modulenotfounderror", "importerror", "no module named"],
++        [
++            "Fix the failing Python import/module path.",
++            "Run local unit tests before re-running `verify_repo`.",
++        ],
++    ),
++]
++
++
++def _pick_summary(text: str, *, max_lines: int = 8, max_chars: int = 700) -> str:
++    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
++    if not lines:
++        return "(empty)"
++    picked = lines[-max_lines:]
++    out = "\n".join(picked)
++    if len(out) > max_chars:
++        out = out[-max_chars:]
++    return out
++
++
++def classify_verify(rc: int, stdout: str, stderr: str) -> dict[str, Any]:
++    merged = f"{stdout}\n{stderr}".lower()
++    if int(rc) == 0:
++        return {
++            "label": "PASS",
++            "next_actions": ["No action needed."],
++            "matched_keywords": [],
++        }
++
++    for label, keys, actions in RULES:
++        matched = [k for k in keys if k.lower() in merged]
++        if matched:
++            return {
++                "label": label,
++                "next_actions": actions,
++                "matched_keywords": matched,
++            }
++
++    return {
++        "label": "UNKNOWN",
++        "next_actions": [
++            "Inspect verify stdout/stderr logs for the first hard failure.",
++            "Use Local Librarian evidence to plan a minimal, targeted fix.",
++        ],
++        "matched_keywords": [],
++    }
++
++
++def write_fix_brief(
++    *,
++    out_path: str | Path,
++    rc: int,
++    stdout: str,
++    stderr: str,
++    references: list[dict[str, Any]] | None = None,
++) -> dict[str, Any]:
++    result = classify_verify(rc=rc, stdout=stdout, stderr=stderr)
++    refs = references or []
++    label = str(result["label"])
++    actions = [str(x) for x in result.get("next_actions", [])]
++
++    lines: list[str] = [
++        "# Fix Brief",
++        "",
++        f"- label: `{label}`",
++        f"- verify_rc: `{int(rc)}`",
++    ]
++    keys = [str(x) for x in result.get("matched_keywords", []) if str(x).strip()]
++    if keys:
++        lines.append(f"- matched_keywords: `{', '.join(keys)}`")
++
++    lines += [
++        "",
++        "## Minimal Next Actions",
++    ]
++    for action in actions:
++        lines.append(f"- {action}")
++
++    lines += [
++        "",
++        "## Related File References",
++    ]
++    if refs:
++        for row in refs:
++            path = str(row.get("path", ""))
++            start_line = int(row.get("start_line", 0) or 0)
++            end_line = int(row.get("end_line", 0) or 0)
++            if start_line > 0 and end_line > 0:
++                lines.append(f"- `{path}:{start_line}-{end_line}`")
++            else:
++                lines.append(f"- `{path}`")
++    else:
++        lines.append("- (no librarian references)")
++
++    lines += [
++        "",
++        "## Verify stdout summary",
++        "```",
++        _pick_summary(stdout),
++        "```",
++        "",
++        "## Verify stderr summary",
++        "```",
++        _pick_summary(stderr),
++        "```",
++        "",
++    ]
++
++    target = Path(out_path)
++    target.parent.mkdir(parents=True, exist_ok=True)
++    target.write_text("\n".join(lines), encoding="utf-8")
++    return result
++
++
++def main() -> int:
++    ap = argparse.ArgumentParser(description="Rule-based contrast classifier for verify output")
++    ap.add_argument("--rc", type=int, required=True)
++    ap.add_argument("--stdout", default="")
++    ap.add_argument("--stderr", default="")
++    ap.add_argument("--out", default="")
++    args = ap.parse_args()
++
++    result = classify_verify(rc=args.rc, stdout=args.stdout, stderr=args.stderr)
++    if args.out:
++        write_fix_brief(
++            out_path=args.out,
++            rc=args.rc,
++            stdout=args.stdout,
++            stderr=args.stderr,
++            references=[],
++        )
++    print(json.dumps(result, ensure_ascii=False, indent=2))
++    return 0
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
++
+diff --git a/tools/local_librarian.py b/tools/local_librarian.py
+new file mode 100644
+index 0000000..38e012f
+--- /dev/null
++++ b/tools/local_librarian.py
+@@ -0,0 +1,245 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++import argparse
++import json
++import os
++import shutil
++import subprocess
++from pathlib import Path
++from typing import Any
++
++SEARCH_ROOTS = (
++    "docs",
++    "scripts",
++    "tools",
++    "src",
++    "workflow_registry",
++    "simlab",
++)
++
++SKIP_DIR_NAMES = {
++    ".git",
++    ".hg",
++    ".svn",
++    "__pycache__",
++    "runs",
++    "_runs",
++    "_runs_repo_gate",
++    "build",
++    "build_lite",
++    "build_verify",
++    "dist",
++    ".venv",
++}
++
++SKIP_SUFFIXES = {
++    ".png",
++    ".jpg",
++    ".jpeg",
++    ".gif",
++    ".bmp",
++    ".ico",
++    ".zip",
++    ".7z",
++    ".gz",
++    ".bz2",
++    ".exe",
++    ".dll",
++    ".so",
++    ".dylib",
++    ".obj",
++    ".o",
++    ".a",
++    ".lib",
++    ".pdf",
++}
++
++
++def _to_rel_posix(path: Path, repo_root: Path) -> str:
++    return path.resolve().relative_to(repo_root.resolve()).as_posix()
++
++
++def _format_snippet(lines: list[str], start: int, end: int, match_lines: set[int]) -> str:
++    chunks: list[str] = []
++    for idx in range(start, end + 1):
++        marker = ">" if idx in match_lines else " "
++        chunks.append(f"{idx:>6}{marker} {lines[idx - 1]}")
++    return "\n".join(chunks)
++
++
++def _read_text_lines(path: Path) -> list[str]:
++    return path.read_text(encoding="utf-8", errors="replace").splitlines()
++
++
++def _build_result(
++    *,
++    repo_root: Path,
++    rel_path: str,
++    line_numbers: list[int],
++    fallback_text: str,
++) -> dict[str, Any]:
++    abs_path = (repo_root / rel_path).resolve()
++    start_line = min(line_numbers) if line_numbers else 1
++    end_line = max(line_numbers) if line_numbers else start_line
++    try:
++        lines = _read_text_lines(abs_path)
++        if lines:
++            span_start = max(1, start_line - 1)
++            span_end = min(len(lines), start_line + 1)
++            snippet = _format_snippet(lines, span_start, span_end, set(line_numbers))
++        else:
++            snippet = fallback_text
++    except Exception:
++        snippet = fallback_text
++
++    return {
++        "path": rel_path,
++        "start_line": int(start_line),
++        "end_line": int(end_line),
++        "snippet": snippet.strip(),
++    }
++
++
++def _search_with_rg(repo_root: Path, query: str) -> list[dict[str, Any]]:
++    rg = shutil.which("rg")
++    if not rg:
++        return []
++
++    roots = [r for r in SEARCH_ROOTS if (repo_root / r).exists()]
++    if not roots:
++        roots = ["."]
++    cmd = [
++        rg,
++        "-n",
++        "--no-heading",
++        "--fixed-strings",
++        "--color",
++        "never",
++        query,
++        *roots,
++    ]
++    proc = subprocess.run(
++        cmd,
++        cwd=str(repo_root),
++        capture_output=True,
++        text=True,
++        encoding="utf-8",
++        errors="replace",
++    )
++    if proc.returncode not in (0, 1):
++        return []
++
++    grouped: dict[str, list[tuple[int, str]]] = {}
++    for raw in proc.stdout.splitlines():
++        line = raw.rstrip("\n")
++        if not line:
++            continue
++        parts = line.split(":", 2)
++        if len(parts) < 3:
++            continue
++        rel = Path(parts[0]).as_posix()
++        try:
++            lineno = int(parts[1])
++        except Exception:
++            continue
++        text = parts[2]
++        grouped.setdefault(rel, []).append((lineno, text))
++
++    results: list[dict[str, Any]] = []
++    for rel in sorted(grouped.keys()):
++        rows = sorted(grouped[rel], key=lambda x: x[0])
++        line_numbers = [row[0] for row in rows[:5]]
++        fallback_text = "\n".join(f"{ln}: {txt}" for ln, txt in rows[:3])
++        results.append(
++            _build_result(
++                repo_root=repo_root,
++                rel_path=rel,
++                line_numbers=line_numbers,
++                fallback_text=fallback_text,
++            )
++        )
++    return results
++
++
++def _iter_candidate_files(repo_root: Path) -> list[Path]:
++    out: list[Path] = []
++    for base in SEARCH_ROOTS:
++        root = (repo_root / base).resolve()
++        if not root.exists() or not root.is_dir():
++            continue
++        for current, dirs, files in os.walk(root):
++            dirs[:] = sorted(d for d in dirs if d not in SKIP_DIR_NAMES)
++            for name in sorted(files):
++                p = Path(current) / name
++                if p.suffix.lower() in SKIP_SUFFIXES:
++                    continue
++                out.append(p)
++    return out
++
++
++def _search_with_python(repo_root: Path, query: str) -> list[dict[str, Any]]:
++    if not query:
++        return []
++    results: list[dict[str, Any]] = []
++    for path in _iter_candidate_files(repo_root):
++        try:
++            if path.stat().st_size > 1024 * 1024:
++                continue
++            lines = _read_text_lines(path)
++        except Exception:
++            continue
++
++        match_lines: list[int] = []
++        for idx, text in enumerate(lines, start=1):
++            if query in text:
++                match_lines.append(idx)
++        if not match_lines:
++            continue
++
++        rel = _to_rel_posix(path, repo_root)
++        start_line = match_lines[0]
++        span_start = max(1, start_line - 1)
++        span_end = min(len(lines), start_line + 1)
++        snippet = _format_snippet(lines, span_start, span_end, set(match_lines[:5]))
++        results.append(
++            {
++                "path": rel,
++                "start_line": int(start_line),
++                "end_line": int(match_lines[min(len(match_lines), 5) - 1]),
++                "snippet": snippet.strip(),
++            }
++        )
++    results.sort(key=lambda x: (str(x["path"]), int(x["start_line"])))
++    return results
++
++
++def search(repo_root: str | Path, query: str, k: int = 8) -> list[dict[str, Any]]:
++    root = Path(repo_root).resolve()
++    text = str(query or "").strip()
++    if not text or k <= 0:
++        return []
++
++    results = _search_with_rg(root, text)
++    if not results:
++        results = _search_with_python(root, text)
++
++    results.sort(key=lambda x: (str(x["path"]), int(x["start_line"])))
++    return results[: int(k)]
++
++
++def main() -> int:
++    ap = argparse.ArgumentParser(description="Local Librarian deterministic search")
++    ap.add_argument("--repo-root", default=".")
++    ap.add_argument("--query", required=True)
++    ap.add_argument("--k", type=int, default=8)
++    args = ap.parse_args()
++
++    rows = search(repo_root=args.repo_root, query=args.query, k=args.k)
++    print(json.dumps(rows, ensure_ascii=False, indent=2))
++    return 0
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
++
+diff --git a/tools/run_state.py b/tools/run_state.py
+new file mode 100644
+index 0000000..4859712
+--- /dev/null
++++ b/tools/run_state.py
+@@ -0,0 +1,89 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++import datetime as dt
++import json
++from pathlib import Path
++from typing import Any
++
++
++def create_run_id() -> str:
++    return dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
++
++
++def _iso_now() -> str:
++    return dt.datetime.now().isoformat(timespec="seconds")
++
++
++def _normalize_state(doc: dict[str, Any]) -> dict[str, Any]:
++    run_id = str(doc.get("run_id", "")).strip() or create_run_id()
++    phase = str(doc.get("phase", "")).strip() or "init"
++    round_value = doc.get("round", 1)
++    try:
++        round_number = max(1, int(round_value))
++    except Exception:
++        round_number = 1
++
++    artifacts = doc.get("artifacts", {})
++    if not isinstance(artifacts, dict):
++        artifacts = {}
++
++    last_verify = doc.get("last_verify", {})
++    if not isinstance(last_verify, dict):
++        last_verify = {}
++    rc_raw = last_verify.get("rc", None)
++    try:
++        rc = int(rc_raw) if rc_raw is not None else None
++    except Exception:
++        rc = None
++    verify_paths = last_verify.get("paths", {})
++    if not isinstance(verify_paths, dict):
++        verify_paths = {}
++    last_verify = {
++        "rc": rc,
++        "paths": verify_paths,
++        "summary": str(last_verify.get("summary", "")),
++    }
++
++    timestamps = doc.get("timestamps", {})
++    if not isinstance(timestamps, dict):
++        timestamps = {}
++    created_at = str(timestamps.get("created_at", "")).strip() or _iso_now()
++    updated_at = str(timestamps.get("updated_at", "")).strip() or created_at
++
++    return {
++        "run_id": run_id,
++        "phase": phase,
++        "round": round_number,
++        "artifacts": artifacts,
++        "last_verify": last_verify,
++        "timestamps": {
++            "created_at": created_at,
++            "updated_at": updated_at,
++        },
++    }
++
++
++def load_state(run_dir: str | Path) -> dict[str, Any]:
++    run_path = Path(run_dir)
++    state_path = run_path / "state.json"
++    if not state_path.exists():
++        return _normalize_state({})
++    try:
++        raw = json.loads(state_path.read_text(encoding="utf-8"))
++    except Exception:
++        raw = {}
++    if not isinstance(raw, dict):
++        raw = {}
++    return _normalize_state(raw)
++
++
++def save_state(run_dir: str | Path, state: dict[str, Any]) -> dict[str, Any]:
++    run_path = Path(run_dir)
++    run_path.mkdir(parents=True, exist_ok=True)
++    normalized = _normalize_state(state if isinstance(state, dict) else {})
++    normalized["timestamps"]["updated_at"] = _iso_now()
++    state_path = run_path / "state.json"
++    state_path.write_text(json.dumps(normalized, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
++    return normalized
++
+diff --git a/workflow_registry/adlc_self_improve_core/recipe.yaml b/workflow_registry/adlc_self_improve_core/recipe.yaml
+new file mode 100644
+index 0000000..ea9ed26
+--- /dev/null
++++ b/workflow_registry/adlc_self_improve_core/recipe.yaml
+@@ -0,0 +1,47 @@
++id: adlc_self_improve_core
++version: 0.1.0
++description: Minimal self-improve core loop with local librarian, contract guard, and verify contrast loop.
++
++inputs:
++  required:
++    - goal
++    - repo_root
++    - workflow_registry/index.json
++  optional:
++    - max_rounds
++    - patch_cmd
++
++outputs:
++  required:
++    - runs/adlc_self_improve_core/<run_id>/state.json
++    - runs/adlc_self_improve_core/<run_id>/outbox/PLAN.md
++    - runs/adlc_self_improve_core/<run_id>/outbox/fix_brief.md
++    - runs/adlc_self_improve_core/<run_id>/reviews/contract_review.json
++    - runs/adlc_self_improve_core/<run_id>/logs/verify_stdout.txt
++    - runs/adlc_self_improve_core/<run_id>/logs/verify_stderr.txt
++    - runs/adlc_self_improve_core/<run_id>/diff.patch
++
++steps:
++  - doc
++  - analysis
++  - find_local_librarian
++  - plan
++  - build_patch
++  - contract_guard
++  - verify
++  - contrast
++  - fix_loop
++  - stop
++
++gates:
++  default:
++    - verify_repo
++    - workflow_checks
++    - contract_checks
++    - doc_index_check
++    - unit_tests
++
++cost_hints:
++  dependency_level: low
++  api_level: low
++  estimated_minutes: 8
+diff --git a/workflow_registry/index.json b/workflow_registry/index.json
+index 00462fd..d41a8a6 100644
+--- a/workflow_registry/index.json
++++ b/workflow_registry/index.json
+@@ -20,10 +20,38 @@
+     "replace_resolver": false
+   },
+   "workflows": [
++    {
++      "id": "adlc_self_improve_core",
++      "version": "0.1.0",
++      "path": "workflow_registry/adlc_self_improve_core/recipe.yaml",
++      "entry": "scripts/workflows/adlc_self_improve_core.py",
++      "tags": [
++        "ctcp",
++        "adlc",
++        "self-improve",
++        "librarian",
++        "contract-guard"
++      ],
++      "supported_goals": [
++        "self-improve-core",
++        "workflow-hardening",
++        "iterative-fix-loop"
++      ],
++      "dependency_level": "low",
++      "cost_hint": {
++        "time_level": "low",
++        "api_level": "low"
++      },
++      "last_known_good": {
++        "status": "unknown",
++        "source": "local"
++      }
++    },
+     {
+       "id": "wf_minimal_patch_verify",
+       "version": "1.0.0",
+       "path": "workflow_registry/wf_minimal_patch_verify/recipe.yaml",
++      "entry": "scripts/adlc_run.py",
+       "tags": [
+         "ctcp",
+         "headless",

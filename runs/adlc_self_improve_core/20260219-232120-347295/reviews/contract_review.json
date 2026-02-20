@@ -1,0 +1,82 @@
+{
+  "contract_guard": {
+    "pass": false,
+    "policy_path": "D:\\.c_projects\\adc\\ctcp\\contracts\\allowed_changes.yaml",
+    "reasons": [
+      "path outside allowlist: meta/tasks/CURRENT.md",
+      "path outside allowlist: warning: in the working copy of 'meta/tasks/CURRENT.md', LF will be replaced by CRLF the next time Git touches it",
+      "path outside allowlist: warning: in the working copy of 'scripts/sync_doc_links.py', LF will be replaced by CRLF the next time Git touches it",
+      "path outside allowlist: warning: in the working copy of 'scripts/verify_repo.ps1', LF will be replaced by CRLF the next time Git touches it",
+      "path outside allowlist: warning: in the working copy of 'scripts/verify_repo.sh', LF will be replaced by CRLF the next time Git touches it",
+      "path outside allowlist: warning: in the working copy of 'workflow_registry/index.json', LF will be replaced by CRLF the next time Git touches it",
+      "changed file count 11 exceeds max_files=10"
+    ],
+    "touched_files": [
+      "README.md",
+      "meta/tasks/CURRENT.md",
+      "scripts/sync_doc_links.py",
+      "scripts/verify_repo.ps1",
+      "scripts/verify_repo.sh",
+      "warning: in the working copy of 'meta/tasks/CURRENT.md', LF will be replaced by CRLF the next time Git touches it",
+      "warning: in the working copy of 'scripts/sync_doc_links.py', LF will be replaced by CRLF the next time Git touches it",
+      "warning: in the working copy of 'scripts/verify_repo.ps1', LF will be replaced by CRLF the next time Git touches it",
+      "warning: in the working copy of 'scripts/verify_repo.sh', LF will be replaced by CRLF the next time Git touches it",
+      "warning: in the working copy of 'workflow_registry/index.json', LF will be replaced by CRLF the next time Git touches it",
+      "workflow_registry/index.json"
+    ],
+    "stats": {
+      "files": {
+        "README.md": {
+          "added": 1,
+          "deleted": 0
+        },
+        "meta/tasks/CURRENT.md": {
+          "added": 29,
+          "deleted": 33
+        },
+        "scripts/sync_doc_links.py": {
+          "added": 1,
+          "deleted": 0
+        },
+        "scripts/verify_repo.ps1": {
+          "added": 6,
+          "deleted": 0
+        },
+        "scripts/verify_repo.sh": {
+          "added": 3,
+          "deleted": 0
+        },
+        "workflow_registry/index.json": {
+          "added": 28,
+          "deleted": 0
+        }
+      },
+      "total_files": 11,
+      "added_lines": 68,
+      "deleted_lines": 33,
+      "total_lines": 101
+    },
+    "limits": {
+      "max_files": 10,
+      "max_added_lines": 800,
+      "max_deleted_lines": 800,
+      "max_total_lines": 800,
+      "allowed_paths": [
+        "scripts/",
+        "tools/",
+        "docs/",
+        "workflow_registry/",
+        "simlab/",
+        "tests/",
+        "contracts/",
+        "README.md"
+      ],
+      "blocked_paths": [
+        ".github/",
+        "runs/",
+        "build/",
+        "dist/"
+      ]
+    }
+  }
+}

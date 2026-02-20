@@ -28,6 +28,18 @@ def _parse_bool(v: Any) -> bool:
     return s in {"1", "true", "yes", "y", "on"}
 
 
+def _parse_env_list(value: Any, *, field_name: str) -> list[str]:
+    if value is None:
+        rows: list[Any] = []
+    elif isinstance(value, str):
+        rows = [value]
+    elif isinstance(value, list):
+        rows = value
+    else:
+        raise ValueError(f"{field_name} must be an array or string")
+    return [str(x) for x in rows]
+
+
 def _load_doc(path: Path) -> dict[str, Any]:
     txt = path.read_text(encoding="utf-8")
     try:
@@ -45,7 +57,9 @@ def _load_doc(path: Path) -> dict[str, Any]:
     return doc
 
 
-def evaluate_suite_gate(doc: dict[str, Any], env: dict[str, str]) -> dict[str, Any]:
+def evaluate_suite_gate(
+    doc: dict[str, Any], env: dict[str, str], *, suite_file: str | None = None
+) -> dict[str, Any]:
     suite = doc.get("suite")
     if not isinstance(suite, dict):
         raise ValueError("missing object key: suite")
@@ -54,17 +68,13 @@ def evaluate_suite_gate(doc: dict[str, Any], env: dict[str, str]) -> dict[str, A
     if not isinstance(env_gate, dict):
         raise ValueError("missing object key: suite.env_gate")
 
-    required_env = env_gate.get("required_env", [])
-    if not isinstance(required_env, list):
-        raise ValueError("suite.env_gate.required_env must be an array")
-    required_env = [str(x) for x in required_env]
-
-    allow_network_env = env_gate.get("allow_network_env", [])
-    if isinstance(allow_network_env, str):
-        allow_network_env = [allow_network_env]
-    if not isinstance(allow_network_env, list):
-        raise ValueError("suite.env_gate.allow_network_env must be an array or string")
-    allow_network_env = [str(x) for x in allow_network_env]
+    required_env = _parse_env_list(
+        env_gate.get("required_env", []), field_name="suite.env_gate.required_env"
+    )
+    allow_network_env = _parse_env_list(
+        env_gate.get("allow_network_env", []),
+        field_name="suite.env_gate.allow_network_env",
+    )
 
     require_network = _parse_bool(env_gate.get("require_network", False))
     missing_env = [k for k in required_env if not env.get(k, "").strip()]
@@ -76,12 +86,21 @@ def evaluate_suite_gate(doc: dict[str, Any], env: dict[str, str]) -> dict[str, A
     if missing_env:
         reasons.append("missing required env: " + ", ".join(missing_env))
     if require_network and not network_allowed:
-        reasons.append("network gate blocked: set one allow_network_env variable to true")
+        if allow_network_env:
+            reasons.append(
+                "network gate blocked: set one allow_network_env variable to true"
+            )
+        else:
+            reasons.append(
+                "network gate blocked: allow_network_env is empty in suite config"
+            )
+
+    result_suite_file = str(suite_file or DEFAULT_SUITE.as_posix())
 
     ready = not reasons
     return {
         "checked_at": dt.datetime.now().isoformat(timespec="seconds"),
-        "suite_file": str(DEFAULT_SUITE.as_posix()),
+        "suite_file": result_suite_file,
         "suite_id": str(suite.get("id", "")),
         "suite_title": str(suite.get("title", "")),
         "tier": str(suite.get("tier", "")),
@@ -111,12 +130,13 @@ def main() -> int:
 
     try:
         doc = _load_doc(suite_path)
-        result = evaluate_suite_gate(doc, dict(os.environ))
+        result = evaluate_suite_gate(
+            doc, dict(os.environ), suite_file=suite_path.as_posix()
+        )
     except Exception as exc:
         print(f"[suite_gate] error: {exc}")
         return 2
 
-    result["suite_file"] = suite_path.as_posix()
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:

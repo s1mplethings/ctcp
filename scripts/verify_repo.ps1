@@ -234,6 +234,12 @@ if ($SkipLiteReplay) {
   }
 }
 
+Invoke-Step -Name "python unit tests" -Block {
+  Invoke-ExternalChecked -Label "python unit tests" -Command {
+    python -m unittest discover -s tests -p "test_*.py"
+  }
+}
+
 if ($RunFull) {
   Write-Host "[verify_repo] FULL mode enabled via --Full / CTCP_FULL_GATE=1"
   $TestAll = Join-Path $Root "scripts\test_all.ps1"

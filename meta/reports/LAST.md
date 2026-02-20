@@ -1,74 +1,95 @@
 # Demo Report - LAST
 
 ## Goal
-- Execute P0 optimization slice:
-  - SimLab sandbox prefers `git worktree` (with safe fallback).
-  - `verify_repo` supports unified build root + compiler launcher + parallel build/test.
+- Land a minimal ADLC + multi-agent + local Local Librarian self-improve core loop:
+  `doc -> analysis -> find -> plan -> build -> verify -> contrast -> fix(loop) -> stop`
+- Register the workflow in registry/dispatch and keep `verify_repo` (PowerShell + shell) passing.
 
 ## Readlist
-- `AGENTS.md`
 - `ai_context/00_AI_CONTRACT.md`
 - `README.md`
 - `BUILD.md`
 - `PATCH_README.md`
 - `TREE.md`
-- `docs/00_CORE.md`
-- `docs/02_workflow.md`
 - `docs/03_quality_gates.md`
-- `docs/12_modules_index.md`
-- `meta/tasks/TEMPLATE.md`
-- `meta/tasks/CURRENT.md`
-- `meta/reports/LAST.md`
 - `ai_context/problem_registry.md`
 - `ai_context/decision_log.md`
+- `docs/00_CORE.md`
+- `scripts/verify_repo.ps1`
+- `scripts/verify_repo.sh`
+- `scripts/resolve_workflow.py`
+- `scripts/ctcp_dispatch.py`
+- `scripts/ctcp_orchestrate.py`
+- `meta/tasks/TEMPLATE.md`
+- `meta/reports/TEMPLATE_LAST.md`
 
 ## Plan
-1. SimLab: introduce `worktree` sandbox path, keep `copy` fallback when repo is dirty.
-2. Verify pipeline: add build-root/launcher/parallel knobs without changing default gate order.
-3. Keep behavior compatibility and rerun full lite + verify gate.
+1. Docs/Spec first:
+   - add patch protocol contract doc
+   - update doc index generator and README index
+2. Implement core modules:
+   - run state persistence
+   - deterministic local librarian
+   - contract guard
+   - verify contrast rule classifier
+3. Implement workflow and dispatch wiring:
+   - add `adlc_self_improve_core` workflow script
+   - register workflow recipe/index
+   - add workflow dispatch entry
+4. Add tests and integrate into verify_repo:
+   - unittest suite for librarian/guard/contrast/dispatch
+   - run via `python -m unittest discover -s tests -p "test_*.py"`
+5. Validate:
+   - run PowerShell verify gate
+   - run bash verify gate
 
 ## Timeline / Trace Pointer
-- Lite replay run:
-  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\simlab_runs\20260219-212827`
-- verify_repo internal lite replay:
-  - `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\simlab_runs\20260219-212830`
+- Run pointer file: `meta/run_pointers/LAST_RUN.txt`
+- verify_repo.ps1 lite replay run:
+  - `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260220-000103`
+- verify_repo.sh lite replay run:
+  - `/home/sunom/.local/share/ctcp/runs/ctcp/simlab_runs/20260219-235615`
 
 ## Changes
-- `simlab/run.py`
-  - add `--sandbox-mode` (`auto|copy|worktree`, default `auto` via `CTCP_SIMLAB_SANDBOX_MODE`).
-  - in `auto`, dirty repo falls back to `copy` mode; clean repo uses `git worktree`.
-  - add scenario-isolated external `CTCP_RUNS_ROOT` (`simlab_external_runs/...`) to avoid run-dir collisions.
-  - trace now records `Sandbox-Mode` and `Sandbox-Note`.
-- `scripts/verify_repo.ps1`
-  - add `CTCP_BUILD_ROOT` (unified build root).
-  - add launcher autodetect (`ccache` then `sccache`, or `CTCP_COMPILER_LAUNCHER` override).
-  - add `CTCP_BUILD_PARALLEL` and pass `--parallel` to build + `-j` to ctest.
-  - add `CTCP_USE_NINJA=1` optional generator switch.
-- `scripts/verify_repo.sh`
-  - same build-root/launcher/parallel/Ninja behavior as PowerShell script.
-- `CMakeLists.txt`
-  - add `CTCP_ENABLE_COMPILER_LAUNCHER` (ON by default): autodetect `ccache`/`sccache` and set compiler launcher.
-- `meta/tasks/CURRENT.md`
-  - switch active task to optimization slice (`L4-OPT-001`, P0 subset).
-- `meta/backlog/execution_queue.json`
-  - `L4-OPT-001` status moved to `doing` with P0 slice note.
+- Added:
+  - `contracts/allowed_changes.yaml`
+  - `docs/PATCH_CONTRACT.md`
+  - `tools/run_state.py`
+  - `tools/local_librarian.py`
+  - `tools/contract_guard.py`
+  - `tools/contrast_rules.py`
+  - `scripts/workflow_dispatch.py`
+  - `scripts/workflows/adlc_self_improve_core.py`
+  - `workflow_registry/adlc_self_improve_core/recipe.yaml`
+  - `tests/test_local_librarian.py`
+  - `tests/test_contract_guard.py`
+  - `tests/test_contrast_rules.py`
+  - `tests/test_workflow_dispatch.py`
+  - `tests/test_suite_gate.py`
+- Updated:
+  - `tools/checks/suite_gate.py` (support scalar `required_env`, clearer network-block reason, explicit `suite_file` in evaluator output)
+  - `workflow_registry/index.json` (register new workflow)
+  - `scripts/verify_repo.ps1` (run unittest discover)
+  - `scripts/verify_repo.sh` (run unittest discover + python shim for shell envs with python3 only)
+  - `scripts/sync_doc_links.py` (include patch contract doc)
+  - `README.md` (doc index sync)
+  - `meta/tasks/CURRENT.md`
 
 ## Verify
-- `python scripts/sync_doc_links.py --check`
-  - result: `[sync_doc_links] ok`
-- `python simlab/run.py --suite lite`
-  - result: `{"run_dir":".../20260219-212827","passed":8,"failed":0}`
+- `python -m unittest discover -s tests -p "test_*.py"`
+  - `Ran 14 tests ... OK`
 - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
-  - result: `[verify_repo] OK`
-  - key lines:
-    - build root printed
-    - parallel value printed
-    - launcher status printed
-    - lite replay: `passed=8 failed=0`
+  - `[verify_repo] OK`
+  - lite replay: `passed=8 failed=0`
+  - unittest discover executed and passed
+- `bash scripts/verify_repo.sh`
+  - `[verify_repo] OK`
+  - lite replay: `passed=8 failed=0`
+  - unittest discover executed and passed
 
 ## Open Questions
 - None.
 
 ## Next Steps
-1. P1: verify gate step-level parallelism (`workflow/contract/doc-index` in parallel after build).
-2. P1: core dead-code/import cleanup pass.
+1. Add a focused simlab scenario for `adlc_self_improve_core` workflow state-resume behavior.
+2. Expand contrast rules with per-gate regex diagnostics once more failure corpora are collected.

@@ -17,6 +17,7 @@ CURATED_DOCS = [
     "README.md",
     "BUILD.md",
     "PATCH_README.md",
+    "docs/PATCH_CONTRACT.md",
     "TREE.md",
     "docs/00_CORE.md",
     "docs/00_overview.md",

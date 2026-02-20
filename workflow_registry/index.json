@@ -21,9 +21,37 @@
   },
   "workflows": [
     {
+      "id": "adlc_self_improve_core",
+      "version": "0.1.0",
+      "path": "workflow_registry/adlc_self_improve_core/recipe.yaml",
+      "entry": "scripts/workflows/adlc_self_improve_core.py",
+      "tags": [
+        "ctcp",
+        "adlc",
+        "self-improve",
+        "librarian",
+        "contract-guard"
+      ],
+      "supported_goals": [
+        "self-improve-core",
+        "workflow-hardening",
+        "iterative-fix-loop"
+      ],
+      "dependency_level": "low",
+      "cost_hint": {
+        "time_level": "low",
+        "api_level": "low"
+      },
+      "last_known_good": {
+        "status": "unknown",
+        "source": "local"
+      }
+    },
+    {
       "id": "wf_minimal_patch_verify",
       "version": "1.0.0",
       "path": "workflow_registry/wf_minimal_patch_verify/recipe.yaml",
+      "entry": "scripts/adlc_run.py",
       "tags": [
         "ctcp",
         "headless",

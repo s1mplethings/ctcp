@@ -26,6 +26,28 @@ fi
 echo "[verify_repo] write_fixtures: ${WRITE_FIXTURES}"
 BUILD_ARTIFACTS_COMMITTED_MESSAGE="$(printf '\u6784\u5efa\u4ea7\u7269\u88ab\u63d0\u4ea4\u4e86\uff0c\u8bf7\u4ece git \u4e2d\u79fb\u9664\u5e76\u66f4\u65b0 .gitignore')"
 RUN_ARTIFACTS_COMMITTED_MESSAGE="Run outputs exist or are tracked inside repo; move them to external CTCP_RUNS_ROOT."
+PY_SHIM_DIR=""
+
+cleanup_python_alias() {
+  if [[ -n "${PY_SHIM_DIR}" && -d "${PY_SHIM_DIR}" ]]; then
+    rm -rf "${PY_SHIM_DIR}"
+  fi
+}
+
+trap cleanup_python_alias EXIT
+
+ensure_python_alias() {
+  if command -v python >/dev/null 2>&1; then
+    return
+  fi
+  if ! command -v python3 >/dev/null 2>&1; then
+    return
+  fi
+  PY_SHIM_DIR="$(mktemp -d)"
+  ln -s "$(command -v python3)" "${PY_SHIM_DIR}/python"
+  export PATH="${PY_SHIM_DIR}:${PATH}"
+  echo "[verify_repo] python shim enabled: python -> python3"
+}
 
 anti_pollution_gate() {
   echo "[verify_repo] anti-pollution gate (build/run artifacts)"
@@ -115,6 +137,7 @@ anti_pollution_gate() {
 }
 
 anti_pollution_gate
+ensure_python_alias
 
 if command -v cmake >/dev/null 2>&1; then
   CMAKE_EXE="$(command -v cmake)"
@@ -192,6 +215,9 @@ else
     python3 "${ROOT}/simlab/run.py" --suite lite
   fi
 fi
+
+echo "[verify_repo] python unit tests"
+python3 -m unittest discover -s tests -p "test_*.py"
 
 if [[ "${MODE}" == "1" ]]; then
   echo "[verify_repo] FULL mode enabled"

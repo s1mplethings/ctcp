@@ -1,0 +1,47 @@
+id: adlc_self_improve_core
+version: 0.1.0
+description: Minimal self-improve core loop with local librarian, contract guard, and verify contrast loop.
+
+inputs:
+  required:
+    - goal
+    - repo_root
+    - workflow_registry/index.json
+  optional:
+    - max_rounds
+    - patch_cmd
+
+outputs:
+  required:
+    - runs/adlc_self_improve_core/<run_id>/state.json
+    - runs/adlc_self_improve_core/<run_id>/outbox/PLAN.md
+    - runs/adlc_self_improve_core/<run_id>/outbox/fix_brief.md
+    - runs/adlc_self_improve_core/<run_id>/reviews/contract_review.json
+    - runs/adlc_self_improve_core/<run_id>/logs/verify_stdout.txt
+    - runs/adlc_self_improve_core/<run_id>/logs/verify_stderr.txt
+    - runs/adlc_self_improve_core/<run_id>/diff.patch
+
+steps:
+  - doc
+  - analysis
+  - find_local_librarian
+  - plan
+  - build_patch
+  - contract_guard
+  - verify
+  - contrast
+  - fix_loop
+  - stop
+
+gates:
+  default:
+    - verify_repo
+    - workflow_checks
+    - contract_checks
+    - doc_index_check
+    - unit_tests
+
+cost_hints:
+  dependency_level: low
+  api_level: low
+  estimated_minutes: 8

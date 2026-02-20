@@ -114,6 +114,7 @@ cmake --build build_gui --config Release
 - [README.md](README.md)
 - [BUILD.md](BUILD.md)
 - [PATCH_README.md](PATCH_README.md)
+- [docs/PATCH_CONTRACT.md](docs/PATCH_CONTRACT.md)
 - [TREE.md](TREE.md)
 - [docs/00_CORE.md](docs/00_CORE.md)
 - [docs/00_overview.md](docs/00_overview.md)

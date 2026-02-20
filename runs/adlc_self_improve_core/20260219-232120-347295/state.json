@@ -1,0 +1,21 @@
+{
+  "run_id": "20260219-232120-347295",
+  "phase": "stop",
+  "round": 1,
+  "artifacts": {
+    "run_dir": "runs/adlc_self_improve_core/20260219-232120-347295",
+    "analysis": "outbox/analysis.md",
+    "context": "outbox/CONTEXT.md",
+    "plan": "outbox/PLAN.md",
+    "contract_review": "reviews/contract_review.json"
+  },
+  "last_verify": {
+    "rc": null,
+    "paths": {},
+    "summary": ""
+  },
+  "timestamps": {
+    "created_at": "2026-02-19T23:21:20",
+    "updated_at": "2026-02-19T23:21:20"
+  }
+}
