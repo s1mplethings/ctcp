@@ -30,14 +30,20 @@ class WorkflowDispatchTests(unittest.TestCase):
             repo_root=ROOT,
             goal="Self improve core loop",
             max_rounds=2,
+            plan_cmd="",
             patch_cmd="",
             verify_cmd="",
+            require_external_plan="true",
+            require_external_patch="true",
+            allow_local=False,
+            no_mechanical_fallback=False,
         )
         text = " ".join(cmd)
         self.assertIn("adlc_self_improve_core.py", text)
         self.assertIn("--max-rounds", cmd)
+        self.assertIn("--require-external-plan", cmd)
+        self.assertIn("--require-external-patch", cmd)
 
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -45,6 +45,8 @@ def _normalize_state(doc: dict[str, Any]) -> dict[str, Any]:
         "summary": str(last_verify.get("summary", "")),
     }
 
+    last_error = str(doc.get("last_error", ""))
+
     timestamps = doc.get("timestamps", {})
     if not isinstance(timestamps, dict):
         timestamps = {}
@@ -57,6 +59,7 @@ def _normalize_state(doc: dict[str, Any]) -> dict[str, Any]:
         "round": round_number,
         "artifacts": artifacts,
         "last_verify": last_verify,
+        "last_error": last_error,
         "timestamps": {
             "created_at": created_at,
             "updated_at": updated_at,
@@ -86,4 +89,3 @@ def save_state(run_dir: str | Path, state: dict[str, Any]) -> dict[str, Any]:
     state_path = run_path / "state.json"
     state_path.write_text(json.dumps(normalized, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return normalized
-

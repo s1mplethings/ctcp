@@ -15,7 +15,9 @@ outputs:
   required:
     - runs/adlc_self_improve_core/<run_id>/state.json
     - runs/adlc_self_improve_core/<run_id>/outbox/PLAN.md
-    - runs/adlc_self_improve_core/<run_id>/outbox/fix_brief.md
+    - runs/adlc_self_improve_core/<run_id>/outbox/CONTEXT.md
+    - runs/adlc_self_improve_core/<run_id>/outbox/CONSTRAINTS.md
+    - runs/adlc_self_improve_core/<run_id>/outbox/FIX_BRIEF.md
     - runs/adlc_self_improve_core/<run_id>/reviews/contract_review.json
     - runs/adlc_self_improve_core/<run_id>/logs/verify_stdout.txt
     - runs/adlc_self_improve_core/<run_id>/logs/verify_stderr.txt

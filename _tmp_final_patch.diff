@@ -1,0 +1,901 @@
+diff --git a/scripts/workflow_dispatch.py b/scripts/workflow_dispatch.py
+index 797e8bd..e25dc9f 100644
+--- a/scripts/workflow_dispatch.py
++++ b/scripts/workflow_dispatch.py
+@@ -43,4 +43,9 @@ def _dispatch_command(
+     max_rounds: int,
++    plan_cmd: str,
+     patch_cmd: str,
+     verify_cmd: str,
++    require_external_plan: str,
++    require_external_patch: str,
++    allow_local: bool,
++    no_mechanical_fallback: bool,
+ ) -> list[str]:
+@@ -56,3 +61,9 @@ def _dispatch_command(
+             str(max_rounds),
++            "--require-external-plan",
++            require_external_plan,
++            "--require-external-patch",
++            require_external_patch,
+         ]
++        if plan_cmd.strip():
++            cmd += ["--plan-cmd", plan_cmd]
+         if patch_cmd.strip():
+@@ -61,2 +72,6 @@ def _dispatch_command(
+             cmd += ["--verify-cmd", verify_cmd]
++        if allow_local:
++            cmd += ["--allow-local"]
++        if no_mechanical_fallback:
++            cmd += ["--no-mechanical-fallback"]
+         return cmd
+@@ -83,4 +98,9 @@ def main() -> int:
+     ap.add_argument("--max-rounds", type=int, default=2)
++    ap.add_argument("--plan-cmd", default="")
+     ap.add_argument("--patch-cmd", default="")
+     ap.add_argument("--verify-cmd", default="")
++    ap.add_argument("--require-external-plan", default="true")
++    ap.add_argument("--require-external-patch", default="true")
++    ap.add_argument("--allow-local", action="store_true")
++    ap.add_argument("--no-mechanical-fallback", action="store_true")
+     args = ap.parse_args()
+@@ -95,4 +115,9 @@ def main() -> int:
+         max_rounds=max(1, int(args.max_rounds)),
++        plan_cmd=str(args.plan_cmd),
+         patch_cmd=str(args.patch_cmd),
+         verify_cmd=str(args.verify_cmd),
++        require_external_plan=str(args.require_external_plan),
++        require_external_patch=str(args.require_external_patch),
++        allow_local=bool(args.allow_local),
++        no_mechanical_fallback=bool(args.no_mechanical_fallback),
+     )
+@@ -106,2 +131 @@ if __name__ == "__main__":
+     raise SystemExit(main())
+-
+diff --git a/scripts/workflows/adlc_self_improve_core.py b/scripts/workflows/adlc_self_improve_core.py
+index 293efd1..7269dd3 100644
+--- a/scripts/workflows/adlc_self_improve_core.py
++++ b/scripts/workflows/adlc_self_improve_core.py
+@@ -10,2 +10,3 @@ import subprocess
+ import sys
++from datetime import datetime
+ from pathlib import Path
+@@ -24,2 +25,15 @@ PATCH_START_RE = re.compile(r"^diff --git .*$", re.M)
+ 
++def _parse_bool(value: Any, *, default: bool) -> bool:
++    if value is None:
++        return default
++    if isinstance(value, bool):
++        return value
++    text = str(value).strip().lower()
++    if text in {"1", "true", "yes", "y", "on"}:
++        return True
++    if text in {"0", "false", "no", "n", "off"}:
++        return False
++    return default
++
++
+ def _run(
+@@ -47,2 +61,9 @@ def _write(path: Path, text: str) -> None:
+ 
++def _trace(run_dir: Path, message: str) -> None:
++    trace_path = run_dir / "TRACE.md"
++    stamp = datetime.now().isoformat(timespec="seconds")
++    with trace_path.open("a", encoding="utf-8") as fh:
++        fh.write(f"- [{stamp}] {message}\n")
++
++
+ def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
+@@ -122,2 +143,68 @@ def _write_context(
+ 
++def _write_constraints(out_path: Path, repo_root: Path) -> None:
++    policy_path = repo_root / "contracts" / "allowed_changes.yaml"
++    policy = contract_guard.load_policy(policy_path)
++    allowed_paths = [str(x) for x in policy.get("allowed_paths", []) if str(x).strip()]
++    blocked_paths = [str(x) for x in policy.get("blocked_paths", []) if str(x).strip()]
++    max_files = int(policy.get("max_files", 10))
++    max_added = int(policy.get("max_added_lines", 800))
++    max_deleted = int(policy.get("max_deleted_lines", 800))
++    max_total = int(policy.get("max_total_lines", 800))
++
++    lines = [
++        "# Constraints",
++        "",
++        f"- policy: `{policy_path.as_posix()}`",
++        f"- max_files: `{max_files}`",
++        f"- max_added_lines: `{max_added}`",
++        f"- max_deleted_lines: `{max_deleted}`",
++        f"- max_total_lines: `{max_total}`",
++        "",
++        "## Allowed Paths",
++    ]
++    if allowed_paths:
++        for row in allowed_paths:
++            lines.append(f"- `{row}`")
++    else:
++        lines.append("- (none specified)")
++
++    lines += [
++        "",
++        "## Blocked Paths",
++    ]
++    if blocked_paths:
++        for row in blocked_paths:
++            lines.append(f"- `{row}`")
++    else:
++        lines.append("- (none specified)")
++    lines.append("")
++    _write(out_path, "\n".join(lines))
++
++
++def _ensure_fix_brief_seed(path: Path, goal: str) -> None:
++    if path.exists() and path.read_text(encoding="utf-8", errors="replace").strip():
++        return
++    lines = [
++        "# Fix Brief",
++        "",
++        "- label: `BOOTSTRAP`",
++        "- verify_rc: `N/A`",
++        "",
++        "## Minimal Next Actions",
++        "- Use CONTEXT + CONSTRAINTS to generate a minimal external PLAN.",
++        "- Use external PATCH command to emit unified diff starting with `diff --git`.",
++        "",
++        "## Related File References",
++        f"- goal: `{goal}`",
++        "",
++    ]
++    _write(path, "\n".join(lines))
++
++
++def _sync_fix_brief_alias(upper_path: Path, lower_path: Path) -> None:
++    if not upper_path.exists():
++        return
++    _write(lower_path, upper_path.read_text(encoding="utf-8", errors="replace"))
++
++
+ def _write_plan(
+@@ -183,3 +270,9 @@ def _verify_command(repo_root: Path, override: str) -> list[str]:
+     if os.name == "nt":
+-        return ["powershell", "-ExecutionPolicy", "Bypass", "-File", str(repo_root / "scripts" / "verify_repo.ps1")]
++        return [
++            "powershell",
++            "-ExecutionPolicy",
++            "Bypass",
++            "-File",
++            str(repo_root / "scripts" / "verify_repo.ps1"),
++        ]
+     return ["bash", str(repo_root / "scripts" / "verify_repo.sh")]
+@@ -212,2 +305,77 @@ def _save_state(state_path_root: Path, state: dict[str, Any], **updates: Any) ->
+ 
++def _fail(
++    *,
++    run_dir: Path,
++    state: dict[str, Any],
++    phase: str,
++    round_number: int,
++    reason: str,
++    code: int,
++    event: str,
++    artifacts: dict[str, Any] | None = None,
++) -> int:
++    logs_dir = run_dir / "logs"
++    logs_dir.mkdir(parents=True, exist_ok=True)
++    _write(logs_dir / "error.txt", reason.rstrip() + "\n")
++    _trace(run_dir, f"[error] {reason}")
++    _append_jsonl(run_dir / "events.jsonl", {"event": event, "round": round_number, "reason": reason})
++    _save_state(
++        run_dir,
++        state,
++        phase=phase,
++        round=round_number,
++        last_error=reason,
++        artifacts=artifacts or {},
++    )
++    print(f"[adlc_self_improve_core][error] {reason}")
++    return code
++
++
++def _format_cmd(template: str, **kwargs: str) -> tuple[str, str]:
++    try:
++        return template.format(**kwargs), ""
++    except Exception as exc:
++        return "", f"command template formatting failed: {exc}"
++
++
++def _generate_plan_via_cmd(
++    *,
++    repo_root: Path,
++    run_dir: Path,
++    plan_cmd_tpl: str,
++    plan_path: Path,
++    context_path: Path,
++    constraints_path: Path,
++    fix_brief_path: Path,
++    goal: str,
++    current_round: int,
++) -> tuple[bool, str]:
++    cmd, err = _format_cmd(
++        plan_cmd_tpl,
++        PLAN_PATH=str(plan_path),
++        CONTEXT_PATH=str(context_path),
++        CONSTRAINTS_PATH=str(constraints_path),
++        FIX_BRIEF_PATH=str(fix_brief_path),
++        GOAL=goal,
++        ROUND=str(current_round),
++        REPO_ROOT=str(repo_root),
++    )
++    if err:
++        _write(run_dir / "logs" / "plan_cmd.stdout.txt", "")
++        _write(run_dir / "logs" / "plan_cmd.stderr.txt", err + "\n")
++        return False, err
++
++    rc, out, stderr = _run(cmd, cwd=repo_root, shell=True)
++    _write(run_dir / "logs" / "plan_cmd.stdout.txt", out)
++    _write(run_dir / "logs" / "plan_cmd.stderr.txt", stderr)
++    if rc != 0:
++        return False, f"plan-cmd failed (exit={rc})"
++
++    plan_text = out.strip()
++    if not plan_text:
++        return False, "plan-cmd produced empty stdout"
++    _write(plan_path, plan_text + "\n")
++    return True, "ok"
++
++
+ def _generate_patch_via_cmd(
+@@ -219,3 +387,7 @@ def _generate_patch_via_cmd(
+     context_path: Path,
+-) -> str:
++    constraints_path: Path,
++    fix_brief_path: Path,
++    goal: str,
++    current_round: int,
++) -> tuple[str, str]:
+     prompt_path = run_dir / "outbox" / "PATCH_PROMPT.md"
+@@ -230,2 +402,4 @@ def _generate_patch_via_cmd(
+             f"CONTEXT: {context_path.as_posix()}",
++            f"CONSTRAINTS: {constraints_path.as_posix()}",
++            f"FIX_BRIEF: {fix_brief_path.as_posix()}",
+         ]
+@@ -233,3 +407,4 @@ def _generate_patch_via_cmd(
+     _write(prompt_path, prompt)
+-    cmd = patch_cmd_tpl.format(
++    cmd, err = _format_cmd(
++        patch_cmd_tpl,
+         PROMPT_PATH=str(prompt_path),
+@@ -237,4 +412,12 @@ def _generate_patch_via_cmd(
+         CONTEXT_PATH=str(context_path),
++        CONSTRAINTS_PATH=str(constraints_path),
++        FIX_BRIEF_PATH=str(fix_brief_path),
++        GOAL=goal,
++        ROUND=str(current_round),
+         REPO_ROOT=str(repo_root),
+     )
++    if err:
++        _write(run_dir / "logs" / "patch_cmd.stdout.txt", "")
++        _write(run_dir / "logs" / "patch_cmd.stderr.txt", err + "\n")
++        return "", err
+     rc, out, err = _run(cmd, cwd=repo_root, shell=True)
+@@ -243,4 +426,7 @@ def _generate_patch_via_cmd(
+     if rc != 0:
+-        return ""
+-    return _extract_patch(out)
++        return "", f"patch-cmd failed (exit={rc})"
++    patch = _extract_patch(out)
++    if not patch:
++        return "", "patch-cmd output did not contain unified diff starting with `diff --git`"
++    return patch, "ok"
+ 
+@@ -292,4 +478,9 @@ def run_workflow(
+     run_id: str,
++    plan_cmd_tpl: str,
+     patch_cmd_tpl: str,
+     verify_cmd: str,
++    require_external_plan: bool,
++    require_external_patch: bool,
++    no_mechanical_fallback: bool,
++    allow_local: bool,
+ ) -> int:
+@@ -308,4 +499,23 @@ def run_workflow(
+         phase="doc",
++        last_error="",
+         artifacts={"run_dir": str(run_dir.relative_to(repo_root).as_posix())},
+     )
++    _trace(run_dir, f"start run_id={run_id} goal={goal}")
++
++    effective_require_plan = bool(require_external_plan) and not bool(allow_local)
++    effective_require_patch = bool(require_external_patch) and not bool(allow_local)
++    effective_no_mechanical_fallback = bool(no_mechanical_fallback) or effective_require_patch
++    _trace(
++        run_dir,
++        "mode "
++        + json.dumps(
++            {
++                "require_external_plan": effective_require_plan,
++                "require_external_patch": effective_require_patch,
++                "no_mechanical_fallback": effective_no_mechanical_fallback,
++                "allow_local": bool(allow_local),
++            },
++            ensure_ascii=False,
++        ),
++    )
+ 
+@@ -321,4 +531,10 @@ def run_workflow(
+     next_query = goal
++    fix_brief_upper = outbox_dir / "FIX_BRIEF.md"
++    fix_brief_lower = outbox_dir / "fix_brief.md"
++    _ensure_fix_brief_seed(fix_brief_upper, goal)
++    _sync_fix_brief_alias(fix_brief_upper, fix_brief_lower)
++
+     start_round = int(state.get("round", 1) or 1)
+     for current_round in range(start_round, max_rounds + 1):
++        _trace(run_dir, f"round={current_round} phase=find query={next_query}")
+         state = _save_state(run_dir, state, phase="find", round=current_round)
+@@ -327,2 +543,6 @@ def run_workflow(
+         _write_context(out_path=context_path, goal=next_query, references=references)
++        constraints_path = outbox_dir / "CONSTRAINTS.md"
++        _write_constraints(constraints_path, repo_root)
++        _ensure_fix_brief_seed(fix_brief_upper, goal)
++        _sync_fix_brief_alias(fix_brief_upper, fix_brief_lower)
+         state = _save_state(
+@@ -332,2 +552,4 @@ def run_workflow(
+                 "context": str(context_path.relative_to(run_dir).as_posix()),
++                "constraints": str(constraints_path.relative_to(run_dir).as_posix()),
++                "fix_brief": str(fix_brief_upper.relative_to(run_dir).as_posix()),
+             },
+@@ -337,8 +559,53 @@ def run_workflow(
+         plan_path = outbox_dir / "PLAN.md"
+-        _write_plan(
+-            out_path=plan_path,
+-            goal=goal,
+-            current_round=current_round,
+-            references=references,
+-        )
++        _trace(run_dir, f"round={current_round} phase=plan")
++        if plan_cmd_tpl.strip():
++            ok_plan, plan_reason = _generate_plan_via_cmd(
++                repo_root=repo_root,
++                run_dir=run_dir,
++                plan_cmd_tpl=plan_cmd_tpl,
++                plan_path=plan_path,
++                context_path=context_path,
++                constraints_path=constraints_path,
++                fix_brief_path=fix_brief_upper,
++                goal=goal,
++                current_round=current_round,
++            )
++            if not ok_plan:
++                if effective_require_plan:
++                    return _fail(
++                        run_dir=run_dir,
++                        state=state,
++                        phase="stop",
++                        round_number=current_round,
++                        reason=f"external plan required; {plan_reason}",
++                        code=5,
++                        event="PLAN_CMD_FAIL",
++                    )
++                _trace(
++                    run_dir,
++                    f"plan-cmd failed but local fallback allowed: {plan_reason}",
++                )
++                _write_plan(
++                    out_path=plan_path,
++                    goal=goal,
++                    current_round=current_round,
++                    references=references,
++                )
++        elif effective_require_plan:
++            return _fail(
++                run_dir=run_dir,
++                state=state,
++                phase="stop",
++                round_number=current_round,
++                reason="SDDAI_PLAN_CMD/--plan-cmd required when require-external-plan=true",
++                code=5,
++                event="PLAN_CMD_REQUIRED",
++            )
++        else:
++            _write_plan(
++                out_path=plan_path,
++                goal=goal,
++                current_round=current_round,
++                references=references,
++            )
+         state = _save_state(
+@@ -350,2 +617,3 @@ def run_workflow(
+         state = _save_state(run_dir, state, phase="build")
++        _trace(run_dir, f"round={current_round} phase=build")
+         pre_review = contract_guard.evaluate(
+@@ -356,13 +624,12 @@ def run_workflow(
+         if not bool(pre_review.get("contract_guard", {}).get("pass", False)):
+-            _append_jsonl(
+-                run_dir / "events.jsonl",
+-                {"event": "CONTRACT_FAIL_PRE", "round": current_round},
+-            )
+-            _save_state(
+-                run_dir,
+-                state,
++            return _fail(
++                run_dir=run_dir,
++                state=state,
+                 phase="stop",
++                round_number=current_round,
++                reason="contract guard failed before apply",
++                code=2,
++                event="CONTRACT_FAIL_PRE",
+                 artifacts={"contract_review": "reviews/contract_review.json"},
+             )
+-            return 2
+ 
+@@ -370,4 +637,5 @@ def run_workflow(
+         patch_text = ""
++        patch_reason = ""
+         if patch_cmd_tpl.strip():
+-            patch_text = _generate_patch_via_cmd(
++            patch_text, patch_reason = _generate_patch_via_cmd(
+                 repo_root=repo_root,
+@@ -377,5 +645,42 @@ def run_workflow(
+                 context_path=context_path,
++                constraints_path=constraints_path,
++                fix_brief_path=fix_brief_upper,
++                goal=goal,
++                current_round=current_round,
++            )
++            if not patch_text and effective_no_mechanical_fallback:
++                return _fail(
++                    run_dir=run_dir,
++                    state=state,
++                    phase="stop",
++                    round_number=current_round,
++                    reason=f"external patch required; {patch_reason}",
++                    code=6,
++                    event="PATCH_CMD_FAIL",
++                )
++        elif effective_require_patch:
++            return _fail(
++                run_dir=run_dir,
++                state=state,
++                phase="stop",
++                round_number=current_round,
++                reason="SDDAI_PATCH_CMD/--patch-cmd required when require-external-patch=true",
++                code=6,
++                event="PATCH_CMD_REQUIRED",
+             )
++
+         if not patch_text:
++            if effective_no_mechanical_fallback:
++                return _fail(
++                    run_dir=run_dir,
++                    state=state,
++                    phase="stop",
++                    round_number=current_round,
++                    reason="local mechanical fallback disabled and no external patch available",
++                    code=6,
++                    event="PATCH_FALLBACK_DISABLED",
++                )
++            _trace(run_dir, f"using local mechanical patch fallback label={label_hint}")
+             patch_text = _mechanical_patch(repo_root=repo_root, run_dir=run_dir, label=label_hint)
++
+         patch_path = run_dir / "diff.patch"
+@@ -390,8 +695,12 @@ def run_workflow(
+         if not ok_apply:
+-            _append_jsonl(
+-                run_dir / "events.jsonl",
+-                {"event": "PATCH_APPLY_FAIL", "round": current_round, "reason": apply_reason},
++            _rollback_patch(repo_root, patch_path, run_dir)
++            return _fail(
++                run_dir=run_dir,
++                state=state,
++                phase="stop",
++                round_number=current_round,
++                reason=f"patch apply failed: {apply_reason}",
++                code=3,
++                event="PATCH_APPLY_FAIL",
+             )
+-            _save_state(run_dir, state, phase="stop")
+-            return 3
+ 
+@@ -404,15 +713,15 @@ def run_workflow(
+             _rollback_patch(repo_root, patch_path, run_dir)
+-            _append_jsonl(
+-                run_dir / "events.jsonl",
+-                {"event": "CONTRACT_FAIL_POST", "round": current_round},
+-            )
+-            _save_state(
+-                run_dir,
+-                state,
++            return _fail(
++                run_dir=run_dir,
++                state=state,
+                 phase="stop",
++                round_number=current_round,
++                reason="contract guard failed after apply",
++                code=4,
++                event="CONTRACT_FAIL_POST",
+                 artifacts={"contract_review": "reviews/contract_review.json"},
+             )
+-            return 4
+ 
+         state = _save_state(run_dir, state, phase="verify")
++        _trace(run_dir, f"round={current_round} phase=verify")
+         cmd = _verify_command(repo_root, verify_cmd)
+@@ -441,3 +750,4 @@ def run_workflow(
+         if rc == 0:
+-            _save_state(run_dir, state, phase="done")
++            _save_state(run_dir, state, phase="done", last_error="")
++            _trace(run_dir, f"round={current_round} phase=done")
+             print(json.dumps({"run_id": run_id, "run_dir": str(run_dir), "status": "done"}, ensure_ascii=False))
+@@ -450,3 +760,3 @@ def run_workflow(
+         fix_refs = local_librarian.search(repo_root=repo_root, query=next_query, k=6)
+-        fix_brief_path = outbox_dir / "fix_brief.md"
++        fix_brief_path = fix_brief_upper
+         contrast_rules.write_fix_brief(
+@@ -458,2 +768,4 @@ def run_workflow(
+         )
++        _sync_fix_brief_alias(fix_brief_upper, fix_brief_lower)
++        _trace(run_dir, f"round={current_round} phase=fix label={label}")
+         _save_state(
+@@ -474,3 +786,10 @@ def run_workflow(
+ 
+-    _save_state(run_dir, state, phase="stop", round=max_rounds)
++    _save_state(
++        run_dir,
++        state,
++        phase="stop",
++        round=max_rounds,
++        last_error="max_rounds reached without verify pass",
++    )
++    _trace(run_dir, "phase=stop reason=max_rounds")
+     print(json.dumps({"run_id": run_id, "run_dir": str(run_dir), "status": "stop"}, ensure_ascii=False))
+@@ -485,4 +804,9 @@ def main() -> int:
+     ap.add_argument("--run-id", default="")
++    ap.add_argument("--plan-cmd", default="")
+     ap.add_argument("--patch-cmd", default="")
+     ap.add_argument("--verify-cmd", default="")
++    ap.add_argument("--require-external-plan", default="true")
++    ap.add_argument("--require-external-patch", default="true")
++    ap.add_argument("--allow-local", action="store_true")
++    ap.add_argument("--no-mechanical-fallback", action="store_true")
+     args = ap.parse_args()
+@@ -491,3 +815,6 @@ def main() -> int:
+     run_id = args.run_id.strip() or run_state.create_run_id()
++    plan_cmd_tpl = (args.plan_cmd or os.environ.get("SDDAI_PLAN_CMD", "")).strip()
+     patch_cmd_tpl = (args.patch_cmd or os.environ.get("SDDAI_PATCH_CMD", "")).strip()
++    require_external_plan = _parse_bool(args.require_external_plan, default=True)
++    require_external_patch = _parse_bool(args.require_external_patch, default=True)
+     return run_workflow(
+@@ -497,4 +824,9 @@ def main() -> int:
+         run_id=run_id,
++        plan_cmd_tpl=plan_cmd_tpl,
+         patch_cmd_tpl=patch_cmd_tpl,
+         verify_cmd=str(args.verify_cmd),
++        require_external_plan=require_external_plan,
++        require_external_patch=require_external_patch,
++        no_mechanical_fallback=bool(args.no_mechanical_fallback),
++        allow_local=bool(args.allow_local),
+     )
+@@ -504,2 +836 @@ if __name__ == "__main__":
+     raise SystemExit(main())
+-
+diff --git a/tests/test_self_improve_external_requirements.py b/tests/test_self_improve_external_requirements.py
+new file mode 100644
+index 0000000..e98b933
+--- /dev/null
++++ b/tests/test_self_improve_external_requirements.py
+@@ -0,0 +1,265 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++import json
++import shutil
++import subprocess
++import tempfile
++import unittest
++from pathlib import Path
++
++import sys
++
++ROOT = Path(__file__).resolve().parents[1]
++WORKFLOW = ROOT / "scripts" / "workflows" / "adlc_self_improve_core.py"
++
++
++def _run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
++    return subprocess.run(
++        cmd,
++        cwd=str(cwd),
++        capture_output=True,
++        text=True,
++        encoding="utf-8",
++        errors="replace",
++    )
++
++
++def _must_run(cmd: list[str], cwd: Path) -> None:
++    proc = _run(cmd, cwd)
++    if proc.returncode != 0:
++        raise AssertionError(
++            "command failed\n"
++            f"cmd={cmd}\n"
++            f"stdout={proc.stdout}\n"
++            f"stderr={proc.stderr}\n"
++        )
++
++
++def _init_repo(repo: Path) -> None:
++    _must_run(["git", "init"], repo)
++    _must_run(["git", "config", "user.email", "test@example.com"], repo)
++    _must_run(["git", "config", "user.name", "ctcp-test"], repo)
++    (repo / "docs").mkdir(parents=True, exist_ok=True)
++    (repo / "docs" / "target.txt").write_text("hello\n", encoding="utf-8")
++    (repo / "contracts").mkdir(parents=True, exist_ok=True)
++    (repo / "contracts" / "allowed_changes.yaml").write_text(
++        "\n".join(
++            [
++                "allowed_paths:",
++                "  - docs/",
++                "  - contracts/",
++                "blocked_paths:",
++                "  - .github/",
++                "max_files: 10",
++                "max_added_lines: 200",
++                "max_deleted_lines: 200",
++                "max_total_lines: 200",
++                "",
++            ]
++        ),
++        encoding="utf-8",
++    )
++    _must_run(["git", "add", "docs/target.txt", "contracts/allowed_changes.yaml"], repo)
++    _must_run(["git", "commit", "-m", "init"], repo)
++
++
++def _write(repo: Path, rel: str, text: str) -> Path:
++    path = repo / rel
++    path.parent.mkdir(parents=True, exist_ok=True)
++    path.write_text(text, encoding="utf-8")
++    return path
++
++
++def _workflow_cmd(
++    *,
++    repo: Path,
++    run_id: str,
++    verify_cmd: str,
++    plan_cmd: str = "",
++    patch_cmd: str = "",
++) -> list[str]:
++    cmd = [
++        sys.executable,
++        str(WORKFLOW),
++        "--repo",
++        str(repo),
++        "--goal",
++        "external-requirements",
++        "--max-rounds",
++        "1",
++        "--run-id",
++        run_id,
++        "--verify-cmd",
++        verify_cmd,
++    ]
++    if plan_cmd.strip():
++        cmd += ["--plan-cmd", plan_cmd]
++    if patch_cmd.strip():
++        cmd += ["--patch-cmd", patch_cmd]
++    return cmd
++
++
++@unittest.skipUnless(shutil.which("git"), "git is required")
++class SelfImproveExternalRequirementTests(unittest.TestCase):
++    def test_default_mode_requires_plan_and_patch_commands(self) -> None:
++        with tempfile.TemporaryDirectory() as td:
++            repo = Path(td)
++            _init_repo(repo)
++            verify_script = _write(repo, "verify_ok.py", "raise SystemExit(0)\n")
++            verify_cmd = f"python {verify_script.name}"
++
++            proc = _run(
++                _workflow_cmd(repo=repo, run_id="r1", verify_cmd=verify_cmd),
++                repo,
++            )
++            self.assertNotEqual(proc.returncode, 0)
++
++            run_dir = repo / "runs" / "adlc_self_improve_core" / "r1"
++            error_text = (run_dir / "logs" / "error.txt").read_text(encoding="utf-8")
++            state = json.loads((run_dir / "state.json").read_text(encoding="utf-8"))
++            self.assertIn("SDDAI_PLAN_CMD/--plan-cmd required", error_text)
++            self.assertIn("SDDAI_PLAN_CMD/--plan-cmd required", state.get("last_error", ""))
++            self.assertEqual(state.get("phase"), "stop")
++
++    def test_invalid_external_patch_fails_without_fallback(self) -> None:
++        with tempfile.TemporaryDirectory() as td:
++            repo = Path(td)
++            _init_repo(repo)
++            verify_script = _write(repo, "verify_ok.py", "raise SystemExit(0)\n")
++            plan_script = _write(
++                repo,
++                "plan_ok.py",
++                "\n".join(
++                    [
++                        "import pathlib",
++                        "import sys",
++                        "ctx = pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')",
++                        "cons = pathlib.Path(sys.argv[2]).read_text(encoding='utf-8')",
++                        "fixb = pathlib.Path(sys.argv[3]).read_text(encoding='utf-8')",
++                        "print('# PLAN FROM EXTERNAL')",
++                        "print('')",
++                        "print(f'- context_chars: {len(ctx)}')",
++                        "print(f'- constraints_chars: {len(cons)}')",
++                        "print(f'- fix_brief_chars: {len(fixb)}')",
++                        "",
++                    ]
++                ),
++            )
++            patch_script = _write(
++                repo,
++                "patch_invalid.py",
++                "print('this is not a unified diff')\n",
++            )
++            verify_cmd = f"python {verify_script.name}"
++            plan_cmd = (
++                f'python "{plan_script.name}" '
++                '"{CONTEXT_PATH}" "{CONSTRAINTS_PATH}" "{FIX_BRIEF_PATH}"'
++            )
++            patch_cmd = f'python "{patch_script.name}" "{{PLAN_PATH}}"'
++
++            proc = _run(
++                _workflow_cmd(
++                    repo=repo,
++                    run_id="r2",
++                    verify_cmd=verify_cmd,
++                    plan_cmd=plan_cmd,
++                    patch_cmd=patch_cmd,
++                ),
++                repo,
++            )
++            self.assertNotEqual(proc.returncode, 0)
++
++            run_dir = repo / "runs" / "adlc_self_improve_core" / "r2"
++            error_text = (run_dir / "logs" / "error.txt").read_text(encoding="utf-8")
++            patch_stdout = (run_dir / "logs" / "patch_cmd.stdout.txt").read_text(
++                encoding="utf-8"
++            )
++            self.assertIn("diff --git", error_text)
++            self.assertIn("not a unified diff", patch_stdout)
++            self.assertFalse((run_dir / "logs" / "verify_stdout.txt").exists())
++            self.assertEqual((repo / "docs" / "target.txt").read_text(encoding="utf-8"), "hello\n")
++
++    def test_external_plan_and_patch_can_complete_round(self) -> None:
++        with tempfile.TemporaryDirectory() as td:
++            repo = Path(td)
++            _init_repo(repo)
++            verify_script = _write(repo, "verify_ok.py", "raise SystemExit(0)\n")
++            plan_script = _write(
++                repo,
++                "plan_ok.py",
++                "\n".join(
++                    [
++                        "import pathlib",
++                        "import sys",
++                        "ctx = pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')",
++                        "cons = pathlib.Path(sys.argv[2]).read_text(encoding='utf-8')",
++                        "fixb = pathlib.Path(sys.argv[3]).read_text(encoding='utf-8')",
++                        "print('# PLAN FROM EXTERNAL')",
++                        "print('')",
++                        "print(f'- context_chars: {len(ctx)}')",
++                        "print(f'- constraints_chars: {len(cons)}')",
++                        "print(f'- fix_brief_chars: {len(fixb)}')",
++                        "",
++                    ]
++                ),
++            )
++            patch_script = _write(
++                repo,
++                "patch_ok.py",
++                "\n".join(
++                    [
++                        "print('diff --git a/docs/target.txt b/docs/target.txt')",
++                        "print('--- a/docs/target.txt')",
++                        "print('+++ b/docs/target.txt')",
++                        "print('@@ -1 +1 @@')",
++                        "print('-hello')",
++                        "print('+hello patched')",
++                        "",
++                    ]
++                ),
++            )
++            verify_cmd = f"python {verify_script.name}"
++            plan_cmd = (
++                f'python "{plan_script.name}" '
++                '"{CONTEXT_PATH}" "{CONSTRAINTS_PATH}" "{FIX_BRIEF_PATH}"'
++            )
++            patch_cmd = (
++                f'python "{patch_script.name}" '
++                '"{PLAN_PATH}" "{CONTEXT_PATH}" "{CONSTRAINTS_PATH}" "{FIX_BRIEF_PATH}"'
++            )
++
++            proc = _run(
++                _workflow_cmd(
++                    repo=repo,
++                    run_id="r3",
++                    verify_cmd=verify_cmd,
++                    plan_cmd=plan_cmd,
++                    patch_cmd=patch_cmd,
++                ),
++                repo,
++            )
++            self.assertEqual(proc.returncode, 0, msg=f"stdout={proc.stdout}\nstderr={proc.stderr}")
++
++            run_dir = repo / "runs" / "adlc_self_improve_core" / "r3"
++            self.assertTrue((run_dir / "outbox" / "PLAN.md").exists())
++            self.assertTrue((run_dir / "outbox" / "CONTEXT.md").exists())
++            self.assertTrue((run_dir / "outbox" / "CONSTRAINTS.md").exists())
++            self.assertTrue((run_dir / "outbox" / "FIX_BRIEF.md").exists())
++            self.assertTrue((run_dir / "logs" / "plan_cmd.stdout.txt").exists())
++            self.assertTrue((run_dir / "logs" / "patch_cmd.stdout.txt").exists())
++            self.assertTrue((run_dir / "logs" / "verify_stdout.txt").exists())
++            self.assertIn(
++                "PLAN FROM EXTERNAL",
++                (run_dir / "outbox" / "PLAN.md").read_text(encoding="utf-8"),
++            )
++            self.assertEqual(
++                (repo / "docs" / "target.txt").read_text(encoding="utf-8"),
++                "hello patched\n",
++            )
++            state = json.loads((run_dir / "state.json").read_text(encoding="utf-8"))
++            self.assertEqual(state.get("phase"), "done")
++
++
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/tests/test_workflow_dispatch.py b/tests/test_workflow_dispatch.py
+index c29f0d6..4ba7138 100644
+--- a/tests/test_workflow_dispatch.py
++++ b/tests/test_workflow_dispatch.py
+@@ -32,4 +32,9 @@ class WorkflowDispatchTests(unittest.TestCase):
+             max_rounds=2,
++            plan_cmd="",
+             patch_cmd="",
+             verify_cmd="",
++            require_external_plan="true",
++            require_external_patch="true",
++            allow_local=False,
++            no_mechanical_fallback=False,
+         )
+@@ -38,2 +43,4 @@ class WorkflowDispatchTests(unittest.TestCase):
+         self.assertIn("--max-rounds", cmd)
++        self.assertIn("--require-external-plan", cmd)
++        self.assertIn("--require-external-patch", cmd)
+ 
+@@ -42,2 +49 @@ if __name__ == "__main__":
+     unittest.main()
+-
+diff --git a/tools/run_state.py b/tools/run_state.py
+index 4859712..0e8cc27 100644
+--- a/tools/run_state.py
++++ b/tools/run_state.py
+@@ -47,2 +47,4 @@ def _normalize_state(doc: dict[str, Any]) -> dict[str, Any]:
+ 
++    last_error = str(doc.get("last_error", ""))
++
+     timestamps = doc.get("timestamps", {})
+@@ -59,2 +61,3 @@ def _normalize_state(doc: dict[str, Any]) -> dict[str, Any]:
+         "last_verify": last_verify,
++        "last_error": last_error,
+         "timestamps": {
+@@ -88,2 +91 @@ def save_state(run_dir: str | Path, state: dict[str, Any]) -> dict[str, Any]:
+     return normalized
+-
+diff --git a/workflow_registry/adlc_self_improve_core/recipe.yaml b/workflow_registry/adlc_self_improve_core/recipe.yaml
+index ea9ed26..773bdec 100644
+--- a/workflow_registry/adlc_self_improve_core/recipe.yaml
++++ b/workflow_registry/adlc_self_improve_core/recipe.yaml
+@@ -17,3 +17,5 @@ outputs:
+     - runs/adlc_self_improve_core/<run_id>/outbox/PLAN.md
+-    - runs/adlc_self_improve_core/<run_id>/outbox/fix_brief.md
++    - runs/adlc_self_improve_core/<run_id>/outbox/CONTEXT.md
++    - runs/adlc_self_improve_core/<run_id>/outbox/CONSTRAINTS.md
++    - runs/adlc_self_improve_core/<run_id>/outbox/FIX_BRIEF.md
+     - runs/adlc_self_improve_core/<run_id>/reviews/contract_review.json
