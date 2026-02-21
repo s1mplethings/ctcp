@@ -77,3 +77,17 @@
 - 一个 patch 只做一件事（一个主题）
 - 新依赖必须记录到 `third_party/THIRD_PARTY.md`（若目录存在）
 - 任何绕过 gate 的行为必须写入 `ai_context/decision_log.md`
+
+---
+
+## Codex Skills（repo-local）
+
+- `ctcp-workflow`：固定执行 CTCP/ADLC 流程（spec-first → gate → verify → report，失败走证据链）
+  - path: `.agents/skills/ctcp-workflow/SKILL.md`
+  - invoke: `$ctcp-workflow`
+- `ctcp-verify`：执行仓库唯一验收入口并给出首个失败点与最小修复策略
+  - path: `.agents/skills/ctcp-verify/SKILL.md`
+  - invoke: `$ctcp-verify`
+- `ctcp-failure-bundle`：在失败后收集证据链并输出可审计失败闭环
+  - path: `.agents/skills/ctcp-failure-bundle/SKILL.md`
+  - invoke: `$ctcp-failure-bundle`
