@@ -1,0 +1,32 @@
+# external-self-improve-real-codex
+
+## Round 1 BOOTSTRAP
+- goal: `external-self-improve-real-codex`
+- round: `1`
+- label: `BOOTSTRAP`
+- status: `complete`
+- verify_rc: `N/A`
+
+## Intent
+Create the smallest auditable bootstrap update so this goal is explicitly tracked and discoverable, with no runtime/code-path behavior changes.
+
+## Constraints Snapshot
+- policy: `D:/.c_projects/adc/ctcp/contracts/allowed_changes.yaml`
+- max_files: `10`
+- max_added_lines: `800`
+- max_deleted_lines: `800`
+- max_total_lines: `800`
+- allowed_paths: `scripts/`, `tools/`, `docs/`, `workflow_registry/`, `simlab/`, `tests/`, `contracts/`, `README.md`
+- blocked_paths: `.github/`, `runs/`, `build/`, `dist/`
+
+## Assumptions
+1. Local context evidence had no prior references for `external-self-improve-real-codex`.
+2. Round 1 is documentation/registry bootstrap only.
+3. Runtime/source behavior changes remain out of scope in this round.
+
+## Next-Round Action Checklist
+- [ ] Build Round 2 external PLAN from current CONTEXT and CONSTRAINTS.
+- [ ] Generate a minimal safe patch that stays within contract_guard limits.
+- [ ] Re-run path-scope and diff-budget checks before merge.
+- [ ] Set `verify_rc` to a concrete value when verification becomes applicable.
+diff --git a/workflow_registry/external-self-improve-real-codex.round1.yaml b/workflow_registry/external-self-improve-real-codex.round1.yaml

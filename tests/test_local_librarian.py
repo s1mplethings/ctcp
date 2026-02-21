@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import tempfile
+import subprocess
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -40,7 +41,37 @@ class LocalLibrarianTests(unittest.TestCase):
             self.assertEqual(rows[0]["path"], "docs/sample.md")
             self.assertIn("MATCH_TOKEN", rows[0]["snippet"])
 
+    def test_private_dir_is_excluded_from_python_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            (repo / "docs" / ".agent_private").mkdir(parents=True, exist_ok=True)
+            (repo / "docs" / "visible.md").write_text("alpha\nSECRET_TOKEN\nomega\n", encoding="utf-8")
+            (repo / "docs" / ".agent_private" / "hidden.md").write_text(
+                "alpha\nSECRET_TOKEN\nomega\n",
+                encoding="utf-8",
+            )
+            with mock.patch("tools.local_librarian.shutil.which", return_value=None):
+                rows = local_librarian.search(repo, "SECRET_TOKEN", k=8)
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["path"], "docs/visible.md")
+
+    def test_rg_search_adds_skip_globs(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            (repo / "docs").mkdir(parents=True, exist_ok=True)
+
+            captured: dict[str, list[str]] = {}
+
+            def _fake_run(cmd, **kwargs):
+                captured["cmd"] = list(cmd)
+                return subprocess.CompletedProcess(cmd, 1, "", "")
+
+            with mock.patch("tools.local_librarian.shutil.which", return_value="rg"):
+                with mock.patch("tools.local_librarian.subprocess.run", side_effect=_fake_run):
+                    rows = local_librarian.search(repo, "TOKEN", k=8)
+            self.assertEqual(rows, [])
+            self.assertIn("!**/.agent_private/**", captured.get("cmd", []))
+
 
 if __name__ == "__main__":
     unittest.main()
-

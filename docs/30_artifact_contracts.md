@@ -120,6 +120,20 @@ unified diff, apply via git apply
 
 must stay within PLAN scope allowlist/denylist
 
+Patch-first enforcement (hard):
+
+- patch must start with `diff --git`
+- path normalization: repo-relative POSIX path only
+- policy gate: allow_roots / deny_prefixes / deny_suffixes / max_files / max_added_lines
+- `git apply --check` must pass before apply
+- defaults: `max_files <= 5`, `max_added_lines <= 400`
+
+On patch reject:
+
+- keep candidate `artifacts/diff.patch` unchanged for evidence
+- write rejection review to `reviews/review_patch.md`
+- request fixer retry through outbox with "patch only" instruction
+
 I) artifacts/verify_report.json
 
 Fields:
@@ -196,6 +210,7 @@ Hard constraints:
 - Only write requested target artifact in run_dir.
 - Do not modify repo files.
 - Follow role template output keys (for example `Verdict: APPROVE|BLOCK`, `Status: SIGNED`, patch only `artifacts/diff.patch`).
+- If target is `artifacts/diff.patch`, output must be unified diff only (no prose/full-file rewrite).
 
 M) failure_bundle.zip (on verify FAIL)
 
@@ -214,6 +229,7 @@ artifacts/diff.patch (real file or placeholder entry)
 reviews/ (directory entry) and reviews/* evidence files (when present)
 
 outbox/ (directory entry) and outbox/* dispatch prompt/request files
+reviews/review_patch.md (when patch-first gate rejects candidate patch)
 
 Optional:
 

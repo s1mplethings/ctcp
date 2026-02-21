@@ -1,0 +1,1502 @@
+diff --git a/docs/30_artifact_contracts.md b/docs/30_artifact_contracts.md
+index 637c5b3..5ae25a3 100644
+--- a/docs/30_artifact_contracts.md
++++ b/docs/30_artifact_contracts.md
+@@ -120,6 +120,20 @@ unified diff, apply via git apply
+ 
+ must stay within PLAN scope allowlist/denylist
+ 
++Patch-first enforcement (hard):
++
++- patch must start with `diff --git`
++- path normalization: repo-relative POSIX path only
++- policy gate: allow_roots / deny_prefixes / deny_suffixes / max_files / max_added_lines
++- `git apply --check` must pass before apply
++- defaults: `max_files <= 5`, `max_added_lines <= 400`
++
++On patch reject:
++
++- keep candidate `artifacts/diff.patch` unchanged for evidence
++- write rejection review to `reviews/review_patch.md`
++- request fixer retry through outbox with "patch only" instruction
++
+ I) artifacts/verify_report.json
+ 
+ Fields:
+@@ -196,6 +210,7 @@ Hard constraints:
+ - Only write requested target artifact in run_dir.
+ - Do not modify repo files.
+ - Follow role template output keys (for example `Verdict: APPROVE|BLOCK`, `Status: SIGNED`, patch only `artifacts/diff.patch`).
++- If target is `artifacts/diff.patch`, output must be unified diff only (no prose/full-file rewrite).
+ 
+ M) failure_bundle.zip (on verify FAIL)
+ 
+@@ -214,6 +229,7 @@ artifacts/diff.patch (real file or placeholder entry)
+ reviews/ (directory entry) and reviews/* evidence files (when present)
+ 
+ outbox/ (directory entry) and outbox/* dispatch prompt/request files
++reviews/review_patch.md (when patch-first gate rejects candidate patch)
+ 
+ Optional:
+ 
+diff --git a/docs/PATCH_CONTRACT.md b/docs/PATCH_CONTRACT.md
+index 5d53908..3dd14c2 100644
+--- a/docs/PATCH_CONTRACT.md
++++ b/docs/PATCH_CONTRACT.md
+@@ -1,45 +1,51 @@
+-# Patch Contract
++# Patch-First Editing Contract
+ 
+-This repository accepts patch outputs only when they satisfy all required rules below.
++All code edits are patch-first. Agent output is accepted only as unified diff and is applied only through the patch gate.
+ 
+-## Required Format
++## Required Patch Shape
+ 
+-1. The patch must be unified diff text.
+-2. The patch must start with `diff --git`.
+-3. Each changed file section must include:
+-   - `--- a/<path>`
+-   - `+++ b/<path>`
+-   - unified hunks (`@@ ... @@`)
+-4. The patch must be directly applicable with:
+-   - `git apply <patch-file>`
++1. Output must be unified diff text.
++2. First non-empty line must be `diff --git ...`.
++3. Per file section must include `--- a/...`, `+++ b/...`, and `@@ ... @@` hunk lines.
++4. Binary patch payloads are rejected.
++5. Prose-only output is rejected.
+ 
+-## Required Evidence
++## Three Mandatory Gates
+ 
+-Every patch request/response must include evidence references for each intended change:
++1. Path normalization gate
++   - Normalize to repo-root relative POSIX paths.
++   - Reject absolute paths, drive-letter paths, backtracking (`..`), or empty paths.
++2. Policy gate
++   - Enforce allowlist roots (`allow_roots`) and deny prefixes (`deny_prefixes`).
++   - Reject denied suffixes (`deny_suffixes`), lock/binary/artifact-like targets.
++   - Enforce patch size budgets: `max_files` and `max_added_lines`.
++   - Default budgets: `max_files=5`, `max_added_lines=400`.
++3. Apply precheck gate
++   - Must pass `git apply --check` in `repo_root`.
+ 
+-- file path
+-- line number or line range
+-- short evidence snippet
++Only after all three gates pass may the system run `git apply`.
+ 
+-Evidence references should come from Local Librarian search results when available.
++## Execution Boundary
+ 
+-## Intent Statement
++1. All git apply/check commands run with `cwd=repo_root`.
++2. `run_dir` is evidence-only (`logs`, `outbox`, `reviews`, `artifacts`) and never used as repo root for apply/test path resolution.
+ 
+-For each file change, include one short intent statement:
++## Rejection Contract
+ 
+-- what is being changed
+-- why this is the minimal safe change
++When rejected, the orchestrator must emit structured rejection evidence with:
+ 
+-## Scope and Safety
++- `stage`: `parse|policy|git_check|apply`
++- `code`: stable error code (`PATCH_PARSE_INVALID`, `PATCH_POLICY_DENY`, `PATCH_GIT_CHECK_FAIL`, `PATCH_APPLY_FAIL`)
++- `message`: human-readable summary
++- `details`: machine-auditable fields (files, limits, command stderr tail)
+ 
+-1. Patch scope must stay within the approved contract guard limits.
+-2. If contract guard fails, patch application is rejected.
+-3. Any rejected patch must produce:
+-   - `reviews/contract_review.json`
+-   - brief reason summary in run artifacts
++`artifacts/diff.patch` (candidate patch) must still be preserved. Rejection reasons must be written to review/outbox feedback and included in failure bundle evidence.
+ 
+-## Non-Goals
++## Retry Rule (Hard)
+ 
+-1. No prose-only output in place of patch.
+-2. No opaque binary edits without textual diff metadata.
+-3. No bypass of `verify_repo` or workflow/contract/doc gates.
++After rejection, agent may only resubmit `artifacts/diff.patch` as unified diff.
++
++Not allowed:
++- full-file rewrite blobs
++- alternate output channel replacing patch
++- bypassing `verify_repo` / workflow / contract gates
+diff --git a/scripts/ctcp_orchestrate.py b/scripts/ctcp_orchestrate.py
+index 7cfd4cd..d289246 100644
+--- a/scripts/ctcp_orchestrate.py
++++ b/scripts/ctcp_orchestrate.py
+@@ -32,6 +32,12 @@ except ModuleNotFoundError:
+     sys.path.insert(0, str(Path(__file__).resolve().parent))
+     import ctcp_dispatch
+ 
++try:
++    from tools.patch_first import PatchPolicy, apply_patch_safely
++except ModuleNotFoundError:
++    sys.path.insert(0, str(ROOT))
++    from tools.patch_first import PatchPolicy, apply_patch_safely
++
+ 
+ def now_iso() -> str:
+     return dt.datetime.now().isoformat(timespec="seconds")
+@@ -254,6 +260,58 @@ def resolve_max_iterations(run_dir: Path) -> tuple[int, str]:
+     return DEFAULT_MAX_ITERATIONS, "default"
+ 
+ 
++def resolve_patch_policy(run_dir: Path) -> tuple[dict[str, Any] | None, str, str]:
++    policy_path = run_dir / "artifacts" / "patch_policy.json"
++    if not policy_path.exists():
++        return None, "default", ""
++    try:
++        raw = read_json(policy_path)
++    except Exception as exc:
++        return {}, "artifacts/patch_policy.json", f"invalid patch policy json: {exc}"
++    if not isinstance(raw, dict):
++        return {}, "artifacts/patch_policy.json", "patch policy json must be an object"
++    return raw, "artifacts/patch_policy.json", ""
++
++
++def write_patch_rejection_review(
++    run_dir: Path,
++    *,
++    patch_sha: str,
++    policy_source: str,
++    policy_note: str,
++    result: Any,
++) -> Path:
++    review = run_dir / "reviews" / "review_patch.md"
++    touched = [str(x) for x in getattr(result, "touched_files", [])]
++    touched_lines = "\n".join(f"- {x}" for x in touched) if touched else "- (none)"
++    lines = [
++        "# Patch Review",
++        "",
++        "Verdict: BLOCK",
++        f"Code: {getattr(result, 'code', '')}",
++        f"Stage: {getattr(result, 'stage', '')}",
++        f"Reason: {getattr(result, 'message', '')}",
++        f"Patch-SHA256: {patch_sha}",
++        f"Policy-Source: {policy_source}",
++        f"Added-Lines: {int(getattr(result, 'added_lines', 0) or 0)}",
++        "",
++        "Touched-Files:",
++        touched_lines,
++        "",
++        "Retry-Rule:",
++        "1. Only rewrite artifacts/diff.patch.",
++        "2. Output unified diff only, first non-empty line must start with diff --git.",
++        "3. Do not output prose, JSON, or full-file content dumps.",
++    ]
++    if policy_note:
++        lines.extend(["", f"Policy-Note: {policy_note}"])
++    details = getattr(result, "details", {})
++    if isinstance(details, dict) and details:
++        lines.extend(["", "Details:", json.dumps(details, ensure_ascii=False, indent=2)])
++    write_text(review, "\n".join(lines) + "\n")
++    return review
++
++
+ def _tail_summary(text: str, *, max_lines: int = 8, max_chars: int = 500) -> str:
+     lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
+     if not lines:
+@@ -419,6 +477,26 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
+ 
+     if str(run_doc.get("status", "")).lower() == "pass":
+         return {"state": "pass", "owner": "", "path": "", "reason": "run already pass"}
++
++    blocked_reason = str(run_doc.get("blocked_reason", "")).strip().lower()
++    if blocked_reason.startswith("patch_first_rejected"):
++        candidate = active_patch_candidate(run_dir)
++        if candidate is not None and patch_marker.exists():
++            try:
++                marker_doc = read_json(patch_marker)
++                marker_sha = str(marker_doc.get("patch_sha256", ""))
++                marker_rc = int(marker_doc.get("rc", 1))
++                candidate_sha = file_sha256(candidate)
++                if marker_rc != 0 and marker_sha == candidate_sha:
++                    return {
++                        "state": "blocked",
++                        "owner": "Fixer",
++                        "path": "artifacts/diff.patch,reviews/review_patch.md",
++                        "reason": "patch-first gate rejected current diff.patch; resubmit unified diff only",
++                    }
++            except Exception:
++                pass
++
+     if str(run_doc.get("status", "")).lower() == "fail":
+         candidate = active_patch_candidate(run_dir)
+         if candidate is not None:
+@@ -642,7 +720,8 @@ def ensure_fixer_outbox_prompt(run_dir: Path, goal: str, reason: str) -> tuple[s
+             "",
+             "Hard Rules:",
+             "1. Only write artifacts/diff.patch in run_dir.",
+-            "2. Do not modify repo files.",
++            "2. Output unified diff only (first non-empty line must be diff --git).",
++            "3. Do not modify repo files.",
+             "",
+         ]
+     )
+@@ -925,25 +1004,28 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
+                 print("[ctcp_orchestrate] blocked: repo dirty before apply (clean workspace and retry)")
+                 return 0
+ 
+-            cmd = ["git", "apply", str(patch)]
+-            rc, out, err = run_cmd(cmd, ROOT)
++            patch_text = patch.read_text(encoding="utf-8", errors="replace")
++            policy_doc, policy_source, policy_note = resolve_patch_policy(run_dir)
++            result = apply_patch_safely(ROOT, patch_text, policy_doc)
++
+             out_log = run_dir / "logs" / "patch_apply.stdout.log"
+             err_log = run_dir / "logs" / "patch_apply.stderr.log"
+-            write_text(out_log, out)
+-            write_text(err_log, err)
++            write_text(out_log, result.stdout or "")
++            write_text(err_log, result.stderr or "")
++            trace_cmd = result.command.split() if result.command else [f"patch_first:{result.stage}"]
+             append_command_trace(
+                 run_dir,
+                 phase="patch_apply",
+-                cmd=cmd,
+-                rc=rc,
+-                stdout=out,
+-                stderr=err,
++                cmd=trace_cmd,
++                rc=0 if result.ok else 1,
++                stdout=result.stdout,
++                stderr=result.stderr,
+                 stdout_log=out_log,
+                 stderr_log=err_log,
+             )
+ 
+-            if rc != 0 and prev_ok and prev_sha and prev_sha != patch_sha:
+-                if last_applied_patch.exists():
++            if (not result.ok) and prev_ok and prev_sha and prev_sha != patch_sha:
++                if last_applied_patch.exists() and result.code in {"PATCH_GIT_CHECK_FAIL", "PATCH_APPLY_FAIL"}:
+                     append_event(
+                         run_dir,
+                         "Local Orchestrator",
+@@ -976,19 +1058,19 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
+                             cmd=" ".join(revert_cmd),
+                             rc=rr,
+                         )
+-                        cmd = ["git", "apply", str(patch)]
+-                        rc, out, err = run_cmd(cmd, ROOT)
++                        result = apply_patch_safely(ROOT, patch_text, policy_doc)
+                         out_log = run_dir / "logs" / "patch_apply_retry.stdout.log"
+                         err_log = run_dir / "logs" / "patch_apply_retry.stderr.log"
+-                        write_text(out_log, out)
+-                        write_text(err_log, err)
++                        write_text(out_log, result.stdout or "")
++                        write_text(err_log, result.stderr or "")
++                        trace_cmd = result.command.split() if result.command else [f"patch_first:{result.stage}"]
+                         append_command_trace(
+                             run_dir,
+                             phase="patch_apply_retry",
+-                            cmd=cmd,
+-                            rc=rc,
+-                            stdout=out,
+-                            stderr=err,
++                            cmd=trace_cmd,
++                            rc=0 if result.ok else 1,
++                            stdout=result.stdout,
++                            stderr=result.stderr,
+                             stdout_log=out_log,
+                             stderr_log=err_log,
+                         )
+@@ -1002,24 +1084,168 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
+                             rc=rr,
+                         )
+ 
++            rc = 0 if result.ok else 1
+             write_json(
+                 run_dir / "artifacts" / "patch_apply.json",
+                 {
+                     "patch_sha256": patch_sha,
+-                    "cmd": " ".join(cmd),
++                    "cmd": result.command or f"patch_first:{result.stage}",
+                     "rc": rc,
++                    "stage": result.stage,
++                    "code": result.code,
++                    "message": result.message,
++                    "touched_files": list(result.touched_files),
++                    "added_lines": int(result.added_lines),
+                     "stdout_log": out_log.as_posix(),
+                     "stderr_log": err_log.as_posix(),
+                     "applied_at": now_iso(),
+                 },
+             )
+-            append_event(run_dir, "Local Orchestrator", "patch_apply", "artifacts/diff.patch", rc=rc)
+-            if rc != 0:
++            append_event(
++                run_dir,
++                "Local Orchestrator",
++                "patch_apply",
++                "artifacts/diff.patch",
++                rc=rc,
++                stage=result.stage,
++                code=result.code,
++            )
++            if not result.ok:
++                review_path = write_patch_rejection_review(
++                    run_dir,
++                    patch_sha=patch_sha,
++                    policy_source=policy_source,
++                    policy_note=policy_note,
++                    result=result,
++                )
++                write_json(
++                    run_dir / "artifacts" / "patch_rejection.json",
++                    {
++                        "ts": now_iso(),
++                        "patch_sha256": patch_sha,
++                        "policy_source": policy_source,
++                        "policy_note": policy_note,
++                        "result": result.to_dict(),
++                        "review_path": review_path.relative_to(run_dir).as_posix(),
++                    },
++                )
++
++                max_iterations, max_source = resolve_max_iterations(run_dir)
++                verify_iteration = int(run_doc.get("verify_iterations", 0) or 0)
++                paths = {
++                    "trace": "TRACE.md",
++                    "verify_report": "artifacts/verify_report.json",
++                    "bundle": "failure_bundle.zip",
++                    "patch": "artifacts/diff.patch",
++                    "patch_review": "reviews/review_patch.md",
++                    "stdout_log": out_log.relative_to(run_dir).as_posix(),
++                    "stderr_log": err_log.relative_to(run_dir).as_posix(),
++                }
++                if (run_dir / "artifacts" / "PLAN.md").exists():
++                    paths["plan"] = "artifacts/PLAN.md"
++                write_json(
++                    run_dir / "artifacts" / "verify_report.json",
++                    {
++                        "result": "FAIL",
++                        "gate": "patch_first",
++                        "iteration": verify_iteration,
++                        "max_iterations": max_iterations,
++                        "max_iterations_source": max_source,
++                        "patch_sha256": patch_sha,
++                        "commands": [
++                            {
++                                "cmd": result.command or f"patch_first:{result.stage}",
++                                "exit_code": 1,
++                                "stdout_log": out_log.relative_to(run_dir).as_posix(),
++                                "stderr_log": err_log.relative_to(run_dir).as_posix(),
++                            }
++                        ],
++                        "failures": [
++                            {
++                                "kind": "patch_first",
++                                "id": result.code,
++                                "message": result.message,
++                            }
++                        ],
++                        "paths": paths,
++                        "artifacts": paths,
++                    },
++                )
++
+                 run_doc["status"] = "blocked"
+-                run_doc["blocked_reason"] = "patch_apply_failed"
++                run_doc["blocked_reason"] = f"patch_first_rejected:{result.code}"
+                 save_run_doc(run_dir, run_doc)
+-                print("[ctcp_orchestrate] blocked: patch apply failed (see logs/patch_apply.*.log)")
+-                return 0
++                append_event(
++                    run_dir,
++                    "Local Orchestrator",
++                    "PATCH_REJECTED",
++                    "artifacts/diff.patch",
++                    code=result.code,
++                    stage=result.stage,
++                    review=review_path.relative_to(run_dir).as_posix(),
++                )
++
++                bundle, mode_before_dispatch = ensure_failure_bundle(run_dir)
++                fail_gate = current_gate(run_dir, run_doc)
++                dispatch = ctcp_dispatch.dispatch_once(run_dir, run_doc, fail_gate, ROOT)
++                dispatch_status = str(dispatch.get("status", ""))
++                if dispatch_status == "outbox_created":
++                    outbox_path = str(dispatch.get("path", ""))
++                    append_event(
++                        run_dir,
++                        str(dispatch.get("role", "fixer")),
++                        "OUTBOX_PROMPT_CREATED",
++                        outbox_path,
++                        target_path=str(dispatch.get("target_path", "")),
++                        action=str(dispatch.get("action", "")),
++                        provider=str(dispatch.get("provider", "")),
++                    )
++                    print(f"[ctcp_orchestrate] outbox prompt created: {outbox_path}")
++                elif dispatch_status == "outbox_exists":
++                    outbox_path = str(dispatch.get("path", ""))
++                    if outbox_path:
++                        print(f"[ctcp_orchestrate] waiting for outbox response: {outbox_path}")
++                elif dispatch_status == "budget_exceeded":
++                    append_event(
++                        run_dir,
++                        "Local Orchestrator",
++                        "STOP_BUDGET_EXCEEDED",
++                        "artifacts/dispatch_config.json",
++                        reason=str(dispatch.get("reason", "")),
++                        provider=str(dispatch.get("provider", "")),
++                    )
++                fallback_path, created_fallback = ensure_fixer_outbox_prompt(
++                    run_dir,
++                    goal=goal,
++                    reason=str(run_doc.get("blocked_reason", "patch_first_rejected")),
++                )
++                if created_fallback:
++                    append_event(
++                        run_dir,
++                        "fixer",
++                        "OUTBOX_PROMPT_CREATED",
++                        fallback_path,
++                        target_path="artifacts/diff.patch",
++                        action="fix_patch",
++                        provider="manual_outbox_fallback",
++                    )
++                bundle, mode_after_dispatch = ensure_failure_bundle(run_dir, require_outbox_prompt=True)
++                final_mode = (
++                    mode_after_dispatch
++                    if mode_after_dispatch in {"created", "recreated"}
++                    else mode_before_dispatch
++                )
++                append_event(
++                    run_dir,
++                    "Local Orchestrator",
++                    "BUNDLE_CREATED",
++                    "failure_bundle.zip",
++                    mode=final_mode,
++                )
++                write_pointer(LAST_BUNDLE_POINTER, bundle)
++                print(f"[ctcp_orchestrate] blocked: patch-first gate rejected diff.patch, bundle={bundle}")
++                return 1
++
+             shutil.copy2(patch, run_dir / "artifacts" / "last_applied.patch")
+             steps += 1
+             continue
+diff --git a/simlab/run.py b/simlab/run.py
+index 82f1784..faec947 100644
+--- a/simlab/run.py
++++ b/simlab/run.py
+@@ -96,6 +96,7 @@ def copy_repo(src: Path, dst: Path) -> None:
+             if name in {
+                 ".git",
+                 ".venv",
++                "runs",
+                 "build",
+                 "build_lite",
+                 "build_verify",
+diff --git a/specs/modules/dispatcher_providers.md b/specs/modules/dispatcher_providers.md
+index a72cba8..2671122 100644
+--- a/specs/modules/dispatcher_providers.md
++++ b/specs/modules/dispatcher_providers.md
+@@ -6,6 +6,7 @@
+ ## Scope
+ - Map gate state -> role/action/target artifact.
+ - Invoke `manual_outbox` or constrained `local_exec`.
++- When patch-first gate rejects `artifacts/diff.patch`, dispatch fixer retry with patch-only constraints.
+ 
+ ## Non-Goals
+ - Network/API execution.
+@@ -20,6 +21,7 @@
+ ## Outputs
+ - `${run_dir}/outbox/*.md` prompts for manual/API roles.
+ - provider execution events in `${run_dir}/events.jsonl`.
++- Rejection feedback paths in outbox prompt metadata (for example `reviews/review_patch.md`).
+ 
+ ## Dependencies
+ - Orchestrator state machine.
+@@ -32,6 +34,7 @@
+ ## Failure Evidence
+ - Dispatcher failures must be visible in events and trace.
+ - Budget-exceeded path must be explicit and reproducible.
++- Patch rejection retry loop must keep candidate patch + reject reason auditable.
+ 
+ ## Owner Roles
+ - Local Orchestrator dispatches.
+diff --git a/specs/modules/orchestrator.md b/specs/modules/orchestrator.md
+index adb56cb..004a821 100644
+--- a/specs/modules/orchestrator.md
++++ b/specs/modules/orchestrator.md
+@@ -6,6 +6,7 @@
+ ## Scope
+ - `new-run`, `status`, `advance` lifecycle.
+ - Gate transitions, event emission, verify triggering, failure closure.
++- Patch-first apply gate for `artifacts/diff.patch` before any repo mutation.
+ 
+ ## Non-Goals
+ - Decide workflow strategy.
+@@ -22,6 +23,7 @@
+ - `${run_dir}/RUN.json` status updates.
+ - `${run_dir}/events.jsonl`, `${run_dir}/TRACE.md`.
+ - verify and failure artifacts (`verify_report`, `failure_bundle`).
++- Patch rejection evidence (`reviews/review_patch.md`, patch apply marker).
+ 
+ ## Dependencies
+ - `docs/00_CORE.md`
+@@ -31,10 +33,12 @@
+ ## Gates
+ - SimLab lite orchestrator scenarios.
+ - `scripts/verify_repo.*` pass.
++- Patch-first gates: path normalize -> policy -> `git apply --check`.
+ 
+ ## Failure Evidence
+ - Must preserve `TRACE.md`, `events.jsonl`, `artifacts/verify_report.json`.
+ - Must generate/validate `failure_bundle.zip` on verify fail.
++- Patch reject must preserve candidate `artifacts/diff.patch` and rejection reason.
+ 
+ ## Owner Roles
+ - Local Orchestrator (write control-plane artifacts/events).
+diff --git a/tools/providers/manual_outbox.py b/tools/providers/manual_outbox.py
+index a279868..ff8a6ec 100644
+--- a/tools/providers/manual_outbox.py
++++ b/tools/providers/manual_outbox.py
+@@ -105,6 +105,12 @@ def _render_prompt(
+     template_name = TEMPLATE_BY_ROLE_ACTION.get((role, action), "chair_plan_draft.md")
+     template_body = _read_template(repo_root, template_name)
+     max_outbox_prompts = _max_outbox_prompts(config)
++    patch_only_rule = ""
++    if target_path.endswith("diff.patch"):
++        patch_only_rule = (
++            "5. If target is artifacts/diff.patch, output unified diff only "
++            "(first non-empty line: diff --git)."
++        )
+ 
+     missing_lines = "\n".join(f"- {p}" for p in missing_paths) if missing_paths else "- (none)"
+     budget_lines = "\n".join(
+@@ -136,7 +142,8 @@ def _render_prompt(
+         f"1. You may only write to `{run_target}`.\n"
+         "2. Do not modify any file under repo root.\n"
+         "3. Do not call network/API tools; manual offline execution only.\n"
+-        "4. Follow docs/30_artifact_contracts.md output requirements exactly.\n\n"
++        "4. Follow docs/30_artifact_contracts.md output requirements exactly.\n"
++        f"{patch_only_rule}\n\n"
+         "---\n\n"
+         f"{template_body}\n"
+     )
+@@ -190,4 +197,3 @@ def execute(
+     )
+     prompt_path.write_text(prompt_text, encoding="utf-8")
+     return {"status": "outbox_created", "path": rel_path}
+-
+diff --git a/agents/prompts/fixer_patch.md b/agents/prompts/fixer_patch.md
+new file mode 100644
+index 0000000..200d84c
+--- /dev/null
++++ b/agents/prompts/fixer_patch.md
+@@ -0,0 +1,9 @@
++## Task
++- Read rejection reasons from `reviews/review_patch.md` and produce a corrected unified diff.
++- Write only to `artifacts/diff.patch`.
++- First non-empty line must start with `diff --git`.
++
++## Hard Output Rule
++- Output patch text only.
++- Do not output prose, markdown wrappers, JSON, or full-file rewrites.
++
+diff --git a/agents/prompts/patchmaker_patch.md b/agents/prompts/patchmaker_patch.md
+new file mode 100644
+index 0000000..fd16905
+--- /dev/null
++++ b/agents/prompts/patchmaker_patch.md
+@@ -0,0 +1,9 @@
++## Task
++- Generate only one unified diff patch for `artifacts/diff.patch`.
++- First non-empty line must start with `diff --git`.
++- Keep changes minimal and policy-compliant.
++
++## Hard Output Rule
++- Output patch text only.
++- Do not output prose, markdown wrappers, JSON, or full-file rewrites.
++
+diff --git a/scripts/apply_patch_first.py b/scripts/apply_patch_first.py
+new file mode 100644
+index 0000000..fc6e15a
+--- /dev/null
++++ b/scripts/apply_patch_first.py
+@@ -0,0 +1,97 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++import argparse
++import json
++import sys
++from pathlib import Path
++from typing import Any
++
++ROOT = Path(__file__).resolve().parents[1]
++if str(ROOT) not in sys.path:
++    sys.path.insert(0, str(ROOT))
++
++from tools.patch_first import PatchPolicy, apply_patch_safely
++
++
++def _read_text(path: Path) -> str:
++    return path.read_text(encoding="utf-8", errors="replace")
++
++
++def _load_policy(path: Path) -> PatchPolicy:
++    raw = json.loads(_read_text(path))
++    if not isinstance(raw, dict):
++        raise ValueError("policy json must be an object")
++    return PatchPolicy.from_mapping(raw)
++
++
++def _print_result(doc: dict[str, Any]) -> None:
++    sys.stdout.write(json.dumps(doc, ensure_ascii=False, indent=2) + "\n")
++
++
++def main() -> int:
++    ap = argparse.ArgumentParser(description="Patch-first safe apply helper")
++    ap.add_argument("--repo", default=".", help="repository root")
++    src = ap.add_mutually_exclusive_group(required=True)
++    src.add_argument("--patch", default="", help="path to unified diff patch file")
++    src.add_argument("--stdin", action="store_true", help="read patch text from stdin")
++    ap.add_argument("--policy-json", default="", help="optional patch policy JSON path")
++    args = ap.parse_args()
++
++    repo_root = Path(args.repo).expanduser().resolve()
++    if not repo_root.exists():
++        _print_result({"ok": False, "stage": "env", "code": "PATCH_ENV_INVALID", "message": f"repo does not exist: {repo_root}"})
++        return 2
++
++    try:
++        if args.stdin:
++            patch_text = sys.stdin.read()
++        else:
++            patch_path = Path(str(args.patch)).expanduser().resolve()
++            if not patch_path.exists():
++                _print_result(
++                    {
++                        "ok": False,
++                        "stage": "env",
++                        "code": "PATCH_ENV_INVALID",
++                        "message": f"patch file does not exist: {patch_path}",
++                    }
++                )
++                return 2
++            patch_text = _read_text(patch_path)
++    except Exception as exc:
++        _print_result({"ok": False, "stage": "env", "code": "PATCH_ENV_INVALID", "message": str(exc)})
++        return 2
++
++    policy: PatchPolicy | None = None
++    if str(args.policy_json).strip():
++        policy_path = Path(str(args.policy_json)).expanduser().resolve()
++        if not policy_path.exists():
++            _print_result(
++                {
++                    "ok": False,
++                    "stage": "env",
++                    "code": "PATCH_ENV_INVALID",
++                    "message": f"policy json does not exist: {policy_path}",
++                }
++            )
++            return 2
++        try:
++            policy = _load_policy(policy_path)
++        except Exception as exc:
++            _print_result({"ok": False, "stage": "policy", "code": "PATCH_POLICY_INVALID", "message": str(exc)})
++            return 2
++
++    result = apply_patch_safely(repo_root=repo_root, diff_text=patch_text, policy=policy)
++    _print_result(result.to_dict())
++
++    if result.ok:
++        return 0
++    if result.code in {"PATCH_ENV_INVALID", "PATCH_POLICY_INVALID"}:
++        return 2
++    return 1
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
++
+diff --git a/simlab/scenarios/S17_lite_patch_first_reject.yaml b/simlab/scenarios/S17_lite_patch_first_reject.yaml
+new file mode 100644
+index 0000000..bcdf523
+--- /dev/null
++++ b/simlab/scenarios/S17_lite_patch_first_reject.yaml
+@@ -0,0 +1,72 @@
++{
++  "id": "S17_lite_patch_first_reject",
++  "name": "lite orchestrator should reject illegal patch via patch-first gate",
++  "suite": "lite",
++  "steps": [
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-patch-first-reject > artifacts/_s17_newrun.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; rev=r/'reviews'; art.mkdir(parents=True, exist_ok=True); rev.mkdir(parents=True, exist_ok=True); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_minimal_patch_verify','selected_version':'1.0','candidates':[{'workflow_id':'wf_minimal_patch_verify','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-patch-first-reject','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':1,'max_total_bytes':5000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); ctx={'schema_version':'ctcp-context-pack-v1','goal':'simlab-patch-first-reject','repo_slug':'ctcp','summary':'simlab','files':[],'omitted':[]}; (art/'context_pack.json').write_text(json.dumps(ctx, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'PLAN_draft.md').write_text('# draft\\n', encoding='utf-8'); (art/'PLAN.md').write_text('Status: SIGNED\\nScope-Allow: README.md\\nScope-Deny: none\\nGates: lite\\nStop: max_iterations=2\\nBudgets: max_files=5,max_total_bytes=20000\\nSteps: patch->verify\\n', encoding='utf-8'); (rev/'review_contract.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); (rev/'review_cost.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); patch='diff --git a/runs/evil.txt b/runs/evil.txt\\nnew file mode 100644\\nindex 0000000..1111111\\n--- /dev/null\\n+++ b/runs/evil.txt\\n@@ -0,0 +1 @@\\n+evil\\n'; (art/'diff.patch').write_text(patch, encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 16 > artifacts/_s17_advance.out.txt 2>&1",
++        "expect_exit": "nonzero"
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import zipfile, shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); review=r/'reviews'/'review_patch.md'; verify=r/'artifacts'/'verify_report.json'; ev=r/'events.jsonl'; outbox_md=sorted((r/'outbox').glob('*.md')); bundle=r/'failure_bundle.zip'; assert review.exists(), str(review); assert verify.exists(), str(verify); assert bundle.exists(), str(bundle); assert not (r/'runs'/'evil.txt').exists(), 'illegal path was applied'; names=set(zipfile.ZipFile(bundle).namelist()); assert 'artifacts/diff.patch' in names, 'missing diff.patch in bundle'; assert 'reviews/review_patch.md' in names, 'missing review_patch in bundle'; assert any(n.startswith('outbox/') and n.endswith('.md') for n in names), 'missing outbox prompt in bundle'; assert outbox_md, 'missing outbox prompt in run dir'; shutil.copy2(review, 'artifacts/_s17_review_patch.md'); shutil.copy2(verify, 'artifacts/_s17_verify_report.json'); shutil.copy2(ev, 'artifacts/_s17_events.jsonl'); shutil.copy2(outbox_md[0], 'artifacts/_s17_outbox_prompt.md')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s17_verify_report.json",
++        "includes": [
++          "\"result\": \"FAIL\"",
++          "\"gate\": \"patch_first\"",
++          "\"kind\": \"patch_first\""
++        ]
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s17_review_patch.md",
++        "includes": [
++          "Verdict: BLOCK",
++          "Retry-Rule:",
++          "unified diff"
++        ]
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s17_outbox_prompt.md",
++        "includes": [
++          "Role: fixer",
++          "write to: artifacts/diff.patch",
++          "unified diff only"
++        ]
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s17_events.jsonl",
++        "includes": [
++          "PATCH_REJECTED",
++          "OUTBOX_PROMPT_CREATED",
++          "BUNDLE_CREATED"
++        ]
++      }
++    }
++  ]
++}
++
+diff --git a/tests/test_patch_first.py b/tests/test_patch_first.py
+new file mode 100644
+index 0000000..2d8504a
+--- /dev/null
++++ b/tests/test_patch_first.py
+@@ -0,0 +1,131 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++import subprocess
++import sys
++import tempfile
++import unittest
++from pathlib import Path
++
++ROOT = Path(__file__).resolve().parents[1]
++if str(ROOT) not in sys.path:
++    sys.path.insert(0, str(ROOT))
++
++from tools.patch_first import (
++    PatchPolicy,
++    PatchValidationError,
++    apply_patch_safely,
++    git_apply_check,
++    normalize_repo_relpath,
++    validate_diff_against_policy,
++)
++
++
++def _run(argv: list[str], cwd: Path) -> None:
++    proc = subprocess.run(
++        argv,
++        cwd=str(cwd),
++        capture_output=True,
++        text=True,
++        encoding="utf-8",
++        errors="replace",
++    )
++    if proc.returncode != 0:
++        raise RuntimeError(f"command failed: {' '.join(argv)}\n{proc.stdout}\n{proc.stderr}")
++
++
++def _diff_new_file(path: str, added_lines: list[str]) -> str:
++    body = "\n".join(f"+{ln}" for ln in added_lines)
++    return (
++        f"diff --git a/{path} b/{path}\n"
++        "new file mode 100644\n"
++        "index 0000000..1111111\n"
++        "--- /dev/null\n"
++        f"+++ b/{path}\n"
++        f"@@ -0,0 +1,{len(added_lines)} @@\n"
++        f"{body}\n"
++    )
++
++
++def _diff_modify(path: str, before: str, after: str) -> str:
++    return (
++        f"diff --git a/{path} b/{path}\n"
++        "index 1111111..2222222 100644\n"
++        f"--- a/{path}\n"
++        f"+++ b/{path}\n"
++        "@@ -1 +1 @@\n"
++        f"-{before}\n"
++        f"+{after}\n"
++    )
++
++
++class PatchFirstTests(unittest.TestCase):
++    def test_normalize_rejects_absolute_drive_and_parent(self) -> None:
++        with self.assertRaises(PatchValidationError):
++            normalize_repo_relpath("/etc/passwd")
++        with self.assertRaises(PatchValidationError):
++            normalize_repo_relpath("C:/tmp/x.txt")
++        with self.assertRaises(PatchValidationError):
++            normalize_repo_relpath("../secrets.txt")
++
++    def test_policy_rejects_deny_prefix(self) -> None:
++        patch = _diff_new_file("runs/evil.txt", ["evil"])
++        policy = PatchPolicy(allow_roots=("runs",), deny_prefixes=("runs",), deny_suffixes=())
++        with self.assertRaises(PatchValidationError) as ctx:
++            validate_diff_against_policy(patch, policy, ROOT)
++        self.assertEqual(ctx.exception.code, "PATCH_POLICY_DENY")
++        self.assertIn("deny_prefixes", str(ctx.exception))
++
++    def test_policy_rejects_max_files(self) -> None:
++        chunks = [_diff_new_file(f"docs/f{i}.md", ["x"]) for i in range(1, 7)]
++        patch = "".join(chunks)
++        with self.assertRaises(PatchValidationError) as ctx:
++            validate_diff_against_policy(patch, PatchPolicy(max_files=5), ROOT)
++        self.assertEqual(ctx.exception.code, "PATCH_POLICY_DENY")
++        self.assertIn("max_files", str(ctx.exception))
++
++    def test_policy_rejects_max_added_lines(self) -> None:
++        added = [f"line-{i}" for i in range(401)]
++        patch = _diff_new_file("docs/too_many_lines.md", added)
++        with self.assertRaises(PatchValidationError) as ctx:
++            validate_diff_against_policy(patch, PatchPolicy(max_added_lines=400), ROOT)
++        self.assertEqual(ctx.exception.code, "PATCH_POLICY_DENY")
++        self.assertIn("max_added_lines", str(ctx.exception))
++
++    def test_git_apply_check_fail_and_safe_apply_fail(self) -> None:
++        with tempfile.TemporaryDirectory() as td:
++            repo = Path(td)
++            _run(["git", "init"], repo)
++            _run(["git", "config", "user.email", "test@example.com"], repo)
++            _run(["git", "config", "user.name", "patch-first-test"], repo)
++            (repo / "README.md").write_text("hello\n", encoding="utf-8")
++            _run(["git", "add", "README.md"], repo)
++            _run(["git", "commit", "-m", "init"], repo)
++
++            bad_patch = _diff_modify("README.md", "not-hello", "patched")
++            rc, _, _ = git_apply_check(repo, bad_patch)
++            self.assertNotEqual(rc, 0)
++
++            result = apply_patch_safely(repo, bad_patch)
++            self.assertFalse(result.ok)
++            self.assertEqual(result.code, "PATCH_GIT_CHECK_FAIL")
++
++    def test_safe_apply_success(self) -> None:
++        with tempfile.TemporaryDirectory() as td:
++            repo = Path(td)
++            _run(["git", "init"], repo)
++            _run(["git", "config", "user.email", "test@example.com"], repo)
++            _run(["git", "config", "user.name", "patch-first-test"], repo)
++            (repo / "README.md").write_text("hello\n", encoding="utf-8")
++            _run(["git", "add", "README.md"], repo)
++            _run(["git", "commit", "-m", "init"], repo)
++
++            good_patch = _diff_modify("README.md", "hello", "patched")
++            policy = PatchPolicy(allow_roots=("README.md",), deny_prefixes=(), deny_suffixes=())
++            result = apply_patch_safely(repo, good_patch, policy)
++            self.assertTrue(result.ok)
++            self.assertEqual((repo / "README.md").read_text(encoding="utf-8"), "patched\n")
++
++
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/tools/patch_first/__init__.py b/tools/patch_first/__init__.py
+new file mode 100644
+index 0000000..7a958c7
+--- /dev/null
++++ b/tools/patch_first/__init__.py
+@@ -0,0 +1,27 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++from .core import (
++    PatchApplyResult,
++    PatchPolicy,
++    PatchValidationError,
++    apply_patch,
++    apply_patch_safely,
++    git_apply_check,
++    normalize_repo_relpath,
++    parse_unified_diff,
++    validate_diff_against_policy,
++)
++
++__all__ = [
++    "PatchApplyResult",
++    "PatchPolicy",
++    "PatchValidationError",
++    "apply_patch",
++    "apply_patch_safely",
++    "git_apply_check",
++    "normalize_repo_relpath",
++    "parse_unified_diff",
++    "validate_diff_against_policy",
++]
++
+diff --git a/tools/patch_first/core.py b/tools/patch_first/core.py
+new file mode 100644
+index 0000000..311b750
+--- /dev/null
++++ b/tools/patch_first/core.py
+@@ -0,0 +1,527 @@
++#!/usr/bin/env python3
++from __future__ import annotations
++
++from dataclasses import dataclass, field
++from pathlib import Path
++import re
++import subprocess
++from typing import Any
++
++DEFAULT_ALLOW_ROOTS: tuple[str, ...] = (
++    "src",
++    "include",
++    "web",
++    "scripts",
++    "tools",
++    "docs",
++    "specs",
++    "meta",
++    "contracts",
++    "workflow_registry",
++    "tests",
++    "ai_context",
++    "agents",
++    "ai",
++    "simlab",
++    "ctcp",
++    "resources",
++    "executor",
++    "third_party",
++    "README.md",
++    "BUILD.md",
++    "PATCH_README.md",
++    "TREE.md",
++    "CMakeLists.txt",
++    "AGENTS.md",
++    "APPLY_OVERLAY.md",
++    "LICENSE",
++    "requirements-dev.txt",
++)
++
++DEFAULT_DENY_PREFIXES: tuple[str, ...] = (
++    ".git/",
++    "build/",
++    "build_lite/",
++    "build_verify/",
++    "build_gui/",
++    "dist/",
++    "generated_projects/",
++    "runs/",
++    "artifacts/",
++    "simlab/_runs",
++    "meta/runs/",
++    "tests/fixtures/adlc_forge_full_bundle/runs/",
++)
++
++DEFAULT_DENY_SUFFIXES: tuple[str, ...] = (
++    ".lock",
++    ".png",
++    ".jpg",
++    ".jpeg",
++    ".gif",
++    ".bmp",
++    ".webp",
++    ".ico",
++    ".zip",
++    ".7z",
++    ".tar",
++    ".gz",
++    ".pdf",
++    ".exe",
++    ".dll",
++    ".so",
++    ".dylib",
++    ".bin",
++    ".class",
++    ".jar",
++    ".pyc",
++    ".pyo",
++    ".o",
++    ".obj",
++    ".a",
++    ".lib",
++    ".db",
++    ".sqlite",
++    ".sqlite3",
++)
++
++
++class PatchValidationError(RuntimeError):
++    def __init__(
++        self,
++        *,
++        code: str,
++        message: str,
++        stage: str,
++        details: dict[str, Any] | None = None,
++    ) -> None:
++        super().__init__(message)
++        self.code = code
++        self.stage = stage
++        self.details = details or {}
++
++
++@dataclass(frozen=True)
++class PatchPolicy:
++    allow_roots: tuple[str, ...] = DEFAULT_ALLOW_ROOTS
++    deny_prefixes: tuple[str, ...] = DEFAULT_DENY_PREFIXES
++    deny_suffixes: tuple[str, ...] = DEFAULT_DENY_SUFFIXES
++    max_files: int = 5
++    max_added_lines: int = 400
++
++    @staticmethod
++    def _norm_entries(values: list[str] | tuple[str, ...] | None) -> tuple[str, ...]:
++        if not values:
++            return tuple()
++        out: list[str] = []
++        for raw in values:
++            norm = _normalize_policy_path(str(raw))
++            if norm:
++                out.append(norm)
++        return tuple(out)
++
++    @staticmethod
++    def _coerce_limit(value: Any, default: int) -> int:
++        try:
++            parsed = int(value)
++        except Exception:
++            return default
++        return parsed if parsed > 0 else default
++
++    @classmethod
++    def from_mapping(cls, raw: Any) -> "PatchPolicy":
++        if isinstance(raw, PatchPolicy):
++            return raw
++        if raw is None:
++            return cls()
++        if not isinstance(raw, dict):
++            raise PatchValidationError(
++                code="PATCH_POLICY_INVALID",
++                stage="policy",
++                message="patch policy must be an object",
++            )
++        return cls(
++            allow_roots=cls._norm_entries(_as_list(raw.get("allow_roots"), list(DEFAULT_ALLOW_ROOTS))),
++            deny_prefixes=cls._norm_entries(_as_list(raw.get("deny_prefixes"), list(DEFAULT_DENY_PREFIXES))),
++            deny_suffixes=tuple(str(x).strip().lower() for x in _as_list(raw.get("deny_suffixes"), list(DEFAULT_DENY_SUFFIXES)) if str(x).strip()),
++            max_files=cls._coerce_limit(raw.get("max_files", 5), 5),
++            max_added_lines=cls._coerce_limit(raw.get("max_added_lines", 400), 400),
++        )
++
++    def to_dict(self) -> dict[str, Any]:
++        return {
++            "allow_roots": list(self.allow_roots),
++            "deny_prefixes": list(self.deny_prefixes),
++            "deny_suffixes": list(self.deny_suffixes),
++            "max_files": self.max_files,
++            "max_added_lines": self.max_added_lines,
++        }
++
++
++@dataclass
++class PatchApplyResult:
++    ok: bool
++    stage: str
++    code: str
++    message: str
++    touched_files: list[str] = field(default_factory=list)
++    added_lines: int = 0
++    command: str = ""
++    stdout: str = ""
++    stderr: str = ""
++    details: dict[str, Any] = field(default_factory=dict)
++
++    def to_dict(self) -> dict[str, Any]:
++        return {
++            "ok": self.ok,
++            "stage": self.stage,
++            "code": self.code,
++            "message": self.message,
++            "touched_files": list(self.touched_files),
++            "added_lines": int(self.added_lines),
++            "command": self.command,
++            "stdout": self.stdout,
++            "stderr": self.stderr,
++            "details": dict(self.details),
++        }
++
++
++def _as_list(value: Any, default: list[str]) -> list[str]:
++    if value is None:
++        return default
++    if isinstance(value, (list, tuple)):
++        return [str(x) for x in value]
++    return default
++
++
++def _normalize_policy_path(value: str) -> str:
++    text = (value or "").strip().replace("\\", "/")
++    while text.startswith("./"):
++        text = text[2:]
++    text = text.strip("/")
++    return text
++
++
++def normalize_repo_relpath(p: str) -> str:
++    text = (p or "").strip().replace("\\", "/")
++    if text.startswith("a/") or text.startswith("b/"):
++        text = text[2:]
++    while text.startswith("./"):
++        text = text[2:]
++    if not text or text == ".":
++        raise PatchValidationError(
++            code="PATCH_PATH_INVALID",
++            stage="path",
++            message=f"invalid empty relative path: {p!r}",
++        )
++    if text.startswith("/") or text.startswith("\\"):
++        raise PatchValidationError(
++            code="PATCH_PATH_INVALID",
++            stage="path",
++            message=f"absolute path is not allowed: {p!r}",
++        )
++    if re.match(r"^[A-Za-z]:[\\/]", text):
++        raise PatchValidationError(
++            code="PATCH_PATH_INVALID",
++            stage="path",
++            message=f"drive-letter path is not allowed: {p!r}",
++        )
++    parts = [seg for seg in text.split("/") if seg not in {"", "."}]
++    if any(seg == ".." for seg in parts):
++        raise PatchValidationError(
++            code="PATCH_PATH_INVALID",
++            stage="path",
++            message=f"path traversal is not allowed: {p!r}",
++        )
++    normalized = "/".join(parts)
++    if not normalized:
++        raise PatchValidationError(
++            code="PATCH_PATH_INVALID",
++            stage="path",
++            message=f"invalid relative path: {p!r}",
++        )
++    return normalized
++
++
++def parse_unified_diff(text: str) -> list[str]:
++    raw = text or ""
++    lines = raw.splitlines()
++    non_empty = [ln for ln in lines if ln.strip()]
++    if not non_empty:
++        raise PatchValidationError(
++            code="PATCH_PARSE_INVALID",
++            stage="parse",
++            message="patch is empty",
++        )
++    if not non_empty[0].startswith("diff --git "):
++        raise PatchValidationError(
++            code="PATCH_PARSE_INVALID",
++            stage="parse",
++            message="patch must start with 'diff --git'",
++        )
++    touched: list[str] = []
++    seen: set[str] = set()
++    for ln in lines:
++        if not ln.startswith("diff --git "):
++            continue
++        m = re.match(r"^diff --git a/(.+) b/(.+)$", ln.strip())
++        if not m:
++            raise PatchValidationError(
++                code="PATCH_PARSE_INVALID",
++                stage="parse",
++                message=f"invalid diff header: {ln.strip()}",
++            )
++        # A rename is still one touched target file; guard policy uses target path.
++        path = normalize_repo_relpath(m.group(2))
++        if path not in seen:
++            seen.add(path)
++            touched.append(path)
++    if not touched:
++        raise PatchValidationError(
++            code="PATCH_PARSE_INVALID",
++            stage="parse",
++            message="no touched files found from diff headers",
++        )
++    return touched
++
++
++def _count_added_lines(diff_text: str) -> int:
++    added = 0
++    for ln in (diff_text or "").splitlines():
++        if ln.startswith("+++ "):
++            continue
++        if ln.startswith("+"):
++            added += 1
++    return added
++
++
++def _contains_binary_payload(diff_text: str) -> bool:
++    if "\x00" in diff_text:
++        return True
++    for ln in diff_text.splitlines():
++        if ln.startswith("GIT binary patch"):
++            return True
++        if ln.startswith("Binary files "):
++            return True
++    return False
++
++
++def _path_in_root(path: str, root: str) -> bool:
++    return path == root or path.startswith(root + "/")
++
++
++def validate_diff_against_policy(
++    diff_text: str,
++    policy: PatchPolicy | dict[str, Any] | None,
++    repo_root: Path | str,
++) -> dict[str, Any]:
++    del repo_root  # policy is repo-relative and does not depend on filesystem state.
++    resolved_policy = PatchPolicy.from_mapping(policy)
++    touched_files = parse_unified_diff(diff_text)
++
++    if _contains_binary_payload(diff_text):
++        raise PatchValidationError(
++            code="PATCH_POLICY_DENY",
++            stage="policy",
++            message="binary patch payload is not allowed",
++            details={"rule": "binary_payload"},
++        )
++
++    if len(touched_files) > resolved_policy.max_files:
++        raise PatchValidationError(
++            code="PATCH_POLICY_DENY",
++            stage="policy",
++            message=f"touched files exceed max_files ({len(touched_files)} > {resolved_policy.max_files})",
++            details={
++                "rule": "max_files",
++                "limit": resolved_policy.max_files,
++                "actual": len(touched_files),
++            },
++        )
++
++    added_lines = _count_added_lines(diff_text)
++    if added_lines > resolved_policy.max_added_lines:
++        raise PatchValidationError(
++            code="PATCH_POLICY_DENY",
++            stage="policy",
++            message=f"added lines exceed max_added_lines ({added_lines} > {resolved_policy.max_added_lines})",
++            details={
++                "rule": "max_added_lines",
++                "limit": resolved_policy.max_added_lines,
++                "actual": added_lines,
++            },
++        )
++
++    for path in touched_files:
++        if resolved_policy.allow_roots and not any(_path_in_root(path, root) for root in resolved_policy.allow_roots):
++            raise PatchValidationError(
++                code="PATCH_POLICY_DENY",
++                stage="policy",
++                message=f"path is outside allow_roots: {path}",
++                details={"rule": "allow_roots", "path": path},
++            )
++        if any(_path_in_root(path, prefix) for prefix in resolved_policy.deny_prefixes):
++            raise PatchValidationError(
++                code="PATCH_POLICY_DENY",
++                stage="policy",
++                message=f"path matches deny_prefixes: {path}",
++                details={"rule": "deny_prefixes", "path": path},
++            )
++        lower = path.lower()
++        if any(lower.endswith(suffix) for suffix in resolved_policy.deny_suffixes):
++            raise PatchValidationError(
++                code="PATCH_POLICY_DENY",
++                stage="policy",
++                message=f"path matches deny_suffixes: {path}",
++                details={"rule": "deny_suffixes", "path": path},
++            )
++
++    return {
++        "touched_files": touched_files,
++        "added_lines": added_lines,
++        "policy": resolved_policy.to_dict(),
++    }
++
++
++def git_apply_check(repo_root: Path | str, diff_text: str) -> tuple[int, str, str]:
++    root = Path(repo_root).resolve()
++    if not root.exists():
++        raise PatchValidationError(
++            code="PATCH_ENV_INVALID",
++            stage="env",
++            message=f"repo_root does not exist: {root}",
++        )
++    proc = subprocess.run(
++        ["git", "apply", "--check", "--whitespace=nowarn", "-"],
++        cwd=str(root),
++        input=diff_text,
++        text=True,
++        encoding="utf-8",
++        errors="replace",
++        capture_output=True,
++    )
++    return proc.returncode, proc.stdout, proc.stderr
++
++
++def apply_patch(repo_root: Path | str, diff_text: str) -> tuple[int, str, str]:
++    root = Path(repo_root).resolve()
++    if not root.exists():
++        raise PatchValidationError(
++            code="PATCH_ENV_INVALID",
++            stage="env",
++            message=f"repo_root does not exist: {root}",
++        )
++    proc = subprocess.run(
++        ["git", "apply", "--whitespace=nowarn", "-"],
++        cwd=str(root),
++        input=diff_text,
++        text=True,
++        encoding="utf-8",
++        errors="replace",
++        capture_output=True,
++    )
++    return proc.returncode, proc.stdout, proc.stderr
++
++
++def apply_patch_safely(
++    repo_root: Path | str,
++    diff_text: str,
++    policy: PatchPolicy | dict[str, Any] | None = None,
++) -> PatchApplyResult:
++    try:
++        summary = validate_diff_against_policy(diff_text, policy, repo_root)
++    except PatchValidationError as exc:
++        return PatchApplyResult(
++            ok=False,
++            stage=exc.stage,
++            code=exc.code,
++            message=str(exc),
++            details=exc.details,
++        )
++
++    touched_files = [str(x) for x in summary.get("touched_files", [])]
++    added_lines = int(summary.get("added_lines", 0))
++
++    try:
++        rc_check, out_check, err_check = git_apply_check(repo_root, diff_text)
++    except PatchValidationError as exc:
++        return PatchApplyResult(
++            ok=False,
++            stage=exc.stage,
++            code=exc.code,
++            message=str(exc),
++            touched_files=touched_files,
++            added_lines=added_lines,
++            details=exc.details,
++        )
++    except FileNotFoundError:
++        return PatchApplyResult(
++            ok=False,
++            stage="git_check",
++            code="PATCH_ENV_INVALID",
++            message="git executable not found",
++            touched_files=touched_files,
++            added_lines=added_lines,
++        )
++
++    if rc_check != 0:
++        return PatchApplyResult(
++            ok=False,
++            stage="git_check",
++            code="PATCH_GIT_CHECK_FAIL",
++            message="git apply --check failed",
++            touched_files=touched_files,
++            added_lines=added_lines,
++            command="git apply --check --whitespace=nowarn -",
++            stdout=out_check,
++            stderr=err_check,
++        )
++
++    try:
++        rc_apply, out_apply, err_apply = apply_patch(repo_root, diff_text)
++    except PatchValidationError as exc:
++        return PatchApplyResult(
++            ok=False,
++            stage=exc.stage,
++            code=exc.code,
++            message=str(exc),
++            touched_files=touched_files,
++            added_lines=added_lines,
++            details=exc.details,
++        )
++    except FileNotFoundError:
++        return PatchApplyResult(
++            ok=False,
++            stage="apply",
++            code="PATCH_ENV_INVALID",
++            message="git executable not found",
++            touched_files=touched_files,
++            added_lines=added_lines,
++        )
++
++    if rc_apply != 0:
++        return PatchApplyResult(
++            ok=False,
++            stage="apply",
++            code="PATCH_APPLY_FAIL",
++            message="git apply failed",
++            touched_files=touched_files,
++            added_lines=added_lines,
++            command="git apply --whitespace=nowarn -",
++            stdout=out_apply,
++            stderr=err_apply,
++        )
++
++    return PatchApplyResult(
++        ok=True,
++        stage="apply",
++        code="PATCH_OK",
++        message="patch applied",
++        touched_files=touched_files,
++        added_lines=added_lines,
++        command="git apply --whitespace=nowarn -",
++        stdout=out_apply,
++        stderr=err_apply,
++        details={"policy": summary.get("policy", {})},
++    )
++

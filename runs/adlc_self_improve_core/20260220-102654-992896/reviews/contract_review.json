@@ -1,0 +1,37 @@
+{
+  "contract_guard": {
+    "pass": true,
+    "policy_path": "D:\\.c_projects\\adc\\ctcp\\contracts\\allowed_changes.yaml",
+    "reasons": [],
+    "touched_files": [],
+    "stats": {
+      "files": {},
+      "total_files": 0,
+      "added_lines": 0,
+      "deleted_lines": 0,
+      "total_lines": 0
+    },
+    "limits": {
+      "max_files": 10,
+      "max_added_lines": 800,
+      "max_deleted_lines": 800,
+      "max_total_lines": 800,
+      "allowed_paths": [
+        "scripts/",
+        "tools/",
+        "docs/",
+        "workflow_registry/",
+        "simlab/",
+        "tests/",
+        "contracts/",
+        "README.md"
+      ],
+      "blocked_paths": [
+        ".github/",
+        "runs/",
+        "build/",
+        "dist/"
+      ]
+    }
+  }
+}

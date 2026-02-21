@@ -1,0 +1,2 @@
+error: patch failed: scripts/workflows/adlc_self_improve_core.py:834
+error: scripts/workflows/adlc_self_improve_core.py: patch does not apply

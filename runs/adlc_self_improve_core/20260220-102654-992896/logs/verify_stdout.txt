@@ -1,0 +1,1 @@
+Remove-Item Env:SDDAI_PLAN_CMD -ErrorAction SilentlyContinue; Remove-Item Env:SDDAI_PATCH_CMD -ErrorAction SilentlyContinue; python -m unittest discover -s tests -p test_*.py

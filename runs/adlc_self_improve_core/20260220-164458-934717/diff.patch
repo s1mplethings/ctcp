@@ -1,0 +1,7 @@
+diff --git a/tests/forge_full_suite_bootstrap_round1.marker b/tests/forge_full_suite_bootstrap_round1.marker
+new file mode 100644
+index 0000000..af6a4f0
+--- /dev/null
++++ b/tests/forge_full_suite_bootstrap_round1.marker
+@@ -0,0 +1 @@
++BOOTSTRAP round=1 goal=forge-full-suite self optimize

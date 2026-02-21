@@ -1,0 +1,3 @@
+D:/.c_projects/adc/ctcp/runs/adlc_self_improve_core/20260220-164458-934717/diff.patch:7: trailing whitespace.
+BOOTSTRAP round=1 goal=forge-full-suite self optimize
+warning: 1 line adds whitespace errors.

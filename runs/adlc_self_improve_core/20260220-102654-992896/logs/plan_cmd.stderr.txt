@@ -1,0 +1,114 @@
+2026-02-20T02:26:55.941676Z  WARN codex_core::shell_snapshot: Failed to create shell snapshot for powershell: Shell snapshot not supported yet for PowerShell
+OpenAI Codex v0.100.0-alpha.10 (research preview)
+--------
+workdir: D:\.c_projects\adc\ctcp
+model: gpt-5.3-codex
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: auto
+session id: 019c78df-2543-7340-8b12-42f5b9b3fbb6
+--------
+user
+You are an external planner for an ADLC self-improve workflow.
+Return PLAN.md content only in plain markdown.
+Do not wrap in code fences.
+
+Goal: external-self-improve-real-codex
+Round: 1
+
+Constraints:
+# Constraints
+
+- policy: `D:/.c_projects/adc/ctcp/contracts/allowed_changes.yaml`
+- max_files: `10`
+- max_added_lines: `800`
+- max_deleted_lines: `800`
+- max_total_lines: `800`
+
+## Allowed Paths
+- `scripts/`
+- `tools/`
+- `docs/`
+- `workflow_registry/`
+- `simlab/`
+- `tests/`
+- `contracts/`
+- `README.md`
+
+## Blocked Paths
+- `.github/`
+- `runs/`
+- `build/`
+- `dist/`
+
+
+Fix brief:
+# Fix Brief
+
+- label: `BOOTSTRAP`
+- verify_rc: `N/A`
+
+## Minimal Next Actions
+- Use CONTEXT + CONSTRAINTS to generate a minimal external PLAN.
+- Use external PATCH command to emit unified diff starting with `diff --git`.
+
+## Related File References
+- goal: `external-self-improve-real-codex`
+
+
+Context evidence:
+# Context Evidence
+
+- query: `external-self-improve-real-codex`
+
+- No references found by Local Librarian.
+
+
+Requirements:
+- Keep changes minimal and policy-compliant.
+- Include concrete acceptance steps.
+mcp startup: no servers
+
+thinking
+**Generating external plan markdown**
+codex
+# Goal
+`external-self-improve-real-codex` (Round 1, `BOOTSTRAP`)
+
+## Intent
+Create the smallest auditable bootstrap update so this goal is explicitly tracked and discoverable, with no runtime/code-path behavior changes.
+
+## Planned Changes
+1. Add `docs/external-self-improve-real-codex.md`
+- Capture goal, round, constraints snapshot, assumptions, and next-round action checklist.
+
+2. Add `workflow_registry/external-self-improve-real-codex.round1.yaml`
+- Register round metadata: `goal`, `round`, `label`, `status`, `verify_rc: N/A`, and minimal `next_actions`.
+
+## Execution Rules
+1. Use external PATCH command and emit unified diff starting with `diff --git`.
+2. Touch only allowed paths.
+3. Stay within limits:
+- `max_files: 10`
+- `max_added_lines: 800`
+- `max_deleted_lines: 800`
+- `max_total_lines: 800`
+
+## Acceptance Steps
+1. Generate patch; verify first line is `diff --git`.
+2. Verify changed files are only:
+- `docs/`
+- `workflow_registry/`
+3. Verify diff budgets using `git diff --numstat` (or equivalent) are within all caps.
+4. Verify discoverability:
+- `rg -n "external-self-improve-real-codex|BOOTSTRAP" docs/ workflow_registry/`
+5. Mark Round 1 bootstrap complete with `verify_rc: N/A`.
+
+## Out of Scope
+- Runtime/source behavior changes in `scripts/`, `tools/`, `tests/`, or product code.
+- Any change under blocked paths: `.github/`, `runs/`, `build/`, `dist/`.
+- New dependencies or policy changes.
+tokens used
+4,471

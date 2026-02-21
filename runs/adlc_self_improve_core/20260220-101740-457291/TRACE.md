@@ -1,0 +1,6 @@
+- [2026-02-20T10:17:40] start run_id=20260220-101740-457291 goal=external-self-improve-live
+- [2026-02-20T10:17:40] mode {"require_external_plan": true, "require_external_patch": true, "no_mechanical_fallback": true, "allow_local": false}
+- [2026-02-20T10:17:40] round=1 phase=find query=external-self-improve-live
+- [2026-02-20T10:17:40] round=1 phase=plan
+- [2026-02-20T10:17:40] round=1 phase=build
+- [2026-02-20T10:17:41] [error] patch apply failed: git apply failed

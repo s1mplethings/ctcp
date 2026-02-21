@@ -1,0 +1,54 @@
+{
+  "contract_guard": {
+    "pass": false,
+    "policy_path": "D:\\.c_projects\\adc\\ctcp\\contracts\\allowed_changes.yaml",
+    "reasons": [
+      "path outside allowlist: warning: in the working copy of 'scripts/workflows/adlc_self_improve_core.py', LF will be replaced by CRLF the next time Git touches it",
+      "path outside allowlist: warning: in the working copy of 'tests/test_self_improve_external_requirements.py', LF will be replaced by CRLF the next time Git touches it"
+    ],
+    "touched_files": [
+      "scripts/workflows/adlc_self_improve_core.py",
+      "tests/test_self_improve_external_requirements.py",
+      "warning: in the working copy of 'scripts/workflows/adlc_self_improve_core.py', LF will be replaced by CRLF the next time Git touches it",
+      "warning: in the working copy of 'tests/test_self_improve_external_requirements.py', LF will be replaced by CRLF the next time Git touches it"
+    ],
+    "stats": {
+      "files": {
+        "scripts/workflows/adlc_self_improve_core.py": {
+          "added": 90,
+          "deleted": 4
+        },
+        "tests/test_self_improve_external_requirements.py": {
+          "added": 157,
+          "deleted": 1
+        }
+      },
+      "total_files": 4,
+      "added_lines": 247,
+      "deleted_lines": 5,
+      "total_lines": 252
+    },
+    "limits": {
+      "max_files": 10,
+      "max_added_lines": 800,
+      "max_deleted_lines": 800,
+      "max_total_lines": 800,
+      "allowed_paths": [
+        "scripts/",
+        "tools/",
+        "docs/",
+        "workflow_registry/",
+        "simlab/",
+        "tests/",
+        "contracts/",
+        "README.md"
+      ],
+      "blocked_paths": [
+        ".github/",
+        "runs/",
+        "build/",
+        "dist/"
+      ]
+    }
+  }
+}

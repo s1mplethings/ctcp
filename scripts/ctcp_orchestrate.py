@@ -32,6 +32,12 @@ except ModuleNotFoundError:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import ctcp_dispatch
 
+try:
+    from tools.patch_first import PatchPolicy, apply_patch_safely
+except ModuleNotFoundError:
+    sys.path.insert(0, str(ROOT))
+    from tools.patch_first import PatchPolicy, apply_patch_safely
+
 
 def now_iso() -> str:
     return dt.datetime.now().isoformat(timespec="seconds")
@@ -254,6 +260,58 @@ def resolve_max_iterations(run_dir: Path) -> tuple[int, str]:
     return DEFAULT_MAX_ITERATIONS, "default"
 
 
+def resolve_patch_policy(run_dir: Path) -> tuple[dict[str, Any] | None, str, str]:
+    policy_path = run_dir / "artifacts" / "patch_policy.json"
+    if not policy_path.exists():
+        return None, "default", ""
+    try:
+        raw = read_json(policy_path)
+    except Exception as exc:
+        return {}, "artifacts/patch_policy.json", f"invalid patch policy json: {exc}"
+    if not isinstance(raw, dict):
+        return {}, "artifacts/patch_policy.json", "patch policy json must be an object"
+    return raw, "artifacts/patch_policy.json", ""
+
+
+def write_patch_rejection_review(
+    run_dir: Path,
+    *,
+    patch_sha: str,
+    policy_source: str,
+    policy_note: str,
+    result: Any,
+) -> Path:
+    review = run_dir / "reviews" / "review_patch.md"
+    touched = [str(x) for x in getattr(result, "touched_files", [])]
+    touched_lines = "\n".join(f"- {x}" for x in touched) if touched else "- (none)"
+    lines = [
+        "# Patch Review",
+        "",
+        "Verdict: BLOCK",
+        f"Code: {getattr(result, 'code', '')}",
+        f"Stage: {getattr(result, 'stage', '')}",
+        f"Reason: {getattr(result, 'message', '')}",
+        f"Patch-SHA256: {patch_sha}",
+        f"Policy-Source: {policy_source}",
+        f"Added-Lines: {int(getattr(result, 'added_lines', 0) or 0)}",
+        "",
+        "Touched-Files:",
+        touched_lines,
+        "",
+        "Retry-Rule:",
+        "1. Only rewrite artifacts/diff.patch.",
+        "2. Output unified diff only, first non-empty line must start with diff --git.",
+        "3. Do not output prose, JSON, or full-file content dumps.",
+    ]
+    if policy_note:
+        lines.extend(["", f"Policy-Note: {policy_note}"])
+    details = getattr(result, "details", {})
+    if isinstance(details, dict) and details:
+        lines.extend(["", "Details:", json.dumps(details, ensure_ascii=False, indent=2)])
+    write_text(review, "\n".join(lines) + "\n")
+    return review
+
+
 def _tail_summary(text: str, *, max_lines: int = 8, max_chars: int = 500) -> str:
     lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
     if not lines:
@@ -419,6 +477,26 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
 
     if str(run_doc.get("status", "")).lower() == "pass":
         return {"state": "pass", "owner": "", "path": "", "reason": "run already pass"}
+
+    blocked_reason = str(run_doc.get("blocked_reason", "")).strip().lower()
+    if blocked_reason.startswith("patch_first_rejected"):
+        candidate = active_patch_candidate(run_dir)
+        if candidate is not None and patch_marker.exists():
+            try:
+                marker_doc = read_json(patch_marker)
+                marker_sha = str(marker_doc.get("patch_sha256", ""))
+                marker_rc = int(marker_doc.get("rc", 1))
+                candidate_sha = file_sha256(candidate)
+                if marker_rc != 0 and marker_sha == candidate_sha:
+                    return {
+                        "state": "blocked",
+                        "owner": "Fixer",
+                        "path": "artifacts/diff.patch,reviews/review_patch.md",
+                        "reason": "patch-first gate rejected current diff.patch; resubmit unified diff only",
+                    }
+            except Exception:
+                pass
+
     if str(run_doc.get("status", "")).lower() == "fail":
         candidate = active_patch_candidate(run_dir)
         if candidate is not None:
@@ -642,7 +720,8 @@ def ensure_fixer_outbox_prompt(run_dir: Path, goal: str, reason: str) -> tuple[s
             "",
             "Hard Rules:",
             "1. Only write artifacts/diff.patch in run_dir.",
-            "2. Do not modify repo files.",
+            "2. Output unified diff only (first non-empty line must be diff --git).",
+            "3. Do not modify repo files.",
             "",
         ]
     )
@@ -925,25 +1004,28 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
                 print("[ctcp_orchestrate] blocked: repo dirty before apply (clean workspace and retry)")
                 return 0
 
-            cmd = ["git", "apply", str(patch)]
-            rc, out, err = run_cmd(cmd, ROOT)
+            patch_text = patch.read_text(encoding="utf-8", errors="replace")
+            policy_doc, policy_source, policy_note = resolve_patch_policy(run_dir)
+            result = apply_patch_safely(ROOT, patch_text, policy_doc)
+
             out_log = run_dir / "logs" / "patch_apply.stdout.log"
             err_log = run_dir / "logs" / "patch_apply.stderr.log"
-            write_text(out_log, out)
-            write_text(err_log, err)
+            write_text(out_log, result.stdout or "")
+            write_text(err_log, result.stderr or "")
+            trace_cmd = result.command.split() if result.command else [f"patch_first:{result.stage}"]
             append_command_trace(
                 run_dir,
                 phase="patch_apply",
-                cmd=cmd,
-                rc=rc,
-                stdout=out,
-                stderr=err,
+                cmd=trace_cmd,
+                rc=0 if result.ok else 1,
+                stdout=result.stdout,
+                stderr=result.stderr,
                 stdout_log=out_log,
                 stderr_log=err_log,
             )
 
-            if rc != 0 and prev_ok and prev_sha and prev_sha != patch_sha:
-                if last_applied_patch.exists():
+            if (not result.ok) and prev_ok and prev_sha and prev_sha != patch_sha:
+                if last_applied_patch.exists() and result.code in {"PATCH_GIT_CHECK_FAIL", "PATCH_APPLY_FAIL"}:
                     append_event(
                         run_dir,
                         "Local Orchestrator",
@@ -976,19 +1058,19 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
                             cmd=" ".join(revert_cmd),
                             rc=rr,
                         )
-                        cmd = ["git", "apply", str(patch)]
-                        rc, out, err = run_cmd(cmd, ROOT)
+                        result = apply_patch_safely(ROOT, patch_text, policy_doc)
                         out_log = run_dir / "logs" / "patch_apply_retry.stdout.log"
                         err_log = run_dir / "logs" / "patch_apply_retry.stderr.log"
-                        write_text(out_log, out)
-                        write_text(err_log, err)
+                        write_text(out_log, result.stdout or "")
+                        write_text(err_log, result.stderr or "")
+                        trace_cmd = result.command.split() if result.command else [f"patch_first:{result.stage}"]
                         append_command_trace(
                             run_dir,
                             phase="patch_apply_retry",
-                            cmd=cmd,
-                            rc=rc,
-                            stdout=out,
-                            stderr=err,
+                            cmd=trace_cmd,
+                            rc=0 if result.ok else 1,
+                            stdout=result.stdout,
+                            stderr=result.stderr,
                             stdout_log=out_log,
                             stderr_log=err_log,
                         )
@@ -1002,24 +1084,168 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
                             rc=rr,
                         )
 
+            rc = 0 if result.ok else 1
             write_json(
                 run_dir / "artifacts" / "patch_apply.json",
                 {
                     "patch_sha256": patch_sha,
-                    "cmd": " ".join(cmd),
+                    "cmd": result.command or f"patch_first:{result.stage}",
                     "rc": rc,
+                    "stage": result.stage,
+                    "code": result.code,
+                    "message": result.message,
+                    "touched_files": list(result.touched_files),
+                    "added_lines": int(result.added_lines),
                     "stdout_log": out_log.as_posix(),
                     "stderr_log": err_log.as_posix(),
                     "applied_at": now_iso(),
                 },
             )
-            append_event(run_dir, "Local Orchestrator", "patch_apply", "artifacts/diff.patch", rc=rc)
-            if rc != 0:
+            append_event(
+                run_dir,
+                "Local Orchestrator",
+                "patch_apply",
+                "artifacts/diff.patch",
+                rc=rc,
+                stage=result.stage,
+                code=result.code,
+            )
+            if not result.ok:
+                review_path = write_patch_rejection_review(
+                    run_dir,
+                    patch_sha=patch_sha,
+                    policy_source=policy_source,
+                    policy_note=policy_note,
+                    result=result,
+                )
+                write_json(
+                    run_dir / "artifacts" / "patch_rejection.json",
+                    {
+                        "ts": now_iso(),
+                        "patch_sha256": patch_sha,
+                        "policy_source": policy_source,
+                        "policy_note": policy_note,
+                        "result": result.to_dict(),
+                        "review_path": review_path.relative_to(run_dir).as_posix(),
+                    },
+                )
+
+                max_iterations, max_source = resolve_max_iterations(run_dir)
+                verify_iteration = int(run_doc.get("verify_iterations", 0) or 0)
+                paths = {
+                    "trace": "TRACE.md",
+                    "verify_report": "artifacts/verify_report.json",
+                    "bundle": "failure_bundle.zip",
+                    "patch": "artifacts/diff.patch",
+                    "patch_review": "reviews/review_patch.md",
+                    "stdout_log": out_log.relative_to(run_dir).as_posix(),
+                    "stderr_log": err_log.relative_to(run_dir).as_posix(),
+                }
+                if (run_dir / "artifacts" / "PLAN.md").exists():
+                    paths["plan"] = "artifacts/PLAN.md"
+                write_json(
+                    run_dir / "artifacts" / "verify_report.json",
+                    {
+                        "result": "FAIL",
+                        "gate": "patch_first",
+                        "iteration": verify_iteration,
+                        "max_iterations": max_iterations,
+                        "max_iterations_source": max_source,
+                        "patch_sha256": patch_sha,
+                        "commands": [
+                            {
+                                "cmd": result.command or f"patch_first:{result.stage}",
+                                "exit_code": 1,
+                                "stdout_log": out_log.relative_to(run_dir).as_posix(),
+                                "stderr_log": err_log.relative_to(run_dir).as_posix(),
+                            }
+                        ],
+                        "failures": [
+                            {
+                                "kind": "patch_first",
+                                "id": result.code,
+                                "message": result.message,
+                            }
+                        ],
+                        "paths": paths,
+                        "artifacts": paths,
+                    },
+                )
+
                 run_doc["status"] = "blocked"
-                run_doc["blocked_reason"] = "patch_apply_failed"
+                run_doc["blocked_reason"] = f"patch_first_rejected:{result.code}"
                 save_run_doc(run_dir, run_doc)
-                print("[ctcp_orchestrate] blocked: patch apply failed (see logs/patch_apply.*.log)")
-                return 0
+                append_event(
+                    run_dir,
+                    "Local Orchestrator",
+                    "PATCH_REJECTED",
+                    "artifacts/diff.patch",
+                    code=result.code,
+                    stage=result.stage,
+                    review=review_path.relative_to(run_dir).as_posix(),
+                )
+
+                bundle, mode_before_dispatch = ensure_failure_bundle(run_dir)
+                fail_gate = current_gate(run_dir, run_doc)
+                dispatch = ctcp_dispatch.dispatch_once(run_dir, run_doc, fail_gate, ROOT)
+                dispatch_status = str(dispatch.get("status", ""))
+                if dispatch_status == "outbox_created":
+                    outbox_path = str(dispatch.get("path", ""))
+                    append_event(
+                        run_dir,
+                        str(dispatch.get("role", "fixer")),
+                        "OUTBOX_PROMPT_CREATED",
+                        outbox_path,
+                        target_path=str(dispatch.get("target_path", "")),
+                        action=str(dispatch.get("action", "")),
+                        provider=str(dispatch.get("provider", "")),
+                    )
+                    print(f"[ctcp_orchestrate] outbox prompt created: {outbox_path}")
+                elif dispatch_status == "outbox_exists":
+                    outbox_path = str(dispatch.get("path", ""))
+                    if outbox_path:
+                        print(f"[ctcp_orchestrate] waiting for outbox response: {outbox_path}")
+                elif dispatch_status == "budget_exceeded":
+                    append_event(
+                        run_dir,
+                        "Local Orchestrator",
+                        "STOP_BUDGET_EXCEEDED",
+                        "artifacts/dispatch_config.json",
+                        reason=str(dispatch.get("reason", "")),
+                        provider=str(dispatch.get("provider", "")),
+                    )
+                fallback_path, created_fallback = ensure_fixer_outbox_prompt(
+                    run_dir,
+                    goal=goal,
+                    reason=str(run_doc.get("blocked_reason", "patch_first_rejected")),
+                )
+                if created_fallback:
+                    append_event(
+                        run_dir,
+                        "fixer",
+                        "OUTBOX_PROMPT_CREATED",
+                        fallback_path,
+                        target_path="artifacts/diff.patch",
+                        action="fix_patch",
+                        provider="manual_outbox_fallback",
+                    )
+                bundle, mode_after_dispatch = ensure_failure_bundle(run_dir, require_outbox_prompt=True)
+                final_mode = (
+                    mode_after_dispatch
+                    if mode_after_dispatch in {"created", "recreated"}
+                    else mode_before_dispatch
+                )
+                append_event(
+                    run_dir,
+                    "Local Orchestrator",
+                    "BUNDLE_CREATED",
+                    "failure_bundle.zip",
+                    mode=final_mode,
+                )
+                write_pointer(LAST_BUNDLE_POINTER, bundle)
+                print(f"[ctcp_orchestrate] blocked: patch-first gate rejected diff.patch, bundle={bundle}")
+                return 1
+
             shutil.copy2(patch, run_dir / "artifacts" / "last_applied.patch")
             steps += 1
             continue

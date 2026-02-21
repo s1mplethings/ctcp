@@ -1,0 +1,7 @@
+Invoke-ExternalChecked : [verify_repo] FAILED: lite scenario replay (exit=1)
+At D:\.c_projects\adc\ctcp\scripts\verify_repo.ps1:230 char:7
++       Invoke-ExternalChecked -Label "lite scenario replay" -Command {
++       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException,Invoke-ExternalChecked
+ 

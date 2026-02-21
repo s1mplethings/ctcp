@@ -1,0 +1,30 @@
+{
+  "run_id": "20260220-164458-934717",
+  "phase": "done",
+  "round": 1,
+  "artifacts": {
+    "run_dir": "runs/adlc_self_improve_core/20260220-164458-934717",
+    "analysis": "outbox/analysis.md",
+    "context": "outbox/CONTEXT.md",
+    "constraints": "outbox/CONSTRAINTS.md",
+    "fix_brief": "outbox/FIX_BRIEF.md",
+    "plan": "outbox/PLAN.md",
+    "patch": "diff.patch",
+    "verify_stdout": "logs/verify_stdout.txt",
+    "verify_stderr": "logs/verify_stderr.txt",
+    "contract_review": "reviews/contract_review.json"
+  },
+  "last_verify": {
+    "rc": 0,
+    "paths": {
+      "stdout": "logs/verify_stdout.txt",
+      "stderr": "logs/verify_stderr.txt"
+    },
+    "summary": "ld_lite\n[verify_repo] cmake build (headless lite)\n适用于 .NET Framework MSBuild 版本 17.14.8+a7a4d5af0\n\n  ctcp_headless.vcxproj -> D:\\.c_projects\\adc\\ctcp\\build_lite\\Release\\ctcp_headless.exe\n[verify_repo] ctest lite\nTest project D:/.c_projects/adc/ctcp/build_lite\n    Start 2: verify_tools_selftest\n    Start 1: headless_smoke\n1/2 Test #2: verify_tools_selftest ............   Passed    0.12 sec\n2/2 Test #1: headless_smoke ...................   Passed    0.15 sec\n\n100% tests passed, 0 tests failed out of 2\n\nTotal Test time (real) =   0.17 sec\n[verify_repo] workflow gate (workflow checks)\n[workflow_checks] ok\n[verify_repo] contract checks\n[contract_checks] schema presence ok\n[contract_checks] meta schema_version ok\n[contract_checks] readme links ok\n[contract_checks] unique Graph Spider implementation ok\n[verify_repo] doc index check (sync doc links --check)\n[sync_doc_links] ok\n[verify_repo] lite scenario replay\n{\"run_dir\": \"C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260220-164848\", \"passed\": 8, \"failed\": 0}\n[verify_repo] python unit tests\n[verify_repo] OK\n\n.....................\n----------------------------------------------------------------------\nRan 21 tests in 8.310s\n\nOK\n"
+  },
+  "last_error": "",
+  "timestamps": {
+    "created_at": "2026-02-20T16:44:58",
+    "updated_at": "2026-02-20T16:50:18"
+  }
+}

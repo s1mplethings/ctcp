@@ -6,6 +6,7 @@
 ## Scope
 - Map gate state -> role/action/target artifact.
 - Invoke `manual_outbox` or constrained `local_exec`.
+- When patch-first gate rejects `artifacts/diff.patch`, dispatch fixer retry with patch-only constraints.
 
 ## Non-Goals
 - Network/API execution.
@@ -20,6 +21,7 @@
 ## Outputs
 - `${run_dir}/outbox/*.md` prompts for manual/API roles.
 - provider execution events in `${run_dir}/events.jsonl`.
+- Rejection feedback paths in outbox prompt metadata (for example `reviews/review_patch.md`).
 
 ## Dependencies
 - Orchestrator state machine.
@@ -32,6 +34,7 @@
 ## Failure Evidence
 - Dispatcher failures must be visible in events and trace.
 - Budget-exceeded path must be explicit and reproducible.
+- Patch rejection retry loop must keep candidate patch + reject reason auditable.
 
 ## Owner Roles
 - Local Orchestrator dispatches.

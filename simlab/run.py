@@ -96,6 +96,7 @@ def copy_repo(src: Path, dst: Path) -> None:
             if name in {
                 ".git",
                 ".venv",
+                "runs",
                 "build",
                 "build_lite",
                 "build_verify",

@@ -22,6 +22,7 @@ SKIP_DIR_NAMES = {
     ".git",
     ".hg",
     ".svn",
+    ".agent_private",
     "__pycache__",
     "runs",
     "_runs",
@@ -54,6 +55,15 @@ SKIP_SUFFIXES = {
     ".lib",
     ".pdf",
 }
+
+
+def _rg_exclude_globs() -> list[str]:
+    globs: list[str] = []
+    for name in sorted(SKIP_DIR_NAMES):
+        globs.extend(["--glob", f"!**/{name}/**"])
+    for suffix in sorted(SKIP_SUFFIXES):
+        globs.extend(["--glob", f"!**/*{suffix}"])
+    return globs
 
 
 def _to_rel_posix(path: Path, repo_root: Path) -> str:
@@ -116,6 +126,7 @@ def _search_with_rg(repo_root: Path, query: str) -> list[dict[str, Any]]:
         "--fixed-strings",
         "--color",
         "never",
+        *_rg_exclude_globs(),
         query,
         *roots,
     ]
@@ -242,4 +253,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

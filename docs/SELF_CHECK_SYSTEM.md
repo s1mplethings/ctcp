@@ -23,3 +23,19 @@
 - `{REPO_ROOT}`：仓库根目录
 
 脚本会把 stdout 中从 `diff --git` 开始的内容提取为 patch 并尝试 `git apply`。
+
+## OpenAI API 外部化（ADLC core）
+如果你希望明确走自己的 OpenAI API 计费通道，不走 `codex exec` 会话：
+
+1) 设置 API Key：
+- `OPENAI_API_KEY`
+
+2) 可选设置模型：
+- `SDDAI_OPENAI_MODEL`（默认 `gpt-4.1-mini`）
+- 或分别设置 `SDDAI_OPENAI_PLAN_MODEL` / `SDDAI_OPENAI_PATCH_MODEL`
+
+3) 设置命令模板（支持 workflow 占位符）：
+- `SDDAI_PLAN_CMD`:
+  - `python scripts/externals/openai_plan_api.py "{CONTEXT_PATH}" "{CONSTRAINTS_PATH}" "{FIX_BRIEF_PATH}" "{GOAL}" "{ROUND}" "{REPO_ROOT}"`
+- `SDDAI_PATCH_CMD`:
+  - `python scripts/externals/openai_patch_api.py "{PLAN_PATH}" "{CONTEXT_PATH}" "{CONSTRAINTS_PATH}" "{FIX_BRIEF_PATH}" "{GOAL}" "{ROUND}" "{REPO_ROOT}"`

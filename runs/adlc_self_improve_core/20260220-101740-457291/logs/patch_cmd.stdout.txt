@@ -1,0 +1,6 @@
+diff --git a/scripts/workflows/adlc_self_improve_core.py b/scripts/workflows/adlc_self_improve_core.py
+@@ -834,3 +834,4 @@
+ 
+ if __name__ == "__main__":
+     raise SystemExit(main())
++# external-self-improve marker: round=1 at 2026-02-20 10:17:40

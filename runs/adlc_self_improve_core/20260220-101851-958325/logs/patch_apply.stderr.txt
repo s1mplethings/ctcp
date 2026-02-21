@@ -1,0 +1,7 @@
+D:/.c_projects/adc/ctcp/runs/adlc_self_improve_core/20260220-101851-958325/diff.patch:6: trailing whitespace.
+external self improve marker
+D:/.c_projects/adc/ctcp/runs/adlc_self_improve_core/20260220-101851-958325/diff.patch:7: trailing whitespace.
+round=1
+D:/.c_projects/adc/ctcp/runs/adlc_self_improve_core/20260220-101851-958325/diff.patch:8: trailing whitespace.
+generated_at=20260220_101852
+warning: 3 lines add whitespace errors.

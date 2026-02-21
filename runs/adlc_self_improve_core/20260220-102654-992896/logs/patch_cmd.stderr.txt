@@ -1,0 +1,335 @@
+2026-02-20T02:27:37.570819Z  WARN codex_core::shell_snapshot: Failed to create shell snapshot for powershell: Shell snapshot not supported yet for PowerShell
+OpenAI Codex v0.100.0-alpha.10 (research preview)
+--------
+workdir: D:\.c_projects\adc\ctcp
+model: gpt-5.3-codex
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: auto
+session id: 019c78df-c7e1-7c80-a558-6c55f11af15c
+--------
+user
+You are an external patch generator.
+Output MUST be unified diff only, and MUST start with: diff --git
+No explanations, no markdown fences, no extra text.
+
+Goal: external-self-improve-real-codex
+Round: 1
+
+Patch policy:
+- Make one minimal safe change.
+- Prefer adding a marker file under tests/ with name not matching test_*.py.
+- Keep contract_guard limits.
+
+Plan:
+# Goal
+`external-self-improve-real-codex` (Round 1, `BOOTSTRAP`)
+
+## Intent
+Create the smallest auditable bootstrap update so this goal is explicitly tracked and discoverable, with no runtime/code-path behavior changes.
+
+## Planned Changes
+1. Add `docs/external-self-improve-real-codex.md`
+- Capture goal, round, constraints snapshot, assumptions, and next-round action checklist.
+
+2. Add `workflow_registry/external-self-improve-real-codex.round1.yaml`
+- Register round metadata: `goal`, `round`, `label`, `status`, `verify_rc: N/A`, and minimal `next_actions`.
+
+## Execution Rules
+1. Use external PATCH command and emit unified diff starting with `diff --git`.
+2. Touch only allowed paths.
+3. Stay within limits:
+- `max_files: 10`
+- `max_added_lines: 800`
+- `max_deleted_lines: 800`
+- `max_total_lines: 800`
+
+## Acceptance Steps
+1. Generate patch; verify first line is `diff --git`.
+2. Verify changed files are only:
+- `docs/`
+- `workflow_registry/`
+3. Verify diff budgets using `git diff --numstat` (or equivalent) are within all caps.
+4. Verify discoverability:
+- `rg -n "external-self-improve-real-codex|BOOTSTRAP" docs/ workflow_registry/`
+5. Mark Round 1 bootstrap complete with `verify_rc: N/A`.
+
+## Out of Scope
+- Runtime/source behavior changes in `scripts/`, `tools/`, `tests/`, or product code.
+- Any change under blocked paths: `.github/`, `runs/`, `build/`, `dist/`.
+- New dependencies or policy changes.
+
+
+Constraints:
+# Constraints
+
+- policy: `D:/.c_projects/adc/ctcp/contracts/allowed_changes.yaml`
+- max_files: `10`
+- max_added_lines: `800`
+- max_deleted_lines: `800`
+- max_total_lines: `800`
+
+## Allowed Paths
+- `scripts/`
+- `tools/`
+- `docs/`
+- `workflow_registry/`
+- `simlab/`
+- `tests/`
+- `contracts/`
+- `README.md`
+
+## Blocked Paths
+- `.github/`
+- `runs/`
+- `build/`
+- `dist/`
+
+
+Fix brief:
+# Fix Brief
+
+- label: `BOOTSTRAP`
+- verify_rc: `N/A`
+
+## Minimal Next Actions
+- Use CONTEXT + CONSTRAINTS to generate a minimal external PLAN.
+- Use external PATCH command to emit unified diff starting with `diff --git`.
+
+## Related File References
+- goal: `external-self-improve-real-codex`
+
+
+Context:
+# Context Evidence
+
+- query: `external-self-improve-real-codex`
+
+- No references found by Local Librarian.
+
+mcp startup: no servers
+
+thinking
+**Planning file existence check**
+codex
+Reviewing the workspace to confirm whether the target files already exist and to craft a minimal, valid unified diff that only touches allowed paths.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'rg --files docs workflow_registry tests README.md 2>$null' in D:\.c_projects\adc\ctcpexec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Get-ChildItem -Name' in D:\.c_projects\adc\ctcp exited -1 in 0ms:
+`"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'rg --files docs workflow_registry tests README.md 2>$null'` rejected: blocked by policy
+ succeeded in 2.35s:
+.codex
+.github
+.pytest_cache
+.venv
+agents
+ai
+ai_context
+artifacts
+build
+build_lite
+build_verify
+contracts
+ctcp
+dist
+docs
+executor
+generated_projects
+include
+issue_memory
+meta
+
+thinking
+**Checking file existence approach**
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Get-ChildItem -Recurse -File docs | Select-Object -ExpandProperty FullName' in D:\.c_projects\adc\ctcpexec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Get-ChildItem -Recurse -File workflow_registry | Select-Object -ExpandProperty FullName' in D:\.c_projects\adc\ctcp succeeded in 2.41s:
+D:\.c_projects\adc\ctcp\docs\00_CORE.md
+D:\.c_projects\adc\ctcp\docs\00_overview.md
+D:\.c_projects\adc\ctcp\docs\01_architecture.md
+D:\.c_projects\adc\ctcp\docs\02_workflow.md
+D:\.c_projects\adc\ctcp\docs\03_quality_gates.md
+D:\.c_projects\adc\ctcp\docs\04_project_detection.md
+D:\.c_projects\adc\ctcp\docs\05_navigation.md
+D:\.c_projects\adc\ctcp\docs\06_graph_map.md
+D:\.c_projects\adc\ctcp\docs\07_layout_and_views.md
+D:\.c_projects\adc\ctcp\docs\08_summary_drilldown.md
+D:\.c_projects\adc\ctcp\docs\10_team_mode.md
+D:\.c_projects\adc\ctcp\docs\10_workflow.md
+D:\.c_projects\adc\ctcp\docs\11_webengine_resources.md
+D:\.c_projects\adc\ctcp\docs\12_modules_index.md
+D:\.c_projects\adc\ctcp\docs\13_contracts_index.md
+D:\.c_projects\adc\ctcp\docs\15_performance_rules.md
+D:\.c_projects\adc\ctcp\docs\16_visual_rules.md
+D:\.c_projects\adc\ctcp\docs\17_interactions.md
+D:\.c_projects\adc\ctcp\docs\18_back_and_preview.md
+D:\.c_projects\adc\ctcp\docs\19_lod_rendering.md
+ succeeded in 2.56s:
+D:\.c_projects\adc\ctcp\workflow_registry\index.json
+D:\.c_projects\adc\ctcp\workflow_registry\adlc_self_improve_core\recipe.yaml
+D:\.c_projects\adc\ctcp\workflow_registry\wf_minimal_patch_verify\recipe.yaml
+Error while loading conda entry point: conda-libmamba-solver (module 'libmambapy' has no attribute 'QueryFormat')
+Error while loading conda entry point: conda-libmamba-solver (module 'libmambapy' has no attribute 'QueryFormat')
+
+thinking
+**Inspecting docs and workflow formats**
+codex
+I confirmed the target files do not exist yet. Next I��m checking nearby file conventions so the added bootstrap files follow existing repo style while staying minimal.
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Get-Content -Raw workflow_registry/wf_minimal_patch_verify/recipe.yaml' in D:\.c_projects\adc\ctcpexec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Get-Content -Raw docs/25_project_plan.md' in D:\.c_projects\adc\ctcpexec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Get-Content -Raw workflow_registry/adlc_self_improve_core/recipe.yaml' in D:\.c_projects\adc\ctcp succeeded in 2.52s:
+# Project Plan (Foundation-First)
+
+This document defines the project-level execution model for CTCP.
+Authoritative contract precedence remains:
+`docs/00_CORE.md` > other docs.
+
+## Three Planning Scopes
+
+1. Project queue (long-horizon): `meta/backlog/execution_queue.json`
+- Single source of truth for layered roadmap (`L0`..`L4`), dependencies, status, and DoD.
+- Used to choose what should be worked on next at project scale.
+
+2. Current task card (single work item): `meta/tasks/CURRENT.md`
+- One active queue item at a time.
+- Holds the concrete implementation/verification plan for this turn.
+- Must map to exactly one queue item id.
+
+3. Run-level execution plan (external run_dir): `${CTCP_RUNS_ROOT}/<repo_slug>/<run_id>/artifacts/PLAN.md`
+- Runtime plan for one ADLC execution loop.
+- Must follow run artifact contract and review gates.
+ succeeded in 2.73s:
+id: wf_minimal_patch_verify
+version: 1.0.0
+description: Minimal fallback workflow for patch + lite verify with evidence bundle.
+
+inputs:
+  required:
+    - goal
+    - repo_root
+    - workflow_registry/index.json
+  optional:
+    - constraints
+    - previous_runs
+
+outputs:
+  required:
+    - artifacts/find_result.json
+    - artifacts/PLAN.md
+    - artifacts/diff.patch
+    - TRACE.md
+    - artifacts/verify_report.md
+ succeeded in 2.93s:
+id: adlc_self_improve_core
+version: 0.1.0
+description: Minimal self-improve core loop with local librarian, contract guard, and verify contrast loop.
+
+inputs:
+  required:
+    - goal
+    - repo_root
+    - workflow_registry/index.json
+  optional:
+    - max_rounds
+    - patch_cmd
+
+outputs:
+  required:
+    - runs/adlc_self_improve_core/<run_id>/state.json
+    - runs/adlc_self_improve_core/<run_id>/outbox/PLAN.md
+    - runs/adlc_self_improve_core/<run_id>/outbox/CONTEXT.md
+    - runs/adlc_self_improve_core/<run_id>/outbox/CONSTRAINTS.md
+    - runs/adlc_self_improve_core/<run_id>/outbox/FIX_BRIEF.md
+
+thinking
+**Planning minimal patch content**
+exec
+"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command 'Get-Content -Raw contracts/allowed_changes.yaml' in D:\.c_projects\adc\ctcp succeeded in 2.26s:
+allowed_paths:
+  - scripts/
+  - tools/
+  - docs/
+  - workflow_registry/
+  - simlab/
+  - tests/
+  - contracts/
+  - README.md
+
+blocked_paths:
+  - .github/
+  - runs/
+  - build/
+  - dist/
+
+max_files: 10
+max_added_lines: 800
+max_deleted_lines: 800
+max_total_lines: 800
+
+thinking
+**Finalizing minimal two-file patch**
+codex
+diff --git a/docs/external-self-improve-real-codex.md b/docs/external-self-improve-real-codex.md
+new file mode 100644
+index 0000000..c8e6f3a
+--- /dev/null
++++ b/docs/external-self-improve-real-codex.md
+@@ -0,0 +1,32 @@
++# external-self-improve-real-codex
++
++## Round 1 BOOTSTRAP
++- goal: `external-self-improve-real-codex`
++- round: `1`
++- label: `BOOTSTRAP`
++- status: `complete`
++- verify_rc: `N/A`
++
++## Intent
++Create the smallest auditable bootstrap update so this goal is explicitly tracked and discoverable, with no runtime/code-path behavior changes.
++
++## Constraints Snapshot
++- policy: `D:/.c_projects/adc/ctcp/contracts/allowed_changes.yaml`
++- max_files: `10`
++- max_added_lines: `800`
++- max_deleted_lines: `800`
++- max_total_lines: `800`
++- allowed_paths: `scripts/`, `tools/`, `docs/`, `workflow_registry/`, `simlab/`, `tests/`, `contracts/`, `README.md`
++- blocked_paths: `.github/`, `runs/`, `build/`, `dist/`
++
++## Assumptions
++1. Local context evidence had no prior references for `external-self-improve-real-codex`.
++2. Round 1 is documentation/registry bootstrap only.
++3. Runtime/source behavior changes remain out of scope in this round.
++
++## Next-Round Action Checklist
++- [ ] Build Round 2 external PLAN from current CONTEXT and CONSTRAINTS.
++- [ ] Generate a minimal safe patch that stays within contract_guard limits.
++- [ ] Re-run path-scope and diff-budget checks before merge.
++- [ ] Set `verify_rc` to a concrete value when verification becomes applicable.
++diff --git a/workflow_registry/external-self-improve-real-codex.round1.yaml b/workflow_registry/external-self-improve-real-codex.round1.yaml
++new file mode 100644
++index 0000000..818ff0c
++--- /dev/null
+++++ b/workflow_registry/external-self-improve-real-codex.round1.yaml
++@@ -0,0 +1,16 @@
+++goal: external-self-improve-real-codex
+++round: 1
+++label: BOOTSTRAP
+++status: complete
+++verify_rc: N/A
+++summary: Round 1 bootstrap registration for explicit tracking and discoverability.
+++constraints:
+++  policy: D:/.c_projects/adc/ctcp/contracts/allowed_changes.yaml
+++  max_files: 10
+++  max_added_lines: 800
+++  max_deleted_lines: 800
+++  max_total_lines: 800
+++next_actions:
+++  - Use CONTEXT and CONSTRAINTS to generate the next external PLAN.
+++  - Emit unified diff output with minimal safe scope.
+++  - Keep all changes within allowed paths and contract_guard limits.
+tokens used
+10,003

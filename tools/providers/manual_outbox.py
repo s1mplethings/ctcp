@@ -105,6 +105,12 @@ def _render_prompt(
     template_name = TEMPLATE_BY_ROLE_ACTION.get((role, action), "chair_plan_draft.md")
     template_body = _read_template(repo_root, template_name)
     max_outbox_prompts = _max_outbox_prompts(config)
+    patch_only_rule = ""
+    if target_path.endswith("diff.patch"):
+        patch_only_rule = (
+            "5. If target is artifacts/diff.patch, output unified diff only "
+            "(first non-empty line: diff --git)."
+        )
 
     missing_lines = "\n".join(f"- {p}" for p in missing_paths) if missing_paths else "- (none)"
     budget_lines = "\n".join(
@@ -136,7 +142,8 @@ def _render_prompt(
         f"1. You may only write to `{run_target}`.\n"
         "2. Do not modify any file under repo root.\n"
         "3. Do not call network/API tools; manual offline execution only.\n"
-        "4. Follow docs/30_artifact_contracts.md output requirements exactly.\n\n"
+        "4. Follow docs/30_artifact_contracts.md output requirements exactly.\n"
+        f"{patch_only_rule}\n\n"
         "---\n\n"
         f"{template_body}\n"
     )
@@ -190,4 +197,3 @@ def execute(
     )
     prompt_path.write_text(prompt_text, encoding="utf-8")
     return {"status": "outbox_created", "path": rel_path}
-

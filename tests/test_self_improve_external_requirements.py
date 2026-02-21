@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -14,10 +15,16 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / "scripts" / "workflows" / "adlc_self_improve_core.py"
 
 
-def _run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+def _run(
+    cmd: list[str],
+    cwd: Path,
+    *,
+    env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         cmd,
         cwd=str(cwd),
+        env=env,
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -259,6 +266,155 @@ class SelfImproveExternalRequirementTests(unittest.TestCase):
             )
             state = json.loads((run_dir / "state.json").read_text(encoding="utf-8"))
             self.assertEqual(state.get("phase"), "done")
+
+    def test_patch_output_with_trailing_noise_is_sanitized(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            _init_repo(repo)
+            verify_script = _write(repo, "verify_ok.py", "raise SystemExit(0)\n")
+            plan_script = _write(
+                repo,
+                "plan_ok.py",
+                "print('# PLAN FROM EXTERNAL')\n",
+            )
+            patch_script = _write(
+                repo,
+                "patch_noisy.py",
+                "\n".join(
+                    [
+                        "print('diff --git a/docs/target.txt b/docs/target.txt')",
+                        "print('--- a/docs/target.txt')",
+                        "print('+++ b/docs/target.txt')",
+                        "print('@@ -1 +1 @@')",
+                        "print('-hello')",
+                        "print('+hello noisy-patched')",
+                        "print('')",
+                        "print('extra line not in patch format')",
+                        "",
+                    ]
+                ),
+            )
+            verify_cmd = f"python {verify_script.name}"
+            plan_cmd = f'python "{plan_script.name}"'
+            patch_cmd = f'python "{patch_script.name}"'
+
+            proc = _run(
+                _workflow_cmd(
+                    repo=repo,
+                    run_id="r4",
+                    verify_cmd=verify_cmd,
+                    plan_cmd=plan_cmd,
+                    patch_cmd=patch_cmd,
+                ),
+                repo,
+            )
+            self.assertEqual(proc.returncode, 0, msg=f"stdout={proc.stdout}\nstderr={proc.stderr}")
+
+            run_dir = repo / "runs" / "adlc_self_improve_core" / "r4"
+            patch_saved = (run_dir / "diff.patch").read_text(encoding="utf-8")
+            self.assertNotIn("extra line not in patch format", patch_saved)
+            self.assertEqual(
+                (repo / "docs" / "target.txt").read_text(encoding="utf-8"),
+                "hello noisy-patched\n",
+            )
+
+    def test_verify_does_not_inherit_external_cmd_env_vars(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            _init_repo(repo)
+            verify_script = _write(
+                repo,
+                "verify_env_guard.py",
+                "\n".join(
+                    [
+                        "import os",
+                        "leaked = bool(os.environ.get('SDDAI_PLAN_CMD') or os.environ.get('SDDAI_PATCH_CMD'))",
+                        "raise SystemExit(9 if leaked else 0)",
+                        "",
+                    ]
+                ),
+            )
+            plan_script = _write(repo, "plan_ok.py", "print('# PLAN FROM EXTERNAL')\n")
+            patch_script = _write(
+                repo,
+                "patch_ok.py",
+                "\n".join(
+                    [
+                        "print('diff --git a/docs/target.txt b/docs/target.txt')",
+                        "print('--- a/docs/target.txt')",
+                        "print('+++ b/docs/target.txt')",
+                        "print('@@ -1 +1 @@')",
+                        "print('-hello')",
+                        "print('+hello env-guard-patched')",
+                        "",
+                    ]
+                ),
+            )
+            verify_cmd = f"python {verify_script.name}"
+            plan_cmd = f'python "{plan_script.name}"'
+            patch_cmd = f'python "{patch_script.name}"'
+            leaked_env = dict(os.environ)
+            leaked_env["SDDAI_PLAN_CMD"] = "LEAK_TEST_PLAN"
+            leaked_env["SDDAI_PATCH_CMD"] = "LEAK_TEST_PATCH"
+
+            proc = _run(
+                _workflow_cmd(
+                    repo=repo,
+                    run_id="r5",
+                    verify_cmd=verify_cmd,
+                    plan_cmd=plan_cmd,
+                    patch_cmd=patch_cmd,
+                ),
+                repo,
+                env=leaked_env,
+            )
+            self.assertEqual(proc.returncode, 0, msg=f"stdout={proc.stdout}\nstderr={proc.stderr}")
+
+            run_dir = repo / "runs" / "adlc_self_improve_core" / "r5"
+            state = json.loads((run_dir / "state.json").read_text(encoding="utf-8"))
+            self.assertEqual(state.get("phase"), "done")
+
+    def test_patch_with_nested_diff_marker_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            _init_repo(repo)
+            verify_script = _write(repo, "verify_ok.py", "raise SystemExit(0)\n")
+            plan_script = _write(repo, "plan_ok.py", "print('# PLAN FROM EXTERNAL')\n")
+            patch_script = _write(
+                repo,
+                "patch_nested_bad.py",
+                "\n".join(
+                    [
+                        "print('diff --git a/docs/target.txt b/docs/target.txt')",
+                        "print('--- a/docs/target.txt')",
+                        "print('+++ b/docs/target.txt')",
+                        "print('@@ -1 +1,2 @@')",
+                        "print('-hello')",
+                        "print('+hello patched')",
+                        "print('+diff --git a/evil.txt b/evil.txt')",
+                        "",
+                    ]
+                ),
+            )
+            verify_cmd = f"python {verify_script.name}"
+            plan_cmd = f'python "{plan_script.name}"'
+            patch_cmd = f'python "{patch_script.name}"'
+
+            proc = _run(
+                _workflow_cmd(
+                    repo=repo,
+                    run_id="r6",
+                    verify_cmd=verify_cmd,
+                    plan_cmd=plan_cmd,
+                    patch_cmd=patch_cmd,
+                ),
+                repo,
+            )
+            self.assertNotEqual(proc.returncode, 0)
+            run_dir = repo / "runs" / "adlc_self_improve_core" / "r6"
+            error_text = (run_dir / "logs" / "error.txt").read_text(encoding="utf-8")
+            self.assertIn("nested diff markers", error_text)
+            self.assertEqual((repo / "docs" / "target.txt").read_text(encoding="utf-8"), "hello\n")
 
 
 if __name__ == "__main__":

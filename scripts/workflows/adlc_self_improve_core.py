@@ -21,6 +21,28 @@ except ModuleNotFoundError:
     from tools import contract_guard, contrast_rules, local_librarian, run_state
 
 PATCH_START_RE = re.compile(r"^diff --git .*$", re.M)
+NESTED_DIFF_ADDED_LINE_RE = re.compile(r"^\+diff --git .*$", re.M)
+PATCH_META_PREFIXES = (
+    "diff --git ",
+    "index ",
+    "new file mode ",
+    "deleted file mode ",
+    "old mode ",
+    "new mode ",
+    "similarity index ",
+    "rename from ",
+    "rename to ",
+    "copy from ",
+    "copy to ",
+    "--- ",
+    "+++ ",
+    "@@",
+    "Binary files ",
+    "GIT binary patch",
+    "literal ",
+    "delta ",
+    "\\ No newline at end of file",
+)
 
 
 def _parse_bool(value: Any, *, default: bool) -> bool:
@@ -41,11 +63,13 @@ def _run(
     *,
     cwd: Path,
     shell: bool = False,
+    env: dict[str, str] | None = None,
 ) -> tuple[int, str, str]:
     proc = subprocess.run(
         cmd,
         cwd=str(cwd),
         shell=shell,
+        env=env,
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -72,11 +96,68 @@ def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
         fh.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
+def _is_patch_line(line: str) -> bool:
+    if not line:
+        return False
+    if line.startswith(PATCH_META_PREFIXES):
+        return True
+    first = line[0]
+    return first in {"+", "-", " "}
+
+
+def _sanitize_patch_block(lines: list[str]) -> list[str]:
+    block = list(lines)
+    while block and not _is_patch_line(block[-1]):
+        block.pop()
+    if not block:
+        return []
+    if not block[0].startswith("diff --git "):
+        return []
+    has_old = any(row.startswith("--- ") for row in block)
+    has_new = any(row.startswith("+++ ") for row in block)
+    if not (has_old and has_new):
+        return []
+    return block
+
+
+def _has_nested_diff_added_lines(patch_text: str) -> bool:
+    return bool(NESTED_DIFF_ADDED_LINE_RE.search(patch_text or ""))
+
+
 def _extract_patch(text: str) -> str:
-    match = PATCH_START_RE.search(text or "")
-    if not match:
+    lines = (text or "").splitlines()
+    start = -1
+    for idx, row in enumerate(lines):
+        if row.startswith("diff --git "):
+            start = idx
+            break
+    if start < 0:
         return ""
-    return text[match.start() :].strip() + "\n"
+
+    blocks: list[list[str]] = []
+    current: list[str] = []
+    for row in lines[start:]:
+        if row.startswith("diff --git "):
+            if current:
+                cleaned = _sanitize_patch_block(current)
+                if cleaned:
+                    blocks.append(cleaned)
+            current = [row]
+            continue
+        current.append(row)
+    if current:
+        cleaned = _sanitize_patch_block(current)
+        if cleaned:
+            blocks.append(cleaned)
+
+    if not blocks:
+        return ""
+    merged: list[str] = []
+    for block in blocks:
+        if merged:
+            merged.append("")
+        merged.extend(block)
+    return "\n".join(merged).strip() + "\n"
 
 
 def _summarize_file(path: Path, max_lines: int = 10) -> str:
@@ -428,6 +509,8 @@ def _generate_patch_via_cmd(
     patch = _extract_patch(out)
     if not patch:
         return "", "patch-cmd output did not contain unified diff starting with `diff --git`"
+    if _has_nested_diff_added_lines(patch):
+        return "", "patch-cmd output contained nested diff markers inside added lines"
     return patch, "ok"
 
 
@@ -725,7 +808,10 @@ def run_workflow(
         state = _save_state(run_dir, state, phase="verify")
         _trace(run_dir, f"round={current_round} phase=verify")
         cmd = _verify_command(repo_root, verify_cmd)
-        rc, stdout, stderr = _run(cmd, cwd=repo_root)
+        verify_env = dict(os.environ)
+        verify_env.pop("SDDAI_PLAN_CMD", None)
+        verify_env.pop("SDDAI_PATCH_CMD", None)
+        rc, stdout, stderr = _run(cmd, cwd=repo_root, env=verify_env)
         verify_stdout_path = logs_dir / "verify_stdout.txt"
         verify_stderr_path = logs_dir / "verify_stderr.txt"
         _write(verify_stdout_path, stdout)

@@ -71,6 +71,14 @@ def _run_git(repo_root: Path, args: list[str]) -> tuple[int, str]:
     return proc.returncode, text
 
 
+def _is_git_noise_line(raw: str) -> bool:
+    text = str(raw or "").strip()
+    if not text:
+        return True
+    lower = text.lower()
+    return lower.startswith("warning: ") or lower.startswith("hint: ")
+
+
 def _collect_diff(repo_root: Path) -> tuple[list[str], dict[str, Any], list[str]]:
     touched: set[str] = set()
     stats = {
@@ -88,12 +96,16 @@ def _collect_diff(repo_root: Path) -> tuple[list[str], dict[str, Any], list[str]
             errors.append(f"git {' '.join(args)} failed")
             continue
         for row in out.splitlines():
+            if _is_git_noise_line(row):
+                continue
             rel = row.strip().replace("\\", "/")
             if rel:
                 touched.add(rel)
 
     def parse_numstat(output: str) -> None:
         for row in output.splitlines():
+            if _is_git_noise_line(row):
+                continue
             parts = row.split("\t")
             if len(parts) < 3:
                 continue
@@ -225,4 +237,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

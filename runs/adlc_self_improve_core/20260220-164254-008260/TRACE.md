@@ -1,0 +1,6 @@
+- [2026-02-20T16:42:54] start run_id=20260220-164254-008260 goal=forge-full-suite self optimize
+- [2026-02-20T16:42:54] mode {"require_external_plan": true, "require_external_patch": true, "no_mechanical_fallback": true, "allow_local": false}
+- [2026-02-20T16:42:54] round=1 phase=find query=forge-full-suite self optimize
+- [2026-02-20T16:42:54] round=1 phase=plan
+- [2026-02-20T16:43:28] round=1 phase=build
+- [2026-02-20T16:43:28] [error] contract guard failed before apply

@@ -1,0 +1,127 @@
+2026-02-20T08:48:27.917104Z  WARN codex_core::shell_snapshot: Failed to create shell snapshot for powershell: Shell snapshot not supported yet for PowerShell
+OpenAI Codex v0.100.0-alpha.10 (research preview)
+--------
+workdir: D:\.c_projects\adc\ctcp
+model: gpt-5.3-codex
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: auto
+session id: 019c7a3c-730b-75c2-9762-e09c286a6357
+--------
+user
+You are an external patch generator.
+Output MUST be unified diff only, and MUST start with: diff --git
+No explanations, no markdown fences, no extra text.
+
+Goal: forge-full-suite self optimize
+Round: 1
+
+Patch policy:
+- Make one minimal safe change.
+- Prefer adding a marker file under tests/ with name not matching test_*.py.
+- Keep contract_guard limits.
+
+Plan:
+# PLAN - forge-full-suite self optimize (Round 1)
+
+status: SIGNED  
+label: BOOTSTRAP  
+verify_rc: N/A
+
+## Objective
+Produce a minimal, auditable bootstrap plan and patch flow for `forge-full-suite self optimize`, strictly within policy.
+
+## Constraints Snapshot
+- policy: `contracts/allowed_changes.yaml`
+- max_files: `10`
+- max_added_lines: `800`
+- max_deleted_lines: `800`
+- max_total_lines: `800`
+- allowed_paths: `scripts/`, `tools/`, `docs/`, `workflow_registry/`, `simlab/`, `tests/`, `contracts/`, `README.md`
+- blocked_paths: `.github/`, `runs/`, `build/`, `dist/`
+
+## Execution Plan
+1. Docs/Spec: add or update one bootstrap spec file under `docs/` for goal, scope, constraints, and stop conditions.
+2. Docs/Spec: add or update one workflow entry under `workflow_registry/` for Round 1 bootstrap tracking.
+3. Code: default to no runtime behavior changes in Round 1.
+4. Code fallback: if verification cannot pass without code edits, make at most one focused change in `scripts/` or `tools/`, directly tied to this goal.
+5. Verify: run `python scripts/contract_checks.py`.
+6. Verify: run `python scripts/workflow_checks.py`.
+7. Verify: run `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` (or `bash scripts/verify_repo.sh` on Unix).
+8. Report/Patch: run the external PATCH command and emit unified diff only, with output beginning `diff --git`.
+
+## Acceptance Steps
+1. `python scripts/contract_checks.py` exits `0`.
+2. `python scripts/workflow_checks.py` exits `0`.
+3. `scripts/verify_repo.ps1` (or `scripts/verify_repo.sh`) exits `0`.
+4. `git diff --name-only` lists only allowed paths.
+5. `git diff --stat` stays within `max_files <= 10` and total changed lines `<= 800` (added `<= 800`, deleted `<= 800`).
+6. External patch output first line matches `diff --git` and contains no prose before the diff.
+
+## Patch Command Requirement
+Use an external patch command template with `{PROMPT_PATH}` and `{REPO_ROOT}` placeholders, and require unified diff output only.
+
+
+Constraints:
+# Constraints
+
+- policy: `D:/.c_projects/adc/ctcp/contracts/allowed_changes.yaml`
+- max_files: `10`
+- max_added_lines: `800`
+- max_deleted_lines: `800`
+- max_total_lines: `800`
+
+## Allowed Paths
+- `scripts/`
+- `tools/`
+- `docs/`
+- `workflow_registry/`
+- `simlab/`
+- `tests/`
+- `contracts/`
+- `README.md`
+
+## Blocked Paths
+- `.github/`
+- `runs/`
+- `build/`
+- `dist/`
+
+
+Fix brief:
+# Fix Brief
+
+- label: `BOOTSTRAP`
+- verify_rc: `N/A`
+
+## Minimal Next Actions
+- Use CONTEXT + CONSTRAINTS to generate a minimal external PLAN.
+- Use external PATCH command to emit unified diff starting with `diff --git`.
+
+## Related File References
+- goal: `forge-full-suite self optimize`
+
+
+Context:
+# Context Evidence
+
+- query: `forge-full-suite self optimize`
+
+- No references found by Local Librarian.
+
+mcp startup: no servers
+
+thinking
+**Creating minimal marker file patch**
+codex
+diff --git a/tests/forge_full_suite_bootstrap_round1.marker b/tests/forge_full_suite_bootstrap_round1.marker
+new file mode 100644
+index 0000000..af6a4f0
+--- /dev/null
++++ b/tests/forge_full_suite_bootstrap_round1.marker
+@@ -0,0 +1 @@
++BOOTSTRAP round=1 goal=forge-full-suite self optimize
+tokens used
+3,780

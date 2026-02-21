@@ -1,0 +1,8 @@
+- [2026-02-20T10:20:57] start run_id=20260220-102057-822443 goal=external-self-improve-live
+- [2026-02-20T10:20:57] mode {"require_external_plan": true, "require_external_patch": true, "no_mechanical_fallback": true, "allow_local": false}
+- [2026-02-20T10:20:57] round=1 phase=find query=external-self-improve-live
+- [2026-02-20T10:20:57] round=1 phase=plan
+- [2026-02-20T10:20:58] round=1 phase=build
+- [2026-02-20T10:20:58] round=1 phase=verify
+- [2026-02-20T10:20:58] round=1 phase=fix label=UNKNOWN
+- [2026-02-20T10:20:58] phase=stop reason=max_rounds

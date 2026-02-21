@@ -93,7 +93,54 @@ class ContractGuardTests(unittest.TestCase):
             reasons = "\n".join(review["contract_guard"]["reasons"])
             self.assertIn("blocked path touched", reasons)
 
+    def test_collect_diff_ignores_git_warning_lines(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            _init_repo(repo)
+
+            original = contract_guard._run_git
+
+            def _fake_run_git(_repo_root: Path, args: list[str]) -> tuple[int, str]:
+                key = " ".join(args)
+                if key == "diff --name-only":
+                    return (
+                        0,
+                        "\n".join(
+                            [
+                                "scripts/x.py",
+                                "warning: in the working copy of 'scripts/x.py', LF will be replaced by CRLF the next time Git touches it",
+                                "",
+                            ]
+                        ),
+                    )
+                if key == "diff --cached --name-only":
+                    return (0, "")
+                if key == "diff --numstat":
+                    return (
+                        0,
+                        "\n".join(
+                            [
+                                "1\t0\tscripts/x.py",
+                                "warning: in the working copy of 'scripts/x.py', LF will be replaced by CRLF the next time Git touches it",
+                                "",
+                            ]
+                        ),
+                    )
+                if key == "diff --cached --numstat":
+                    return (0, "")
+                return (0, "")
+
+            contract_guard._run_git = _fake_run_git
+            try:
+                touched, stats, errors = contract_guard._collect_diff(repo)
+            finally:
+                contract_guard._run_git = original
+
+            self.assertEqual(errors, [])
+            self.assertEqual(touched, ["scripts/x.py"])
+            self.assertEqual(stats["total_files"], 1)
+            self.assertIn("scripts/x.py", stats["files"])
+
 
 if __name__ == "__main__":
     unittest.main()
-
