@@ -23,6 +23,21 @@ outputs:
     - runs/adlc_self_improve_core/<run_id>/logs/verify_stderr.txt
     - runs/adlc_self_improve_core/<run_id>/diff.patch
 
+roles:
+  guardian:
+    provider: local_exec
+    target: reviews/contract_review.json
+  patchmaker:
+    provider: api_agent
+    outputs:
+      - outbox/PLAN.md
+      - outbox/diff.patch
+  fixer:
+    provider: api_agent
+    outputs:
+      - outbox/PLAN.md
+      - outbox/diff.patch
+
 steps:
   - doc
   - analysis

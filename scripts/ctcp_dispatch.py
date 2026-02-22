@@ -9,29 +9,30 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DISPATCH_CONFIG_PATH = Path("artifacts") / "dispatch_config.json"
+FIND_RESULT_PATH = Path("artifacts") / "find_result.json"
+WORKFLOW_INDEX_PATH = ROOT / "workflow_registry" / "index.json"
 
 try:
-    from tools.providers import local_exec, manual_outbox
+    from tools.providers import api_agent, local_exec, manual_outbox
 except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
-    from tools.providers import local_exec, manual_outbox
+    from tools.providers import api_agent, local_exec, manual_outbox
 
-KNOWN_PROVIDERS = {"manual_outbox", "local_exec"}
+KNOWN_PROVIDERS = {"manual_outbox", "local_exec", "api_agent"}
 
 
-def default_dispatch_config_doc() -> dict[str, Any]:
+def default_dispatch_config_doc(role_defaults: dict[str, str] | None = None) -> dict[str, Any]:
+    role_providers: dict[str, str] = {
+        "librarian": "local_exec",
+    }
+    if isinstance(role_defaults, dict):
+        for role, provider in role_defaults.items():
+            role_providers[str(role).strip().lower()] = _normalize_provider(str(provider))
+
     return {
         "schema_version": "ctcp-dispatch-config-v1",
         "mode": "manual_outbox",
-        "role_providers": {
-            "librarian": "local_exec",
-            "chair": "manual_outbox",
-            "contract_guardian": "manual_outbox",
-            "cost_controller": "manual_outbox",
-            "patchmaker": "manual_outbox",
-            "fixer": "manual_outbox",
-            "researcher": "manual_outbox",
-        },
+        "role_providers": role_providers,
         "budgets": {"max_outbox_prompts": 20},
     }
 
@@ -52,17 +53,82 @@ def _write_json(path: Path, doc: dict[str, Any]) -> None:
     path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _selected_workflow_id(run_dir: Path) -> str:
+    path = run_dir / FIND_RESULT_PATH
+    if not path.exists():
+        return ""
+    try:
+        doc = _read_json(path)
+    except Exception:
+        return ""
+    return str(doc.get("selected_workflow_id", "")).strip()
+
+
+def _load_recipe_role_providers(run_dir: Path) -> dict[str, str]:
+    selected = _selected_workflow_id(run_dir)
+    if not selected or not WORKFLOW_INDEX_PATH.exists():
+        return {}
+    try:
+        index = _read_json(WORKFLOW_INDEX_PATH)
+    except Exception:
+        return {}
+
+    recipe_rel = ""
+    for row in index.get("workflows", []):
+        if str(row.get("id", "")).strip() == selected:
+            recipe_rel = str(row.get("path", "")).strip()
+            break
+    if not recipe_rel:
+        return {}
+
+    recipe_path = (ROOT / recipe_rel).resolve()
+    if not recipe_path.exists():
+        return {}
+
+    try:
+        lines = recipe_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except Exception:
+        return {}
+
+    providers: dict[str, str] = {}
+    in_roles = False
+    current_role = ""
+    for raw in lines:
+        if not raw.strip() or raw.strip().startswith("#"):
+            continue
+        if not in_roles:
+            if raw.strip() == "roles:":
+                in_roles = True
+            continue
+
+        indent = len(raw) - len(raw.lstrip(" "))
+        stripped = raw.strip()
+        if indent == 0:
+            break
+        if indent == 2 and stripped.endswith(":"):
+            current_role = stripped[:-1].strip().lower()
+            continue
+        if indent >= 4 and stripped.startswith("provider:") and current_role:
+            value = stripped.split(":", 1)[1].strip().strip("'").strip('"')
+            role = current_role
+            if role == "guardian":
+                role = "contract_guardian"
+            providers[role] = _normalize_provider(value)
+    return providers
+
+
 def ensure_dispatch_config(run_dir: Path) -> Path:
     path = run_dir / DISPATCH_CONFIG_PATH
     if not path.exists():
-        _write_json(path, default_dispatch_config_doc())
+        _write_json(path, default_dispatch_config_doc(_load_recipe_role_providers(run_dir)))
     return path
 
 
 def load_dispatch_config(run_dir: Path) -> tuple[dict[str, Any] | None, str]:
     path = run_dir / DISPATCH_CONFIG_PATH
     if not path.exists():
-        return None, "missing artifacts/dispatch_config.json"
+        cfg = default_dispatch_config_doc(_load_recipe_role_providers(run_dir))
+        return cfg, "missing dispatch_config; using defaults"
 
     try:
         raw = _read_json(path)
@@ -80,6 +146,9 @@ def load_dispatch_config(run_dir: Path) -> tuple[dict[str, Any] | None, str]:
     if isinstance(role_providers_raw, dict):
         for k, v in role_providers_raw.items():
             role_providers[str(k).strip().lower()] = _normalize_provider(str(v))
+    for role, provider in _load_recipe_role_providers(run_dir).items():
+        if role not in role_providers:
+            role_providers[role] = _normalize_provider(provider)
 
     budgets = raw.get("budgets", {})
     if not isinstance(budgets, dict):
@@ -194,8 +263,11 @@ def _resolve_provider(config: dict[str, Any], role: str) -> tuple[str, str]:
     if not isinstance(role_providers, dict):
         role_providers = {}
     provider = _normalize_provider(str(role_providers.get(role, config.get("mode", "manual_outbox"))))
-    if provider == "local_exec" and role != "librarian":
-        return "manual_outbox", "local_exec restricted to librarian; fallback to manual_outbox"
+    if provider == "local_exec" and role not in {"librarian", "contract_guardian"}:
+        return (
+            "manual_outbox",
+            "local_exec restricted to librarian/contract_guardian; fallback to manual_outbox",
+        )
     return provider, ""
 
 
@@ -214,6 +286,8 @@ def dispatch_preview(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str
         preview = manual_outbox.preview(run_dir=run_dir, request=request, config=config)
     elif provider == "local_exec":
         preview = {"status": "can_exec"}
+    elif provider == "api_agent":
+        preview = api_agent.preview(run_dir=run_dir, request=request, config=config)
     else:
         preview = {"status": "unsupported_provider", "reason": provider}
 
@@ -246,6 +320,14 @@ def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], 
         )
     elif provider == "local_exec":
         result = local_exec.execute(repo_root=repo_root, run_dir=run_dir, request=request)
+    elif provider == "api_agent":
+        result = api_agent.execute(
+            repo_root=repo_root,
+            run_dir=run_dir,
+            request=request,
+            config=config,
+            guardrails_budgets=_parse_guardrails_budgets(run_dir),
+        )
     else:
         result = {"status": "unsupported_provider", "reason": provider}
 
@@ -309,4 +391,3 @@ def detect_fulfilled_prompts(run_dir: Path) -> list[dict[str, str]]:
         if (run_dir / row["target_path"]).exists():
             todo.append(row)
     return todo
-

@@ -91,3 +91,21 @@
 - `ctcp-failure-bundle`：在失败后收集证据链并输出可审计失败闭环
   - path: `.agents/skills/ctcp-failure-bundle/SKILL.md`
   - invoke: `$ctcp-failure-bundle`
+- `ctcp-gate-precheck`：改动前检查任务门禁与契约前置条件
+  - path: `.agents/skills/ctcp-gate-precheck/SKILL.md`
+  - invoke: `$ctcp-gate-precheck`
+- `ctcp-doc-index-sync`：处理 README Doc Index 同步与复检闭环
+  - path: `.agents/skills/ctcp-doc-index-sync/SKILL.md`
+  - invoke: `$ctcp-doc-index-sync`
+- `ctcp-orchestrate-loop`：驱动 `ctcp_orchestrate` 的状态推进与阻塞分流
+  - path: `.agents/skills/ctcp-orchestrate-loop/SKILL.md`
+  - invoke: `$ctcp-orchestrate-loop`
+- `ctcp-patch-guard`：执行 patch 范围/契约守卫并给出最小修复策略
+  - path: `.agents/skills/ctcp-patch-guard/SKILL.md`
+  - invoke: `$ctcp-patch-guard`
+- `ctcp-simlab-lite`：运行轻量 SimLab 回放并输出首个失败点
+  - path: `.agents/skills/ctcp-simlab-lite/SKILL.md`
+  - invoke: `$ctcp-simlab-lite`
+- `ctcp-run-report`：汇总 run 证据并生成可审计报告
+  - path: `.agents/skills/ctcp-run-report/SKILL.md`
+  - invoke: `$ctcp-run-report`

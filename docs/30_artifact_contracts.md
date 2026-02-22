@@ -174,23 +174,35 @@ Fields:
 
 schema_version: "ctcp-dispatch-config-v1"
 
-mode: "manual_outbox" | "local_exec"
+mode: "manual_outbox" | "local_exec" | "api_agent"
 
 role_providers: {
   "librarian": "local_exec|manual_outbox",
-  "chair": "manual_outbox",
-  "contract_guardian": "manual_outbox",
+  "chair": "manual_outbox|api_agent",
+  "contract_guardian": "manual_outbox|local_exec",
   "cost_controller": "manual_outbox",
-  "patchmaker": "manual_outbox",
-  "fixer": "manual_outbox",
+  "patchmaker": "manual_outbox|api_agent",
+  "fixer": "manual_outbox|api_agent",
   "researcher": "manual_outbox"
 }
 
 budgets: { "max_outbox_prompts": int }
 
 Rules:
-- `local_exec` MUST only auto-execute librarian context pack generation.
-- API-facing roles MUST use manual outbox prompts (no direct network/API call in local orchestrator).
+- `local_exec` MUST only auto-execute `librarian` or `contract_guardian`.
+- `api_agent` executes configured external command templates (`SDDAI_PLAN_CMD`, `SDDAI_PATCH_CMD`, `SDDAI_AGENT_CMD`) and records stdout/stderr logs.
+- For patch targets, `api_agent` output MUST start with `diff --git`, otherwise provider execution fails with explicit logs/reason.
+
+K.1) outbox evidence pack for api_agent
+
+Before `api_agent` execution, dispatcher MUST maintain:
+
+- `outbox/CONTEXT.md`
+- `outbox/CONSTRAINTS.md`
+- `outbox/FIX_BRIEF.md`
+- `outbox/EXTERNALS.md`
+
+These files must be included in provider prompt context.
 
 L) outbox/*.md (manual provider prompt)
 
