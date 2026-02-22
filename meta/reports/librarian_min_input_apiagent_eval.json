@@ -1,0 +1,570 @@
+{
+  "repo": "d:\\.c_projects\\adc\\ctcp",
+  "temp_eval_root": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_min_input_4xw_0hbh",
+  "objective": "Minimal librarian input drives api_agent outputs",
+  "cases": [
+    {
+      "case_id": "min_snippet",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_min_input_4xw_0hbh\\runs\\min_snippet",
+      "input": {
+        "run_librarian": true,
+        "file_request_exists": true,
+        "file_request_bytes": 235
+      },
+      "gate": {
+        "before": {
+          "state": "blocked",
+          "owner": "Local Librarian",
+          "path": "artifacts/context_pack.json",
+          "reason": "waiting for context_pack.json"
+        },
+        "after_librarian": {
+          "state": "blocked",
+          "owner": "Chair/Planner",
+          "path": "artifacts/PLAN_draft.md",
+          "reason": "waiting for PLAN_draft.md"
+        },
+        "unblocked_context_pack": true
+      },
+      "librarian": {
+        "result": {
+          "status": "executed",
+          "target_path": "artifacts/context_pack.json",
+          "cmd": "D:\\anaconda\\python.exe d:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_librarian.py --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_min_input_4xw_0hbh\\runs\\min_snippet",
+          "rc": 0,
+          "stdout_log": "logs/dispatch_local_exec_librarian.stdout.log",
+          "stderr_log": "logs/dispatch_local_exec_librarian.stderr.log",
+          "provider": "local_exec",
+          "role": "librarian",
+          "action": "context_pack"
+        },
+        "context_pack_exists": true,
+        "context_pack_summary": "included=1 omitted=0 used_bytes=66 budget_files=1 budget_bytes=256",
+        "context_pack_stats": {
+          "included": 1,
+          "omitted": 0,
+          "used_bytes": 66,
+          "budget_files": 1,
+          "budget_bytes": 256
+        },
+        "context_pack_hash": "454890040a583d49b124277d591711f291e0c8f7022b0df1b8e1cb332fc4ec54"
+      },
+      "api_agent": {
+        "result": {
+          "status": "executed",
+          "target_path": "artifacts/diff.patch",
+          "plan_path": "outbox/PLAN.md",
+          "patch_path": "outbox/diff.patch",
+          "prompt_path": "outbox/AGENT_PROMPT_patchmaker_make_patch.md",
+          "stdout_log": "logs/patch_agent.stdout",
+          "stderr_log": "logs/patch_agent.stderr",
+          "provider": "api_agent",
+          "role": "patchmaker",
+          "action": "make_patch"
+        },
+        "plan_exists": true,
+        "patch_exists": true,
+        "plan_hash": "5918e4eee1a81828961dda415319da9da093df997a77779935bbf08fb23382be",
+        "patch_hash": "33f8ee858c5ef4acc3f76217060a8f78efbc5bae8eb2cbe6e3746da0ea76a39e",
+        "patch_first_line": "diff --git a/docs/target.txt b/docs/target.txt",
+        "plan_first_line": "# PLAN"
+      }
+    },
+    {
+      "case_id": "empty_needs",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_min_input_4xw_0hbh\\runs\\empty_needs",
+      "input": {
+        "run_librarian": true,
+        "file_request_exists": true,
+        "file_request_bytes": 168
+      },
+      "gate": {
+        "before": {
+          "state": "blocked",
+          "owner": "Local Librarian",
+          "path": "artifacts/context_pack.json",
+          "reason": "waiting for context_pack.json"
+        },
+        "after_librarian": {
+          "state": "blocked",
+          "owner": "Chair/Planner",
+          "path": "artifacts/PLAN_draft.md",
+          "reason": "waiting for PLAN_draft.md"
+        },
+        "unblocked_context_pack": true
+      },
+      "librarian": {
+        "result": {
+          "status": "executed",
+          "target_path": "artifacts/context_pack.json",
+          "cmd": "D:\\anaconda\\python.exe d:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_librarian.py --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_min_input_4xw_0hbh\\runs\\empty_needs",
+          "rc": 0,
+          "stdout_log": "logs/dispatch_local_exec_librarian.stdout.log",
+          "stderr_log": "logs/dispatch_local_exec_librarian.stderr.log",
+          "provider": "local_exec",
+          "role": "librarian",
+          "action": "context_pack"
+        },
+        "context_pack_exists": true,
+        "context_pack_summary": "included=0 omitted=0 used_bytes=0 budget_files=1 budget_bytes=64",
+        "context_pack_stats": {
+          "included": 0,
+          "omitted": 0,
+          "used_bytes": 0,
+          "budget_files": 1,
+          "budget_bytes": 64
+        },
+        "context_pack_hash": "115dcca1b159dfbbb99b6303c553faa4e4a42aa01096761a0ba0282c8c4a8395"
+      },
+      "api_agent": {
+        "result": {
+          "status": "executed",
+          "target_path": "artifacts/diff.patch",
+          "plan_path": "outbox/PLAN.md",
+          "patch_path": "outbox/diff.patch",
+          "prompt_path": "outbox/AGENT_PROMPT_patchmaker_make_patch.md",
+          "stdout_log": "logs/patch_agent.stdout",
+          "stderr_log": "logs/patch_agent.stderr",
+          "provider": "api_agent",
+          "role": "patchmaker",
+          "action": "make_patch"
+        },
+        "plan_exists": true,
+        "patch_exists": true,
+        "plan_hash": "5918e4eee1a81828961dda415319da9da093df997a77779935bbf08fb23382be",
+        "patch_hash": "33f8ee858c5ef4acc3f76217060a8f78efbc5bae8eb2cbe6e3746da0ea76a39e",
+        "patch_first_line": "diff --git a/docs/target.txt b/docs/target.txt",
+        "plan_first_line": "# PLAN"
+      }
+    },
+    {
+      "case_id": "tiny_budget",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_min_input_4xw_0hbh\\runs\\tiny_budget",
+      "input": {
+        "run_librarian": true,
+        "file_request_exists": true,
+        "file_request_bytes": 204
+      },
+      "gate": {
+        "before": {
+          "state": "blocked",
+          "owner": "Local Librarian",
+          "path": "artifacts/context_pack.json",
+          "reason": "waiting for context_pack.json"
+        },
+        "after_librarian": {
+          "state": "blocked",
+          "owner": "Chair/Planner",
+          "path": "artifacts/PLAN_draft.md",
+          "reason": "waiting for PLAN_draft.md"
+        },
+        "unblocked_context_pack": true
+      },
+      "librarian": {
+        "result": {
+          "status": "executed",
+          "target_path": "artifacts/context_pack.json",
+          "cmd": "D:\\anaconda\\python.exe d:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_librarian.py --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_min_input_4xw_0hbh\\runs\\tiny_budget",
+          "rc": 0,
+          "stdout_log": "logs/dispatch_local_exec_librarian.stdout.log",
+          "stderr_log": "logs/dispatch_local_exec_librarian.stderr.log",
+          "provider": "local_exec",
+          "role": "librarian",
+          "action": "context_pack"
+        },
+        "context_pack_exists": true,
+        "context_pack_summary": "included=0 omitted=1 used_bytes=0 budget_files=1 budget_bytes=1",
+        "context_pack_stats": {
+          "included": 0,
+          "omitted": 1,
+          "used_bytes": 0,
+          "budget_files": 1,
+          "budget_bytes": 1
+        },
+        "context_pack_hash": "3a77d4216fe5057622c389fe32972013b09c26fc7af939982248f00cfa0937a5"
+      },
+      "api_agent": {
+        "result": {
+          "status": "executed",
+          "target_path": "artifacts/diff.patch",
+          "plan_path": "outbox/PLAN.md",
+          "patch_path": "outbox/diff.patch",
+          "prompt_path": "outbox/AGENT_PROMPT_patchmaker_make_patch.md",
+          "stdout_log": "logs/patch_agent.stdout",
+          "stderr_log": "logs/patch_agent.stderr",
+          "provider": "api_agent",
+          "role": "patchmaker",
+          "action": "make_patch"
+        },
+        "plan_exists": true,
+        "patch_exists": true,
+        "plan_hash": "5918e4eee1a81828961dda415319da9da093df997a77779935bbf08fb23382be",
+        "patch_hash": "33f8ee858c5ef4acc3f76217060a8f78efbc5bae8eb2cbe6e3746da0ea76a39e",
+        "patch_first_line": "diff --git a/docs/target.txt b/docs/target.txt",
+        "plan_first_line": "# PLAN"
+      }
+    },
+    {
+      "case_id": "invalid_schema",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_min_input_4xw_0hbh\\runs\\invalid_schema",
+      "input": {
+        "run_librarian": true,
+        "file_request_exists": true,
+        "file_request_bytes": 221
+      },
+      "gate": {
+        "before": {
+          "state": "blocked",
+          "owner": "Local Librarian",
+          "path": "artifacts/context_pack.json",
+          "reason": "waiting for context_pack.json"
+        },
+        "after_librarian": {
+          "state": "blocked",
+          "owner": "Local Librarian",
+          "path": "artifacts/context_pack.json",
+          "reason": "waiting for context_pack.json"
+        },
+        "unblocked_context_pack": false
+      },
+      "librarian": {
+        "result": {
+          "status": "exec_failed",
+          "reason": "local_exec command failed rc=1",
+          "target_path": "artifacts/context_pack.json",
+          "cmd": "D:\\anaconda\\python.exe d:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_librarian.py --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_min_input_4xw_0hbh\\runs\\invalid_schema",
+          "rc": 1,
+          "stdout_log": "logs/dispatch_local_exec_librarian.stdout.log",
+          "stderr_log": "logs/dispatch_local_exec_librarian.stderr.log",
+          "provider": "local_exec",
+          "role": "librarian",
+          "action": "context_pack"
+        },
+        "context_pack_exists": false,
+        "context_pack_summary": "",
+        "context_pack_stats": {},
+        "context_pack_hash": null
+      },
+      "api_agent": {
+        "result": {
+          "status": "executed",
+          "target_path": "artifacts/diff.patch",
+          "plan_path": "outbox/PLAN.md",
+          "patch_path": "outbox/diff.patch",
+          "prompt_path": "outbox/AGENT_PROMPT_patchmaker_make_patch.md",
+          "stdout_log": "logs/patch_agent.stdout",
+          "stderr_log": "logs/patch_agent.stderr",
+          "provider": "api_agent",
+          "role": "patchmaker",
+          "action": "make_patch"
+        },
+        "plan_exists": true,
+        "patch_exists": true,
+        "plan_hash": "5918e4eee1a81828961dda415319da9da093df997a77779935bbf08fb23382be",
+        "patch_hash": "33f8ee858c5ef4acc3f76217060a8f78efbc5bae8eb2cbe6e3746da0ea76a39e",
+        "patch_first_line": "diff --git a/docs/target.txt b/docs/target.txt",
+        "plan_first_line": "# PLAN"
+      }
+    },
+    {
+      "case_id": "control_skip_librarian",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_min_input_4xw_0hbh\\runs\\control_skip_librarian",
+      "input": {
+        "run_librarian": false,
+        "file_request_exists": true,
+        "file_request_bytes": 235
+      },
+      "gate": {
+        "before": {
+          "state": "blocked",
+          "owner": "Local Librarian",
+          "path": "artifacts/context_pack.json",
+          "reason": "waiting for context_pack.json"
+        },
+        "after_librarian": {
+          "state": "blocked",
+          "owner": "Local Librarian",
+          "path": "artifacts/context_pack.json",
+          "reason": "waiting for context_pack.json"
+        },
+        "unblocked_context_pack": false
+      },
+      "librarian": {
+        "result": {
+          "status": "skipped"
+        },
+        "context_pack_exists": false,
+        "context_pack_summary": "",
+        "context_pack_stats": {},
+        "context_pack_hash": null
+      },
+      "api_agent": {
+        "result": {
+          "status": "executed",
+          "target_path": "artifacts/diff.patch",
+          "plan_path": "outbox/PLAN.md",
+          "patch_path": "outbox/diff.patch",
+          "prompt_path": "outbox/AGENT_PROMPT_patchmaker_make_patch.md",
+          "stdout_log": "logs/patch_agent.stdout",
+          "stderr_log": "logs/patch_agent.stderr",
+          "provider": "api_agent",
+          "role": "patchmaker",
+          "action": "make_patch"
+        },
+        "plan_exists": true,
+        "patch_exists": true,
+        "plan_hash": "5918e4eee1a81828961dda415319da9da093df997a77779935bbf08fb23382be",
+        "patch_hash": "33f8ee858c5ef4acc3f76217060a8f78efbc5bae8eb2cbe6e3746da0ea76a39e",
+        "patch_first_line": "diff --git a/docs/target.txt b/docs/target.txt",
+        "plan_first_line": "# PLAN"
+      }
+    }
+  ],
+  "stability": {
+    "runs": 10,
+    "ok_runs": 10,
+    "unique_patch_hashes": 1,
+    "stable": true,
+    "patch_hash": "33f8ee858c5ef4acc3f76217060a8f78efbc5bae8eb2cbe6e3746da0ea76a39e",
+    "rows": [
+      {
+        "case_id": "stability_00",
+        "ok": true,
+        "patch_hash": "33f8ee858c5ef4acc3f76217060a8f78efbc5bae8eb2cbe6e3746da0ea76a39e"
+      },
+      {
+        "case_id": "stability_01",
+        "ok": true,
+        "patch_hash": "33f8ee858c5ef4acc3f76217060a8f78efbc5bae8eb2cbe6e3746da0ea76a39e"
+      },
+      {
+        "case_id": "stability_02",
+        "ok": true,
+        "patch_hash": "33f8ee858c5ef4acc3f76217060a8f78efbc5bae8eb2cbe6e3746da0ea76a39e"
+      },
+      {
+        "case_id": "stability_03",
+        "ok": true,
+        "patch_hash": "33f8ee858c5ef4acc3f76217060a8f78efbc5bae8eb2cbe6e3746da0ea76a39e"
+      },
+      {
+        "case_id": "stability_04",
+        "ok": true,
+        "patch_hash": "33f8ee858c5ef4acc3f76217060a8f78efbc5bae8eb2cbe6e3746da0ea76a39e"
+      },
+      {
+        "case_id": "stability_05",
+        "ok": true,
+        "patch_hash": "33f8ee858c5ef4acc3f76217060a8f78efbc5bae8eb2cbe6e3746da0ea76a39e"
+      },
+      {
+        "case_id": "stability_06",
+        "ok": true,
+        "patch_hash": "33f8ee858c5ef4acc3f76217060a8f78efbc5bae8eb2cbe6e3746da0ea76a39e"
+      },
+      {
+        "case_id": "stability_07",
+        "ok": true,
+        "patch_hash": "33f8ee858c5ef4acc3f76217060a8f78efbc5bae8eb2cbe6e3746da0ea76a39e"
+      },
+      {
+        "case_id": "stability_08",
+        "ok": true,
+        "patch_hash": "33f8ee858c5ef4acc3f76217060a8f78efbc5bae8eb2cbe6e3746da0ea76a39e"
+      },
+      {
+        "case_id": "stability_09",
+        "ok": true,
+        "patch_hash": "33f8ee858c5ef4acc3f76217060a8f78efbc5bae8eb2cbe6e3746da0ea76a39e"
+      }
+    ]
+  },
+  "stub_requests": [
+    {
+      "path": "/v1/responses",
+      "kind": "plan",
+      "input_chars": 2171,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "patch",
+      "input_chars": 2234,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "plan",
+      "input_chars": 2171,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "patch",
+      "input_chars": 2234,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "plan",
+      "input_chars": 2171,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "patch",
+      "input_chars": 2234,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "plan",
+      "input_chars": 2180,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "patch",
+      "input_chars": 2243,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "plan",
+      "input_chars": 2174,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "patch",
+      "input_chars": 2237,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "plan",
+      "input_chars": 2195,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "patch",
+      "input_chars": 2258,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "plan",
+      "input_chars": 2195,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "patch",
+      "input_chars": 2258,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "plan",
+      "input_chars": 2195,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "patch",
+      "input_chars": 2258,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "plan",
+      "input_chars": 2195,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "patch",
+      "input_chars": 2258,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "plan",
+      "input_chars": 2195,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "patch",
+      "input_chars": 2258,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "plan",
+      "input_chars": 2195,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "patch",
+      "input_chars": 2258,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "plan",
+      "input_chars": 2195,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "patch",
+      "input_chars": 2258,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "plan",
+      "input_chars": 2195,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "patch",
+      "input_chars": 2258,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "plan",
+      "input_chars": 2195,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "patch",
+      "input_chars": 2258,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "plan",
+      "input_chars": 2195,
+      "has_auth": true
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "patch",
+      "input_chars": 2258,
+      "has_auth": true
+    }
+  ],
+  "mvp_min_input": {
+    "case_id": "empty_needs",
+    "file_request_bytes": 168,
+    "context_pack_summary": "included=0 omitted=0 used_bytes=0 budget_files=1 budget_bytes=64"
+  },
+  "key_observation": "api_agent builds CONTEXT via local_librarian.search and does not directly read artifacts/context_pack.json"
+}

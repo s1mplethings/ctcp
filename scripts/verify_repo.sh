@@ -12,6 +12,7 @@ SKIP_LITE_REPLAY="${CTCP_SKIP_LITE_REPLAY:-0}"
 USE_NINJA="${CTCP_USE_NINJA:-0}"
 BUILD_PARALLEL="${CTCP_BUILD_PARALLEL:-}"
 COMPILER_LAUNCHER="${CTCP_COMPILER_LAUNCHER:-}"
+EXECUTED_GATES=()
 if [[ "${1:-}" == "--full" ]]; then
   MODE="1"
 fi
@@ -47,6 +48,11 @@ ensure_python_alias() {
   ln -s "$(command -v python3)" "${PY_SHIM_DIR}/python"
   export PATH="${PY_SHIM_DIR}:${PATH}"
   echo "[verify_repo] python shim enabled: python -> python3"
+}
+
+add_executed_gate() {
+  local gate="$1"
+  EXECUTED_GATES+=("${gate}")
 }
 
 anti_pollution_gate() {
@@ -140,6 +146,7 @@ anti_pollution_gate
 ensure_python_alias
 
 if command -v cmake >/dev/null 2>&1; then
+  # BEHAVIOR_ID: B001
   CMAKE_EXE="$(command -v cmake)"
   if [[ -z "${BUILD_PARALLEL}" ]]; then
     if command -v nproc >/dev/null 2>&1; then
@@ -187,22 +194,47 @@ if command -v cmake >/dev/null 2>&1; then
   else
     echo "[verify_repo] no tests detected or ctest missing in lite build (skip ctest)"
   fi
+  add_executed_gate "lite"
 else
   echo "[verify_repo] cmake not found; skipping headless build"
+  add_executed_gate "lite"
 fi
 
+# BEHAVIOR_ID: B002
 echo "[verify_repo] workflow gate (workflow checks)"
 python3 "${ROOT}/scripts/workflow_checks.py"
+add_executed_gate "workflow_gate"
 
+# BEHAVIOR_ID: B003
+echo "[verify_repo] plan check"
+python3 "${ROOT}/scripts/plan_check.py"
+add_executed_gate "plan_check"
+
+# BEHAVIOR_ID: B004
+echo "[verify_repo] patch check (scope from PLAN)"
+python3 "${ROOT}/scripts/patch_check.py"
+add_executed_gate "patch_check"
+
+# BEHAVIOR_ID: B005
+echo "[verify_repo] behavior catalog check"
+python3 "${ROOT}/scripts/behavior_catalog_check.py"
+add_executed_gate "behavior_catalog_check"
+
+# BEHAVIOR_ID: B006
 echo "[verify_repo] contract checks"
 python3 "${ROOT}/scripts/contract_checks.py"
+add_executed_gate "contract_checks"
 
+# BEHAVIOR_ID: B007
 echo "[verify_repo] doc index check (sync doc links --check)"
 python3 "${ROOT}/scripts/sync_doc_links.py" --check
+add_executed_gate "doc_index_check"
 
 if [[ "${SKIP_LITE_REPLAY}" == "1" ]]; then
   echo "[verify_repo] lite scenario replay skipped (CTCP_SKIP_LITE_REPLAY=1)"
+  add_executed_gate "lite_replay"
 else
+  # BEHAVIOR_ID: B008
   echo "[verify_repo] lite scenario replay"
   if [[ "${WRITE_FIXTURES}" == "1" ]]; then
     RUNS_ROOT="${ROOT}/tests/fixtures/adlc_forge_full_bundle/runs/simlab_lite_runs"
@@ -214,10 +246,13 @@ else
   else
     python3 "${ROOT}/simlab/run.py" --suite lite
   fi
+  add_executed_gate "lite_replay"
 fi
 
+# BEHAVIOR_ID: B009
 echo "[verify_repo] python unit tests"
 python3 -m unittest discover -s tests -p "test_*.py"
+add_executed_gate "python_unit_tests"
 
 if [[ "${MODE}" == "1" ]]; then
   echo "[verify_repo] FULL mode enabled"
@@ -228,5 +263,9 @@ if [[ "${MODE}" == "1" ]]; then
     echo "[verify_repo] tests (full): scripts/test_all.sh not found (skip)"
   fi
 fi
+
+echo "[verify_repo] plan gate execution/evidence check"
+EXECUTED_GATES_CSV="$(IFS=,; echo "${EXECUTED_GATES[*]}")"
+python3 "${ROOT}/scripts/plan_check.py" --executed-gates "${EXECUTED_GATES_CSV}" --check-evidence
 
 echo "[verify_repo] OK"

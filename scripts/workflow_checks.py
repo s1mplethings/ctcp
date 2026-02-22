@@ -50,6 +50,7 @@ def _is_code_change(path: str) -> bool:
 
 
 def main() -> int:
+    # BEHAVIOR_ID: B034
     missing: list[str] = []
     if not AI_CONTRACT.exists():
         missing.append("ai_context/00_AI_CONTRACT.md")

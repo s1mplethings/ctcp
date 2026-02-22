@@ -20,6 +20,7 @@ $WriteFixtures = ($env:CTCP_WRITE_FIXTURES -eq "1")
 $SkipLiteReplay = ($env:CTCP_SKIP_LITE_REPLAY -eq "1")
 $ModeName = "LITE"
 if ($RunFull) { $ModeName = "FULL" }
+$ExecutedGates = @()
 
 Write-Host "[verify_repo] repo root: $Root"
 Write-Host "[verify_repo] build root: $BuildRoot"
@@ -55,6 +56,14 @@ function Invoke-Step {
   )
   Write-Host "[verify_repo] $Name"
   & $Block
+}
+
+function Add-ExecutedGate {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$GateName
+  )
+  $script:ExecutedGates += $GateName
 }
 
 function Get-CmakeExe {
@@ -151,6 +160,7 @@ Invoke-BuildPollutionGate -RepoRoot $Root
 $CmakeExe = Get-CmakeExe
 $CtestExe = Get-CtestExe
 if ($CmakeExe) {
+  # BEHAVIOR_ID: B001
   if (-not $CompilerLauncher) {
     $CompilerLauncher = Get-CompilerLauncher
   }
@@ -198,27 +208,55 @@ if ($CmakeExe) {
   } else {
     Write-Host "[verify_repo] no tests detected or ctest missing in lite build (skip ctest)"
   }
+  Add-ExecutedGate "lite"
 } else {
   Write-Host "[verify_repo] cmake not found; skipping headless build"
+  Add-ExecutedGate "lite"
 }
 
+# BEHAVIOR_ID: B002
 Invoke-Step -Name "workflow gate (workflow checks)" -Block {
   Invoke-ExternalChecked -Label "workflow gate (workflow checks)" -Command { python scripts\workflow_checks.py }
 }
+Add-ExecutedGate "workflow_gate"
 
+# BEHAVIOR_ID: B003
+Invoke-Step -Name "plan check" -Block {
+  Invoke-ExternalChecked -Label "plan check" -Command { python scripts\plan_check.py }
+}
+Add-ExecutedGate "plan_check"
+
+# BEHAVIOR_ID: B004
+Invoke-Step -Name "patch check (scope from PLAN)" -Block {
+  Invoke-ExternalChecked -Label "patch check (scope from PLAN)" -Command { python scripts\patch_check.py }
+}
+Add-ExecutedGate "patch_check"
+
+# BEHAVIOR_ID: B005
+Invoke-Step -Name "behavior catalog check" -Block {
+  Invoke-ExternalChecked -Label "behavior catalog check" -Command { python scripts\behavior_catalog_check.py }
+}
+Add-ExecutedGate "behavior_catalog_check"
+
+# BEHAVIOR_ID: B006
 Invoke-Step -Name "contract checks" -Block {
   Invoke-ExternalChecked -Label "contract checks" -Command { python scripts\contract_checks.py }
 }
+Add-ExecutedGate "contract_checks"
 
+# BEHAVIOR_ID: B007
 Invoke-Step -Name "doc index check (sync doc links --check)" -Block {
   Invoke-ExternalChecked -Label "doc index check (sync doc links --check)" -Command {
     python scripts\sync_doc_links.py --check
   }
 }
+Add-ExecutedGate "doc_index_check"
 
 if ($SkipLiteReplay) {
   Write-Host "[verify_repo] lite scenario replay skipped (CTCP_SKIP_LITE_REPLAY=1)"
+  Add-ExecutedGate "lite_replay"
 } else {
+  # BEHAVIOR_ID: B008
   Invoke-Step -Name "lite scenario replay" -Block {
     if ($WriteFixtures) {
       $RunsRoot = Join-Path $Root "tests\fixtures\adlc_forge_full_bundle\runs\simlab_lite_runs"
@@ -232,13 +270,16 @@ if ($SkipLiteReplay) {
       }
     }
   }
+  Add-ExecutedGate "lite_replay"
 }
 
+# BEHAVIOR_ID: B009
 Invoke-Step -Name "python unit tests" -Block {
   Invoke-ExternalChecked -Label "python unit tests" -Command {
     python -m unittest discover -s tests -p "test_*.py"
   }
 }
+Add-ExecutedGate "python_unit_tests"
 
 if ($RunFull) {
   Write-Host "[verify_repo] FULL mode enabled via --Full / CTCP_FULL_GATE=1"
@@ -249,6 +290,13 @@ if ($RunFull) {
     }
   } else {
     Write-Host "[verify_repo] tests (full): scripts/test_all.ps1 not found (skip)"
+  }
+}
+
+Invoke-Step -Name "plan gate execution/evidence check" -Block {
+  $ExecutedGatesCsv = ($ExecutedGates -join ",")
+  Invoke-ExternalChecked -Label "plan gate execution/evidence check" -Command {
+    python scripts\plan_check.py --executed-gates $ExecutedGatesCsv --check-evidence
   }
 }
 

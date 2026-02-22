@@ -30,6 +30,7 @@ def _print_result(doc: dict[str, Any]) -> None:
 
 
 def main() -> int:
+    # BEHAVIOR_ID: B032
     ap = argparse.ArgumentParser(description="Patch-first safe apply helper")
     ap.add_argument("--repo", default=".", help="repository root")
     src = ap.add_mutually_exclusive_group(required=True)
@@ -94,4 +95,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

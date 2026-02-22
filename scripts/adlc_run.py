@@ -102,6 +102,7 @@ def append_history(
 
 
 def main() -> int:
+    # BEHAVIOR_ID: B013
     ap = argparse.ArgumentParser(description="Headless ADLC runner (doc->plan->patch->verify->bundle).")
     ap.add_argument("--goal", default="headless-lite")
     ap.add_argument("--verify-cmd", default="")

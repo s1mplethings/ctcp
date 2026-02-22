@@ -18,6 +18,7 @@ except ModuleNotFoundError:
 
 
 def _run_librarian(repo_root: Path, run_dir: Path, target_path: str) -> dict[str, Any]:
+    # BEHAVIOR_ID: B029
     logs_dir = run_dir / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
     stdout_log = logs_dir / "dispatch_local_exec_librarian.stdout.log"
@@ -100,6 +101,7 @@ def _render_contract_review_md(review: dict[str, Any]) -> str:
 
 
 def _run_contract_guardian(repo_root: Path, run_dir: Path, target_path: str) -> dict[str, Any]:
+    # BEHAVIOR_ID: B030
     logs_dir = run_dir / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
     stdout_log = logs_dir / "dispatch_local_exec_contract_guardian.stdout.log"

@@ -480,6 +480,7 @@ def execute(
     config: dict[str, Any],
     guardrails_budgets: dict[str, str],
 ) -> dict[str, Any]:
+    # BEHAVIOR_ID: B031
     logs_dir = run_dir / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
 

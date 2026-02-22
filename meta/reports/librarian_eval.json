@@ -1,0 +1,148 @@
+{
+  "repo": "D:\\.c_projects\\adc\\ctcp",
+  "script": "D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_librarian.py",
+  "temp_eval_root": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_eval_l_onhgm0",
+  "robustness": {
+    "score": "7/7",
+    "pass_rate": 1.0,
+    "checks": [
+      {
+        "id": "valid_mixed",
+        "pass": true
+      },
+      {
+        "id": "invalid_schema",
+        "pass": true
+      },
+      {
+        "id": "invalid_budget",
+        "pass": true
+      },
+      {
+        "id": "traversal_denied",
+        "pass": true
+      },
+      {
+        "id": "too_large",
+        "pass": true
+      },
+      {
+        "id": "invalid_mode",
+        "pass": true
+      },
+      {
+        "id": "missing_file_request",
+        "pass": true
+      }
+    ]
+  },
+  "readability": {
+    "score": "4/4",
+    "pass_rate": 1.0,
+    "checks": [
+      {
+        "id": "valid_mixed",
+        "top_keys": true,
+        "summary": true,
+        "file_shape": true,
+        "path_style": true,
+        "pass": true
+      },
+      {
+        "id": "traversal_denied",
+        "top_keys": true,
+        "summary": true,
+        "file_shape": true,
+        "path_style": true,
+        "pass": true
+      },
+      {
+        "id": "too_large",
+        "top_keys": true,
+        "summary": true,
+        "file_shape": true,
+        "path_style": true,
+        "pass": true
+      },
+      {
+        "id": "invalid_mode",
+        "top_keys": true,
+        "summary": true,
+        "file_shape": true,
+        "path_style": true,
+        "pass": true
+      }
+    ]
+  },
+  "stability": {
+    "runs": 12,
+    "unique_hashes": 1,
+    "stable": true,
+    "hash": "98906a5b50b43fd7358e069f56ef08b01dc955b3ef2409fa6fe41d6c54e9ea37"
+  },
+  "case_results": [
+    {
+      "id": "valid_mixed",
+      "rc": 0,
+      "stdout": "[ctcp_librarian] wrote: C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_eval_l_onhgm0\\valid_mixed\\artifacts\\context_pack.json\n[ctcp_librarian] included=2 omitted=0 used_bytes=1566 budget_files=3 budget_bytes=60000",
+      "stderr": "",
+      "context_exists": true,
+      "context_sha256": "98906a5b50b43fd7358e069f56ef08b01dc955b3ef2409fa6fe41d6c54e9ea37",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_eval_l_onhgm0\\valid_mixed"
+    },
+    {
+      "id": "invalid_schema",
+      "rc": 1,
+      "stdout": "",
+      "stderr": "[ctcp_librarian] file_request schema_version must be ctcp-file-request-v1",
+      "context_exists": false,
+      "context_sha256": null,
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_eval_l_onhgm0\\invalid_schema"
+    },
+    {
+      "id": "invalid_budget",
+      "rc": 1,
+      "stdout": "",
+      "stderr": "[ctcp_librarian] budget.max_files and budget.max_total_bytes must be > 0",
+      "context_exists": false,
+      "context_sha256": null,
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_eval_l_onhgm0\\invalid_budget"
+    },
+    {
+      "id": "traversal_denied",
+      "rc": 0,
+      "stdout": "[ctcp_librarian] wrote: C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_eval_l_onhgm0\\traversal_denied\\artifacts\\context_pack.json\n[ctcp_librarian] included=1 omitted=1 used_bytes=311 budget_files=2 budget_bytes=15000",
+      "stderr": "",
+      "context_exists": true,
+      "context_sha256": "b7a3982c53b8e71e21eaa4967e4a703aa8fc813ee6e3e3d88456e6b17e9cd504",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_eval_l_onhgm0\\traversal_denied"
+    },
+    {
+      "id": "too_large",
+      "rc": 0,
+      "stdout": "[ctcp_librarian] wrote: C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_eval_l_onhgm0\\too_large\\artifacts\\context_pack.json\n[ctcp_librarian] included=1 omitted=1 used_bytes=4540 budget_files=1 budget_bytes=200000",
+      "stderr": "",
+      "context_exists": true,
+      "context_sha256": "ba7bf66a131d4236f1a77d4affa9e10fe41c3b7d725bc492f28bd0979d086a42",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_eval_l_onhgm0\\too_large"
+    },
+    {
+      "id": "invalid_mode",
+      "rc": 0,
+      "stdout": "[ctcp_librarian] wrote: C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_eval_l_onhgm0\\invalid_mode\\artifacts\\context_pack.json\n[ctcp_librarian] included=0 omitted=1 used_bytes=0 budget_files=2 budget_bytes=5000",
+      "stderr": "",
+      "context_exists": true,
+      "context_sha256": "85971d8fb0c4d30ba11c2fad13f296dcb71b5f637b7a691ca94ae195c79baf11",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_eval_l_onhgm0\\invalid_mode"
+    },
+    {
+      "id": "missing_file_request",
+      "rc": 1,
+      "stdout": "[ctcp_librarian] missing file_request: C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_eval_l_onhgm0\\missing_file_request\\artifacts\\file_request.json",
+      "stderr": "",
+      "context_exists": false,
+      "context_sha256": null,
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_eval_l_onhgm0\\missing_file_request"
+    }
+  ]
+}

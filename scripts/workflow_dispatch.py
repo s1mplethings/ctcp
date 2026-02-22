@@ -91,6 +91,7 @@ def _dispatch_command(
 
 
 def main() -> int:
+    # BEHAVIOR_ID: B014
     ap = argparse.ArgumentParser(description="Dispatch workflow by workflow_registry id")
     ap.add_argument("--workflow", default="")
     ap.add_argument("--repo", default=".")

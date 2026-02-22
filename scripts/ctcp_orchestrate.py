@@ -469,6 +469,7 @@ def validate_externals_pack(goal: str) -> tuple[bool, str, str]:
 
 
 def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
+    # BEHAVIOR_ID: B015
     artifacts = run_dir / "artifacts"
     reviews = run_dir / "reviews"
     patch = artifacts / "diff.patch"
@@ -628,6 +629,7 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
 
 
 def make_failure_bundle(run_dir: Path) -> Path:
+    # BEHAVIOR_ID: B016
     bundle = run_dir / "failure_bundle.zip"
     ensure_layout(run_dir)
     artifacts = run_dir / "artifacts"

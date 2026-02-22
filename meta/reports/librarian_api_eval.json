@@ -1,0 +1,462 @@
+{
+  "timestamp_utc": "2026-02-22T09:56:33.005830+00:00",
+  "repo": "d:\\.c_projects\\adc\\ctcp",
+  "temp_eval_root": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e",
+  "librarian": {
+    "script": "d:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_librarian.py",
+    "robustness": {
+      "score": "7/7",
+      "pass_rate": 1.0,
+      "checks": [
+        {
+          "id": "valid_mixed",
+          "pass": true
+        },
+        {
+          "id": "invalid_schema",
+          "pass": true
+        },
+        {
+          "id": "invalid_budget",
+          "pass": true
+        },
+        {
+          "id": "traversal_denied",
+          "pass": true
+        },
+        {
+          "id": "too_large",
+          "pass": true
+        },
+        {
+          "id": "invalid_mode",
+          "pass": true
+        },
+        {
+          "id": "missing_file_request",
+          "pass": true
+        }
+      ]
+    },
+    "readability": {
+      "score": "4/4",
+      "pass_rate": 1.0,
+      "checks": [
+        {
+          "id": "valid_mixed",
+          "top_keys": true,
+          "summary": true,
+          "file_shape": true,
+          "path_style": true,
+          "pass": true
+        },
+        {
+          "id": "traversal_denied",
+          "top_keys": true,
+          "summary": true,
+          "file_shape": true,
+          "path_style": true,
+          "pass": true
+        },
+        {
+          "id": "too_large",
+          "top_keys": true,
+          "summary": true,
+          "file_shape": true,
+          "path_style": true,
+          "pass": true
+        },
+        {
+          "id": "invalid_mode",
+          "top_keys": true,
+          "summary": true,
+          "file_shape": true,
+          "path_style": true,
+          "pass": true
+        }
+      ]
+    },
+    "stability": {
+      "runs": 12,
+      "all_rc_zero": true,
+      "unique_hashes": 1,
+      "stable": true,
+      "hash": "a6362918edb4d47a039c59c811f2d7c0f063a77addf72a9bd4e3b928f09d9f71",
+      "duration_ms": {
+        "min": 88,
+        "max": 98,
+        "avg": 91
+      }
+    },
+    "case_results": [
+      {
+        "id": "valid_mixed",
+        "rc": 0,
+        "stdout": "[ctcp_librarian] wrote: C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\librarian\\valid_mixed\\artifacts\\context_pack.json\n[ctcp_librarian] included=2 omitted=0 used_bytes=5368 budget_files=3 budget_bytes=60000",
+        "stderr": "",
+        "duration_ms": 128,
+        "context_exists": true,
+        "context_sha256": "03c731819f6c8fea5a8b4fe9e60303c064a6796106c354d1eaff9bf6e2f7abdb",
+        "context": {
+          "schema_version": "ctcp-context-pack-v1",
+          "goal": "eval-librarian-valid",
+          "repo_slug": "ctcp",
+          "summary": "included=2 omitted=0 used_bytes=5368 budget_files=3 budget_bytes=60000",
+          "files": [
+            {
+              "path": "README.md",
+              "why": "robustness-valid; mode=full",
+              "content": "# CTCP — ADLC + Multi-Agent Execution Engine\n\n本仓库核心定位：核心 = ADLC 执行引擎（证据链 + failure bundle），把“项目实现”变成可验证、可回放、可审计的执行闭环。\n- 默认路径是 **headless**（不依赖 GUI/Qt）。\n- GUI 仅作为示例/可视化器，可选开启，不影响核心流程。\n- find = workflow resolver（从本地 `workflow_registry/` + 历史成功记录解析最佳 workflow，不依赖联网检索）。\n- 可选开启受控 web find（`resolver_plus_web`，由外部 Researcher 提供 `find_web.json`），默认仍不依赖联网。\n- GUI 可选/默认挂起（不影响核心 gate）。\n\n系统目标：\n- 你只需给一个目标（Goal）\n- 系统会自动拆解、执行、验收、记录\n- 只有在 **必须由你决策/提供信息** 时才会提问\n- 最终给你一份可回放的演示报告（trace + 可复现命令）\n\n> 强约束入口：先读 `docs/00_CORE.md`、`AGENTS.md`、`ai_context/00_AI_CONTRACT.md`。  \n> 规则冲突时以 `docs/00_CORE.md` 为准。\n\n---\n\n## Quick Start\n\n最小命令（核心链路）：\n```powershell\npowershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1\npython scripts\\adlc_run.py --goal \"your-goal\" --force\n```\n\n项目级执行顺序（foundation-first）见：\n- `docs/25_project_plan.md`\n- `meta/backlog/execution_queue.json`\n\n1) 生成任务单（DoD/验收先行）\n```powershell\npython tools\\ctcp_assistant.py init-task \"your-goal\"\n```\n\n2) （可选）生成外部调研模板（Research-first）\n```powershell\npython tools\\ctcp_assistant.py init-externals \"your-goal\"\n```\n\n3) 运行“团队式”执行（默认 dry-run，会生成 Agent Packet 与演示报告）\n```powershell\npython tools\\ctcp_team.py start \"your-goal\"\n```\n\n4) 运行 ADLC headless 入口（最小闭环）\n```powershell\npython scripts\\adlc_run.py --goal \"your-goal\" --force\n```\n\n5) 验收（必须）：证据闭环 verify（推荐）\n```powershell\npowershell -ExecutionPolicy Bypass -File scripts\\verify.ps1\n```\n或：\n```bash\nbash scripts/verify.sh\n```\n\n6) 基础仓库门禁（Lite 默认；workflow/contract/doc-index + lite scenario）\n```powershell\npowershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1\n```\n或：\n```bash\nbash scripts/verify_repo.sh\n```\n\n---\n\n## What “Team Mode” Produces\n\n- `meta/tasks/CURRENT.md`：本次任务单（验收、计划、是否允许改代码）\n- `meta/externals/*`：外部方案对比（如果需要）\n- `${CTCP_RUNS_ROOT:-~/.ctcp/runs}/ctcp/<run_id>/`：一次运行的“团队包”（真实产物目录）\n  - `PROMPT.md`：给 coding agent 的唯一输入\n  - `QUESTIONS.md`：只允许写阻塞性问题\n  - `TRACE.md`：全过程记录（演示用）\n- `meta/run_pointers/LAST_RUN.txt`：仓库内指针，指向最新外部 run 包绝对路径\n- `meta/reports/LAST.md`：面向你的最终演示报告（可回放/可审计）\n\n---\n\n## Build\n\n默认 headless 构建：\n\n```powershell\ncmake -S . -B build_lite -DCTCP_ENABLE_GUI=OFF\ncmake --build build_lite --config Release\n```\n\nGUI 示例构建（可选）：\n\n```powershell\ncmake -S . -B build_gui -DCTCP_ENABLE_GUI=ON -DCMAKE_PREFIX_PATH=\"<Qt path>\"\ncmake --build build_gui --config Release\n```\n\n更多见 `BUILD.md`。\n\n---\n\n## Doc Index\n\n<!-- CTCP:DOC_INDEX:BEGIN -->\n<!-- (auto-generated by scripts/sync_doc_links.py; curated list) -->\n\n## Project Docs\n\n- [AGENTS.md](AGENTS.md)\n- [README.md](README.md)\n- [BUILD.md](BUILD.md)\n- [PATCH_README.md](PATCH_README.md)\n- [docs/PATCH_CONTRACT.md](docs/PATCH_CONTRACT.md)\n- [TREE.md](TREE.md)\n- [docs/00_CORE.md](docs/00_CORE.md)\n- [docs/00_overview.md](docs/00_overview.md)\n- [docs/01_architecture.md](docs/01_architecture.md)\n- [docs/02_workflow.md](docs/02_workflow.md)\n- [docs/03_quality_gates.md](docs/03_quality_gates.md)\n- [docs/10_team_mode.md](docs/10_team_mode.md)\n- [docs/21_paths_and_locations.md](docs/21_paths_and_locations.md)\n- [docs/22_teamnet_adlc.md](docs/22_teamnet_adlc.md)\n- [docs/22_agent_teamnet.md](docs/22_agent_teamnet.md)\n- [docs/30_artifact_contracts.md](docs/30_artifact_contracts.md)\n- [docs/12_modules_index.md](docs/12_modules_index.md)\n- [docs/13_contracts_index.md](docs/13_contracts_index.md)\n- [docs/SELF_CHECK_SYSTEM.md](docs/SELF_CHECK_SYSTEM.md)\n- [ai_context/00_AI_CONTRACT.md](ai_context/00_AI_CONTRACT.md)\n\n<!-- CTCP:DOC_INDEX:END -->\n\n---\n\n## Notes\n\n- 本仓库默认 **Spec-first**：先改 docs/spec/meta，再改代码。\n- “禁止代码”由 `scripts/workflow_checks.py` 强制执行（不满足直接 fail）。\n"
+            },
+            {
+              "path": "docs/03_quality_gates.md",
+              "why": "robustness-valid; mode=snippets",
+              "content": "# lines 1-20\n     1: # Quality Gates (DoD)\n     2: \n     3: 本仓库的“合格交付”主判定方式：`scripts/verify.*` 通过（证据 gate）。\n     4: `scripts/verify_repo.*` 仍用于 workflow/contract/doc-index 的基础门禁。\n     5: \n     6: “没证据=没测试”硬规则：\n     7: - 必须生成 `artifacts/verify/<timestamp>/proof.json` 与步骤日志。\n     8: - 必须通过 `tools/adlc_gate.py`。\n     9: - `proof.result != PASS` 或日志缺失 -> 直接 fail。\n    10: \n    11: verify_repo 必须保证：\n    12: \n    13: 1) headless lite path (default)\n    14: - `CTCP_ENABLE_GUI=OFF` build path (if cmake exists)\n    15: - lite ctest set\n    16: - lite replay scenario(s)\n    17: \n    18: 2) workflow gate\n    19: - meta/tasks/CURRENT.md 存在\n    20: - ai_context/00_AI_CONTRACT.md 存在"
+            }
+          ],
+          "omitted": []
+        },
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\librarian\\valid_mixed"
+      },
+      {
+        "id": "invalid_schema",
+        "rc": 1,
+        "stdout": "",
+        "stderr": "[ctcp_librarian] file_request schema_version must be ctcp-file-request-v1",
+        "duration_ms": 112,
+        "context_exists": false,
+        "context_sha256": null,
+        "context": null,
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\librarian\\invalid_schema"
+      },
+      {
+        "id": "invalid_budget",
+        "rc": 1,
+        "stdout": "",
+        "stderr": "[ctcp_librarian] budget.max_files and budget.max_total_bytes must be > 0",
+        "duration_ms": 100,
+        "context_exists": false,
+        "context_sha256": null,
+        "context": null,
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\librarian\\invalid_budget"
+      },
+      {
+        "id": "traversal_denied",
+        "rc": 0,
+        "stdout": "[ctcp_librarian] wrote: C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\librarian\\traversal_denied\\artifacts\\context_pack.json\n[ctcp_librarian] included=1 omitted=1 used_bytes=738 budget_files=2 budget_bytes=15000",
+        "stderr": "",
+        "duration_ms": 97,
+        "context_exists": true,
+        "context_sha256": "b9212f9f98cddd58bfd38899baa50c77f8de6f39658e100df0d34c3adec12f33",
+        "context": {
+          "schema_version": "ctcp-context-pack-v1",
+          "goal": "traversal",
+          "repo_slug": "ctcp",
+          "summary": "included=1 omitted=1 used_bytes=738 budget_files=2 budget_bytes=15000",
+          "files": [
+            {
+              "path": "README.md",
+              "why": "requested by chair; mode=snippets",
+              "content": "# lines 1-8\n     1: # CTCP — ADLC + Multi-Agent Execution Engine\n     2: \n     3: 本仓库核心定位：核心 = ADLC 执行引擎（证据链 + failure bundle），把“项目实现”变成可验证、可回放、可审计的执行闭环。\n     4: - 默认路径是 **headless**（不依赖 GUI/Qt）。\n     5: - GUI 仅作为示例/可视化器，可选开启，不影响核心流程。\n     6: - find = workflow resolver（从本地 `workflow_registry/` + 历史成功记录解析最佳 workflow，不依赖联网检索）。\n     7: - 可选开启受控 web find（`resolver_plus_web`，由外部 Researcher 提供 `find_web.json`），默认仍不依赖联网。\n     8: - GUI 可选/默认挂起（不影响核心 gate）。"
+            }
+          ],
+          "omitted": [
+            {
+              "path": "../README.md",
+              "reason": "denied"
+            }
+          ]
+        },
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\librarian\\traversal_denied"
+      },
+      {
+        "id": "too_large",
+        "rc": 0,
+        "stdout": "[ctcp_librarian] wrote: C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\librarian\\too_large\\artifacts\\context_pack.json\n[ctcp_librarian] included=1 omitted=1 used_bytes=4540 budget_files=1 budget_bytes=200000",
+        "stderr": "",
+        "duration_ms": 93,
+        "context_exists": true,
+        "context_sha256": "9a95782132721099f0a0c933e4aa5975f596fc56167ddc7da0b2ec154ae156c5",
+        "context": {
+          "schema_version": "ctcp-context-pack-v1",
+          "goal": "too-large",
+          "repo_slug": "ctcp",
+          "summary": "included=1 omitted=1 used_bytes=4540 budget_files=1 budget_bytes=200000",
+          "files": [
+            {
+              "path": "README.md",
+              "why": "requested by chair; mode=full",
+              "content": "# CTCP — ADLC + Multi-Agent Execution Engine\n\n本仓库核心定位：核心 = ADLC 执行引擎（证据链 + failure bundle），把“项目实现”变成可验证、可回放、可审计的执行闭环。\n- 默认路径是 **headless**（不依赖 GUI/Qt）。\n- GUI 仅作为示例/可视化器，可选开启，不影响核心流程。\n- find = workflow resolver（从本地 `workflow_registry/` + 历史成功记录解析最佳 workflow，不依赖联网检索）。\n- 可选开启受控 web find（`resolver_plus_web`，由外部 Researcher 提供 `find_web.json`），默认仍不依赖联网。\n- GUI 可选/默认挂起（不影响核心 gate）。\n\n系统目标：\n- 你只需给一个目标（Goal）\n- 系统会自动拆解、执行、验收、记录\n- 只有在 **必须由你决策/提供信息** 时才会提问\n- 最终给你一份可回放的演示报告（trace + 可复现命令）\n\n> 强约束入口：先读 `docs/00_CORE.md`、`AGENTS.md`、`ai_context/00_AI_CONTRACT.md`。  \n> 规则冲突时以 `docs/00_CORE.md` 为准。\n\n---\n\n## Quick Start\n\n最小命令（核心链路）：\n```powershell\npowershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1\npython scripts\\adlc_run.py --goal \"your-goal\" --force\n```\n\n项目级执行顺序（foundation-first）见：\n- `docs/25_project_plan.md`\n- `meta/backlog/execution_queue.json`\n\n1) 生成任务单（DoD/验收先行）\n```powershell\npython tools\\ctcp_assistant.py init-task \"your-goal\"\n```\n\n2) （可选）生成外部调研模板（Research-first）\n```powershell\npython tools\\ctcp_assistant.py init-externals \"your-goal\"\n```\n\n3) 运行“团队式”执行（默认 dry-run，会生成 Agent Packet 与演示报告）\n```powershell\npython tools\\ctcp_team.py start \"your-goal\"\n```\n\n4) 运行 ADLC headless 入口（最小闭环）\n```powershell\npython scripts\\adlc_run.py --goal \"your-goal\" --force\n```\n\n5) 验收（必须）：证据闭环 verify（推荐）\n```powershell\npowershell -ExecutionPolicy Bypass -File scripts\\verify.ps1\n```\n或：\n```bash\nbash scripts/verify.sh\n```\n\n6) 基础仓库门禁（Lite 默认；workflow/contract/doc-index + lite scenario）\n```powershell\npowershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1\n```\n或：\n```bash\nbash scripts/verify_repo.sh\n```\n\n---\n\n## What “Team Mode” Produces\n\n- `meta/tasks/CURRENT.md`：本次任务单（验收、计划、是否允许改代码）\n- `meta/externals/*`：外部方案对比（如果需要）\n- `${CTCP_RUNS_ROOT:-~/.ctcp/runs}/ctcp/<run_id>/`：一次运行的“团队包”（真实产物目录）\n  - `PROMPT.md`：给 coding agent 的唯一输入\n  - `QUESTIONS.md`：只允许写阻塞性问题\n  - `TRACE.md`：全过程记录（演示用）\n- `meta/run_pointers/LAST_RUN.txt`：仓库内指针，指向最新外部 run 包绝对路径\n- `meta/reports/LAST.md`：面向你的最终演示报告（可回放/可审计）\n\n---\n\n## Build\n\n默认 headless 构建：\n\n```powershell\ncmake -S . -B build_lite -DCTCP_ENABLE_GUI=OFF\ncmake --build build_lite --config Release\n```\n\nGUI 示例构建（可选）：\n\n```powershell\ncmake -S . -B build_gui -DCTCP_ENABLE_GUI=ON -DCMAKE_PREFIX_PATH=\"<Qt path>\"\ncmake --build build_gui --config Release\n```\n\n更多见 `BUILD.md`。\n\n---\n\n## Doc Index\n\n<!-- CTCP:DOC_INDEX:BEGIN -->\n<!-- (auto-generated by scripts/sync_doc_links.py; curated list) -->\n\n## Project Docs\n\n- [AGENTS.md](AGENTS.md)\n- [README.md](README.md)\n- [BUILD.md](BUILD.md)\n- [PATCH_README.md](PATCH_README.md)\n- [docs/PATCH_CONTRACT.md](docs/PATCH_CONTRACT.md)\n- [TREE.md](TREE.md)\n- [docs/00_CORE.md](docs/00_CORE.md)\n- [docs/00_overview.md](docs/00_overview.md)\n- [docs/01_architecture.md](docs/01_architecture.md)\n- [docs/02_workflow.md](docs/02_workflow.md)\n- [docs/03_quality_gates.md](docs/03_quality_gates.md)\n- [docs/10_team_mode.md](docs/10_team_mode.md)\n- [docs/21_paths_and_locations.md](docs/21_paths_and_locations.md)\n- [docs/22_teamnet_adlc.md](docs/22_teamnet_adlc.md)\n- [docs/22_agent_teamnet.md](docs/22_agent_teamnet.md)\n- [docs/30_artifact_contracts.md](docs/30_artifact_contracts.md)\n- [docs/12_modules_index.md](docs/12_modules_index.md)\n- [docs/13_contracts_index.md](docs/13_contracts_index.md)\n- [docs/SELF_CHECK_SYSTEM.md](docs/SELF_CHECK_SYSTEM.md)\n- [ai_context/00_AI_CONTRACT.md](ai_context/00_AI_CONTRACT.md)\n\n<!-- CTCP:DOC_INDEX:END -->\n\n---\n\n## Notes\n\n- 本仓库默认 **Spec-first**：先改 docs/spec/meta，再改代码。\n- “禁止代码”由 `scripts/workflow_checks.py` 强制执行（不满足直接 fail）。\n"
+            }
+          ],
+          "omitted": [
+            {
+              "path": "docs/03_quality_gates.md",
+              "reason": "too_large"
+            }
+          ]
+        },
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\librarian\\too_large"
+      },
+      {
+        "id": "invalid_mode",
+        "rc": 0,
+        "stdout": "[ctcp_librarian] wrote: C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\librarian\\invalid_mode\\artifacts\\context_pack.json\n[ctcp_librarian] included=0 omitted=1 used_bytes=0 budget_files=2 budget_bytes=5000",
+        "stderr": "",
+        "duration_ms": 94,
+        "context_exists": true,
+        "context_sha256": "d3983a69a8d889990c003851997e7b03667b3b7bae9a4a53fbae7829b1716ac6",
+        "context": {
+          "schema_version": "ctcp-context-pack-v1",
+          "goal": "invalid-mode",
+          "repo_slug": "ctcp",
+          "summary": "included=0 omitted=1 used_bytes=0 budget_files=2 budget_bytes=5000",
+          "files": [],
+          "omitted": [
+            {
+              "path": "README.md",
+              "reason": "irrelevant"
+            }
+          ]
+        },
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\librarian\\invalid_mode"
+      },
+      {
+        "id": "missing_file_request",
+        "rc": 1,
+        "stdout": "[ctcp_librarian] missing file_request: C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\librarian\\missing_file_request\\artifacts\\file_request.json",
+        "stderr": "",
+        "duration_ms": 91,
+        "context_exists": false,
+        "context_sha256": null,
+        "context": null,
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\librarian\\missing_file_request"
+      }
+    ]
+  },
+  "api_connection": {
+    "plan_script": "d:\\.c_projects\\adc\\ctcp\\scripts\\externals\\openai_plan_api.py",
+    "patch_script": "d:\\.c_projects\\adc\\ctcp\\scripts\\externals\\openai_patch_api.py",
+    "robustness": {
+      "score": "7/7",
+      "pass_rate": 1.0,
+      "checks": [
+        {
+          "id": "plan_output_text",
+          "pass": true
+        },
+        {
+          "id": "patch_structured",
+          "pass": true
+        },
+        {
+          "id": "plan_choices",
+          "pass": true
+        },
+        {
+          "id": "missing_key",
+          "pass": true
+        },
+        {
+          "id": "http_500",
+          "pass": true
+        },
+        {
+          "id": "non_json",
+          "pass": true
+        },
+        {
+          "id": "empty_output",
+          "pass": true
+        }
+      ]
+    },
+    "readability": {
+      "score": "4/4",
+      "pass_rate": 1.0,
+      "checks": [
+        {
+          "id": "plan_markdown_shape",
+          "has_plan_header": true,
+          "has_bullet": true,
+          "no_code_fence": true,
+          "pass": true
+        },
+        {
+          "id": "patch_unified_diff_shape",
+          "first_line_diff": true,
+          "has_headers": true,
+          "has_hunk": true,
+          "pass": true
+        },
+        {
+          "id": "missing_key_error_clarity",
+          "mentions_key": true,
+          "pass": true
+        },
+        {
+          "id": "http_error_clarity",
+          "mentions_status": true,
+          "pass": true
+        }
+      ]
+    },
+    "stability": {
+      "plan": {
+        "runs": 12,
+        "all_rc_zero": true,
+        "unique_hashes": 1,
+        "stable": true,
+        "hash": "2421c1de80464b7d7be4588e07c59c46c47af6feb347eabb5f0b76060dd9fae3",
+        "duration_ms": {
+          "min": 186,
+          "max": 210,
+          "avg": 196
+        }
+      },
+      "patch": {
+        "runs": 12,
+        "all_rc_zero": true,
+        "unique_hashes": 1,
+        "stable": true,
+        "hash": "00f325f39d01d9651501842f7e7e09dc3ee33b3562362f83d548e7621dfad654",
+        "duration_ms": {
+          "min": 190,
+          "max": 220,
+          "avg": 198
+        }
+      }
+    },
+    "case_results": [
+      {
+        "id": "plan_output_text",
+        "request_count": 1,
+        "request_path": "/v1/responses",
+        "has_auth_header": true,
+        "cmd": [
+          "D:\\anaconda\\python.exe",
+          "d:\\.c_projects\\adc\\ctcp\\scripts\\externals\\openai_plan_api.py",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\plan_output_text\\CONTEXT.md",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\plan_output_text\\CONSTRAINTS.md",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\plan_output_text\\FIX_BRIEF.md",
+          "goal-x",
+          "1",
+          "d:\\.c_projects\\adc\\ctcp"
+        ],
+        "rc": 0,
+        "stdout": "# PLAN\n- item: ok\n",
+        "stderr": "",
+        "duration_ms": 196
+      },
+      {
+        "id": "patch_structured",
+        "request_count": 1,
+        "cmd": [
+          "D:\\anaconda\\python.exe",
+          "d:\\.c_projects\\adc\\ctcp\\scripts\\externals\\openai_patch_api.py",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\patch_structured\\PLAN.md",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\patch_structured\\CONTEXT.md",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\patch_structured\\CONSTRAINTS.md",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\patch_structured\\FIX_BRIEF.md",
+          "goal-x",
+          "1",
+          "d:\\.c_projects\\adc\\ctcp"
+        ],
+        "rc": 0,
+        "stdout": "diff --git a/docs/target.txt b/docs/target.txt\n--- a/docs/target.txt\n+++ b/docs/target.txt\n@@ -1 +1 @@\n-hello\n+hello patched\n",
+        "stderr": "",
+        "duration_ms": 229
+      },
+      {
+        "id": "plan_choices",
+        "request_count": 1,
+        "cmd": [
+          "D:\\anaconda\\python.exe",
+          "d:\\.c_projects\\adc\\ctcp\\scripts\\externals\\openai_plan_api.py",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\plan_choices\\CONTEXT.md",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\plan_choices\\CONSTRAINTS.md",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\plan_choices\\FIX_BRIEF.md",
+          "goal-x",
+          "1",
+          "d:\\.c_projects\\adc\\ctcp"
+        ],
+        "rc": 0,
+        "stdout": "# PLAN\n- via choices\n",
+        "stderr": "",
+        "duration_ms": 196
+      },
+      {
+        "id": "missing_key",
+        "request_count": 0,
+        "cmd": [
+          "D:\\anaconda\\python.exe",
+          "d:\\.c_projects\\adc\\ctcp\\scripts\\externals\\openai_plan_api.py",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\missing_key\\CONTEXT.md",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\missing_key\\CONSTRAINTS.md",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\missing_key\\FIX_BRIEF.md",
+          "goal-x",
+          "1",
+          "d:\\.c_projects\\adc\\ctcp"
+        ],
+        "rc": 1,
+        "stdout": "",
+        "stderr": "OPENAI_API_KEY is required for OpenAI API mode\n",
+        "duration_ms": 134
+      },
+      {
+        "id": "http_500",
+        "request_count": 1,
+        "cmd": [
+          "D:\\anaconda\\python.exe",
+          "d:\\.c_projects\\adc\\ctcp\\scripts\\externals\\openai_plan_api.py",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\http_500\\CONTEXT.md",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\http_500\\CONSTRAINTS.md",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\http_500\\FIX_BRIEF.md",
+          "goal-x",
+          "1",
+          "d:\\.c_projects\\adc\\ctcp"
+        ],
+        "rc": 1,
+        "stdout": "",
+        "stderr": "OpenAI API HTTP 500: {\"error\": \"boom\"}\n",
+        "duration_ms": 216
+      },
+      {
+        "id": "non_json",
+        "request_count": 1,
+        "cmd": [
+          "D:\\anaconda\\python.exe",
+          "d:\\.c_projects\\adc\\ctcp\\scripts\\externals\\openai_plan_api.py",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\non_json\\CONTEXT.md",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\non_json\\CONSTRAINTS.md",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\non_json\\FIX_BRIEF.md",
+          "goal-x",
+          "1",
+          "d:\\.c_projects\\adc\\ctcp"
+        ],
+        "rc": 1,
+        "stdout": "",
+        "stderr": "OpenAI API returned non-JSON response: Expecting value: line 1 column 1 (char 0)\n",
+        "duration_ms": 199
+      },
+      {
+        "id": "empty_output",
+        "request_count": 1,
+        "cmd": [
+          "D:\\anaconda\\python.exe",
+          "d:\\.c_projects\\adc\\ctcp\\scripts\\externals\\openai_plan_api.py",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\empty_output\\CONTEXT.md",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\empty_output\\CONSTRAINTS.md",
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_librarian_api_eval_jnsu4y3e\\api\\empty_output\\FIX_BRIEF.md",
+          "goal-x",
+          "1",
+          "d:\\.c_projects\\adc\\ctcp"
+        ],
+        "rc": 1,
+        "stdout": "",
+        "stderr": "OpenAI API response did not contain text output: {\"output\": []}\n",
+        "duration_ms": 192
+      }
+    ]
+  }
+}

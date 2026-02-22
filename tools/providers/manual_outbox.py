@@ -214,6 +214,7 @@ def execute(
     config: dict[str, Any],
     guardrails_budgets: dict[str, str],
 ) -> dict[str, Any]:
+    # BEHAVIOR_ID: B028
     outbox_dir = run_dir / "outbox"
     outbox_dir.mkdir(parents=True, exist_ok=True)
 

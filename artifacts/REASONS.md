@@ -1,0 +1,5 @@
+- RS001 | Ref: B003 | Reason: PLAN must be machine-parseable before any scope or gate enforcement runs.
+- RS002 | Ref: B004 | Reason: Patch scope must be derived from PLAN Scope-Allow/Scope-Deny to prevent drift.
+- RS003 | Ref: B005 | Reason: Behavior documentation and code markers must stay synchronized.
+- RS004 | Ref: R004 | Reason: verify_repo must prove that all PLAN-declared gates were executed.
+- RS005 | Ref: R005 | Reason: Evidence paths must be concrete and present for audit replay.

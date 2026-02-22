@@ -29,3 +29,13 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
 - 跟着 Trace 指针回放外部 run 包中的 `TRACE.md`
 
 > 下一步想做到“全自动”，就在 `ctcp_team.py` 里加 provider：直接调用 codex CLI 或 OpenAI Agents SDK。
+
+## codex_agent Provider（可选全自动）
+- 用途：当 `dispatch_config` 选择 `codex_agent` 时，dispatcher 会自动调用本机 `codex exec` 生成目标 artifact（例如 `artifacts/diff.patch`、`artifacts/PLAN_draft.md`）。
+- 默认安全策略：`codex_agent` 默认禁用/可 dry-run，CI 与 `verify_repo` 默认不会触发真实调用。
+- 启用方式：
+  - 复制 `docs/dispatch_config.codex_agent.sample.json` 到 `${run_dir}/artifacts/dispatch_config.json`。
+  - 按需设置 `providers.codex_agent.enabled=true`，或用环境变量 `CTCP_CODEX_AGENT=1` 覆盖。
+- 产物与日志：
+  - 目标产物写入 `${run_dir}/<target_path>`（严格 run_dir 范围）。
+  - 执行日志写入 `${run_dir}/logs/dispatch_codex_agent.stdout.log` 与 `${run_dir}/logs/dispatch_codex_agent.stderr.log`。

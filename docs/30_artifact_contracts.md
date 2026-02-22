@@ -96,13 +96,47 @@ Scope-Allow: (list of path prefixes)
 
 Scope-Deny: (list)
 
-Gates: (lite must exist)
+Gates: (at least `lite`, `plan_check`, `patch_check`, `behavior_catalog_check`)
 
 Stop: (stop conditions)
 
 Budgets: (iterations/files/bytes)
 
-Steps: (patch -> verify loop)
+Behaviors: (list of `B###` ids selected for this run)
+
+Results: (list of `R###` ids selected for this run)
+
+Rules:
+- PLAN headers are machine-read key lines (`Key: Value`), no YAML parser required.
+- `plan_check` must fail on missing required keys or unresolved Behavior/Result references.
+- verify flow must record executed gates and ensure every PLAN-declared gate was executed.
+
+F.1) artifacts/REASONS.md
+
+Each reason line must reference at least one `B###` or `R###` id.
+
+F.2) artifacts/EXPECTED_RESULTS.md
+
+Each `R###` result entry must include:
+- `Acceptance: ...`
+- `Evidence: <path list>`
+- `Related-Gates: <gate list>`
+
+Rules:
+- `plan_check --check-evidence` validates that declared Evidence paths exist.
+- `patch_check` reads Scope-Allow/Scope-Deny from PLAN; missing/unparseable PLAN is a hard failure.
+
+F.3) docs/behaviors catalog
+
+- Index file: `docs/behaviors/INDEX.md`
+- Page file: `docs/behaviors/B###-<slug>.md`
+- Every behavior page must include the headings:
+  - `## Reason`
+  - `## Behavior`
+  - `## Result`
+- `behavior_catalog_check` must enforce:
+  - code `BEHAVIOR_ID` marker -> INDEX entry -> page existence
+  - INDEX reverse coverage (INDEX entries must have code markers and pages)
 
 G) reviews/review_contract.md and reviews/review_cost.md
 

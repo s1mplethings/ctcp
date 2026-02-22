@@ -1,0 +1,39 @@
+# Behavior Catalog Index
+
+Catalog format: `B### | module | entry | step type | gate | doc | summary`.
+
+- B001 | module=verify_repo | entry=scripts/verify_repo.ps1,scripts/verify_repo.sh | step_type=gate | gate=lite | doc=B001-verify-repo-lite-gate.md | summary=Run headless lite configure/build/ctest path.
+- B002 | module=verify_repo | entry=scripts/workflow_checks.py | step_type=gate | gate=workflow_gate | doc=B002-verify-repo-workflow-gate.md | summary=Run workflow prerequisite checks before contract checks.
+- B003 | module=verify_repo | entry=scripts/plan_check.py | step_type=gate | gate=plan_check | doc=B003-verify-repo-plan-check-gate.md | summary=Validate PLAN/REASONS/EXPECTED_RESULTS machine-readable contracts.
+- B004 | module=verify_repo | entry=scripts/patch_check.py | step_type=gate | gate=patch_check | doc=B004-verify-repo-patch-check-gate.md | summary=Enforce changed-file scope from PLAN scope fields.
+- B005 | module=verify_repo | entry=scripts/behavior_catalog_check.py | step_type=gate | gate=behavior_catalog_check | doc=B005-verify-repo-behavior-catalog-gate.md | summary=Enforce BEHAVIOR_ID coverage against docs/behaviors catalog.
+- B006 | module=verify_repo | entry=scripts/contract_checks.py | step_type=gate | gate=contract_checks | doc=B006-verify-repo-contract-checks-gate.md | summary=Run repository contract integrity checks.
+- B007 | module=verify_repo | entry=scripts/sync_doc_links.py --check | step_type=gate | gate=doc_index_check | doc=B007-verify-repo-doc-index-gate.md | summary=Ensure README doc index block is synchronized.
+- B008 | module=verify_repo | entry=simlab/run.py --suite lite | step_type=gate | gate=lite_replay | doc=B008-verify-repo-lite-replay-gate.md | summary=Replay lite scenario set as repository smoke gate.
+- B009 | module=verify_repo | entry=python -m unittest discover | step_type=gate | gate=python_unit_tests | doc=B009-verify-repo-python-unit-tests-gate.md | summary=Execute Python unit-test gate.
+- B010 | module=plan_contract | entry=scripts/plan_check.py | step_type=entry | gate=plan_check | doc=B010-plan-check-parse-and-validate.md | summary=Plan contract parser and validator for RBR artifacts.
+- B011 | module=plan_contract | entry=scripts/patch_check.py | step_type=entry | gate=patch_check | doc=B011-patch-check-scope-from-plan.md | summary=Patch scope gate that binds allow/deny policy to PLAN.
+- B012 | module=behavior_catalog | entry=scripts/behavior_catalog_check.py | step_type=entry | gate=behavior_catalog_check | doc=B012-behavior-catalog-check-coverage.md | summary=Catalog checker for BEHAVIOR_ID markers and docs coverage.
+- B013 | module=adlc | entry=scripts/adlc_run.py | step_type=entry | gate=workflow_gate | doc=B013-adlc-run-cli-entry.md | summary=Headless ADLC bootstrap entry for doc-plan-patch-verify loop.
+- B014 | module=workflow_dispatch | entry=scripts/workflow_dispatch.py | step_type=entry | gate=workflow_gate | doc=B014-workflow-dispatch-cli-entry.md | summary=Workflow selection and command dispatch entry.
+- B015 | module=orchestrator | entry=scripts/ctcp_orchestrate.py current_gate | step_type=step | gate=workflow_gate | doc=B015-orchestrator-state-gate-eval.md | summary=Evaluate run_dir artifacts into next orchestrator gate state.
+- B016 | module=orchestrator | entry=scripts/ctcp_orchestrate.py make_failure_bundle | step_type=step | gate=workflow_gate | doc=B016-orchestrator-failure-bundle-build.md | summary=Build auditable failure bundle when verify/apply fails.
+- B017 | module=dispatch | entry=scripts/ctcp_dispatch.py derive_request | step_type=step_type | gate=workflow_gate | doc=B017-dispatch-step-fail-to-fixer.md | summary=Map fail state to fixer patch request.
+- B018 | module=dispatch | entry=scripts/ctcp_dispatch.py derive_request | step_type=step_type | gate=workflow_gate | doc=B018-dispatch-step-context-pack.md | summary=Map context pack blocking state to librarian request.
+- B019 | module=dispatch | entry=scripts/ctcp_dispatch.py derive_request | step_type=step_type | gate=workflow_gate | doc=B019-dispatch-step-review-contract.md | summary=Map contract review blocking state to contract_guardian request.
+- B020 | module=dispatch | entry=scripts/ctcp_dispatch.py derive_request | step_type=step_type | gate=workflow_gate | doc=B020-dispatch-step-review-cost.md | summary=Map cost review blocking state to cost_controller request.
+- B021 | module=dispatch | entry=scripts/ctcp_dispatch.py derive_request | step_type=step_type | gate=workflow_gate | doc=B021-dispatch-step-plan-signed.md | summary=Map PLAN sign-off blocking state to chair plan_signed request.
+- B022 | module=dispatch | entry=scripts/ctcp_dispatch.py derive_request | step_type=step_type | gate=workflow_gate | doc=B022-dispatch-step-file-request.md | summary=Map missing file request state to chair file_request action.
+- B023 | module=dispatch | entry=scripts/ctcp_dispatch.py derive_request | step_type=step_type | gate=workflow_gate | doc=B023-dispatch-step-find-web.md | summary=Map resolver_plus_web research blocking to researcher action.
+- B024 | module=dispatch | entry=scripts/ctcp_dispatch.py derive_request | step_type=step_type | gate=workflow_gate | doc=B024-dispatch-step-patchmaker.md | summary=Map diff.patch blocking to patchmaker make_patch flow.
+- B025 | module=dispatch | entry=scripts/ctcp_dispatch.py derive_request | step_type=step_type | gate=workflow_gate | doc=B025-dispatch-step-fixer-patch.md | summary=Map fixer-owned patch blocking/fail to fixer patch flow.
+- B026 | module=dispatch | entry=scripts/ctcp_dispatch.py derive_request | step_type=step_type | gate=workflow_gate | doc=B026-dispatch-step-plan-draft-family.md | summary=Map plan_draft/analysis/guardrails/review-block states to chair plan_draft.
+- B027 | module=dispatch | entry=scripts/ctcp_dispatch.py _resolve_provider,dispatch_once | step_type=step | gate=workflow_gate | doc=B027-dispatch-provider-resolution-execute.md | summary=Resolve provider per role then execute provider action once.
+- B028 | module=provider_manual_outbox | entry=tools/providers/manual_outbox.py execute | step_type=entry | gate=workflow_gate | doc=B028-manual-outbox-prompt-create.md | summary=Create deterministic outbox prompt for manual provider execution.
+- B029 | module=provider_local_exec | entry=tools/providers/local_exec.py _run_librarian | step_type=entry | gate=workflow_gate | doc=B029-local-exec-librarian-run.md | summary=Execute local librarian context-pack command.
+- B030 | module=provider_local_exec | entry=tools/providers/local_exec.py _run_contract_guardian | step_type=entry | gate=workflow_gate | doc=B030-local-exec-contract-guardian-run.md | summary=Execute local contract_guardian review generation.
+- B031 | module=provider_api_agent | entry=tools/providers/api_agent.py execute | step_type=entry | gate=workflow_gate | doc=B031-api-agent-provider-execute.md | summary=Execute external/API agent provider with evidence pack and logs.
+- B032 | module=patch_first | entry=scripts/apply_patch_first.py | step_type=entry | gate=patch_check | doc=B032-apply-patch-first-cli-entry.md | summary=CLI entry for patch-first safe apply helper.
+- B033 | module=librarian | entry=scripts/ctcp_librarian.py | step_type=entry | gate=workflow_gate | doc=B033-ctcp-librarian-cli-entry.md | summary=CLI entry for local librarian artifact generation.
+- B034 | module=workflow | entry=scripts/workflow_checks.py | step_type=gate | gate=workflow_gate | doc=B034-workflow-checks-code-change-gate.md | summary=Detect forbidden code edits when task contract is not enabled.
+- B035 | module=contracts | entry=scripts/contract_checks.py | step_type=gate | gate=contract_checks | doc=B035-contract-checks-schema-readme-gate.md | summary=Validate schema presence and README local links contract.

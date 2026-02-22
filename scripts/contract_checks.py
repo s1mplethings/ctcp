@@ -117,6 +117,7 @@ def check_unique_graph_spider_impl() -> None:
     print("[contract_checks] unique Graph Spider implementation ok")
 
 def main():
+    # BEHAVIOR_ID: B035
     missing = [p for p in SCHEMAS if not p.exists()]
     if missing:
         raise SystemExit(f"[contract_checks] missing schema files: {missing}")

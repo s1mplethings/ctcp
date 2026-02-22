@@ -178,6 +178,7 @@ def _build_context_pack(file_request: dict[str, Any]) -> dict[str, Any]:
 
 
 def main() -> int:
+    # BEHAVIOR_ID: B033
     ap = argparse.ArgumentParser(description="CTCP local librarian (read-only context pack supplier)")
     ap.add_argument("--run-dir", default="")
     args = ap.parse_args()

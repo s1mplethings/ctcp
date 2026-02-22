@@ -1,0 +1,23 @@
+{
+  "schema_version": "ctcp-dispatch-config-v1",
+  "mode": "manual_outbox",
+  "role_providers": {
+    "librarian": "local_exec",
+    "contract_guardian": "local_exec",
+    "patchmaker": "codex_agent",
+    "fixer": "codex_agent"
+  },
+  "budgets": {
+    "max_outbox_prompts": 20
+  },
+  "providers": {
+    "codex_agent": {
+      "enabled": false,
+      "dry_run": true,
+      "cmd": "codex",
+      "model": "",
+      "timeout_sec": 900,
+      "fallback_to_manual_outbox": true
+    }
+  }
+}

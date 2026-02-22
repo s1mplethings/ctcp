@@ -13,12 +13,35 @@ FIND_RESULT_PATH = Path("artifacts") / "find_result.json"
 WORKFLOW_INDEX_PATH = ROOT / "workflow_registry" / "index.json"
 
 try:
-    from tools.providers import api_agent, local_exec, manual_outbox
+    from tools.providers import api_agent, codex_agent, local_exec, manual_outbox
 except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
-    from tools.providers import api_agent, local_exec, manual_outbox
+    from tools.providers import api_agent, codex_agent, local_exec, manual_outbox
 
-KNOWN_PROVIDERS = {"manual_outbox", "local_exec", "api_agent"}
+KNOWN_PROVIDERS = {"manual_outbox", "local_exec", "api_agent", "codex_agent"}
+
+# BEHAVIOR_ID: B017
+BEHAVIOR_ID_STEP_FAIL_TO_FIXER = "B017"
+# BEHAVIOR_ID: B018
+BEHAVIOR_ID_STEP_CONTEXT_PACK = "B018"
+# BEHAVIOR_ID: B019
+BEHAVIOR_ID_STEP_REVIEW_CONTRACT = "B019"
+# BEHAVIOR_ID: B020
+BEHAVIOR_ID_STEP_REVIEW_COST = "B020"
+# BEHAVIOR_ID: B021
+BEHAVIOR_ID_STEP_PLAN_SIGNED = "B021"
+# BEHAVIOR_ID: B022
+BEHAVIOR_ID_STEP_FILE_REQUEST = "B022"
+# BEHAVIOR_ID: B023
+BEHAVIOR_ID_STEP_FIND_WEB = "B023"
+# BEHAVIOR_ID: B024
+BEHAVIOR_ID_STEP_PATCHMAKER = "B024"
+# BEHAVIOR_ID: B025
+BEHAVIOR_ID_STEP_FIXER_PATCH = "B025"
+# BEHAVIOR_ID: B026
+BEHAVIOR_ID_STEP_PLAN_DRAFT_FAMILY = "B026"
+# BEHAVIOR_ID: B027
+BEHAVIOR_ID_PROVIDER_RESOLUTION = "B027"
 
 
 def default_dispatch_config_doc(role_defaults: dict[str, str] | None = None) -> dict[str, Any]:
@@ -159,11 +182,16 @@ def load_dispatch_config(run_dir: Path) -> tuple[dict[str, Any] | None, str]:
         max_prompts = 20
     budgets["max_outbox_prompts"] = max(1, max_prompts)
 
+    providers = raw.get("providers", {})
+    if not isinstance(providers, dict):
+        providers = {}
+
     cfg = {
         "schema_version": "ctcp-dispatch-config-v1",
         "mode": _normalize_provider(str(raw.get("mode", "manual_outbox"))),
         "role_providers": role_providers,
         "budgets": budgets,
+        "providers": providers,
     }
     return cfg, "ok"
 
@@ -208,6 +236,7 @@ def derive_request(gate: dict[str, str], run_doc: dict[str, Any]) -> dict[str, A
     goal = str(run_doc.get("goal", "")).strip()
 
     if state == "fail":
+        # BEHAVIOR_ID: B017
         return {
             "role": "fixer",
             "action": "fix_patch",
@@ -221,29 +250,41 @@ def derive_request(gate: dict[str, str], run_doc: dict[str, Any]) -> dict[str, A
         return None
 
     if "context_pack.json" in path_l:
+        # BEHAVIOR_ID: B018
         role, action, target = "librarian", "context_pack", "artifacts/context_pack.json"
     elif "review_contract.md" in path_l and "review_cost.md" in path_l and "approve reviews" in reason_l:
+        # BEHAVIOR_ID: B026
         role, action, target = "chair", "plan_draft", "artifacts/PLAN_draft.md"
     elif "review_contract.md" in path_l:
+        # BEHAVIOR_ID: B019
         role, action, target = "contract_guardian", "review_contract", "reviews/review_contract.md"
     elif "review_cost.md" in path_l:
+        # BEHAVIOR_ID: B020
         role, action, target = "cost_controller", "review_cost", "reviews/review_cost.md"
     elif "plan_draft.md" in path_l:
+        # BEHAVIOR_ID: B026
         role, action, target = "chair", "plan_draft", "artifacts/PLAN_draft.md"
     elif "plan.md" in path_l:
+        # BEHAVIOR_ID: B021
         role, action, target = "chair", "plan_signed", "artifacts/PLAN.md"
     elif "file_request.json" in path_l:
+        # BEHAVIOR_ID: B022
         role, action, target = "chair", "file_request", "artifacts/file_request.json"
     elif "find_web.json" in path_l or "externals_pack.json" in path_l:
+        # BEHAVIOR_ID: B023
         role, action, target = "researcher", "find_web", "artifacts/find_web.json"
     elif "analysis.md" in path_l:
+        # BEHAVIOR_ID: B026
         role, action, target = "chair", "plan_draft", "artifacts/analysis.md"
     elif "guardrails.md" in path_l:
+        # BEHAVIOR_ID: B026
         role, action, target = "chair", "plan_draft", "artifacts/guardrails.md"
     elif "diff.patch" in path_l:
         if owner == "fixer":
+            # BEHAVIOR_ID: B025
             role, action, target = "fixer", "fix_patch", "artifacts/diff.patch"
         else:
+            # BEHAVIOR_ID: B024
             role, action, target = "patchmaker", "make_patch", "artifacts/diff.patch"
     else:
         return None
@@ -259,6 +300,7 @@ def derive_request(gate: dict[str, str], run_doc: dict[str, Any]) -> dict[str, A
 
 
 def _resolve_provider(config: dict[str, Any], role: str) -> tuple[str, str]:
+    # BEHAVIOR_ID: B027
     role_providers = config.get("role_providers", {})
     if not isinstance(role_providers, dict):
         role_providers = {}
@@ -288,6 +330,8 @@ def dispatch_preview(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str
         preview = {"status": "can_exec"}
     elif provider == "api_agent":
         preview = api_agent.preview(run_dir=run_dir, request=request, config=config)
+    elif provider == "codex_agent":
+        preview = codex_agent.preview(run_dir=run_dir, request=request, config=config)
     else:
         preview = {"status": "unsupported_provider", "reason": provider}
 
@@ -301,6 +345,7 @@ def dispatch_preview(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str
 
 
 def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], repo_root: Path) -> dict[str, Any]:
+    # BEHAVIOR_ID: B027
     config, cfg_msg = load_dispatch_config(run_dir)
     if config is None:
         return {"status": "disabled", "reason": cfg_msg}
@@ -322,6 +367,14 @@ def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], 
         result = local_exec.execute(repo_root=repo_root, run_dir=run_dir, request=request)
     elif provider == "api_agent":
         result = api_agent.execute(
+            repo_root=repo_root,
+            run_dir=run_dir,
+            request=request,
+            config=config,
+            guardrails_budgets=_parse_guardrails_budgets(run_dir),
+        )
+    elif provider == "codex_agent":
+        result = codex_agent.execute(
             repo_root=repo_root,
             run_dir=run_dir,
             request=request,
