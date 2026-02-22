@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -13,12 +15,13 @@ FIND_RESULT_PATH = Path("artifacts") / "find_result.json"
 WORKFLOW_INDEX_PATH = ROOT / "workflow_registry" / "index.json"
 
 try:
-    from tools.providers import api_agent, codex_agent, local_exec, manual_outbox
+    from tools.providers import api_agent, codex_agent, local_exec, manual_outbox, mock_agent
 except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
-    from tools.providers import api_agent, codex_agent, local_exec, manual_outbox
+    from tools.providers import api_agent, codex_agent, local_exec, manual_outbox, mock_agent
 
-KNOWN_PROVIDERS = {"manual_outbox", "local_exec", "api_agent", "codex_agent"}
+KNOWN_PROVIDERS = {"manual_outbox", "local_exec", "api_agent", "codex_agent", "mock_agent"}
+STEP_META_PATH = Path("step_meta.jsonl")
 
 # BEHAVIOR_ID: B017
 BEHAVIOR_ID_STEP_FAIL_TO_FIXER = "B017"
@@ -74,6 +77,149 @@ def _read_json(path: Path) -> dict[str, Any]:
 def _write_json(path: Path, doc: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+
+def _now_iso() -> str:
+    return datetime.now().isoformat(timespec="seconds")
+
+
+def _forced_provider() -> str:
+    raw = str(os.environ.get("CTCP_FORCE_PROVIDER", "")).strip().lower()
+    if raw in KNOWN_PROVIDERS:
+        return raw
+    return ""
+
+
+def _append_trace(run_dir: Path, text: str) -> None:
+    trace = run_dir / "TRACE.md"
+    trace.parent.mkdir(parents=True, exist_ok=True)
+    with trace.open("a", encoding="utf-8") as fh:
+        fh.write(f"- {_now_iso()} | {text}\n")
+
+
+def _live_provider_violation(
+    *,
+    run_dir: Path,
+    gate: dict[str, str],
+    request: dict[str, Any],
+    provider: str,
+    note: str,
+) -> dict[str, Any] | None:
+    forced = _forced_provider()
+    if forced != "api_agent":
+        return None
+    if provider == "api_agent":
+        return None
+
+    role = str(request.get("role", "")).strip()
+    action = str(request.get("action", "")).strip()
+    gate_state = str(gate.get("state", "")).strip()
+    gate_owner = str(gate.get("owner", "")).strip()
+    gate_path = str(gate.get("path", "")).strip()
+    detail = (
+        "live_api_only_violation: "
+        f"gate={gate_state}:{gate_owner}:{gate_path} "
+        f"role={role} action={action} provider={provider} expected=api_agent"
+    )
+    if note:
+        detail += f" note={note}"
+    _append_trace(run_dir, detail)
+    return {
+        "status": "provider_mismatch",
+        "reason": detail,
+        "expected_provider": "api_agent",
+        "provider": provider,
+        "role": role,
+        "action": action,
+        "target_path": str(request.get("target_path", "")).strip(),
+    }
+
+
+def _path_exists(run_dir: Path, rel_or_abs: str) -> bool:
+    text = str(rel_or_abs or "").strip()
+    if not text:
+        return False
+    p = Path(text)
+    if p.is_absolute():
+        return p.exists()
+    return (run_dir / text).exists()
+
+
+def _input_statuses(run_dir: Path, request: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for raw in request.get("missing_paths", []):
+        path = str(raw or "").strip()
+        if not path:
+            continue
+        rows.append({"path": path, "exists": _path_exists(run_dir, path)})
+    return rows
+
+
+def _output_paths(request: dict[str, Any], result: dict[str, Any]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+
+    def add(path: str) -> None:
+        text = str(path or "").strip()
+        if not text or text in seen:
+            return
+        seen.add(text)
+        out.append(text)
+
+    add(str(request.get("target_path", "")))
+    for key, value in result.items():
+        if key.endswith("_path") and isinstance(value, str):
+            add(value)
+    writes = result.get("writes")
+    if isinstance(writes, list):
+        for row in writes:
+            if isinstance(row, str):
+                add(row)
+    return out
+
+
+def _append_step_meta(
+    *,
+    run_dir: Path,
+    gate: dict[str, str],
+    request: dict[str, Any],
+    provider: str,
+    result: dict[str, Any],
+) -> None:
+    status = str(result.get("status", "")).strip()
+    try:
+        rc = int(result.get("rc", 0 if status == "executed" else 1))
+    except Exception:
+        rc = 1 if status != "executed" else 0
+    error = str(result.get("reason", "")).strip()
+    inputs = _input_statuses(run_dir, request)
+
+    row = {
+        "timestamp": _now_iso(),
+        "gate": {
+            "state": str(gate.get("state", "")).strip(),
+            "owner": str(gate.get("owner", "")).strip(),
+            "path": str(gate.get("path", "")).strip(),
+            "reason": str(gate.get("reason", "")).strip(),
+        },
+        "role": str(request.get("role", "")).strip(),
+        "action": str(request.get("action", "")).strip(),
+        "provider": provider,
+        "inputs": inputs,
+        "inputs_ready": all(bool(x.get("exists")) for x in inputs) if inputs else True,
+        "outputs": _output_paths(request, result),
+        "status": status,
+        "result": "OK" if status == "executed" else "ERR",
+        "rc": rc,
+        "error": error,
+    }
+    _append_jsonl(run_dir / STEP_META_PATH, row)
 
 
 def _selected_workflow_id(run_dir: Path) -> str:
@@ -306,9 +452,19 @@ def _resolve_provider(config: dict[str, Any], role: str) -> tuple[str, str]:
         role_providers = {}
     provider = _normalize_provider(str(role_providers.get(role, config.get("mode", "manual_outbox"))))
     if provider == "local_exec" and role not in {"librarian", "contract_guardian"}:
+        if role in {"patchmaker", "fixer"}:
+            return (
+                "api_agent",
+                "local_exec restricted to librarian/contract_guardian; fallback to api_agent",
+            )
         return (
             "manual_outbox",
             "local_exec restricted to librarian/contract_guardian; fallback to manual_outbox",
+        )
+    if provider == "manual_outbox" and role in {"patchmaker", "fixer"}:
+        return (
+            "api_agent",
+            "manual_outbox disabled for patchmaker/fixer; fallback to api_agent",
         )
     return provider, ""
 
@@ -332,6 +488,8 @@ def dispatch_preview(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str
         preview = api_agent.preview(run_dir=run_dir, request=request, config=config)
     elif provider == "codex_agent":
         preview = codex_agent.preview(run_dir=run_dir, request=request, config=config)
+    elif provider == "mock_agent":
+        preview = mock_agent.preview(run_dir=run_dir, request=request, config=config)
     else:
         preview = {"status": "unsupported_provider", "reason": provider}
 
@@ -375,6 +533,14 @@ def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], 
         )
     elif provider == "codex_agent":
         result = codex_agent.execute(
+            repo_root=repo_root,
+            run_dir=run_dir,
+            request=request,
+            config=config,
+            guardrails_budgets=_parse_guardrails_budgets(run_dir),
+        )
+    elif provider == "mock_agent":
+        result = mock_agent.execute(
             repo_root=repo_root,
             run_dir=run_dir,
             request=request,

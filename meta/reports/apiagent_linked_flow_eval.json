@@ -1,0 +1,460 @@
+{
+  "timestamp_utc": "2026-02-22T11:18:05.332677+00:00",
+  "repo": "d:\\.c_projects\\adc\\ctcp",
+  "temp_run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_apiagent_flow_eval_mm8_fs2u\\run_20260222111801571",
+  "rubric_weights": {
+    "librarian_context_pack": 10,
+    "chair_plan_draft": 10,
+    "contract_guardian_review": 10,
+    "cost_controller_review": 10,
+    "chair_plan_signed": 15,
+    "researcher_find_web": 10,
+    "patchmaker_make_patch": 20,
+    "fixer_fix_patch": 15
+  },
+  "roles": [
+    {
+      "role_id": "librarian_context_pack",
+      "provider": "local_exec",
+      "result": {
+        "status": "executed",
+        "target_path": "artifacts/context_pack.json",
+        "cmd": "D:\\anaconda\\python.exe d:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_librarian.py --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_apiagent_flow_eval_mm8_fs2u\\run_20260222111801571",
+        "rc": 0,
+        "stdout_log": "logs/dispatch_local_exec_librarian.stdout.log",
+        "stderr_log": "logs/dispatch_local_exec_librarian.stderr.log",
+        "provider": "local_exec",
+        "role": "librarian",
+        "action": "context_pack"
+      },
+      "exception": "",
+      "criteria": [
+        {
+          "id": "provider_local_exec",
+          "pass": true,
+          "detail": "provider=local_exec"
+        },
+        {
+          "id": "status_executed",
+          "pass": true,
+          "detail": "status=executed"
+        },
+        {
+          "id": "context_pack_exists",
+          "pass": true,
+          "detail": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_apiagent_flow_eval_mm8_fs2u\\run_20260222111801571\\artifacts\\context_pack.json"
+        },
+        {
+          "id": "context_schema",
+          "pass": true,
+          "detail": "ctcp-context-pack-v1"
+        },
+        {
+          "id": "route_unblocked",
+          "pass": true,
+          "detail": "before={'state': 'blocked', 'owner': 'Local Librarian', 'path': 'artifacts/context_pack.json', 'reason': 'waiting for context_pack.json'}; after={'state': 'blocked', 'owner': 'Chair/Planner', 'path': 'artifacts/PLAN_draft.md', 'reason': 'waiting for PLAN_draft.md'}"
+        }
+      ],
+      "score": 100.0
+    },
+    {
+      "role_id": "chair_plan_draft",
+      "provider": "n/a",
+      "result": {
+        "status": "exception",
+        "provider": "n/a",
+        "role": "n/a",
+        "action": "n/a"
+      },
+      "exception": "'agent'",
+      "criteria": [
+        {
+          "id": "provider_expected",
+          "pass": false,
+          "detail": "provider=n/a"
+        },
+        {
+          "id": "status_executed",
+          "pass": false,
+          "detail": "status=exception"
+        },
+        {
+          "id": "target_exists",
+          "pass": false,
+          "detail": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_apiagent_flow_eval_mm8_fs2u\\run_20260222111801571\\artifacts\\PLAN_draft.md"
+        },
+        {
+          "id": "contains_plan",
+          "pass": false,
+          "detail": ""
+        },
+        {
+          "id": "non_empty",
+          "pass": false,
+          "detail": "len=0"
+        }
+      ],
+      "score": 0.0
+    },
+    {
+      "role_id": "contract_guardian_review",
+      "provider": "api_agent",
+      "result": {
+        "status": "executed",
+        "target_path": "reviews/review_contract.md",
+        "prompt_path": "outbox/AGENT_PROMPT_contract_guardian_review_contract.md",
+        "stdout_log": "logs/agent.stdout",
+        "stderr_log": "logs/agent.stderr",
+        "provider": "api_agent",
+        "role": "contract_guardian",
+        "action": "review_contract"
+      },
+      "exception": "",
+      "criteria": [
+        {
+          "id": "provider_expected",
+          "pass": true,
+          "detail": "provider=api_agent"
+        },
+        {
+          "id": "status_executed",
+          "pass": true,
+          "detail": "status=executed"
+        },
+        {
+          "id": "target_exists",
+          "pass": true,
+          "detail": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_apiagent_flow_eval_mm8_fs2u\\run_20260222111801571\\reviews\\review_contract.md"
+        },
+        {
+          "id": "has_verdict",
+          "pass": true,
+          "detail": "# Contract Review\n\nVerdict: APPROVE\n\nBlocking Reasons:\n- none\n\nRequired Fix/Artifacts:\n- none\n"
+        },
+        {
+          "id": "verdict_value",
+          "pass": true,
+          "detail": "# Contract Review\n\nVerdict: APPROVE\n\nBlocking Reasons:\n- none\n\nRequired Fix/Artifacts:\n- none\n"
+        },
+        {
+          "id": "has_required_fix",
+          "pass": true,
+          "detail": "# Contract Review\n\nVerdict: APPROVE\n\nBlocking Reasons:\n- none\n\nRequired Fix/Artifacts:\n- none\n"
+        }
+      ],
+      "score": 100.0
+    },
+    {
+      "role_id": "cost_controller_review",
+      "provider": "api_agent",
+      "result": {
+        "status": "executed",
+        "target_path": "reviews/review_cost.md",
+        "prompt_path": "outbox/AGENT_PROMPT_cost_controller_review_cost.md",
+        "stdout_log": "logs/agent.stdout",
+        "stderr_log": "logs/agent.stderr",
+        "provider": "api_agent",
+        "role": "cost_controller",
+        "action": "review_cost"
+      },
+      "exception": "",
+      "criteria": [
+        {
+          "id": "provider_expected",
+          "pass": true,
+          "detail": "provider=api_agent"
+        },
+        {
+          "id": "status_executed",
+          "pass": true,
+          "detail": "status=executed"
+        },
+        {
+          "id": "target_exists",
+          "pass": true,
+          "detail": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_apiagent_flow_eval_mm8_fs2u\\run_20260222111801571\\reviews\\review_cost.md"
+        },
+        {
+          "id": "has_verdict",
+          "pass": true,
+          "detail": "# Cost Review\n\nVerdict: APPROVE\n\nBlocking Reasons:\n- none\n\nRequired Fix/Artifacts:\n- none\n"
+        },
+        {
+          "id": "verdict_value",
+          "pass": true,
+          "detail": "# Cost Review\n\nVerdict: APPROVE\n\nBlocking Reasons:\n- none\n\nRequired Fix/Artifacts:\n- none\n"
+        },
+        {
+          "id": "has_required_fix",
+          "pass": true,
+          "detail": "# Cost Review\n\nVerdict: APPROVE\n\nBlocking Reasons:\n- none\n\nRequired Fix/Artifacts:\n- none\n"
+        }
+      ],
+      "score": 100.0
+    },
+    {
+      "role_id": "chair_plan_signed",
+      "provider": "n/a",
+      "result": {
+        "status": "exception",
+        "provider": "n/a",
+        "role": "n/a",
+        "action": "n/a"
+      },
+      "exception": "'agent'",
+      "criteria": [
+        {
+          "id": "provider_expected",
+          "pass": false,
+          "detail": "provider=n/a"
+        },
+        {
+          "id": "status_executed",
+          "pass": false,
+          "detail": "status=exception"
+        },
+        {
+          "id": "target_exists",
+          "pass": false,
+          "detail": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_apiagent_flow_eval_mm8_fs2u\\run_20260222111801571\\artifacts\\PLAN.md"
+        },
+        {
+          "id": "status_signed",
+          "pass": false,
+          "detail": ""
+        },
+        {
+          "id": "has_scope_allow",
+          "pass": false,
+          "detail": ""
+        },
+        {
+          "id": "has_gates",
+          "pass": false,
+          "detail": ""
+        }
+      ],
+      "score": 0.0
+    },
+    {
+      "role_id": "researcher_find_web",
+      "provider": "api_agent",
+      "result": {
+        "status": "executed",
+        "target_path": "artifacts/find_web.json",
+        "prompt_path": "outbox/AGENT_PROMPT_researcher_find_web.md",
+        "stdout_log": "logs/agent.stdout",
+        "stderr_log": "logs/agent.stderr",
+        "provider": "api_agent",
+        "role": "researcher",
+        "action": "find_web"
+      },
+      "exception": "",
+      "criteria": [
+        {
+          "id": "provider_expected",
+          "pass": true,
+          "detail": "provider=api_agent"
+        },
+        {
+          "id": "status_executed",
+          "pass": true,
+          "detail": "status=executed"
+        },
+        {
+          "id": "target_exists",
+          "pass": true,
+          "detail": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_apiagent_flow_eval_mm8_fs2u\\run_20260222111801571\\artifacts\\find_web.json"
+        },
+        {
+          "id": "json_parse",
+          "pass": true,
+          "detail": "json parsed"
+        },
+        {
+          "id": "schema_ok",
+          "pass": true,
+          "detail": "ctcp-find-web-v1"
+        },
+        {
+          "id": "results_array",
+          "pass": true,
+          "detail": "list"
+        }
+      ],
+      "score": 100.0
+    },
+    {
+      "role_id": "patchmaker_make_patch",
+      "provider": "api_agent",
+      "result": {
+        "status": "executed",
+        "target_path": "artifacts/diff.patch",
+        "plan_path": "outbox/PLAN.md",
+        "patch_path": "outbox/diff.patch",
+        "prompt_path": "outbox/AGENT_PROMPT_patchmaker_make_patch.md",
+        "stdout_log": "logs/patch_agent.stdout",
+        "stderr_log": "logs/patch_agent.stderr",
+        "provider": "api_agent",
+        "role": "patchmaker",
+        "action": "make_patch"
+      },
+      "exception": "",
+      "criteria": [
+        {
+          "id": "provider_expected",
+          "pass": true,
+          "detail": "provider=api_agent"
+        },
+        {
+          "id": "status_executed",
+          "pass": true,
+          "detail": "status=executed"
+        },
+        {
+          "id": "target_exists",
+          "pass": true,
+          "detail": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_apiagent_flow_eval_mm8_fs2u\\run_20260222111801571\\artifacts\\diff.patch"
+        },
+        {
+          "id": "first_line_diff",
+          "pass": true,
+          "detail": "diff --git a/docs/apiagent_patchmaker_20260222111801571.txt b/docs/apiagent_patchmaker_20260222111801571.txt"
+        },
+        {
+          "id": "git_apply_check",
+          "pass": true,
+          "detail": ""
+        },
+        {
+          "id": "plan_out_exists",
+          "pass": true,
+          "detail": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_apiagent_flow_eval_mm8_fs2u\\run_20260222111801571\\outbox\\PLAN.md"
+        }
+      ],
+      "score": 100.0,
+      "patch_hash": "8440dc2b705775e02ae0707c8d17144f420f82ca805d4ba8a94822a8b247399e"
+    },
+    {
+      "role_id": "fixer_fix_patch",
+      "provider": "api_agent",
+      "result": {
+        "status": "executed",
+        "target_path": "artifacts/diff.patch",
+        "plan_path": "outbox/PLAN.md",
+        "patch_path": "outbox/diff.patch",
+        "prompt_path": "outbox/AGENT_PROMPT_fixer_fix_patch.md",
+        "stdout_log": "logs/patch_agent.stdout",
+        "stderr_log": "logs/patch_agent.stderr",
+        "provider": "api_agent",
+        "role": "fixer",
+        "action": "fix_patch"
+      },
+      "exception": "",
+      "criteria": [
+        {
+          "id": "provider_expected",
+          "pass": true,
+          "detail": "provider=api_agent"
+        },
+        {
+          "id": "status_executed",
+          "pass": true,
+          "detail": "status=executed"
+        },
+        {
+          "id": "target_exists",
+          "pass": true,
+          "detail": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_apiagent_flow_eval_mm8_fs2u\\run_20260222111801571\\artifacts\\diff.patch"
+        },
+        {
+          "id": "first_line_diff",
+          "pass": true,
+          "detail": "diff --git a/docs/apiagent_fixer_20260222111801571.txt b/docs/apiagent_fixer_20260222111801571.txt"
+        },
+        {
+          "id": "git_apply_check",
+          "pass": true,
+          "detail": ""
+        },
+        {
+          "id": "plan_out_exists",
+          "pass": true,
+          "detail": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_apiagent_flow_eval_mm8_fs2u\\run_20260222111801571\\outbox\\PLAN.md"
+        }
+      ],
+      "score": 100.0,
+      "patch_hash": "c1e33d33c10bb8b23b62d24b3cb990e507312d7864561f0b91bef9e2a15587cf"
+    }
+  ],
+  "overall": {
+    "weighted_score": 75.0,
+    "pass_roles": 6,
+    "total_roles": 8
+  },
+  "stub_requests": [
+    {
+      "path": "/v1/responses",
+      "kind": "plan_or_agent",
+      "goal": "eval-chair-plan-draft-20260222111801571",
+      "has_auth": true,
+      "input_chars": 2259
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "plan_or_agent",
+      "goal": "eval-contract-guardian-review-20260222111801571",
+      "has_auth": true,
+      "input_chars": 2288
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "plan_or_agent",
+      "goal": "eval-cost-controller-review-20260222111801571",
+      "has_auth": true,
+      "input_chars": 2278
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "plan_or_agent",
+      "goal": "eval-chair-plan-signed-20260222111801571",
+      "has_auth": true,
+      "input_chars": 2263
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "plan_or_agent",
+      "goal": "eval-researcher-find-web-20260222111801571",
+      "has_auth": true,
+      "input_chars": 2268
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "plan_or_agent",
+      "goal": "eval-patchmaker-make-patch-20260222111801571",
+      "has_auth": true,
+      "input_chars": 2271
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "patch",
+      "goal": "eval-patchmaker-make-patch-20260222111801571",
+      "has_auth": true,
+      "input_chars": 2331
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "plan_or_agent",
+      "goal": "eval-fixer-fix-patch-20260222111801571",
+      "has_auth": true,
+      "input_chars": 2244
+    },
+    {
+      "path": "/v1/responses",
+      "kind": "patch",
+      "goal": "eval-fixer-fix-patch-20260222111801571",
+      "has_auth": true,
+      "input_chars": 2299
+    }
+  ]
+}

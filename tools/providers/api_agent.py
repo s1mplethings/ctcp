@@ -459,6 +459,9 @@ def _resolve_templates(repo_root: Path, request: dict[str, Any]) -> tuple[dict[s
             return {}, reason
         templates["agent"] = _default_plan_cmd(repo_root)
 
+    if needs_plan and not needs_patch and "plan" in templates and "agent" not in templates:
+        templates["agent"] = templates["plan"]
+
     return templates, ""
 
 
@@ -634,7 +637,21 @@ def execute(
             "stderr_log": patch_stderr.relative_to(run_dir).as_posix(),
         }
 
-    cmd, fmt_err = _format_cmd_template(templates["agent"], placeholders)
+    agent_tpl = templates.get("agent") or templates.get("plan")
+    if not agent_tpl:
+        available_keys = ", ".join(sorted(templates.keys())) or "(none)"
+        reason = (
+            "missing agent template "
+            f"(role={role}, action={action}, plan={_needs_plan(request)}, patch={_needs_patch(request)}, keys={available_keys})"
+        )
+        review = _record_failure_review(run_dir, reason)
+        return {
+            "status": "exec_failed",
+            "reason": reason,
+            "review": review.relative_to(run_dir).as_posix(),
+        }
+
+    cmd, fmt_err = _format_cmd_template(agent_tpl, placeholders)
     if fmt_err:
         review = _record_failure_review(run_dir, fmt_err)
         return {
