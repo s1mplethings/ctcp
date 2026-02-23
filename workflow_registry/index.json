@@ -75,6 +75,32 @@
         "status": "pass",
         "source": "simlab_lite"
       }
+    },
+    {
+      "id": "live_api_all_roles",
+      "version": "1.0.0",
+      "path": "workflow_registry/live_api_all_roles/recipe.yaml",
+      "entry": "scripts/adlc_run.py",
+      "tags": [
+        "ctcp",
+        "live",
+        "api",
+        "all-roles"
+      ],
+      "supported_goals": [
+        "api-only-integration",
+        "live-routing-matrix",
+        "live-robustness"
+      ],
+      "dependency_level": "low",
+      "cost_hint": {
+        "time_level": "medium",
+        "api_level": "high"
+      },
+      "last_known_good": {
+        "status": "unknown",
+        "source": "live_manual"
+      }
     }
   ]
 }

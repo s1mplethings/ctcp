@@ -1,5 +1,5 @@
 Status: SIGNED
-Scope-Allow: scripts/,tools/,docs/,tests/,artifacts/,meta/
+Scope-Allow: scripts/,tools/,docs/,tests/,artifacts/,meta/,workflow_registry/
 Scope-Deny: .git/,build/,build_lite/,build_verify/,dist/,generated_projects/,runs/,simlab/_runs/,meta/runs/
 Gates: lite,workflow_gate,plan_check,patch_check,behavior_catalog_check,contract_checks,doc_index_check,lite_replay,python_unit_tests
 Budgets: max_iterations=3,max_files=200,max_total_bytes=300000

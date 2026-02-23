@@ -1,0 +1,57 @@
+id: live_api_all_roles
+version: 1.0.0
+description: Live API-only all-role routing profile for CTCP orchestrator and gate flow checks.
+
+inputs:
+  required:
+    - goal
+    - repo_root
+  optional:
+    - max_rounds
+    - dispatch_config
+
+outputs:
+  required:
+    - artifacts/guardrails.md
+    - artifacts/analysis.md
+    - artifacts/file_request.json
+    - artifacts/context_pack.json
+    - artifacts/PLAN_draft.md
+    - reviews/review_contract.md
+    - reviews/review_cost.md
+    - artifacts/PLAN.md
+    - artifacts/diff.patch
+    - api_calls.jsonl
+    - step_meta.jsonl
+
+roles:
+  chair:
+    provider: api_agent
+  planner:
+    provider: api_agent
+  librarian:
+    provider: api_agent
+  researcher:
+    provider: api_agent
+  contract_guardian:
+    provider: api_agent
+  cost_controller:
+    provider: api_agent
+  patchmaker:
+    provider: api_agent
+  fixer:
+    provider: api_agent
+
+steps:
+  - chair_file_request
+  - librarian_context_pack
+  - chair_plan_draft
+  - reviews
+  - chair_plan_signed
+  - patchmaker_make_patch
+  - fixer_loop
+
+cost_hints:
+  dependency_level: low
+  api_level: high
+  estimated_minutes: 12

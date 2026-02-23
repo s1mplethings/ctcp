@@ -447,6 +447,10 @@ def derive_request(gate: dict[str, str], run_doc: dict[str, Any]) -> dict[str, A
 
 def _resolve_provider(config: dict[str, Any], role: str) -> tuple[str, str]:
     # BEHAVIOR_ID: B027
+    forced = _forced_provider()
+    if forced:
+        return forced, f"forced by CTCP_FORCE_PROVIDER={forced}"
+
     role_providers = config.get("role_providers", {})
     if not isinstance(role_providers, dict):
         role_providers = {}
@@ -479,6 +483,16 @@ def dispatch_preview(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str
         return {"status": "no_request"}
 
     provider, note = _resolve_provider(config, str(request["role"]))
+    violation = _live_provider_violation(
+        run_dir=run_dir,
+        gate=gate,
+        request=request,
+        provider=provider,
+        note=note,
+    )
+    if violation is not None:
+        return violation
+
     preview: dict[str, Any]
     if provider == "manual_outbox":
         preview = manual_outbox.preview(run_dir=run_dir, request=request, config=config)
@@ -513,6 +527,23 @@ def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], 
         return {"status": "no_request"}
 
     provider, note = _resolve_provider(config, str(request["role"]))
+    violation = _live_provider_violation(
+        run_dir=run_dir,
+        gate=gate,
+        request=request,
+        provider=provider,
+        note=note,
+    )
+    if violation is not None:
+        _append_step_meta(
+            run_dir=run_dir,
+            gate=gate,
+            request=request,
+            provider=provider,
+            result=violation,
+        )
+        return violation
+
     if provider == "manual_outbox":
         result = manual_outbox.execute(
             repo_root=repo_root,
@@ -556,6 +587,13 @@ def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], 
     result["target_path"] = request["target_path"]
     if note:
         result["note"] = note
+    _append_step_meta(
+        run_dir=run_dir,
+        gate=gate,
+        request=request,
+        provider=provider,
+        result=result,
+    )
     return result
 
 

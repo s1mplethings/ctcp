@@ -5,6 +5,8 @@ import json
 import os
 import urllib.error
 import urllib.request
+from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 
@@ -52,6 +54,39 @@ def extract_response_text(doc: dict[str, Any]) -> str:
     return ""
 
 
+def _now_iso() -> str:
+    return datetime.now().isoformat(timespec="seconds")
+
+
+def _short_error(text: str) -> str:
+    value = str(text or "").strip().replace("\r", " ").replace("\n", " ")
+    if len(value) > 400:
+        return value[:400]
+    return value
+
+
+def _append_api_call(*, model: str, status: str, request_id: str = "", error: str = "") -> None:
+    path_text = str(os.environ.get("CTCP_API_CALLS_PATH", "")).strip()
+    if not path_text:
+        return
+    row = {
+        "timestamp": _now_iso(),
+        "role": str(os.environ.get("CTCP_API_ROLE", "")).strip(),
+        "action": str(os.environ.get("CTCP_API_ACTION", "")).strip(),
+        "request_id": str(request_id or "").strip(),
+        "model": str(model or "").strip(),
+        "status": str(status or "").strip(),
+        "error": _short_error(error),
+    }
+    try:
+        path = Path(path_text)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+    except Exception:
+        return
+
+
 def call_openai_responses(
     *,
     prompt: str,
@@ -62,7 +97,9 @@ def call_openai_responses(
 ) -> tuple[str, str]:
     token = (api_key or os.environ.get("OPENAI_API_KEY", "")).strip()
     if not token:
-        return "", "OPENAI_API_KEY is required for OpenAI API mode"
+        reason = "OPENAI_API_KEY is required for OpenAI API mode"
+        _append_api_call(model=model, status="ERR", error=reason)
+        return "", reason
 
     root = (base_url or os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")).strip()
     endpoint = root.rstrip("/") + "/responses"
@@ -89,19 +126,32 @@ def call_openai_responses(
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
         detail = detail.strip()[:2000]
-        return "", f"OpenAI API HTTP {exc.code}: {detail}"
+        reason = f"OpenAI API HTTP {exc.code}: {detail}"
+        _append_api_call(model=model, status="ERR", error=reason)
+        return "", reason
     except Exception as exc:
-        return "", f"OpenAI API request failed: {exc}"
+        reason = f"OpenAI API request failed: {exc}"
+        _append_api_call(model=model, status="ERR", error=reason)
+        return "", reason
 
     try:
         doc = json.loads(body)
     except Exception as exc:
-        return "", f"OpenAI API returned non-JSON response: {exc}"
+        reason = f"OpenAI API returned non-JSON response: {exc}"
+        _append_api_call(model=model, status="ERR", error=reason)
+        return "", reason
     if not isinstance(doc, dict):
-        return "", "OpenAI API response is not a JSON object"
+        reason = "OpenAI API response is not a JSON object"
+        _append_api_call(model=model, status="ERR", error=reason)
+        return "", reason
 
+    request_id = str(doc.get("id", "")).strip()
     text = extract_response_text(doc)
     if not text:
         preview = json.dumps(doc, ensure_ascii=False)[:2000]
-        return "", f"OpenAI API response did not contain text output: {preview}"
+        reason = f"OpenAI API response did not contain text output: {preview}"
+        _append_api_call(model=model, status="ERR", request_id=request_id, error=reason)
+        return "", reason
+
+    _append_api_call(model=model, status="OK", request_id=request_id)
     return text, ""

@@ -366,6 +366,11 @@ def _default_patch_cmd(repo_root: Path) -> str:
     )
 
 
+def _default_agent_cmd(repo_root: Path) -> str:
+    script = repo_root / "scripts" / "externals" / "openai_agent_api.py"
+    return f'"{sys.executable}" "{script}"'
+
+
 def _format_cmd_template(template: str, values: dict[str, str]) -> tuple[str, str]:
     text = (template or "").strip()
     if not text:
@@ -378,11 +383,22 @@ def _format_cmd_template(template: str, values: dict[str, str]) -> tuple[str, st
         return "", f"command template formatting failed: {exc}"
 
 
-def _run_command(cmd: str, *, cwd: Path, stdin_text: str) -> subprocess.CompletedProcess[str]:
+def _run_command(
+    cmd: str,
+    *,
+    cwd: Path,
+    stdin_text: str,
+    extra_env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    env = os.environ.copy()
+    if extra_env:
+        for key, value in extra_env.items():
+            env[str(key)] = str(value)
     return subprocess.run(
         cmd,
         cwd=str(cwd),
         shell=True,
+        env=env,
         input=stdin_text,
         capture_output=True,
         text=True,
@@ -393,15 +409,9 @@ def _run_command(cmd: str, *, cwd: Path, stdin_text: str) -> subprocess.Complete
 
 def _is_api_env_ready() -> tuple[bool, str]:
     key = str(os.environ.get("OPENAI_API_KEY", "")).strip()
-    base = str(os.environ.get("OPENAI_BASE_URL", "")).strip()
-    if key and base:
+    if key:
         return True, ""
-    missing: list[str] = []
-    if not key:
-        missing.append("OPENAI_API_KEY")
-    if not base:
-        missing.append("OPENAI_BASE_URL")
-    return False, "missing env: " + ", ".join(missing)
+    return False, "missing env: OPENAI_API_KEY"
 
 
 def _needs_patch(request: dict[str, Any]) -> bool:
@@ -457,7 +467,7 @@ def _resolve_templates(repo_root: Path, request: dict[str, Any]) -> tuple[dict[s
         ready, reason = _is_api_env_ready()
         if not ready:
             return {}, reason
-        templates["agent"] = _default_plan_cmd(repo_root)
+        templates["agent"] = _default_agent_cmd(repo_root)
 
     if needs_plan and not needs_patch and "plan" in templates and "agent" not in templates:
         templates["agent"] = templates["plan"]
@@ -532,6 +542,12 @@ def execute(
         "REPO_ROOT": str(repo_root),
         "ROUND": "1",
     }
+    api_calls_path = run_dir / "api_calls.jsonl"
+    api_call_env = {
+        "CTCP_API_CALLS_PATH": str(api_calls_path),
+        "CTCP_API_ROLE": role,
+        "CTCP_API_ACTION": action,
+    }
 
     if "plan" in templates:
         cmd, fmt_err = _format_cmd_template(templates["plan"], placeholders)
@@ -542,7 +558,7 @@ def execute(
                 "reason": fmt_err,
                 "review": review.relative_to(run_dir).as_posix(),
             }
-        proc = _run_command(cmd, cwd=repo_root, stdin_text=prompt_text)
+        proc = _run_command(cmd, cwd=repo_root, stdin_text=prompt_text, extra_env=api_call_env)
         plan_stdout = logs_dir / "plan_agent.stdout"
         plan_stderr = logs_dir / "plan_agent.stderr"
         _write_text(plan_stdout, proc.stdout)
@@ -583,7 +599,7 @@ def execute(
                 "reason": fmt_err,
                 "review": review.relative_to(run_dir).as_posix(),
             }
-        proc = _run_command(cmd, cwd=repo_root, stdin_text=prompt_text)
+        proc = _run_command(cmd, cwd=repo_root, stdin_text=prompt_text, extra_env=api_call_env)
         patch_stdout = logs_dir / "patch_agent.stdout"
         patch_stderr = logs_dir / "patch_agent.stderr"
         _write_text(patch_stdout, proc.stdout)
@@ -660,7 +676,7 @@ def execute(
             "review": review.relative_to(run_dir).as_posix(),
         }
 
-    proc = _run_command(cmd, cwd=repo_root, stdin_text=prompt_text)
+    proc = _run_command(cmd, cwd=repo_root, stdin_text=prompt_text, extra_env=api_call_env)
     agent_stdout = logs_dir / "agent.stdout"
     agent_stderr = logs_dir / "agent.stderr"
     _write_text(agent_stdout, proc.stdout)

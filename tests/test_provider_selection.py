@@ -131,6 +131,72 @@ class ProviderSelectionTests(unittest.TestCase):
             self.assertEqual(preview.get("status"), "disabled")
             self.assertIn("missing env", str(preview.get("reason", "")))
 
+    def test_force_provider_env_overrides_defaults(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            run_dir = Path(td)
+            (run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+            run_doc = {"goal": "force provider"}
+            gate = {
+                "state": "blocked",
+                "owner": "Local Librarian",
+                "path": "artifacts/context_pack.json",
+                "reason": "waiting for context_pack.json",
+            }
+            with mock.patch.dict(
+                os.environ,
+                {
+                    "CTCP_FORCE_PROVIDER": "api_agent",
+                    "OPENAI_API_KEY": "",
+                    "SDDAI_AGENT_CMD": "",
+                    "SDDAI_PLAN_CMD": "",
+                    "SDDAI_PATCH_CMD": "",
+                },
+                clear=False,
+            ):
+                preview = ctcp_dispatch.dispatch_preview(run_dir, run_doc, gate)
+
+            self.assertEqual(preview.get("provider"), "api_agent")
+
+    def test_dispatch_once_writes_step_meta(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            run_dir = Path(td)
+            repo_root = run_dir / "repo"
+            repo_root.mkdir(parents=True, exist_ok=True)
+            (run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+
+            plan_script = repo_root / "plan_stub.py"
+            plan_script.write_text("print('Status: DRAFT\\n- step: test')\n", encoding="utf-8")
+            run_doc = {"goal": "step meta"}
+            gate = {
+                "state": "blocked",
+                "owner": "Chair/Planner",
+                "path": "artifacts/PLAN_draft.md",
+                "reason": "waiting for PLAN_draft.md",
+            }
+
+            with mock.patch.dict(
+                os.environ,
+                {
+                    "CTCP_FORCE_PROVIDER": "api_agent",
+                    "SDDAI_PLAN_CMD": f'"{sys.executable}" "{plan_script}"',
+                    "SDDAI_AGENT_CMD": "",
+                    "SDDAI_PATCH_CMD": "",
+                    "OPENAI_API_KEY": "",
+                },
+                clear=False,
+            ):
+                result = ctcp_dispatch.dispatch_once(run_dir, run_doc, gate, repo_root)
+
+            self.assertEqual(result.get("status"), "executed", msg=str(result))
+            step_meta_path = run_dir / "step_meta.jsonl"
+            self.assertTrue(step_meta_path.exists())
+            rows = [json.loads(x) for x in step_meta_path.read_text(encoding="utf-8").splitlines() if x.strip()]
+            self.assertTrue(rows, msg="step_meta.jsonl should not be empty")
+            last = rows[-1]
+            self.assertEqual(last.get("provider"), "api_agent")
+            self.assertEqual(last.get("role"), "chair")
+            self.assertEqual(last.get("action"), "plan_draft")
+
 
 if __name__ == "__main__":
     unittest.main()
