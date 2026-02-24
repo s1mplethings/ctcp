@@ -17,6 +17,12 @@ TeamNet: multi-agent team roles that write specific artifacts before execution b
 
 ADLC: the execution lifecycle; only enters execution after plan is signed.
 
+Canonical Entrypoint (must)
+
+- The only execution entrypoint is `scripts/ctcp_orchestrate.py`.
+- Other legacy execution entry scripts are removed and unsupported.
+- The only acceptance gate entrypoints are `scripts/verify_repo.ps1` and `scripts/verify_repo.sh`.
+
 2. Locations (must)
 
 Run directory root MUST be outside the repo, controlled by CTCP_RUNS_ROOT.

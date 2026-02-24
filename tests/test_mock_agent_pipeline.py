@@ -424,7 +424,7 @@ class MockAgentPipelineTests(unittest.TestCase):
                 artifacts_recipe / "find_result.json",
                 {
                     "schema_version": "ctcp-find-result-v1",
-                    "selected_workflow_id": "adlc_self_improve_core",
+                    "selected_workflow_id": "wf_orchestrator_only",
                 },
             )
             preview_guardian = ctcp_dispatch.dispatch_preview(

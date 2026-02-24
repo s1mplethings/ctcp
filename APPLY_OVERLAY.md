@@ -8,12 +8,12 @@ This overlay updates workflow docs + gates + tools to match the “autonomous pr
 
 2) Generate a task:
 ```powershell
-python tools\ctcp_assistant.py init-task "your goal"
+python scripts\ctcp_orchestrate.py new-run --goal "your goal"
 ```
 
-3) (Optional) create a run packet:
+3) Advance orchestrator:
 ```powershell
-python tools\ctcp_team.py start "your goal"
+python scripts\ctcp_orchestrate.py advance --max-steps 16
 ```
 
 4) Sync doc index once:

@@ -18,8 +18,6 @@ SCAN_ROOTS = ("scripts", "tools")
 REQUIRED_MARKER_FILES = (
     "scripts/verify_repo.ps1",
     "scripts/verify_repo.sh",
-    "scripts/adlc_run.py",
-    "scripts/workflow_dispatch.py",
     "scripts/ctcp_orchestrate.py",
     "scripts/ctcp_dispatch.py",
     "scripts/apply_patch_first.py",
@@ -109,4 +107,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

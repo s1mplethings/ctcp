@@ -5,7 +5,7 @@
   "steps": [
     {
       "run": {
-        "cmd": "python tools/ctcp_assistant.py init-task simlab-init --force",
+        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-init",
         "expect_exit": 0
       }
     },
@@ -26,4 +26,3 @@
     }
   ]
 }
-

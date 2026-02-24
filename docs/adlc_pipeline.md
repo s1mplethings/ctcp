@@ -22,7 +22,7 @@ Default execution path is headless. GUI is optional and not part of mandatory Li
 - Step list + acceptance in `meta/tasks/CURRENT.md`
 
 5. `build <-> verify`
-- Execute `scripts/verify.sh` or `scripts/verify.ps1`
+- Execute `scripts/verify_repo.sh` or `scripts/verify_repo.ps1`
 - Produce `artifacts/verify/<timestamp>/proof.json` and step logs
 
 6. `contrast`

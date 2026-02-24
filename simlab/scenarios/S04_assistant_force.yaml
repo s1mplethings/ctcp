@@ -1,17 +1,17 @@
 {
   "id": "S04_assistant_force",
-  "name": "assistant commands accept --force",
+  "name": "orchestrator new-run remains idempotent for task bootstrap",
   "suite": "core",
   "steps": [
     {
       "run": {
-        "cmd": "python tools/ctcp_assistant.py init-task simlab-force --force",
+        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-force",
         "expect_exit": 0
       }
     },
     {
       "run": {
-        "cmd": "python tools/ctcp_assistant.py init-externals simlab-force --force",
+        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-force-repeat",
         "expect_exit": 0
       }
     },
@@ -23,4 +23,3 @@
     }
   ]
 }
-

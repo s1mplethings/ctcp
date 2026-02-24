@@ -8,6 +8,12 @@ If this file conflicts with `docs/00_CORE.md`, `docs/00_CORE.md` wins.
 
 Execution starts only after signed `artifacts/PLAN.md` and required adversarial reviews are `APPROVE`.
 
+## Canonical Entrypoint
+
+- Only `scripts/ctcp_orchestrate.py` is supported for execution.
+- Legacy alternate entry scripts no longer exist and are unsupported.
+- User flow always follows the ADLC mainline above.
+
 ## Step I/O Contract (MUST)
 
 | Step | MUST Inputs | MUST Outputs | Owner |

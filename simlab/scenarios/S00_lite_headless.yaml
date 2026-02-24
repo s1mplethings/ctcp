@@ -5,7 +5,7 @@
   "steps": [
     {
       "run": {
-        "cmd": "python tools/ctcp_assistant.py init-task lite-headless --force",
+        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal lite-headless",
         "expect_exit": 0
       }
     },
@@ -19,11 +19,10 @@
       "expect_text": {
         "path": "meta/tasks/CURRENT.md",
         "includes": [
-          "Code changes allowed",
-          "## Acceptance"
+          "## Acceptance",
+          "Code changes allowed"
         ]
       }
     }
   ]
 }
-

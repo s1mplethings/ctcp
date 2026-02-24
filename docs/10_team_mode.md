@@ -14,10 +14,13 @@
 ## 使用
 1) 创建运行包：
 ```powershell
-python tools\ctcp_team.py start "your goal"
+python scripts\ctcp_orchestrate.py new-run --goal "your goal"
 ```
 
-2) 读取 `meta/run_pointers/LAST_RUN.txt`，把对应目录下的 `PROMPT.md` 交给 coding agent（Codex/Claude/你自己的 agent 都行）
+2) 持续推进状态机（直到 PASS 或产生 failure bundle）：
+```powershell
+python scripts\ctcp_orchestrate.py advance --max-steps 16
+```
 
 3) agent 产出 patch/改动后，跑：
 ```powershell
@@ -27,8 +30,6 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
 4) 演示：
 - 打开 `meta/reports/LAST.md`
 - 跟着 Trace 指针回放外部 run 包中的 `TRACE.md`
-
-> 下一步想做到“全自动”，就在 `ctcp_team.py` 里加 provider：直接调用 codex CLI 或 OpenAI Agents SDK。
 
 ## codex_agent Provider（可选全自动）
 - 用途：当 `dispatch_config` 选择 `codex_agent` 时，dispatcher 会自动调用本机 `codex exec` 生成目标 artifact（例如 `artifacts/diff.patch`、`artifacts/PLAN_draft.md`）。

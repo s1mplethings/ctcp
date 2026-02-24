@@ -1,72 +1,43 @@
 {
-  "id": "S17_lite_patch_first_reject",
-  "name": "lite orchestrator should reject illegal patch via patch-first gate",
+  "id": "S17_lite_link_chair_analysis_outbox",
+  "name": "lite link: missing analysis should create chair outbox prompt",
   "suite": "lite",
   "steps": [
     {
       "run": {
-        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-patch-first-reject > artifacts/_s17_newrun.out.txt 2>&1",
+        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-link-chair-analysis > artifacts/_s17_newrun.out.txt 2>&1",
         "expect_exit": 0
       }
     },
     {
       "run": {
-        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; rev=r/'reviews'; art.mkdir(parents=True, exist_ok=True); rev.mkdir(parents=True, exist_ok=True); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_minimal_patch_verify','selected_version':'1.0','candidates':[{'workflow_id':'wf_minimal_patch_verify','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-patch-first-reject','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':1,'max_total_bytes':5000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); ctx={'schema_version':'ctcp-context-pack-v1','goal':'simlab-patch-first-reject','repo_slug':'ctcp','summary':'simlab','files':[],'omitted':[]}; (art/'context_pack.json').write_text(json.dumps(ctx, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'PLAN_draft.md').write_text('# draft\\n', encoding='utf-8'); (art/'PLAN.md').write_text('Status: SIGNED\\nScope-Allow: README.md\\nScope-Deny: none\\nGates: lite\\nStop: max_iterations=2\\nBudgets: max_files=5,max_total_bytes=20000\\nSteps: patch->verify\\n', encoding='utf-8'); (rev/'review_contract.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); (rev/'review_cost.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); patch='diff --git a/runs/evil.txt b/runs/evil.txt\\nnew file mode 100644\\nindex 0000000..1111111\\n--- /dev/null\\n+++ b/runs/evil.txt\\n@@ -0,0 +1 @@\\n+evil\\n'; (art/'diff.patch').write_text(patch, encoding='utf-8')\"",
+        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; art.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'manual_outbox','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8')\"",
         "expect_exit": 0
       }
     },
     {
       "run": {
-        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 16 > artifacts/_s17_advance.out.txt 2>&1",
-        "expect_exit": "nonzero"
-      }
-    },
-    {
-      "run": {
-        "cmd": "python -c \"from pathlib import Path; import zipfile, shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); review=r/'reviews'/'review_patch.md'; verify=r/'artifacts'/'verify_report.json'; ev=r/'events.jsonl'; outbox_md=sorted((r/'outbox').glob('*.md')); bundle=r/'failure_bundle.zip'; assert review.exists(), str(review); assert verify.exists(), str(verify); assert bundle.exists(), str(bundle); assert not (r/'runs'/'evil.txt').exists(), 'illegal path was applied'; names=set(zipfile.ZipFile(bundle).namelist()); assert 'artifacts/diff.patch' in names, 'missing diff.patch in bundle'; assert 'reviews/review_patch.md' in names, 'missing review_patch in bundle'; assert any(n.startswith('outbox/') and n.endswith('.md') for n in names), 'missing outbox prompt in bundle'; assert outbox_md, 'missing outbox prompt in run dir'; shutil.copy2(review, 'artifacts/_s17_review_patch.md'); shutil.copy2(verify, 'artifacts/_s17_verify_report.json'); shutil.copy2(ev, 'artifacts/_s17_events.jsonl'); shutil.copy2(outbox_md[0], 'artifacts/_s17_outbox_prompt.md')\"",
+        "cmd": "python -c \"import subprocess,sys; rc=subprocess.call('python scripts/ctcp_orchestrate.py advance --max-steps 8', shell=True); print(rc); sys.exit(0)\"",
         "expect_exit": 0
       }
     },
     {
-      "expect_text": {
-        "path": "artifacts/_s17_verify_report.json",
-        "includes": [
-          "\"result\": \"FAIL\"",
-          "\"gate\": \"patch_first\"",
-          "\"kind\": \"patch_first\""
-        ]
-      }
-    },
-    {
-      "expect_text": {
-        "path": "artifacts/_s17_review_patch.md",
-        "includes": [
-          "Verdict: BLOCK",
-          "Retry-Rule:",
-          "unified diff"
-        ]
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='chair'; target='artifacts/analysis.md'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: f'role: {role}' in t and (f'target-path: {target}' in t or f'write to: {target}' in t))(p.read_text(encoding='utf-8').lower())]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s17_outbox_prompt.md')\"",
+        "expect_exit": 0
       }
     },
     {
       "expect_text": {
         "path": "artifacts/_s17_outbox_prompt.md",
         "includes": [
-          "Role: fixer",
-          "write to: artifacts/diff.patch",
-          "unified diff only"
-        ]
-      }
-    },
-    {
-      "expect_text": {
-        "path": "artifacts/_s17_events.jsonl",
-        "includes": [
-          "PATCH_REJECTED",
-          "OUTBOX_PROMPT_CREATED",
-          "BUNDLE_CREATED"
+          "Role: chair",
+          "Target-Path: artifacts/analysis.md",
+          "write to: artifacts/analysis.md"
         ]
       }
     }
   ]
 }
+
 

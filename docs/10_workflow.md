@@ -7,8 +7,8 @@
 4) 点节点/边看详情与协议标签
 5) 编辑边（produces/consumes/verifies）→ 写回 meta/pipeline_graph.json
 6) 跑 verify：
-   - Linux/macOS：`bash scripts/verify.sh`
-   - Windows：`powershell -ExecutionPolicy Bypass -File scripts/verify.ps1`
+   - Linux/macOS：`bash scripts/verify_repo.sh`
+   - Windows：`powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
 
 Auto loop（给 AI 代理用）：Discover → Plan → Patch → Verify → Record → Report
 

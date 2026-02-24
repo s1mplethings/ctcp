@@ -20,7 +20,7 @@
 - `specs/modules/`：每个模块一个 spec（Purpose / IO / Process / AC / Trace）
 - `specs/contract_output/`：Graph/Meta/RunEvents 等输出协议 schema
 - `meta/`：权威关系文件（GUI 编辑写回）
-- `scripts/`：verify 入口（sh/ps1）与 contract checks
+- `scripts/`：orchestrator 入口与 verify_repo 门禁脚本
 - `ai_context/`：问题记忆、决策记录、任务卡模板
 - `web/`：前端资源占位（Cytoscape + app.js + index.html）
 - `resources/`：Qt 资源占位（建议用 .qrc 打包 web 资源）
@@ -32,8 +32,8 @@
 - **Run**：一次运行的进度与产物（可由目录推断或由 events.jsonl 精确驱动）
 
 ## verify（语义单入口 + OS 实现）
-- Linux/macOS：`bash scripts/verify.sh`
-- Windows：`powershell -ExecutionPolicy Bypass -File scripts/verify.ps1`
+- Linux/macOS：`bash scripts/verify_repo.sh`
+- Windows：`powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
 
 
 ## 工程识别（建议）

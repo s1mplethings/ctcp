@@ -29,7 +29,7 @@ class ProviderSelectionTests(unittest.TestCase):
                 json.dumps(
                     {
                         "schema_version": "ctcp-find-result-v1",
-                        "selected_workflow_id": "adlc_self_improve_core",
+                        "selected_workflow_id": "wf_orchestrator_only",
                     },
                     ensure_ascii=False,
                     indent=2,
@@ -54,7 +54,7 @@ class ProviderSelectionTests(unittest.TestCase):
                 json.dumps(
                     {
                         "schema_version": "ctcp-find-result-v1",
-                        "selected_workflow_id": "adlc_self_improve_core",
+                        "selected_workflow_id": "wf_orchestrator_only",
                     },
                     ensure_ascii=False,
                     indent=2,

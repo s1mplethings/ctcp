@@ -20,66 +20,30 @@
 
 ## Quick Start
 
-最小命令（核心链路）：
+唯一主入口（执行）：
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
-python scripts\adlc_run.py --goal "your-goal" --force
+python scripts\ctcp_orchestrate.py new-run --goal "your-goal"
+python scripts\ctcp_orchestrate.py advance --max-steps 8
 ```
 
-项目级执行顺序（foundation-first）见：
-- `docs/25_project_plan.md`
-- `meta/backlog/execution_queue.json`
-
-1) 生成任务单（DoD/验收先行）
-```powershell
-python tools\ctcp_assistant.py init-task "your-goal"
-```
-
-2) （可选）生成外部调研模板（Research-first）
-```powershell
-python tools\ctcp_assistant.py init-externals "your-goal"
-```
-
-3) 运行“团队式”执行（默认 dry-run，会生成 Agent Packet 与演示报告）
-```powershell
-python tools\ctcp_team.py start "your-goal"
-```
-
-4) 运行 ADLC headless 入口（最小闭环）
-```powershell
-python scripts\adlc_run.py --goal "your-goal" --force
-```
-
-5) 验收（必须）：证据闭环 verify（推荐）
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\verify.ps1
-```
-或：
-```bash
-bash scripts/verify.sh
-```
-
-6) 基础仓库门禁（Lite 默认；workflow/contract/doc-index + lite scenario）
+唯一验收入口（Windows）：
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
 ```
-或：
+
+唯一验收入口（Unix）：
 ```bash
 bash scripts/verify_repo.sh
 ```
 
 ---
 
-## What “Team Mode” Produces
+## What Orchestrator Produces
 
-- `meta/tasks/CURRENT.md`：本次任务单（验收、计划、是否允许改代码）
-- `meta/externals/*`：外部方案对比（如果需要）
-- `${CTCP_RUNS_ROOT:-~/.ctcp/runs}/ctcp/<run_id>/`：一次运行的“团队包”（真实产物目录）
-  - `PROMPT.md`：给 coding agent 的唯一输入
-  - `QUESTIONS.md`：只允许写阻塞性问题
-  - `TRACE.md`：全过程记录（演示用）
+- `meta/tasks/CURRENT.md`：任务单（首次缺失时自动从模板生成）
+- `meta/reports/LAST.md`：演示报告（首次缺失时自动生成最小文件）
+- `${CTCP_RUNS_ROOT:-~/.ctcp/runs}/ctcp/<run_id>/`：一次运行目录（artifacts/reviews/outbox/logs）
 - `meta/run_pointers/LAST_RUN.txt`：仓库内指针，指向最新外部 run 包绝对路径
-- `meta/reports/LAST.md`：面向你的最终演示报告（可回放/可审计）
 
 ---
 

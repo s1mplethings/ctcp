@@ -1,0 +1,42 @@
+{
+  "id": "S22_lite_link_patchmaker_diff_patch_outbox",
+  "name": "lite link: missing diff.patch should create patchmaker outbox prompt",
+  "suite": "lite",
+  "steps": [
+    {
+      "run": {
+        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-link-patchmaker > artifacts/_s22_newrun.out.txt 2>&1",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; rev=r/'reviews'; art.mkdir(parents=True, exist_ok=True); rev.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'manual_outbox','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'codex_agent','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); idx=json.loads(Path('workflow_registry/index.json').read_text(encoding='utf-8')); wf=''; rp=idx.get('resolver_policy',{}) if isinstance(idx,dict) else {}; wf=str(rp.get('fallback_workflow_id','')).strip() if isinstance(rp,dict) else ''; ws=idx.get('workflows',[]) if isinstance(idx,dict) else []; first=ws[0] if isinstance(ws,list) and ws else {}; wf=wf or (str(first.get('id') or first.get('workflow_id') or '').strip() if isinstance(first,dict) else ''); wf=wf or 'wf_orchestrator_only'; find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':wf,'selected_version':'1.0','candidates':[{'workflow_id':wf,'version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-link-patchmaker','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':1,'max_total_bytes':3000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); ctx={'schema_version':'ctcp-context-pack-v1','goal':'simlab-link-patchmaker','repo_slug':'ctcp','summary':'simlab','files':[],'omitted':[]}; (art/'context_pack.json').write_text(json.dumps(ctx, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'PLAN_draft.md').write_text('# draft\\n', encoding='utf-8'); (rev/'review_contract.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); (rev/'review_cost.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); (art/'PLAN.md').write_text('Status: SIGNED\\nScope-Allow: README.md\\nScope-Deny: none\\nGates: lite\\nStop: max_iterations=2\\nBudgets: max_files=5,max_total_bytes=20000\\nSteps: patch->verify\\n', encoding='utf-8')\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"import subprocess,sys; rc=subprocess.call('python scripts/ctcp_orchestrate.py advance --max-steps 8', shell=True); print(rc); sys.exit(0)\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='patchmaker'; target='artifacts/diff.patch'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: f'role: {role}' in t and (f'target-path: {target}' in t or f'write to: {target}' in t))(p.read_text(encoding='utf-8').lower())]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s22_outbox_prompt.md')\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "expect_text": {
+        "path": "artifacts/_s22_outbox_prompt.md",
+        "includes": [
+          "Role: patchmaker",
+          "Target-Path: artifacts/diff.patch",
+          "write to: artifacts/diff.patch",
+          "unified diff only"
+        ]
+      }
+    }
+  ]
+}

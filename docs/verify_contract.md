@@ -12,8 +12,8 @@ This document defines what "tested" means in this repository.
 
 Primary commands:
 
-- Linux/macOS: `bash scripts/verify.sh`
-- Windows: `powershell -ExecutionPolicy Bypass -File scripts/verify.ps1`
+- Linux/macOS: `bash scripts/verify_repo.sh`
+- Windows: `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
 
 Both commands must run:
 

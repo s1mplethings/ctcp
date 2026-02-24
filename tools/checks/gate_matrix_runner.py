@@ -260,7 +260,7 @@ def run_verify_repo(repo: Path) -> CmdResult:
 
 
 def run_verify(repo: Path) -> CmdResult:
-    return run_cmd(["powershell", "-ExecutionPolicy", "Bypass", "-File", "scripts/verify.ps1"], repo, timeout=480)
+    return run_cmd(["powershell", "-ExecutionPolicy", "Bypass", "-File", "scripts/verify_repo.ps1"], repo, timeout=480)
 
 
 def run_sync_check(repo: Path) -> CmdResult:
@@ -272,7 +272,7 @@ def run_sync_write(repo: Path) -> CmdResult:
 
 
 def run_assistant(repo: Path, args: list[str]) -> CmdResult:
-    return run_cmd(["python", "tools/ctcp_assistant.py"] + args, repo)
+    return run_cmd(["python", "scripts/ctcp_orchestrate.py"] + args, repo)
 
 
 def run_simlab_suite(repo: Path) -> tuple[CmdResult, dict[str, Any] | None]:
@@ -410,30 +410,33 @@ def run_matrix(repo: Path, preflight: dict[str, Any]) -> list[dict[str, Any]]:
                     {"write_rc": out1.rc, "check_rc": out2.rc, "write_out": out1.stdout[-800:], "check_out": out2.stdout[-800:], "diff": diff.stdout[-1600:], "wrote_update": wrote_update})
 
     # 09
-    out = run_assistant(repo, ["init-task", "hitbox-fix", "--force"])
+    out = run_assistant(repo, ["new-run", "--goal", "hitbox-fix"])
     current = (repo / "meta/tasks/CURRENT.md").read_text(encoding="utf-8", errors="replace")
     ok = out.rc == 0 and "## Acceptance" in current
-    record_case(cases, 9, "助手 init-task 生成 CURRENT.md", "pass" if ok else "fail",
+    record_case(cases, 9, "orchestrator new-run 生成 CURRENT.md", "pass" if ok else "fail",
                 "CURRENT.md should contain acceptance checklist",
                 {"rc": out.rc, "stdout": out.stdout[-800:], "current_head": "\n".join(current.splitlines()[:20])})
 
     # 10
-    out = run_assistant(repo, ["init-externals", "cytoscape-layout", "--force"])
-    today = dt.date.today().strftime("%Y%m%d")
-    ext = repo / f"meta/externals/{today}-cytoscape-layout.md"
-    ext_txt = ext.read_text(encoding="utf-8", errors="replace") if ext.exists() else ""
-    ok = out.rc == 0 and ext.exists() and "## Candidates" in ext_txt and "## Final pick" in ext_txt
-    record_case(cases, 10, "助手 init-externals 生成外部调研模板", "pass" if ok else "fail",
-                "externals file should be generated with template sections",
-                {"rc": out.rc, "stdout": out.stdout[-800:], "file": ext.as_posix(), "head": "\n".join(ext_txt.splitlines()[:20])})
+    out = run_assistant(repo, ["new-run", "--goal", "cytoscape-layout"])
+    report = repo / "meta/reports/LAST.md"
+    report_txt = report.read_text(encoding="utf-8", errors="replace") if report.exists() else ""
+    ok = out.rc == 0 and report.exists() and "## Goal" in report_txt
+    record_case(cases, 10, "orchestrator new-run 保证 LAST.md 存在", "pass" if ok else "fail",
+                "new-run should create LAST.md when missing",
+                {"rc": out.rc, "stdout": out.stdout[-800:], "file": report.as_posix(), "head": "\n".join(report_txt.splitlines()[:20])})
 
     # 11
-    out = run_assistant(repo, ["print-prompt"])
-    combo = out.stdout + out.stderr
-    ok = out.rc == 0 and contains(combo, "Required reading order") and contains(combo, "Mandatory output format")
-    record_case(cases, 11, "助手 print-prompt 输出必须阅读清单", "pass" if ok else "fail",
-                "stdout should include required reading/order format blocks",
-                {"rc": out.rc, "stdout": out.stdout[-1600:], "stderr": out.stderr[-400:]})
+    out = run_cmd(
+        ["python", "scripts/resolve_workflow.py", "--goal", "headless-lite", "--out", "artifacts/_matrix_find.json"],
+        repo,
+    )
+    find = repo / "artifacts/_matrix_find.json"
+    find_txt = find.read_text(encoding="utf-8", errors="replace") if find.exists() else ""
+    ok = out.rc == 0 and "\"selected_workflow_id\"" in find_txt
+    record_case(cases, 11, "resolver 输出 find_result 选择信息", "pass" if ok else "fail",
+                "resolve_workflow should produce selected_workflow_id",
+                {"rc": out.rc, "stdout": out.stdout[-1600:], "stderr": out.stderr[-400:], "find_head": "\n".join(find_txt.splitlines()[:20])})
 
     # 12
     if not preflight["has_build_toolchain"]:
@@ -614,7 +617,7 @@ def run_matrix(repo: Path, preflight: dict[str, Any]) -> list[dict[str, Any]]:
         (22, "S01_init_task", "SimLab S01 init task"),
         (23, "S02_doc_first_gate", "SimLab S02 doc-first gate"),
         (24, "S03_doc_index_check", "SimLab S03 doc index check"),
-        (25, "S04_assistant_force", "SimLab S04 assistant --force"),
+        (25, "S04_assistant_force", "SimLab S04 orchestrator new-run"),
         (26, "S05_run_artifacts", "SimLab S05 run artifacts"),
         (27, "S06_failure_bundle", "SimLab S06 failure bundle"),
     ]

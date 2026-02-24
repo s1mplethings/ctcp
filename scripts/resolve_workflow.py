@@ -26,7 +26,7 @@ def _tokenize(text: str) -> list[str]:
     return out
 
 
-def _collect_history(repo: Path) -> dict[str, int]:
+def _collect_history(repo: Path, fallback_workflow_id: str) -> dict[str, int]:
     scores: dict[str, int] = {}
     roots = [
         repo / "simlab" / "_runs",
@@ -43,7 +43,7 @@ def _collect_history(repo: Path) -> dict[str, int]:
             passed = int(doc.get("passed", 0))
             failed = int(doc.get("failed", 0))
             if passed > 0 and failed == 0:
-                scores["wf_minimal_patch_verify"] = scores.get("wf_minimal_patch_verify", 0) + passed
+                scores[fallback_workflow_id] = scores.get(fallback_workflow_id, 0) + passed
     return scores
 
 
@@ -61,9 +61,10 @@ def _score_workflow(wf: dict[str, Any], goal_tokens: list[str], history_score: i
 
 def resolve(goal: str, repo: Path) -> dict[str, Any]:
     index = _load_json(INDEX_PATH)
+    fallback_id = str(index.get("resolver_policy", {}).get("fallback_workflow_id", "")).strip() or "wf_orchestrator_only"
     workflows = list(index.get("workflows", []))
     goal_tokens = _tokenize(goal)
-    history = _collect_history(repo)
+    history = _collect_history(repo, fallback_id)
 
     ranked: list[dict[str, Any]] = []
     for wf in workflows:
@@ -84,14 +85,14 @@ def resolve(goal: str, repo: Path) -> dict[str, Any]:
     selected = ranked[0] if ranked and ranked[0]["score"] > 0 else None
     if selected is None and workflows:
         for w in workflows:
-            if str(w.get("id")) == "wf_minimal_patch_verify":
+            if str(w.get("id")) == fallback_id:
                 selected = {
                     "id": str(w.get("id")),
                     "version": str(w.get("version", "")),
                     "score": 0,
                     "dependency_level": str(w.get("dependency_level", "low")),
                     "path": str(w.get("path", "")),
-                    "detail": {"reason": "fallback_minimal_workflow"},
+                    "detail": {"reason": "fallback_workflow"},
                 }
                 break
 

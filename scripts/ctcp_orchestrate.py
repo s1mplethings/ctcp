@@ -18,6 +18,11 @@ ROOT = Path(__file__).resolve().parents[1]
 POINTERS_DIR = ROOT / "meta" / "run_pointers"
 LAST_RUN_POINTER = POINTERS_DIR / "LAST_RUN.txt"
 LAST_BUNDLE_POINTER = POINTERS_DIR / "LAST_BUNDLE.txt"
+TASKS_DIR = ROOT / "meta" / "tasks"
+REPORTS_DIR = ROOT / "meta" / "reports"
+TASK_TEMPLATE = TASKS_DIR / "TEMPLATE.md"
+TASK_CURRENT = TASKS_DIR / "CURRENT.md"
+REPORT_LAST = REPORTS_DIR / "LAST.md"
 DEFAULT_MAX_ITERATIONS = 3
 
 try:
@@ -176,6 +181,48 @@ def ensure_layout(run_dir: Path) -> None:
     (run_dir / "outbox").mkdir(parents=True, exist_ok=True)
     (run_dir / "logs").mkdir(parents=True, exist_ok=True)
     (run_dir / "snapshot").mkdir(parents=True, exist_ok=True)
+
+
+def ensure_repo_task_and_report(goal: str) -> None:
+    if not TASK_CURRENT.exists():
+        if not TASK_TEMPLATE.exists():
+            raise SystemExit(f"[ctcp_orchestrate] missing task template: {TASK_TEMPLATE}")
+        text = TASK_TEMPLATE.read_text(encoding="utf-8", errors="replace")
+        text = text.replace("<topic>", goal)
+        goal_line = f"Goal: {goal}\n\n"
+        if not text.startswith(goal_line):
+            text = goal_line + text
+        if "## Acceptance" not in text:
+            text = text.rstrip() + "\n\n## Acceptance\n- [ ] Code changes allowed\n"
+        elif "Code changes allowed" not in text:
+            text = text.rstrip() + "\n- [ ] Code changes allowed\n"
+        write_text(TASK_CURRENT, text)
+
+    if not REPORT_LAST.exists():
+        write_text(
+            REPORT_LAST,
+            "\n".join(
+                [
+                    "# Demo Report - LAST",
+                    "",
+                    "## Goal",
+                    f"- {goal}",
+                    "",
+                    "## Readlist",
+                    "- pending",
+                    "",
+                    "## Plan",
+                    "- pending",
+                    "",
+                    "## Changes",
+                    "- pending",
+                    "",
+                    "## Verify",
+                    "- pending",
+                    "",
+                ]
+            ),
+        )
 
 
 def sync_outbox_fulfilled_events(run_dir: Path) -> None:
@@ -823,6 +870,7 @@ def cmd_new_run(goal: str, run_id: str) -> int:
         return 1
 
     ensure_layout(run_dir)
+    ensure_repo_task_and_report(goal)
     sha, dirty = git_info()
     run_doc = {
         "schema_version": "ctcp-run-v1",
