@@ -87,6 +87,14 @@ def main() -> int:
             print(f"  - {p}")
         return 1
 
+    if "meta/reports/LAST.md" not in changed:
+        print("[workflow_checks][error] code changes detected but meta/reports/LAST.md was not updated.")
+        print("Please update meta/reports/LAST.md in the same patch when touching code directories.")
+        print("Code changes:")
+        for p in code_changes:
+            print(f"  - {p}")
+        return 1
+
     print("[workflow_checks] ok")
     return 0
 

@@ -1,6 +1,6 @@
 {
   "id": "S13_lite_dispatch_outbox_on_missing_review",
-  "name": "lite dispatch creates outbox prompt when review_contract is missing",
+  "name": "lite dispatch runs local contract review when review_contract is missing",
   "suite": "lite",
   "steps": [
     {
@@ -23,7 +23,7 @@
     },
     {
       "run": {
-        "cmd": "python -c \"from pathlib import Path; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); p=Path(rd)/'outbox'/'001_contract_guardian_review_contract.md'; assert p.exists(), str(p); Path('artifacts/_dispatch_prompt.md').write_text(p.read_text(encoding='utf-8'), encoding='utf-8')\"",
+        "cmd": "python -c \"from pathlib import Path; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); p=Path(rd)/'reviews'/'review_contract.md'; assert p.exists(), str(p); Path('artifacts/_dispatch_review_contract.md').write_text(p.read_text(encoding='utf-8'), encoding='utf-8')\"",
         "expect_exit": 0
       }
     },
@@ -37,17 +37,17 @@
       "expect_text": {
         "path": "artifacts/_dispatch_status.out.txt",
         "includes": [
-          "blocked: waiting for review_contract.md",
-          "outbox prompt created: outbox/001_contract_guardian_review_contract.md"
+          "blocked: waiting for review_cost.md",
+          "owner=Cost Controller"
         ]
       }
     },
     {
       "expect_text": {
-        "path": "artifacts/_dispatch_prompt.md",
+        "path": "artifacts/_dispatch_review_contract.md",
         "includes": [
-          "Verdict: APPROVE|BLOCK",
-          "write to: reviews/review_contract.md"
+          "Verdict:",
+          "Required Fix/Artifacts:"
         ]
       }
     }

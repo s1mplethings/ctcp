@@ -405,14 +405,14 @@ class MockAgentPipelineTests(unittest.TestCase):
             rows.append(
                 {
                     "case": "default_librarian",
-                    "expected": "local_exec",
+                    "expected": "ollama_agent",
                     "actual": str(preview_librarian.get("provider", "")),
                 }
             )
             rows.append(
                 {
                     "case": "default_chair",
-                    "expected": "manual_outbox",
+                    "expected": "api_agent",
                     "actual": str(preview_chair.get("provider", "")),
                 }
             )
@@ -450,7 +450,7 @@ class MockAgentPipelineTests(unittest.TestCase):
             rows.append(
                 {
                     "case": "recipe_guardian",
-                    "expected": "local_exec",
+                    "expected": "ollama_agent",
                     "actual": str(preview_guardian.get("provider", "")),
                 }
             )
@@ -469,10 +469,10 @@ class MockAgentPipelineTests(unittest.TestCase):
                 artifacts_fallback / "dispatch_config.json",
                 {
                     "schema_version": "ctcp-dispatch-config-v1",
-                    "mode": "manual_outbox",
+                    "mode": "api_agent",
                     "role_providers": {
-                        "patchmaker": "manual_outbox",
-                        "fixer": "manual_outbox",
+                        "patchmaker": "api_agent",
+                        "fixer": "api_agent",
                     },
                     "budgets": {"max_outbox_prompts": 8},
                 },
@@ -521,6 +521,35 @@ class MockAgentPipelineTests(unittest.TestCase):
             for row in rows:
                 self.assertEqual(row["actual"], row["expected"], msg=str(row))
                 self.assertTrue(row["actual"] and row["actual"] != "n/a", msg=str(row))
+
+    def test_mock_patch_is_run_specific(self) -> None:
+        gate = {
+            "state": "blocked",
+            "owner": "PatchMaker",
+            "path": "artifacts/diff.patch",
+            "reason": "waiting for diff.patch",
+        }
+        run_doc = {"goal": "run-specific mock patch"}
+
+        with tempfile.TemporaryDirectory() as td:
+            base = Path(td)
+            run_a = base / "run-A"
+            run_b = base / "run-B"
+            _prepare_run_dir(run_a, _dispatch_config_all_mock())
+            _prepare_run_dir(run_b, _dispatch_config_all_mock())
+
+            result_a = _dispatch_once(run_dir=run_a, run_doc=run_doc, gate=gate, env=None)
+            result_b = _dispatch_once(run_dir=run_b, run_doc=run_doc, gate=gate, env=None)
+            self.assertEqual(result_a.get("status"), "executed", msg=str(result_a))
+            self.assertEqual(result_b.get("status"), "executed", msg=str(result_b))
+
+            patch_a = (run_a / "artifacts" / "diff.patch").read_text(encoding="utf-8", errors="replace")
+            patch_b = (run_b / "artifacts" / "diff.patch").read_text(encoding="utf-8", errors="replace")
+            first_a = _first_non_empty_line(patch_a)
+            first_b = _first_non_empty_line(patch_b)
+            self.assertTrue(first_a.startswith("diff --git"), msg=first_a)
+            self.assertTrue(first_b.startswith("diff --git"), msg=first_b)
+            self.assertNotEqual(first_a, first_b, msg=f"{first_a} == {first_b}")
 
     def test_robustness_fault_injection(self) -> None:
         fault_modes = [

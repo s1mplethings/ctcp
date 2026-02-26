@@ -55,7 +55,7 @@
         "includes": [
           "Role: fixer",
           "failure_bundle.zip",
-          "write to: artifacts/diff.patch"
+          "Target-Path: artifacts/diff.patch"
         ]
       }
     },

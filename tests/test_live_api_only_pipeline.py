@@ -282,6 +282,17 @@ def _tail_jsonl(path: Path, limit: int = 5) -> list[dict[str, Any]]:
     return rows[-limit:]
 
 
+def _expected_provider_for_gate(*, gate: dict[str, str], force_provider: bool) -> str:
+    if force_provider:
+        return "api_agent"
+    gate_path = str(gate.get("path", "")).strip().lower()
+    if "context_pack.json" in gate_path:
+        return "ollama_agent"
+    if "review_contract.md" in gate_path:
+        return "ollama_agent"
+    return "api_agent"
+
+
 def _write_failure_evidence(run_dir: Path, reason: str) -> Path:
     ctcp_orchestrate.ensure_layout(run_dir)
     trace = run_dir / "TRACE.md"
@@ -365,6 +376,10 @@ class LiveApiOnlyPipelineTests(unittest.TestCase):
                 run_doc = {"goal": f"routing matrix {case['name']}"}
                 rows: list[dict[str, Any]] = []
                 for gate in ROUTING_GATES:
+                    expected_provider = _expected_provider_for_gate(
+                        gate=gate,
+                        force_provider=bool(case["force"]),
+                    )
                     preview = _dispatch_preview(
                         run_dir=run_dir,
                         run_doc=run_doc,
@@ -374,7 +389,7 @@ class LiveApiOnlyPipelineTests(unittest.TestCase):
                     row = {
                         "case": case["name"],
                         "gate": gate["path"],
-                        "expected_provider": "api_agent",
+                        "expected_provider": expected_provider,
                         "actual_provider": str(preview.get("provider", "")),
                         "status": str(preview.get("status", "")),
                         "reason": str(preview.get("reason", "")),
@@ -389,7 +404,7 @@ class LiveApiOnlyPipelineTests(unittest.TestCase):
                 _write_json(run_dir / "routing_report.json", report)
 
                 for row in rows:
-                    if row["actual_provider"] != "api_agent":
+                    if row["actual_provider"] != row["expected_provider"]:
                         tail_step_meta = _tail_jsonl(run_dir / "step_meta.jsonl")
                         tail_api_calls = _tail_jsonl(run_dir / "api_calls.jsonl")
                         self.fail(

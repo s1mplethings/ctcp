@@ -59,9 +59,9 @@ Additional constraints:
 
 Never modify more than the minimum number of files needed.
 
-Never change formatting outside the prompt/contract text area.
+Never make stylistic-only formatting changes.
 
-Never change any behavior except prompt/contract enforcement.
+Only change repository behavior when required by the goal and within approved scope; avoid unrelated behavior changes.
 
 END SYSTEM CONTRACT
 

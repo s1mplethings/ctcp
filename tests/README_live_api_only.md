@@ -42,8 +42,8 @@ python -m unittest tests.test_live_api_only_pipeline.LiveApiOnlyPipelineTests.te
 Unified live test entry:
 
 ```powershell
-$env:CTCP_LIVE_API="1"
-$env:CTCP_FORCE_PROVIDER="api_agent"
-$env:OPENAI_API_KEY="<your_key>"
 python scripts/run_live_api_only_tests.py
 ```
+
+`scripts/run_live_api_only_tests.py` will auto-load `OPENAI_API_KEY` and `OPENAI_BASE_URL`
+from `.agent_private/NOTES.md` when env vars are not set locally.

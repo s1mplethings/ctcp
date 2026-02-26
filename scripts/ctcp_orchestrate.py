@@ -650,12 +650,19 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
 
     verdict_contract = parse_verdict(review_contract)
     verdict_cost = parse_verdict(review_cost)
-    if verdict_contract != "APPROVE" or verdict_cost != "APPROVE":
+    if verdict_contract != "APPROVE":
         return {
             "state": "blocked",
-            "owner": "Chair/Planner",
-            "path": "reviews/review_contract.md,reviews/review_cost.md",
-            "reason": f"waiting for APPROVE reviews (contract={verdict_contract}, cost={verdict_cost})",
+            "owner": "Contract Guardian",
+            "path": "reviews/review_contract.md",
+            "reason": f"waiting for APPROVE review_contract (verdict={verdict_contract})",
+        }
+    if verdict_cost != "APPROVE":
+        return {
+            "state": "blocked",
+            "owner": "Cost Controller",
+            "path": "reviews/review_cost.md",
+            "reason": f"waiting for APPROVE review_cost (verdict={verdict_cost})",
         }
 
     if not plan.exists() or not plan_signed(plan):
@@ -859,6 +866,22 @@ def verify_cmd() -> list[str]:
     if os.name == "nt":
         return ["powershell", "-ExecutionPolicy", "Bypass", "-File", str(ROOT / "scripts" / "verify_repo.ps1")]
     return ["bash", str(ROOT / "scripts" / "verify_repo.sh")]
+
+
+def verify_run_env() -> dict[str, str]:
+    env = {
+        "CTCP_SKIP_LITE_REPLAY": "1",
+        # Keep verify independent from provider-routing overrides set for dispatch phases.
+        "CTCP_FORCE_PROVIDER": "",
+        "CTCP_MOCK_AGENT_FAULT_MODE": "",
+        "CTCP_MOCK_AGENT_FAULT_ROLE": "",
+    }
+    if str(os.environ.get("CTCP_VERIFY_ALLOW_LIVE_API", "")).strip() != "1":
+        # Default verify path should not trigger live API tests/calls.
+        env["CTCP_LIVE_API"] = ""
+        env["OPENAI_API_KEY"] = ""
+        env["CTCP_OPENAI_API_KEY"] = ""
+    return env
 
 
 def cmd_new_run(goal: str, run_id: str) -> int:
@@ -1373,7 +1396,7 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
                 iteration=iteration,
                 max_iterations=max_iterations,
             )
-            rc, out, err = run_cmd(cmd, ROOT, env={"CTCP_SKIP_LITE_REPLAY": "1"})
+            rc, out, err = run_cmd(cmd, ROOT, env=verify_run_env())
             out_log = run_dir / "logs" / "verify.stdout.log"
             err_log = run_dir / "logs" / "verify.stderr.log"
             write_text(out_log, out)
@@ -1583,7 +1606,7 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
 
         if dispatch_status == "exec_failed":
             run_doc["status"] = "blocked"
-            run_doc["blocked_reason"] = str(dispatch.get("reason", "local_exec_failed"))
+            run_doc["blocked_reason"] = str(dispatch.get("reason", "provider_exec_failed"))
             save_run_doc(run_dir, run_doc)
             append_event(
                 run_dir,
@@ -1594,7 +1617,7 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
                 cmd=str(dispatch.get("cmd", "")),
                 rc=int(dispatch.get("rc", 1)),
             )
-            print(f"[ctcp_orchestrate] blocked: {dispatch.get('reason', 'local_exec failed')}")
+            print(f"[ctcp_orchestrate] blocked: {dispatch.get('reason', 'provider exec failed')}")
             return 0
 
         if state == "fail":

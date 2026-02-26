@@ -42,21 +42,21 @@ gates:
 
 cost_hints:
   dependency_level: low
-  api_level: low
-  estimated_minutes: 5
+  api_level: high
+  estimated_minutes: 8
 
 roles:
   librarian:
-    provider: local_exec
+    provider: ollama_agent
   contract_guardian:
-    provider: local_exec
+    provider: ollama_agent
   chair:
-    provider: manual_outbox
+    provider: api_agent
   cost_controller:
-    provider: manual_outbox
+    provider: api_agent
   patchmaker:
     provider: api_agent
   fixer:
     provider: api_agent
   researcher:
-    provider: manual_outbox
+    provider: api_agent

@@ -1,116 +1,1353 @@
-diff --git a/.github/workflows/verify.yml b/.github/workflows/verify.yml
-index 3794783..ad6a4d1 100644
---- a/.github/workflows/verify.yml
-+++ b/.github/workflows/verify.yml
-@@ -21,18 +21,11 @@ jobs:
-         with:
-           python-version: "3.12"
- 
--      - name: Install Qt
--        uses: jurplel/install-qt-action@v4
--        with:
--          version: "6.6.3"
--          modules: "qtwebengine"
--          cache: true
--
-       - name: Linux deps
-         if: runner.os == 'Linux'
-         run: |
-           sudo apt-get update
--          sudo apt-get install -y xvfb ninja-build
-+          sudo apt-get install -y xvfb ninja-build cmake build-essential
- 
-       - name: Run verify (Linux)
-         if: runner.os == 'Linux'
-@@ -52,4 +45,3 @@ jobs:
-           name: verify-artifacts-${{ matrix.os }}
-           path: |
-             artifacts/verify/**
--
 diff --git a/meta/reports/LAST.md b/meta/reports/LAST.md
-index 5049943..490243c 100644
+index a194fa4..448dd26 100644
 --- a/meta/reports/LAST.md
 +++ b/meta/reports/LAST.md
-@@ -134,3 +134,31 @@
- - Optional: set explicit enterprise runs root before team runs:
-   - Windows: `$env:CTCP_RUNS_ROOT = "D:\\ctcp-runs"`
-   - Linux/macOS: `export CTCP_RUNS_ROOT=/data/ctcp-runs`
+@@ -1,54 +1,66 @@
+ # Demo Report - LAST
+ 
+ ## Goal
+-- 新增/强化 deterministic 的 agent 连接与 ADLC 鲁棒性场景（S17~S25），并保持 `verify_repo` 与 `simlab lite` 全绿。
++- Align lite scenarios to canonical mainline (S17-S19 linear) and allow manual_outbox for patchmaker/fixer.
+ 
+ ## Readlist
+ - `ai_context/00_AI_CONTRACT.md`
++- `ai_context/CTCP_FAST_RULES.md`
+ - `README.md`
+ - `BUILD.md`
+ - `PATCH_README.md`
+ - `TREE.md`
++- `docs/00_CORE.md`
++- `docs/02_workflow.md`
+ - `docs/03_quality_gates.md`
++- `docs/30_artifact_contracts.md`
++- `docs/PATCH_CONTRACT.md`
++- `AGENTS.md`
+ - `ai_context/problem_registry.md`
+ - `ai_context/decision_log.md`
+-- `docs/00_CORE.md`
+-- `docs/30_artifact_contracts.md`
+ 
+ ## Plan
+-1) Docs/Spec first：更新任务单并对齐 artifact/outbox 合同  
+-2) Implement：新增 SimLab `S17..S25`（连接性 + 鲁棒性）  
+-3) Verify：`compileall` + `simlab --suite lite` + `verify_repo.ps1`  
+-4) Report：回填任务单与 LAST 报告
++1) Docs/Spec first (task + report update)
++2) Implement (dispatch provider fix, update tests, replace S17-S19 scenarios, remove S20-S25)
++3) Verify (`python -m compileall .`, `python simlab/run.py --suite lite`, `scripts/verify_repo.ps1`)
++4) Report (update `meta/reports/LAST.md`)
+ 
+ ## Changes
+-- 更新场景：
+-  - `simlab/scenarios/S17_lite_patch_first_reject.yaml`（替换为 `S17_lite_link_chair_analysis_outbox`）
+-  - 新增 `simlab/scenarios/S18_lite_link_researcher_find_web_outbox.yaml`
+-  - 新增 `simlab/scenarios/S19_lite_link_librarian_context_pack_outbox.yaml`
+-  - 新增 `simlab/scenarios/S20_lite_link_contract_guardian_review_outbox.yaml`
+-  - 新增 `simlab/scenarios/S21_lite_link_cost_controller_review_outbox.yaml`
+-  - 新增 `simlab/scenarios/S22_lite_link_patchmaker_diff_patch_outbox.yaml`
+-  - 新增 `simlab/scenarios/S23_lite_robust_idempotent_outbox_no_duplicates.yaml`
+-  - 新增 `simlab/scenarios/S24_lite_robust_patch_scope_violation_rejected.yaml`
+-  - 新增 `simlab/scenarios/S25_lite_robust_invalid_find_web_json_blocks.yaml`
+-- 门禁记录同步：
+-  - `meta/tasks/CURRENT.md`（DoD/Acceptance 勾选与结果回填）
++- Updated `scripts/ctcp_dispatch.py` to allow manual_outbox for patchmaker/fixer.
++- Updated `tests/test_mock_agent_pipeline.py` expectations for manual_outbox fallback.
++- Replaced lite scenarios:
++  - Added `simlab/scenarios/S17_lite_linear_mainline_resolver_only.yaml`
++  - Added `simlab/scenarios/S18_lite_linear_mainline_resolver_plus_web.yaml`
++  - Added `simlab/scenarios/S19_lite_linear_robustness_tripwire.yaml`
++  - Removed legacy `simlab/scenarios/S17_lite_patch_first_reject.yaml`
++  - Removed legacy `simlab/scenarios/S18_lite_link_researcher_find_web_outbox.yaml`
++  - Removed legacy `simlab/scenarios/S19_lite_link_librarian_context_pack_outbox.yaml`
++  - Removed legacy `simlab/scenarios/S20_lite_link_contract_guardian_review_outbox.yaml`
++  - Removed legacy `simlab/scenarios/S21_lite_link_cost_controller_review_outbox.yaml`
++  - Removed legacy `simlab/scenarios/S22_lite_link_patchmaker_diff_patch_outbox.yaml`
++  - Removed legacy `simlab/scenarios/S23_lite_robust_idempotent_outbox_no_duplicates.yaml`
++  - Removed legacy `simlab/scenarios/S24_lite_robust_patch_scope_violation_rejected.yaml`
++  - Removed legacy `simlab/scenarios/S25_lite_robust_invalid_find_web_json_blocks.yaml`
++- Updated `meta/tasks/CURRENT.md` for this run.
+ 
+ ## Verify
+-- `python simlab/run.py --suite lite` => PASS
+-  - `{"run_dir":"C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260224-194834","passed":17,"failed":0}`
+-- `python -m compileall .` => PASS
+-- `powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1` => PASS
+-  - `workflow gate (workflow checks): ok`
+-  - `plan check: ok`
+-  - `patch check: ok (changed_files=53 max_files=200)`
+-  - `behavior catalog check: ok`
+-  - `contract checks: ok`
+-  - `doc index check: ok`
+-  - `lite scenario replay: passed=17 failed=0`
+-  - `python unit tests: Ran 46 tests ... OK (skipped=3)`
+-  - `[verify_repo] OK`
++- `python -m compileall .` => exit 0
++- `python simlab/run.py --suite lite` => exit 0
++  - run_dir: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260225-005505` (passed=11 failed=0)
++- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => exit 0
++  - lite scenario replay: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260225-005925` (passed=11 failed=0)
 +
-+---
++## TEST SUMMARY
++- Commit: 5b6ec78
++- Commands Run:
++  - `python -m compileall .` (exit 0)
++  - `python simlab/run.py --suite lite` (exit 0)
++  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` (exit 0)
++- SimLab lite: PASS (total=11, passed=11, failed=0)
++- New/updated scenarios:
++  - S17_lite_linear_mainline_resolver_only: PASS
++  - S18_lite_linear_mainline_resolver_plus_web: PASS
++  - S19_lite_linear_robustness_tripwire: PASS
+ 
+ ## Questions
+ - None
+@@ -56,4 +68,77 @@
+ ## Demo
+ - Report: `meta/reports/LAST.md`
+ - Run pointer: `meta/run_pointers/LAST_RUN.txt`
+-- SimLab summary: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\simlab_runs\20260224-195209\summary.json`
++- SimLab summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260225-005925/summary.json`
 +
-+## Follow-up (CI job stabilization)
++## Update 2026-02-24 (MD contract + librarian injection + workflow gate)
++- Scope: sync AGENTS/AI contract wording, add `CTCP_FAST_RULES.md`, enforce librarian mandatory contract injection, and require LAST report update on code-dir changes.
++- Verify:
++  - `powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1` => PASS
++    - `workflow_checks: ok`
++    - `patch_check: ok (changed_files=9)`
++    - `lite replay: passed=17 failed=0`
++    - `python unit tests: Ran 46 tests, OK (skipped=3)`
++  - librarian mandatory injection checks => PASS
++    - run-dir: `C:\Users\sunom\AppData\Local\Temp\ctcp_librarian_manual_04e5e6d1de744948a1f1d4e0896e8ead`
++    - normal budget result: `context_pack.json` includes `AGENTS.md`, `ai_context/00_AI_CONTRACT.md`, `ai_context/CTCP_FAST_RULES.md`, `docs/00_CORE.md`, `PATCH_README.md`
++    - low budget result: non-zero with message `budget too small for mandatory contract files ... Please increase budget.max_files and budget.max_total_bytes.`
 +
-+### Goal
-+- Address fast-fail CI jobs:
-+  - `gate-matrix / preflight-and-matrix`
-+  - `verify-evidence / verify (ubuntu-latest)`
-+  - `verify-evidence / verify (windows-latest)`
++## Update 2026-02-25 (patch 输出稳定性规则对齐)
++
++### Readlist
++- `ai_context/00_AI_CONTRACT.md`
++- `ai_context/CTCP_FAST_RULES.md`
++- `README.md`
++- `BUILD.md`
++- `PATCH_README.md`
++- `TREE.md`
++- `docs/03_quality_gates.md`
++- `ai_context/problem_registry.md`
++- `ai_context/decision_log.md`
++- `docs/00_CORE.md`
++- `AGENTS.md`
++
++### Plan
++1) Docs/Spec: 更新任务单与目标契约文档
++2) Gate: 改动前执行 `python scripts/workflow_checks.py`
++3) Verify: 运行 `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
++4) Report: 回填 `meta/reports/LAST.md`
 +
 +### Changes
-+- `tools/checks/gate_matrix_runner.py`
-+  - Hardened sandbox copy ignore logic:
-+    - removed fragile `.resolve()` on recursive artifact trees
-+    - added ignores for `simlab/_runs*`, `meta/runs/`, `artifacts/verify/`
-+  - Result: `python tools/checks/gate_matrix_runner.py` now completes successfully.
-+- `.github/workflows/verify.yml`
-+  - Removed external Qt install action (verify is headless, GUI optional).
-+  - Added explicit Linux build deps: `cmake`, `build-essential`, `ninja-build`, `xvfb`.
++- `ai_context/00_AI_CONTRACT.md`
++  - 结构化条款为 bullet，新增“单一连续 diff、禁止 Markdown 围栏、报告正文落盘不出现在 chat”约束。
++- `PATCH_README.md`
++  - 新增“UI/复制稳定性”章节，明确 patch-only 连续输出与复制来源建议。
++- `AGENTS.md`
++  - 新增“6) Patch 输出稳定性”强约束与 UI-safe Prompt 模板。
++- `artifacts/PLAN.md`
++  - 最小修复 `patch_check` 作用域：`Scope-Allow` 加入 `PATCH_README.md`。
++- `meta/tasks/CURRENT.md`
++  - 任务单切换为本次文档契约更新主题。
 +
 +### Verify
-+- `python tools/checks/gate_matrix_runner.py`
-+  - exit: `0`
-+- `powershell -ExecutionPolicy Bypass -File scripts/verify.ps1`
-+  - exit: `0`
-+- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
-+  - exit: `0`
++- `python scripts/workflow_checks.py` => exit 0
++- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => exit 1（首个失败点）
++  - first failure: `[patch_check][error] out-of-scope path (Scope-Allow): PATCH_README.md`
++  - minimal fix: 在 `artifacts/PLAN.md` 的 `Scope-Allow` 增加 `PATCH_README.md`
++- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`（修复后重跑）=> exit 0
++  - `workflow gate`: ok
++  - `plan check`: ok
++  - `patch check`: ok
++  - `contract checks`: ok
++  - `doc index check`: ok
++  - `lite scenario replay`: passed=17 failed=0
++  - `python unit tests`: Ran 46, OK (skipped=3)
++- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`（报告回填后最终复检）=> exit 0
++  - `lite scenario replay`: run_dir=`C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260225-001612`
++- `git apply --check --reverse <generated_patch>`（针对本次改动文件集）=> exit 0
++
++### Questions
++- None
++
++### Demo
++- Report: `meta/reports/LAST.md`
++- Run pointer: `meta/run_pointers/LAST_RUN.txt`
++- External trace: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\20260224-215255-959200-orchestrate\TRACE.md`
++- Lite replay summary: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\simlab_runs\20260225-001612\summary.json`
++
 diff --git a/meta/tasks/CURRENT.md b/meta/tasks/CURRENT.md
-index 39ee3f5..58b05f4 100644
+index 211e4d0..5b58d10 100644
 --- a/meta/tasks/CURRENT.md
 +++ b/meta/tasks/CURRENT.md
-@@ -29,3 +29,4 @@
- - Repo-internal outputs restricted to lightweight pointers and path metadata.
- - Added `docs/21_paths_and_locations.md` and `docs/22_agent_teamnet.md`.
- - `scripts/verify_repo.ps1` passed; Team Mode smoke passed with external run pointer.
-+- CI follow-up: fixed `tools/checks/gate_matrix_runner.py` sandbox ignore recursion and simplified `verify.yml` to headless verify dependency set.
-diff --git a/tools/checks/gate_matrix_runner.py b/tools/checks/gate_matrix_runner.py
-index 9ac1539..7646a01 100644
---- a/tools/checks/gate_matrix_runner.py
-+++ b/tools/checks/gate_matrix_runner.py
-@@ -165,12 +165,19 @@ def copy_repo_for_sandbox(dst: Path) -> Path:
+@@ -1,39 +1,38 @@
+-# Task - lite-agent-link-and-adlc-robustness-tests
++# Task - linear-lite-mainline-scenarios
+ 
+ ## Queue Binding
+-- Queue Item: `N/A (user-directed deterministic lite simlab expansion)`
++- Queue Item: `N/A (user-directed test realignment)`
+ - Layer/Priority: `L1 / P0`
+ - Source Queue File: `meta/backlog/execution_queue.json` (reference only)
+ 
+ ## Context
+-- 目标是为 orchestrator/dispatch 链路补齐 deterministic 的 lite 场景覆盖：角色连接性（outbox prompt）+ 鲁棒性（幂等、坏输入、scope 违规）。
+-- 必须保持 patch-first 与 artifact contract，不引入联网调用与新依赖。
+-- verify 路径必须保持 `python simlab/run.py --suite lite` 与 `scripts/verify_repo.*` 可通过。
++- Align lite scenarios to canonical mainline with linear `advance --max-steps 1` steps.
++- Consolidate prior link/robustness coverage into S17-S19.
++- Allow manual_outbox for patchmaker/fixer per artifact contract.
+ 
+ ## DoD Mapping (from execution_queue.json)
+-- [x] DoD-1: 新增 lite 场景 S17~S25（连接性 + 鲁棒性）并全部 deterministic。
+-- [x] DoD-2: blocked gate 对应角色可稳定产出 outbox prompt（至少覆盖 chair/researcher/librarian/guardian/cost/patchmaker/fixer）。
+-- [x] DoD-3: SimLab lite 全量回放通过（包含新增场景）。
+-- [x] DoD-4: `python -m compileall .` 与 `scripts/verify_repo.ps1` 通过。
++- [ ] DoD-1: `S17..S19 linear mainline scenarios in lite suite`
++- [ ] DoD-2: `Dispatch provider selection aligns with artifact contract`
++- [ ] DoD-3: `verify_repo + simlab lite pass`
+ 
+ ## Acceptance (must be checkable)
+ - [x] DoD written (this file complete)
+-- [x] Research logged (if needed): N/A (repo-local issue)
++- [x] Research logged (if needed): N/A (repo-local)
+ - [x] Code changes allowed
+-- [x] Patch applies cleanly (`git apply ...`) OR overlay zip applies cleanly
++- [ ] Patch applies cleanly (`git apply ...`) OR overlay zip applies cleanly
+ - [x] `scripts/verify_repo.*` passes
+ - [x] Demo report updated: `meta/reports/LAST.md`
+ 
+ ## Plan
+-1) Docs/Spec first（任务单 + 契约核对 + 场景设计）
+-2) Implement（新增 S17~S25；必要时 orchestrator 最小修补）
+-3) Verify（compileall + simlab lite + verify_repo）
+-4) Record（更新 LAST 报告与验收摘要）
++1) Docs/Spec first (task + report update)
++2) Implement (simlab scenarios + dispatch provider fix + tests update)
++3) Verify (`python -m compileall .`, `python simlab/run.py --suite lite`, `scripts/verify_repo.*`)
++4) Record (update `meta/reports/LAST.md`)
+ 
+ ## Notes / Decisions
+-- 不新增依赖，不引入联网调用，场景中通过离线 artifact 注入触发 gate。
+-- 优先通过 scenario 配置满足连接性，代码仅做必要修补。
++- Use manual_outbox for patchmaker/fixer to match docs/30_artifact_contracts.md.
+ 
+ ## Results
+-- PASS: 新增 S17~S25 后，`simlab --suite lite` 通过（17/17）。
+-- PASS: `python -m compileall .` 与 `powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1` 通过。
++- PASS: `python -m compileall .` (exit 0)
++- PASS: `python simlab/run.py --suite lite` (passed=11 failed=0)
++- PASS: `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` (exit 0)
+diff --git a/scripts/ctcp_dispatch.py b/scripts/ctcp_dispatch.py
+index 5faf71a..09b0e3e 100644
+--- a/scripts/ctcp_dispatch.py
++++ b/scripts/ctcp_dispatch.py
+@@ -465,11 +465,6 @@ def _resolve_provider(config: dict[str, Any], role: str) -> tuple[str, str]:
+             "manual_outbox",
+             "local_exec restricted to librarian/contract_guardian; fallback to manual_outbox",
+         )
+-    if provider == "manual_outbox" and role in {"patchmaker", "fixer"}:
+-        return (
+-            "api_agent",
+-            "manual_outbox disabled for patchmaker/fixer; fallback to api_agent",
+-        )
+     return provider, ""
+ 
+ 
+diff --git a/simlab/scenarios/S17_lite_linear_mainline_resolver_only.yaml b/simlab/scenarios/S17_lite_linear_mainline_resolver_only.yaml
+new file mode 100644
+index 0000000..2053cff
+--- /dev/null
++++ b/simlab/scenarios/S17_lite_linear_mainline_resolver_only.yaml
+@@ -0,0 +1,240 @@
++{
++  "id": "S17_lite_linear_mainline_resolver_only",
++  "name": "lite linear: mainline resolver_only with local steps and manual outbox",
++  "suite": "lite",
++  "steps": [
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-linear-mainline-resolver-only > artifacts/_s17_newrun.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; art.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'local_exec','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 10\\nmax_total_bytes: 200000\\nmax_iterations: 3\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s17_adv_01.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='chair'; action='plan_draft'; target='artifacts/analysis.md'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s17_outbox_analysis.md')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s17_outbox_analysis.md",
++        "includes": [
++          "Role: chair",
++          "Action: plan_draft",
++          "Target-Path: artifacts/analysis.md",
++          "write to: artifacts/analysis.md"
++        ]
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; art.mkdir(parents=True, exist_ok=True); (art/'analysis.md').write_text('# Analysis\\n- Goal: simlab-linear-mainline-resolver-only\\n- Strategy: linear mainline\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s17_adv_02.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; outbox=r/'outbox'; doc=json.loads((art/'find_result.json').read_text(encoding='utf-8')); assert doc.get('schema_version')=='ctcp-find-result-v1', doc.get('schema_version'); md=[p for p in outbox.glob('*.md')]; assert len(md)==1, f'expected 1 outbox prompt, got {len(md)}'\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s17_adv_03.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='chair'; action='file_request'; target='artifacts/file_request.json'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s17_outbox_file_request.md')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s17_outbox_file_request.md",
++        "includes": [
++          "Role: chair",
++          "Action: file_request",
++          "Target-Path: artifacts/file_request.json",
++          "write to: artifacts/file_request.json"
++        ]
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; req={'schema_version':'ctcp-file-request-v1','goal':'simlab-linear-mainline-resolver-only','needs':[{'path':'README.md','mode':'snippets','line_ranges':[[1,20]]}], 'budget':{'max_files':10,'max_total_bytes':200000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s17_adv_04.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; outbox=r/'outbox'; doc=json.loads((art/'context_pack.json').read_text(encoding='utf-8')); assert doc.get('schema_version')=='ctcp-context-pack-v1', doc.get('schema_version'); md=[p for p in outbox.glob('*.md')]; assert len(md)==2, f'expected 2 outbox prompts, got {len(md)}'\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s17_adv_05.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='chair'; action='plan_draft'; target='artifacts/PLAN_draft.md'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s17_outbox_plan_draft.md')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s17_outbox_plan_draft.md",
++        "includes": [
++          "Role: chair",
++          "Action: plan_draft",
++          "Target-Path: artifacts/PLAN_draft.md",
++          "write to: artifacts/PLAN_draft.md"
++        ]
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; (art/'PLAN_draft.md').write_text('Status: DRAFT\\n- Step: mainline\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s17_adv_06.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='contract_guardian'; action='review_contract'; target='reviews/review_contract.md'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s17_outbox_review_contract.md')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s17_outbox_review_contract.md",
++        "includes": [
++          "Role: contract_guardian",
++          "Action: review_contract",
++          "Target-Path: reviews/review_contract.md",
++          "write to: reviews/review_contract.md"
++        ]
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); rev=Path(rd)/'reviews'; rev.mkdir(parents=True, exist_ok=True); (rev/'review_contract.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s17_adv_07.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='cost_controller'; action='review_cost'; target='reviews/review_cost.md'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s17_outbox_review_cost.md')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s17_outbox_review_cost.md",
++        "includes": [
++          "Role: cost_controller",
++          "Action: review_cost",
++          "Target-Path: reviews/review_cost.md",
++          "write to: reviews/review_cost.md"
++        ]
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); rev=Path(rd)/'reviews'; rev.mkdir(parents=True, exist_ok=True); (rev/'review_cost.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s17_adv_08.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='chair'; action='plan_signed'; target='artifacts/PLAN.md'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s17_outbox_plan_signed.md')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s17_outbox_plan_signed.md",
++        "includes": [
++          "Role: chair",
++          "Action: plan_signed",
++          "Target-Path: artifacts/PLAN.md",
++          "write to: artifacts/PLAN.md"
++        ]
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; (art/'PLAN.md').write_text('Status: SIGNED\\nScope-Allow: docs/,simlab/\\nScope-Deny: build/,dist/\\nGates: lite\\nStop: max_iterations=3\\nBudgets: max_files=10,max_total_bytes=200000\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s17_adv_09.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='patchmaker'; action='make_patch'; target='artifacts/diff.patch'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s17_outbox_patchmaker.md')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s17_outbox_patchmaker.md",
++        "includes": [
++          "Role: patchmaker",
++          "Action: make_patch",
++          "Target-Path: artifacts/diff.patch",
++          "write to: artifacts/diff.patch"
++        ]
++      }
++    }
++  ]
++}
+diff --git a/simlab/scenarios/S17_lite_patch_first_reject.yaml b/simlab/scenarios/S17_lite_patch_first_reject.yaml
+deleted file mode 100644
+index 14f5796..0000000
+--- a/simlab/scenarios/S17_lite_patch_first_reject.yaml
++++ /dev/null
+@@ -1,43 +0,0 @@
+-{
+-  "id": "S17_lite_link_chair_analysis_outbox",
+-  "name": "lite link: missing analysis should create chair outbox prompt",
+-  "suite": "lite",
+-  "steps": [
+-    {
+-      "run": {
+-        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-link-chair-analysis > artifacts/_s17_newrun.out.txt 2>&1",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; art.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'manual_outbox','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8')\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"import subprocess,sys; rc=subprocess.call('python scripts/ctcp_orchestrate.py advance --max-steps 8', shell=True); print(rc); sys.exit(0)\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='chair'; target='artifacts/analysis.md'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: f'role: {role}' in t and (f'target-path: {target}' in t or f'write to: {target}' in t))(p.read_text(encoding='utf-8').lower())]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s17_outbox_prompt.md')\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "expect_text": {
+-        "path": "artifacts/_s17_outbox_prompt.md",
+-        "includes": [
+-          "Role: chair",
+-          "Target-Path: artifacts/analysis.md",
+-          "write to: artifacts/analysis.md"
+-        ]
+-      }
+-    }
+-  ]
+-}
+-
+-
+diff --git a/simlab/scenarios/S18_lite_linear_mainline_resolver_plus_web.yaml b/simlab/scenarios/S18_lite_linear_mainline_resolver_plus_web.yaml
+new file mode 100644
+index 0000000..6019285
+--- /dev/null
++++ b/simlab/scenarios/S18_lite_linear_mainline_resolver_plus_web.yaml
+@@ -0,0 +1,83 @@
++{
++  "id": "S18_lite_linear_mainline_resolver_plus_web",
++  "name": "lite linear: resolver_plus_web researcher branch",
++  "suite": "lite",
++  "steps": [
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-linear-mainline-resolver-plus-web > artifacts/_s18_newrun.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; art.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'local_exec','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_plus_web\\nallow_domains: docs.python.org,openai.com\\nmax_queries: 2\\nmax_pages: 2\\nmax_files: 10\\nmax_total_bytes: 200000\\nmax_iterations: 3\\n', encoding='utf-8'); (art/'analysis.md').write_text('# Analysis\\n- Goal: simlab-linear-mainline-resolver-plus-web\\n- Needs: researcher\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s18_adv_01.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; outbox=r/'outbox'; doc=json.loads((art/'find_result.json').read_text(encoding='utf-8')); assert doc.get('schema_version')=='ctcp-find-result-v1', doc.get('schema_version'); md=[p for p in outbox.glob('*.md')]; assert len(md)==0, f'expected 0 outbox prompts, got {len(md)}'\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s18_adv_02.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='researcher'; action='find_web'; target='artifacts/find_web.json'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s18_outbox_find_web.md')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s18_outbox_find_web.md",
++        "includes": [
++          "Role: researcher",
++          "Action: find_web",
++          "Target-Path: artifacts/find_web.json",
++          "write to: artifacts/find_web.json"
++        ]
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; doc={'schema_version':'ctcp-find-web-v1','constraints':{'allow_domains':['docs.python.org','openai.com'],'max_queries':2,'max_pages':2},'results':[{'url':'https://docs.python.org/3/','locator':{'type':'heading','value':'Python 3 Documentation'},'fetched_at':'2024-01-01T00:00:00Z','excerpt':'Python documentation reference.','why_relevant':'simlab stub','risk_flags':[]}]} ; (art/'find_web.json').write_text(json.dumps(doc, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s18_adv_03.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='chair'; action='file_request'; target='artifacts/file_request.json'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s18_outbox_file_request.md')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s18_outbox_file_request.md",
++        "includes": [
++          "Role: chair",
++          "Action: file_request",
++          "Target-Path: artifacts/file_request.json",
++          "write to: artifacts/file_request.json"
++        ]
++      }
++    }
++  ]
++}
+diff --git a/simlab/scenarios/S18_lite_link_researcher_find_web_outbox.yaml b/simlab/scenarios/S18_lite_link_researcher_find_web_outbox.yaml
+deleted file mode 100644
+index d913d12..0000000
+--- a/simlab/scenarios/S18_lite_link_researcher_find_web_outbox.yaml
++++ /dev/null
+@@ -1,41 +0,0 @@
+-{
+-  "id": "S18_lite_link_researcher_find_web_outbox",
+-  "name": "lite link: resolver_plus_web missing find_web should create researcher outbox prompt",
+-  "suite": "lite",
+-  "steps": [
+-    {
+-      "run": {
+-        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-link-researcher-find-web > artifacts/_s18_newrun.out.txt 2>&1",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; art.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'manual_outbox','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_plus_web\\nallow_domains: docs.python.org,openai.com\\nmax_queries: 2\\nmax_pages: 2\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\nneed external lookup\\n', encoding='utf-8')\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"import subprocess,sys; rc=subprocess.call('python scripts/ctcp_orchestrate.py advance --max-steps 8', shell=True); print(rc); sys.exit(0)\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='researcher'; target='artifacts/find_web.json'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: f'role: {role}' in t and (f'target-path: {target}' in t or f'write to: {target}' in t))(p.read_text(encoding='utf-8').lower())]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s18_outbox_prompt.md')\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "expect_text": {
+-        "path": "artifacts/_s18_outbox_prompt.md",
+-        "includes": [
+-          "Role: researcher",
+-          "Target-Path: artifacts/find_web.json",
+-          "write to: artifacts/find_web.json"
+-        ]
+-      }
+-    }
+-  ]
+-}
+diff --git a/simlab/scenarios/S19_lite_linear_robustness_tripwire.yaml b/simlab/scenarios/S19_lite_linear_robustness_tripwire.yaml
+new file mode 100644
+index 0000000..f0e8011
+--- /dev/null
++++ b/simlab/scenarios/S19_lite_linear_robustness_tripwire.yaml
+@@ -0,0 +1,285 @@
++{
++  "id": "S19_lite_linear_robustness_tripwire",
++  "name": "lite linear: robustness tripwire on mainline",
++  "suite": "lite",
++  "steps": [
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-linear-robustness-tripwire > artifacts/_s19_newrun.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; art.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'local_exec','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_plus_web\\nallow_domains: docs.python.org,openai.com\\nmax_queries: 2\\nmax_pages: 2\\nmax_files: 10\\nmax_total_bytes: 200000\\nmax_iterations: 3\\n', encoding='utf-8'); (art/'analysis.md').write_text('# Analysis\\n- Goal: simlab-linear-robustness-tripwire\\n- Needs: researcher\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s19_adv_01.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; outbox=r/'outbox'; doc=json.loads((art/'find_result.json').read_text(encoding='utf-8')); assert doc.get('schema_version')=='ctcp-find-result-v1', doc.get('schema_version'); md=[p for p in outbox.glob('*.md')]; assert len(md)==0, f'expected 0 outbox prompts, got {len(md)}'\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; (art/'find_web.json').write_text('{', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s19_adv_02.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import json, shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='researcher'; action='find_web'; target='artifacts/find_web.json'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s19_outbox_find_web.md'); rows=[(role_v, action_v, target_v) for p in sorted(outbox.glob('*.md')) for lines in [p.read_text(encoding='utf-8', errors='replace').splitlines()] for role_v in [next((ln.split(':',1)[1].strip() for ln in lines if ln.startswith('Role:')), '')] for action_v in [next((ln.split(':',1)[1].strip() for ln in lines if ln.startswith('Action:')), '')] for target_v in [next((ln.split(':',1)[1].strip() for ln in lines if ln.startswith('Target-Path:')), '') or next((ln.split(':',1)[1].strip() for ln in lines if ln.startswith('write to:')), '')]]; counts={}; [counts.__setitem__(f'{r}|{a}|{t}', counts.get(f'{r}|{a}|{t}',0)+1) for (r,a,t) in rows]; Path('artifacts/_s19_outbox_counts_before.json').write_text(json.dumps(counts, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s19_outbox_find_web.md",
++        "includes": [
++          "Role: researcher",
++          "Action: find_web",
++          "Target-Path: artifacts/find_web.json",
++          "write to: artifacts/find_web.json"
++        ]
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s19_adv_03.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import json; before=json.loads(Path('artifacts/_s19_outbox_counts_before.json').read_text(encoding='utf-8')); rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; rows=[(role_v, action_v, target_v) for p in sorted(outbox.glob('*.md')) for lines in [p.read_text(encoding='utf-8', errors='replace').splitlines()] for role_v in [next((ln.split(':',1)[1].strip() for ln in lines if ln.startswith('Role:')), '')] for action_v in [next((ln.split(':',1)[1].strip() for ln in lines if ln.startswith('Action:')), '')] for target_v in [next((ln.split(':',1)[1].strip() for ln in lines if ln.startswith('Target-Path:')), '') or next((ln.split(':',1)[1].strip() for ln in lines if ln.startswith('write to:')), '')]]; counts={}; [counts.__setitem__(f'{r}|{a}|{t}', counts.get(f'{r}|{a}|{t}',0)+1) for (r,a,t) in rows]; assert all(counts.get(k,0)==v for k,v in before.items()), f'before={before} after={counts}'; key='researcher|find_web|artifacts/find_web.json'; assert counts.get(key,0)==before.get(key,0)==1, f'bad key counts {counts}'; Path('artifacts/_s19_outbox_counts_after.json').write_text(json.dumps(counts, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; doc={'schema_version':'ctcp-find-web-v1','constraints':{'allow_domains':['docs.python.org','openai.com'],'max_queries':2,'max_pages':2},'results':[{'url':'https://docs.python.org/3/','locator':{'type':'heading','value':'Python 3 Documentation'},'fetched_at':'2024-01-01T00:00:00Z','excerpt':'Python documentation reference.','why_relevant':'simlab stub','risk_flags':[]}]} ; (art/'find_web.json').write_text(json.dumps(doc, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s19_adv_04.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='chair'; action='file_request'; target='artifacts/file_request.json'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s19_outbox_file_request.md')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s19_outbox_file_request.md",
++        "includes": [
++          "Role: chair",
++          "Action: file_request",
++          "Target-Path: artifacts/file_request.json",
++          "write to: artifacts/file_request.json"
++        ]
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; req={'schema_version':'ctcp-file-request-v1','goal':'simlab-linear-robustness-tripwire','needs':[{'path':'README.md','mode':'snippets','line_ranges':[[1,20]]}], 'budget':{'max_files':10,'max_total_bytes':200000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s19_adv_05.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; outbox=r/'outbox'; doc=json.loads((art/'context_pack.json').read_text(encoding='utf-8')); assert doc.get('schema_version')=='ctcp-context-pack-v1', doc.get('schema_version'); md=[p for p in outbox.glob('*.md')]; assert len(md)==2, f'expected 2 outbox prompts, got {len(md)}'\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s19_adv_06.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='chair'; action='plan_draft'; target='artifacts/PLAN_draft.md'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s19_outbox_plan_draft.md')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s19_outbox_plan_draft.md",
++        "includes": [
++          "Role: chair",
++          "Action: plan_draft",
++          "Target-Path: artifacts/PLAN_draft.md",
++          "write to: artifacts/PLAN_draft.md"
++        ]
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; (art/'PLAN_draft.md').write_text('Status: DRAFT\\n- Step: mainline\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s19_adv_07.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='contract_guardian'; action='review_contract'; target='reviews/review_contract.md'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s19_outbox_review_contract.md')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s19_outbox_review_contract.md",
++        "includes": [
++          "Role: contract_guardian",
++          "Action: review_contract",
++          "Target-Path: reviews/review_contract.md",
++          "write to: reviews/review_contract.md"
++        ]
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); rev=Path(rd)/'reviews'; rev.mkdir(parents=True, exist_ok=True); (rev/'review_contract.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s19_adv_08.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='cost_controller'; action='review_cost'; target='reviews/review_cost.md'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s19_outbox_review_cost.md')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s19_outbox_review_cost.md",
++        "includes": [
++          "Role: cost_controller",
++          "Action: review_cost",
++          "Target-Path: reviews/review_cost.md",
++          "write to: reviews/review_cost.md"
++        ]
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); rev=Path(rd)/'reviews'; rev.mkdir(parents=True, exist_ok=True); (rev/'review_cost.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s19_adv_09.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='chair'; action='plan_signed'; target='artifacts/PLAN.md'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s19_outbox_plan_signed.md')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s19_outbox_plan_signed.md",
++        "includes": [
++          "Role: chair",
++          "Action: plan_signed",
++          "Target-Path: artifacts/PLAN.md",
++          "write to: artifacts/PLAN.md"
++        ]
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; (art/'PLAN.md').write_text('Status: SIGNED\\nScope-Allow: docs/\\nScope-Deny: none\\nGates: lite\\nStop: max_iterations=3\\nBudgets: max_files=10,max_total_bytes=200000\\n', encoding='utf-8')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s19_adv_10.out.txt 2>&1",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='patchmaker'; action='make_patch'; target='artifacts/diff.patch'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s19_outbox_patchmaker.md')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s19_outbox_patchmaker.md",
++        "includes": [
++          "Role: patchmaker",
++          "Action: make_patch",
++          "Target-Path: artifacts/diff.patch",
++          "write to: artifacts/diff.patch"
++        ]
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import json, shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; policy={'allow_roots':['docs'],'deny_prefixes':[],'deny_suffixes':[],'max_files':5,'max_added_lines':400}; (art/'patch_policy.json').write_text(json.dumps(policy, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); shutil.copy2('tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch', art/'diff.patch')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "run": {
++        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s19_adv_11.out.txt 2>&1",
++        "expect_exit": "nonzero"
++      }
++    },
++    {
++      "run": {
++        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); rev=Path(rd)/'reviews'/'review_patch.md'; assert rev.exists(), str(rev); shutil.copy2(rev, 'artifacts/_s19_review_patch.md')\"",
++        "expect_exit": 0
++      }
++    },
++    {
++      "expect_text": {
++        "path": "artifacts/_s19_review_patch.md",
++        "includes": [
++          "Verdict: BLOCK",
++          "Patch-SHA256"
++        ]
++      }
++    }
++  ]
++}
+diff --git a/simlab/scenarios/S19_lite_link_librarian_context_pack_outbox.yaml b/simlab/scenarios/S19_lite_link_librarian_context_pack_outbox.yaml
+deleted file mode 100644
+index 6b91802..0000000
+--- a/simlab/scenarios/S19_lite_link_librarian_context_pack_outbox.yaml
++++ /dev/null
+@@ -1,41 +0,0 @@
+-{
+-  "id": "S19_lite_link_librarian_context_pack_outbox",
+-  "name": "lite link: missing context_pack should create librarian outbox prompt",
+-  "suite": "lite",
+-  "steps": [
+-    {
+-      "run": {
+-        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-link-librarian-context-pack > artifacts/_s19_newrun.out.txt 2>&1",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; art.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'manual_outbox','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); idx=json.loads(Path('workflow_registry/index.json').read_text(encoding='utf-8')); wf=''; rp=idx.get('resolver_policy',{}) if isinstance(idx,dict) else {}; wf=str(rp.get('fallback_workflow_id','')).strip() if isinstance(rp,dict) else ''; ws=idx.get('workflows',[]) if isinstance(idx,dict) else []; first=ws[0] if isinstance(ws,list) and ws else {}; wf=wf or (str(first.get('id') or first.get('workflow_id') or '').strip() if isinstance(first,dict) else ''); wf=wf or 'wf_orchestrator_only'; find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':wf,'selected_version':'1.0','candidates':[{'workflow_id':wf,'version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-link-librarian-context-pack','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':1,'max_total_bytes':3000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"import subprocess,sys; rc=subprocess.call('python scripts/ctcp_orchestrate.py advance --max-steps 8', shell=True); print(rc); sys.exit(0)\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='librarian'; target='artifacts/context_pack.json'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: f'role: {role}' in t and (f'target-path: {target}' in t or f'write to: {target}' in t))(p.read_text(encoding='utf-8').lower())]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s19_outbox_prompt.md')\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "expect_text": {
+-        "path": "artifacts/_s19_outbox_prompt.md",
+-        "includes": [
+-          "Role: librarian",
+-          "Target-Path: artifacts/context_pack.json",
+-          "write to: artifacts/context_pack.json"
+-        ]
+-      }
+-    }
+-  ]
+-}
+diff --git a/simlab/scenarios/S20_lite_link_contract_guardian_review_outbox.yaml b/simlab/scenarios/S20_lite_link_contract_guardian_review_outbox.yaml
+deleted file mode 100644
+index 4522fd5..0000000
+--- a/simlab/scenarios/S20_lite_link_contract_guardian_review_outbox.yaml
++++ /dev/null
+@@ -1,41 +0,0 @@
+-{
+-  "id": "S20_lite_link_contract_guardian_review_outbox",
+-  "name": "lite link: missing review_contract should create contract_guardian outbox prompt",
+-  "suite": "lite",
+-  "steps": [
+-    {
+-      "run": {
+-        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-link-contract-review > artifacts/_s20_newrun.out.txt 2>&1",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; art.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'manual_outbox','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); idx=json.loads(Path('workflow_registry/index.json').read_text(encoding='utf-8')); wf=''; rp=idx.get('resolver_policy',{}) if isinstance(idx,dict) else {}; wf=str(rp.get('fallback_workflow_id','')).strip() if isinstance(rp,dict) else ''; ws=idx.get('workflows',[]) if isinstance(idx,dict) else []; first=ws[0] if isinstance(ws,list) and ws else {}; wf=wf or (str(first.get('id') or first.get('workflow_id') or '').strip() if isinstance(first,dict) else ''); wf=wf or 'wf_orchestrator_only'; find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':wf,'selected_version':'1.0','candidates':[{'workflow_id':wf,'version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-link-contract-review','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':1,'max_total_bytes':3000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); ctx={'schema_version':'ctcp-context-pack-v1','goal':'simlab-link-contract-review','repo_slug':'ctcp','summary':'simlab','files':[],'omitted':[]}; (art/'context_pack.json').write_text(json.dumps(ctx, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'PLAN_draft.md').write_text('# draft\\n', encoding='utf-8')\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"import subprocess,sys; rc=subprocess.call('python scripts/ctcp_orchestrate.py advance --max-steps 8', shell=True); print(rc); sys.exit(0)\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='contract_guardian'; target='reviews/review_contract.md'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: f'role: {role}' in t and (f'target-path: {target}' in t or f'write to: {target}' in t))(p.read_text(encoding='utf-8').lower())]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s20_outbox_prompt.md')\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "expect_text": {
+-        "path": "artifacts/_s20_outbox_prompt.md",
+-        "includes": [
+-          "Role: contract_guardian",
+-          "Target-Path: reviews/review_contract.md",
+-          "write to: reviews/review_contract.md"
+-        ]
+-      }
+-    }
+-  ]
+-}
+diff --git a/simlab/scenarios/S21_lite_link_cost_controller_review_outbox.yaml b/simlab/scenarios/S21_lite_link_cost_controller_review_outbox.yaml
+deleted file mode 100644
+index 5f5bee4..0000000
+--- a/simlab/scenarios/S21_lite_link_cost_controller_review_outbox.yaml
++++ /dev/null
+@@ -1,41 +0,0 @@
+-{
+-  "id": "S21_lite_link_cost_controller_review_outbox",
+-  "name": "lite link: missing review_cost should create cost_controller outbox prompt",
+-  "suite": "lite",
+-  "steps": [
+-    {
+-      "run": {
+-        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-link-cost-review > artifacts/_s21_newrun.out.txt 2>&1",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; rev=r/'reviews'; art.mkdir(parents=True, exist_ok=True); rev.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'manual_outbox','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); idx=json.loads(Path('workflow_registry/index.json').read_text(encoding='utf-8')); wf=''; rp=idx.get('resolver_policy',{}) if isinstance(idx,dict) else {}; wf=str(rp.get('fallback_workflow_id','')).strip() if isinstance(rp,dict) else ''; ws=idx.get('workflows',[]) if isinstance(idx,dict) else []; first=ws[0] if isinstance(ws,list) and ws else {}; wf=wf or (str(first.get('id') or first.get('workflow_id') or '').strip() if isinstance(first,dict) else ''); wf=wf or 'wf_orchestrator_only'; find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':wf,'selected_version':'1.0','candidates':[{'workflow_id':wf,'version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-link-cost-review','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':1,'max_total_bytes':3000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); ctx={'schema_version':'ctcp-context-pack-v1','goal':'simlab-link-cost-review','repo_slug':'ctcp','summary':'simlab','files':[],'omitted':[]}; (art/'context_pack.json').write_text(json.dumps(ctx, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'PLAN_draft.md').write_text('# draft\\n', encoding='utf-8'); (rev/'review_contract.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8')\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"import subprocess,sys; rc=subprocess.call('python scripts/ctcp_orchestrate.py advance --max-steps 8', shell=True); print(rc); sys.exit(0)\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='cost_controller'; target='reviews/review_cost.md'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: f'role: {role}' in t and (f'target-path: {target}' in t or f'write to: {target}' in t))(p.read_text(encoding='utf-8').lower())]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s21_outbox_prompt.md')\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "expect_text": {
+-        "path": "artifacts/_s21_outbox_prompt.md",
+-        "includes": [
+-          "Role: cost_controller",
+-          "Target-Path: reviews/review_cost.md",
+-          "write to: reviews/review_cost.md"
+-        ]
+-      }
+-    }
+-  ]
+-}
+diff --git a/simlab/scenarios/S22_lite_link_patchmaker_diff_patch_outbox.yaml b/simlab/scenarios/S22_lite_link_patchmaker_diff_patch_outbox.yaml
+deleted file mode 100644
+index 410ebbd..0000000
+--- a/simlab/scenarios/S22_lite_link_patchmaker_diff_patch_outbox.yaml
++++ /dev/null
+@@ -1,42 +0,0 @@
+-{
+-  "id": "S22_lite_link_patchmaker_diff_patch_outbox",
+-  "name": "lite link: missing diff.patch should create patchmaker outbox prompt",
+-  "suite": "lite",
+-  "steps": [
+-    {
+-      "run": {
+-        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-link-patchmaker > artifacts/_s22_newrun.out.txt 2>&1",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; rev=r/'reviews'; art.mkdir(parents=True, exist_ok=True); rev.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'manual_outbox','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'codex_agent','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); idx=json.loads(Path('workflow_registry/index.json').read_text(encoding='utf-8')); wf=''; rp=idx.get('resolver_policy',{}) if isinstance(idx,dict) else {}; wf=str(rp.get('fallback_workflow_id','')).strip() if isinstance(rp,dict) else ''; ws=idx.get('workflows',[]) if isinstance(idx,dict) else []; first=ws[0] if isinstance(ws,list) and ws else {}; wf=wf or (str(first.get('id') or first.get('workflow_id') or '').strip() if isinstance(first,dict) else ''); wf=wf or 'wf_orchestrator_only'; find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':wf,'selected_version':'1.0','candidates':[{'workflow_id':wf,'version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-link-patchmaker','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':1,'max_total_bytes':3000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); ctx={'schema_version':'ctcp-context-pack-v1','goal':'simlab-link-patchmaker','repo_slug':'ctcp','summary':'simlab','files':[],'omitted':[]}; (art/'context_pack.json').write_text(json.dumps(ctx, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'PLAN_draft.md').write_text('# draft\\n', encoding='utf-8'); (rev/'review_contract.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); (rev/'review_cost.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); (art/'PLAN.md').write_text('Status: SIGNED\\nScope-Allow: README.md\\nScope-Deny: none\\nGates: lite\\nStop: max_iterations=2\\nBudgets: max_files=5,max_total_bytes=20000\\nSteps: patch->verify\\n', encoding='utf-8')\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"import subprocess,sys; rc=subprocess.call('python scripts/ctcp_orchestrate.py advance --max-steps 8', shell=True); print(rc); sys.exit(0)\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='patchmaker'; target='artifacts/diff.patch'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: f'role: {role}' in t and (f'target-path: {target}' in t or f'write to: {target}' in t))(p.read_text(encoding='utf-8').lower())]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s22_outbox_prompt.md')\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "expect_text": {
+-        "path": "artifacts/_s22_outbox_prompt.md",
+-        "includes": [
+-          "Role: patchmaker",
+-          "Target-Path: artifacts/diff.patch",
+-          "write to: artifacts/diff.patch",
+-          "unified diff only"
+-        ]
+-      }
+-    }
+-  ]
+-}
+diff --git a/simlab/scenarios/S23_lite_robust_idempotent_outbox_no_duplicates.yaml b/simlab/scenarios/S23_lite_robust_idempotent_outbox_no_duplicates.yaml
+deleted file mode 100644
+index 385d03d..0000000
+--- a/simlab/scenarios/S23_lite_robust_idempotent_outbox_no_duplicates.yaml
++++ /dev/null
+@@ -1,51 +0,0 @@
+-{
+-  "id": "S23_lite_robust_idempotent_outbox_no_duplicates",
+-  "name": "lite robust: repeated advance should not duplicate same outbox prompt",
+-  "suite": "lite",
+-  "steps": [
+-    {
+-      "run": {
+-        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-robust-idempotent-outbox > artifacts/_s23_newrun.out.txt 2>&1",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; art.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'manual_outbox','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); idx=json.loads(Path('workflow_registry/index.json').read_text(encoding='utf-8')); wf=''; rp=idx.get('resolver_policy',{}) if isinstance(idx,dict) else {}; wf=str(rp.get('fallback_workflow_id','')).strip() if isinstance(rp,dict) else ''; ws=idx.get('workflows',[]) if isinstance(idx,dict) else []; first=ws[0] if isinstance(ws,list) and ws else {}; wf=wf or (str(first.get('id') or first.get('workflow_id') or '').strip() if isinstance(first,dict) else ''); wf=wf or 'wf_orchestrator_only'; find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':wf,'selected_version':'1.0','candidates':[{'workflow_id':wf,'version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-robust-idempotent-outbox','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':1,'max_total_bytes':3000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"import subprocess,sys; rc=subprocess.call('python scripts/ctcp_orchestrate.py advance --max-steps 8', shell=True); print(rc); sys.exit(0)\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"from collections import Counter; from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; rows=[]; [rows.append((lambda lines: ((next((ln.split(':',1)[1].strip().lower() for ln in lines if ln.lower().startswith('role:')), ''), next((ln.split(':',1)[1].strip().lower() for ln in lines if ln.lower().startswith('target-path:') or ln.lower().startswith('write to:')), ''))))(p.read_text(encoding='utf-8').splitlines())) for p in sorted(outbox.glob('*.md'))]; keys=[f'{r}|{t}' for (r,t) in rows if r and t]; before=dict(Counter(keys)); Path('artifacts/_s23_before.json').write_text(json.dumps(before, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"import subprocess,sys; rc=subprocess.call('python scripts/ctcp_orchestrate.py advance --max-steps 8', shell=True); print(rc); sys.exit(0)\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"from collections import Counter; from pathlib import Path; import json; before=json.loads(Path('artifacts/_s23_before.json').read_text(encoding='utf-8')); rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; rows=[]; [rows.append((lambda lines: ((next((ln.split(':',1)[1].strip().lower() for ln in lines if ln.lower().startswith('role:')), ''), next((ln.split(':',1)[1].strip().lower() for ln in lines if ln.lower().startswith('target-path:') or ln.lower().startswith('write to:')), ''))))(p.read_text(encoding='utf-8').splitlines())) for p in sorted(outbox.glob('*.md'))]; keys=[f'{r}|{t}' for (r,t) in rows if r and t]; after=dict(Counter(keys)); assert all(after.get(k,0)==v for k,v in before.items()), f'before={before}, after={after}'; key='librarian|artifacts/context_pack.json'; assert before.get(key,0)>=1, f'missing key in before: {before}'; assert after.get(key,0)>=1, f'missing key in after: {after}'; Path('artifacts/_s23_outbox_counts.txt').write_text(json.dumps({'before':before,'after':after}, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "expect_text": {
+-        "path": "artifacts/_s23_outbox_counts.txt",
+-        "includes": [
+-          "librarian|artifacts/context_pack.json"
+-        ]
+-      }
+-    }
+-  ]
+-}
+diff --git a/simlab/scenarios/S24_lite_robust_patch_scope_violation_rejected.yaml b/simlab/scenarios/S24_lite_robust_patch_scope_violation_rejected.yaml
+deleted file mode 100644
+index e5a8ac5..0000000
+--- a/simlab/scenarios/S24_lite_robust_patch_scope_violation_rejected.yaml
++++ /dev/null
+@@ -1,51 +0,0 @@
+-{
+-  "id": "S24_lite_robust_patch_scope_violation_rejected",
+-  "name": "lite robust: scope-violating patch should be rejected and routed to fixer",
+-  "suite": "lite",
+-  "steps": [
+-    {
+-      "run": {
+-        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-robust-scope-violation > artifacts/_s24_newrun.out.txt 2>&1",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"from pathlib import Path; import json, shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; rev=r/'reviews'; art.mkdir(parents=True, exist_ok=True); rev.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'manual_outbox','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); idx=json.loads(Path('workflow_registry/index.json').read_text(encoding='utf-8')); wf=''; rp=idx.get('resolver_policy',{}) if isinstance(idx,dict) else {}; wf=str(rp.get('fallback_workflow_id','')).strip() if isinstance(rp,dict) else ''; ws=idx.get('workflows',[]) if isinstance(idx,dict) else []; first=ws[0] if isinstance(ws,list) and ws else {}; wf=wf or (str(first.get('id') or first.get('workflow_id') or '').strip() if isinstance(first,dict) else ''); wf=wf or 'wf_orchestrator_only'; find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':wf,'selected_version':'1.0','candidates':[{'workflow_id':wf,'version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-robust-scope-violation','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':1,'max_total_bytes':3000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); ctx={'schema_version':'ctcp-context-pack-v1','goal':'simlab-robust-scope-violation','repo_slug':'ctcp','summary':'simlab','files':[],'omitted':[]}; (art/'context_pack.json').write_text(json.dumps(ctx, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'PLAN_draft.md').write_text('# draft\\n', encoding='utf-8'); (rev/'review_contract.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); (rev/'review_cost.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); (art/'PLAN.md').write_text('Status: SIGNED\\nScope-Allow: docs/\\nScope-Deny: none\\nGates: lite\\nStop: max_iterations=2\\nBudgets: max_files=5,max_total_bytes=20000\\nSteps: patch->verify\\n', encoding='utf-8'); policy={'allow_roots':['docs'],'deny_prefixes':[],'deny_suffixes':[],'max_files':5,'max_added_lines':400}; (art/'patch_policy.json').write_text(json.dumps(policy, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); shutil.copy2('tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch', art/'diff.patch')\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"import subprocess,sys; rc=subprocess.call('python scripts/ctcp_orchestrate.py advance --max-steps 16', shell=True); print(rc); sys.exit(0)\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); review=r/'reviews'/'review_patch.md'; outbox=r/'outbox'; role='fixer'; target='artifacts/diff.patch'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: f'role: {role}' in t and (f'target-path: {target}' in t or f'write to: {target}' in t))(p.read_text(encoding='utf-8').lower())]; assert review.exists(), str(review); assert picked, 'missing matched outbox prompt'; shutil.copy2(review, 'artifacts/_s24_review_patch.md'); shutil.copy2(picked[0], 'artifacts/_s24_outbox_prompt.md')\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "expect_text": {
+-        "path": "artifacts/_s24_review_patch.md",
+-        "includes": [
+-          "Verdict: BLOCK",
+-          "PATCH_POLICY_DENY"
+-        ]
+-      }
+-    },
+-    {
+-      "expect_text": {
+-        "path": "artifacts/_s24_outbox_prompt.md",
+-        "includes": [
+-          "Role: fixer",
+-          "Target-Path: artifacts/diff.patch",
+-          "write to: artifacts/diff.patch",
+-          "unified diff only"
+-        ]
+-      }
+-    }
+-  ]
+-}
+diff --git a/simlab/scenarios/S25_lite_robust_invalid_find_web_json_blocks.yaml b/simlab/scenarios/S25_lite_robust_invalid_find_web_json_blocks.yaml
+deleted file mode 100644
+index 7f1802e..0000000
+--- a/simlab/scenarios/S25_lite_robust_invalid_find_web_json_blocks.yaml
++++ /dev/null
+@@ -1,41 +0,0 @@
+-{
+-  "id": "S25_lite_robust_invalid_find_web_json_blocks",
+-  "name": "lite robust: invalid find_web json should keep researcher gate blocked without crash",
+-  "suite": "lite",
+-  "steps": [
+-    {
+-      "run": {
+-        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-robust-invalid-find-web > artifacts/_s25_newrun.out.txt 2>&1",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; art.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'manual_outbox','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_plus_web\\nallow_domains: docs.python.org,openai.com\\nmax_queries: 2\\nmax_pages: 2\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\nneed web checks\\n', encoding='utf-8'); idx=json.loads(Path('workflow_registry/index.json').read_text(encoding='utf-8')); wf=''; rp=idx.get('resolver_policy',{}) if isinstance(idx,dict) else {}; wf=str(rp.get('fallback_workflow_id','')).strip() if isinstance(rp,dict) else ''; ws=idx.get('workflows',[]) if isinstance(idx,dict) else []; first=ws[0] if isinstance(ws,list) and ws else {}; wf=wf or (str(first.get('id') or first.get('workflow_id') or '').strip() if isinstance(first,dict) else ''); wf=wf or 'wf_orchestrator_only'; find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':wf,'selected_version':'1.0','candidates':[{'workflow_id':wf,'version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'find_web.json').write_text('{', encoding='utf-8')\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"import subprocess,sys; rc=subprocess.call('python scripts/ctcp_orchestrate.py advance --max-steps 8', shell=True); print(rc); sys.exit(0)\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "run": {
+-        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='researcher'; target='artifacts/find_web.json'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: f'role: {role}' in t and (f'target-path: {target}' in t or f'write to: {target}' in t))(p.read_text(encoding='utf-8').lower())]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s25_outbox_prompt.md')\"",
+-        "expect_exit": 0
+-      }
+-    },
+-    {
+-      "expect_text": {
+-        "path": "artifacts/_s25_outbox_prompt.md",
+-        "includes": [
+-          "Role: researcher",
+-          "Target-Path: artifacts/find_web.json",
+-          "write to: artifacts/find_web.json"
+-        ]
+-      }
+-    }
+-  ]
+-}
+diff --git a/tests/test_mock_agent_pipeline.py b/tests/test_mock_agent_pipeline.py
+index ce49b51..4493eb0 100644
+--- a/tests/test_mock_agent_pipeline.py
++++ b/tests/test_mock_agent_pipeline.py
+@@ -500,14 +500,14 @@ class MockAgentPipelineTests(unittest.TestCase):
+             rows.append(
+                 {
+                     "case": "fallback_patchmaker",
+-                    "expected": "api_agent",
++                    "expected": "manual_outbox",
+                     "actual": str(preview_patchmaker_fallback.get("provider", "")),
+                 }
              )
- 
-     def ignore(dir_path: str, names: list[str]) -> set[str]:
--        rel = Path(dir_path).resolve().relative_to(ROOT.resolve())
--        rel_posix = rel.as_posix()
-+        # Avoid expensive/fragile .resolve() here; nested artifact trees can
-+        # create very deep paths and trigger recursion on Windows.
-+        try:
-+            rel_posix = Path(os.path.relpath(dir_path, ROOT)).as_posix()
-+        except Exception:
-+            rel_posix = ""
-         ignored: set[str] = set()
- 
-         for name in names:
--            child = (rel / name).as_posix()
-+            if rel_posix in (".", ""):
-+                child = name
-+            else:
-+                child = f"{rel_posix}/{name}"
-             if name in {
-                 ".git",
-                 ".venv",
-@@ -184,7 +191,13 @@ def copy_repo_for_sandbox(dst: Path) -> Path:
-             }:
-                 ignored.add(name)
-                 continue
--            if child.startswith("runs/") or child.startswith("tests/fixtures/adlc_forge_full_bundle/runs/"):
-+            if (
-+                child.startswith("runs/")
-+                or child.startswith("meta/runs/")
-+                or child.startswith("simlab/_runs")
-+                or child.startswith("tests/fixtures/adlc_forge_full_bundle/runs/")
-+                or child.startswith("artifacts/verify/")
-+            ):
-                 ignored.add(name)
-                 continue
-             if name == "__pycache__":
+             rows.append(
+                 {
+                     "case": "fallback_fixer",
+-                    "expected": "api_agent",
++                    "expected": "manual_outbox",
+                     "actual": str(preview_fixer_fallback.get("provider", "")),
+                 }
+             )

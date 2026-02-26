@@ -36,6 +36,19 @@ budget: { "max_files": int, "max_total_bytes": int }
 
 reason
 
+B.1) Librarian mandatory contract injection (hard)
+
+- `scripts/ctcp_librarian.py` MUST prepend mandatory contract docs before processing `needs[]`:
+  - `AGENTS.md`
+  - `ai_context/00_AI_CONTRACT.md`
+  - `ai_context/CTCP_FAST_RULES.md` (single-screen hard-rule summary for fast policy injection)
+  - `docs/00_CORE.md` (if present)
+  - `PATCH_README.md` (if present)
+- Duplicate paths MUST be de-duplicated (mandatory copy wins).
+- Mandatory docs consume budget first.
+- If `budget.max_files` or `budget.max_total_bytes` cannot cover mandatory docs, librarian MUST fail with a clear "increase budget" error.
+- Chair/Planner MUST reserve budget for mandatory docs before adding extra `needs[]`.
+
 C) artifacts/context_pack.json (Librarian output)
 
 Fields:
@@ -51,6 +64,10 @@ summary
 files[]: { "path": "...", "why": "...", "content": "..." }
 
 omitted[]: { "path": "...", "reason": "too_large|denied|irrelevant" }
+
+Notes:
+- `files[]` MUST include the mandatory contract docs listed in B.1 when budget is sufficient.
+- If mandatory docs cannot fit, context generation MUST fail instead of silently omitting them.
 
 D) artifacts/find_result.json (resolver final)
 
@@ -208,12 +225,12 @@ Fields:
 
 schema_version: "ctcp-dispatch-config-v1"
 
-mode: "manual_outbox" | "local_exec" | "api_agent"
+mode: "manual_outbox" | "ollama_agent" | "api_agent"
 
 role_providers: {
-  "librarian": "local_exec|manual_outbox",
+  "librarian": "ollama_agent|manual_outbox",
   "chair": "manual_outbox|api_agent",
-  "contract_guardian": "manual_outbox|local_exec",
+  "contract_guardian": "manual_outbox|ollama_agent",
   "cost_controller": "manual_outbox",
   "patchmaker": "manual_outbox|api_agent",
   "fixer": "manual_outbox|api_agent",
@@ -223,7 +240,7 @@ role_providers: {
 budgets: { "max_outbox_prompts": int }
 
 Rules:
-- `local_exec` MUST only auto-execute `librarian` or `contract_guardian`.
+- `ollama_agent` MUST only auto-execute `librarian` or `contract_guardian`.
 - `api_agent` executes configured external command templates (`SDDAI_PLAN_CMD`, `SDDAI_PATCH_CMD`, `SDDAI_AGENT_CMD`) and records stdout/stderr logs.
 - For patch targets, `api_agent` output MUST start with `diff --git`, otherwise provider execution fails with explicit logs/reason.
 

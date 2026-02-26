@@ -41,7 +41,8 @@ class ProviderSelectionTests(unittest.TestCase):
             cfg, msg = ctcp_dispatch.load_dispatch_config(run_dir)
             self.assertIsNotNone(cfg, msg)
             role_providers = cfg.get("role_providers", {})
-            self.assertEqual(role_providers.get("contract_guardian"), "local_exec")
+            self.assertEqual(role_providers.get("contract_guardian"), "ollama_agent")
+            self.assertEqual(role_providers.get("librarian"), "ollama_agent")
             self.assertEqual(role_providers.get("patchmaker"), "api_agent")
             self.assertEqual(role_providers.get("fixer"), "api_agent")
 
@@ -83,7 +84,35 @@ class ProviderSelectionTests(unittest.TestCase):
             self.assertIsNotNone(cfg, msg)
             role_providers = cfg.get("role_providers", {})
             self.assertEqual(role_providers.get("patchmaker"), "manual_outbox")
-            self.assertEqual(role_providers.get("contract_guardian"), "local_exec")
+            self.assertEqual(role_providers.get("contract_guardian"), "ollama_agent")
+            self.assertEqual(role_providers.get("librarian"), "ollama_agent")
+
+    def test_legacy_local_exec_alias_maps_to_ollama_agent(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            run_dir = Path(td)
+            artifacts = run_dir / "artifacts"
+            artifacts.mkdir(parents=True, exist_ok=True)
+            (artifacts / "dispatch_config.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "ctcp-dispatch-config-v1",
+                        "mode": "api_agent",
+                        "role_providers": {
+                            "librarian": "local_exec",
+                            "contract_guardian": "local_exec",
+                        },
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            cfg, msg = ctcp_dispatch.load_dispatch_config(run_dir)
+            self.assertIsNotNone(cfg, msg)
+            role_providers = cfg.get("role_providers", {})
+            self.assertEqual(role_providers.get("librarian"), "ollama_agent")
+            self.assertEqual(role_providers.get("contract_guardian"), "ollama_agent")
 
     def test_api_agent_preview_disabled_without_env_or_cmd(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -119,6 +148,8 @@ class ProviderSelectionTests(unittest.TestCase):
                 {
                     "OPENAI_API_KEY": "",
                     "OPENAI_BASE_URL": "",
+                    "CTCP_OPENAI_API_KEY": "",
+                    "CTCP_LOCAL_NOTES_PATH": str(run_dir / "missing_notes.md"),
                     "SDDAI_PLAN_CMD": "",
                     "SDDAI_PATCH_CMD": "",
                     "SDDAI_AGENT_CMD": "",

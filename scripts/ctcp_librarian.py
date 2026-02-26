@@ -9,6 +9,15 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 LAST_RUN_POINTER = ROOT / "meta" / "run_pointers" / "LAST_RUN.txt"
+MANDATORY_NEED_PATHS = (
+    "AGENTS.md",
+    "ai_context/00_AI_CONTRACT.md",
+    "ai_context/CTCP_FAST_RULES.md",
+)
+OPTIONAL_MANDATORY_NEED_PATHS = (
+    "docs/00_CORE.md",
+    "PATCH_README.md",
+)
 
 try:
     from tools.run_paths import get_repo_slug
@@ -92,6 +101,52 @@ def _safe_relpath(path: Path) -> str:
     return rel
 
 
+def _normalize_need_key(rel: str) -> str:
+    return str(rel).strip().replace("\\", "/").lstrip("./")
+
+
+def _resolve_mandatory_paths() -> list[str]:
+    mandatory_paths: list[str] = []
+    for rel in MANDATORY_NEED_PATHS:
+        candidate = (ROOT / rel).resolve()
+        if not _is_within(candidate, ROOT) or not candidate.exists() or not candidate.is_file():
+            raise SystemExit(f"[ctcp_librarian] missing mandatory contract file: {rel}")
+        mandatory_paths.append(rel)
+    for rel in OPTIONAL_MANDATORY_NEED_PATHS:
+        candidate = (ROOT / rel).resolve()
+        if _is_within(candidate, ROOT) and candidate.exists() and candidate.is_file():
+            mandatory_paths.append(rel)
+    return mandatory_paths
+
+
+def _prepend_mandatory_needs(
+    needs: list[Any],
+    mandatory_paths: list[str],
+) -> tuple[list[dict[str, Any]], set[str]]:
+    merged: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    mandatory_need_keys = {_normalize_need_key(p) for p in mandatory_paths}
+
+    for rel in mandatory_paths:
+        key = _normalize_need_key(rel)
+        if key in seen:
+            continue
+        merged.append({"path": rel, "mode": "full"})
+        seen.add(key)
+
+    for need in needs:
+        if not isinstance(need, dict):
+            continue
+        rel = str(need.get("path", "")).strip()
+        key = _normalize_need_key(rel)
+        if not rel or key in seen:
+            continue
+        merged.append(need)
+        seen.add(key)
+
+    return merged, mandatory_need_keys
+
+
 def _build_context_pack(file_request: dict[str, Any]) -> dict[str, Any]:
     if file_request.get("schema_version") != "ctcp-file-request-v1":
         raise SystemExit("[ctcp_librarian] file_request schema_version must be ctcp-file-request-v1")
@@ -108,6 +163,23 @@ def _build_context_pack(file_request: dict[str, Any]) -> dict[str, Any]:
     if max_files <= 0 or max_total_bytes <= 0:
         raise SystemExit("[ctcp_librarian] budget.max_files and budget.max_total_bytes must be > 0")
 
+    mandatory_paths = _resolve_mandatory_paths()
+    needs, mandatory_need_keys = _prepend_mandatory_needs(needs, mandatory_paths)
+
+    mandatory_total_bytes = 0
+    for rel in mandatory_paths:
+        candidate = (ROOT / rel).resolve()
+        try:
+            mandatory_total_bytes += len(candidate.read_text(encoding="utf-8", errors="replace").encode("utf-8"))
+        except Exception:
+            raise SystemExit(f"[ctcp_librarian] failed to read mandatory contract file: {rel}")
+    if max_files < len(mandatory_paths) or max_total_bytes < mandatory_total_bytes:
+        raise SystemExit(
+            "[ctcp_librarian] budget too small for mandatory contract files; "
+            f"requires max_files>={len(mandatory_paths)} and max_total_bytes>={mandatory_total_bytes}. "
+            "Please increase budget.max_files and budget.max_total_bytes."
+        )
+
     goal = str(file_request.get("goal", ""))
     reason = str(file_request.get("reason", "")).strip() or "requested by chair"
 
@@ -119,21 +191,29 @@ def _build_context_pack(file_request: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(need, dict):
             continue
         rel = str(need.get("path", "")).strip()
+        need_key = _normalize_need_key(rel)
+        is_mandatory = need_key in mandatory_need_keys
         mode = str(need.get("mode", "")).strip().lower()
         if not rel:
             continue
 
         candidate = (ROOT / rel).resolve()
         if not _is_within(candidate, ROOT):
+            if is_mandatory:
+                raise SystemExit(f"[ctcp_librarian] mandatory contract path is outside repo: {rel}")
             omitted.append({"path": rel, "reason": "denied"})
             continue
         if not candidate.exists() or not candidate.is_file():
+            if is_mandatory:
+                raise SystemExit(f"[ctcp_librarian] mandatory contract file missing: {rel}")
             omitted.append({"path": rel, "reason": "denied"})
             continue
 
         try:
             raw = candidate.read_text(encoding="utf-8", errors="replace")
         except Exception:
+            if is_mandatory:
+                raise SystemExit(f"[ctcp_librarian] failed to read mandatory contract file: {rel}")
             omitted.append({"path": rel, "reason": "denied"})
             continue
 
@@ -146,11 +226,19 @@ def _build_context_pack(file_request: dict[str, Any]) -> dict[str, Any]:
                 omitted.append({"path": rel, "reason": "irrelevant"})
                 continue
         else:
+            if is_mandatory:
+                raise SystemExit(f"[ctcp_librarian] mandatory contract file requires mode=full: {rel}")
             omitted.append({"path": rel, "reason": "irrelevant"})
             continue
 
         content_bytes = len(content.encode("utf-8"))
         if len(files) >= max_files or (used_bytes + content_bytes) > max_total_bytes:
+            if is_mandatory:
+                raise SystemExit(
+                    "[ctcp_librarian] budget too small for mandatory contract files; "
+                    f"requires max_files>={len(mandatory_paths)} and max_total_bytes>={mandatory_total_bytes}. "
+                    "Please increase budget.max_files and budget.max_total_bytes."
+                )
             omitted.append({"path": rel, "reason": "too_large"})
             continue
 

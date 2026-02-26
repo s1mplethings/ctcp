@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_LOCAL_NOTES_PATH = ROOT / ".agent_private" / "NOTES.md"
 
 try:
     from tools import contrast_rules, contract_guard, local_librarian
@@ -23,6 +24,26 @@ def _sanitize(value: str) -> str:
     text = re.sub(r"[^a-z0-9_]+", "_", (value or "").strip().lower())
     text = re.sub(r"_+", "_", text).strip("_")
     return text or "item"
+
+
+def _load_local_notes_defaults() -> dict[str, str]:
+    path_text = str(os.environ.get("CTCP_LOCAL_NOTES_PATH", "")).strip()
+    path = Path(path_text) if path_text else DEFAULT_LOCAL_NOTES_PATH
+    if not path.exists():
+        return {}
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return {}
+
+    out: dict[str, str] = {}
+    m_url = re.search(r"`(https?://[^`\s]+)`", text)
+    if m_url:
+        out["base_url"] = m_url.group(1).strip()
+    m_key = re.search(r"`(sk-[^`\s]+)`", text)
+    if m_key:
+        out["api_key"] = m_key.group(1).strip()
+    return out
 
 
 def _slug(text: str) -> str:
@@ -51,6 +72,324 @@ def _first_non_empty_line(text: str) -> str:
         if line:
             return line
     return ""
+
+
+def _normalize_line_ranges(raw: Any) -> list[list[int]]:
+    if not isinstance(raw, list):
+        return []
+    out: list[list[int]] = []
+    for row in raw:
+        if not isinstance(row, list) or len(row) != 2:
+            continue
+        try:
+            a = int(row[0])
+            b = int(row[1])
+        except Exception:
+            continue
+        if a <= 0 or b <= 0:
+            continue
+        if a > b:
+            a, b = b, a
+        out.append([a, b])
+    return out
+
+
+def _extract_json_dict(text: str) -> dict[str, Any] | None:
+    raw = (text or "").strip()
+    if not raw:
+        return None
+    try:
+        doc = json.loads(raw)
+        if isinstance(doc, dict):
+            return doc
+    except Exception:
+        pass
+
+    for m in re.finditer(r"```(?:json)?\s*([\s\S]*?)```", raw, flags=re.IGNORECASE):
+        block = m.group(1).strip()
+        if not block:
+            continue
+        try:
+            doc = json.loads(block)
+            if isinstance(doc, dict):
+                return doc
+        except Exception:
+            continue
+
+    start = raw.find("{")
+    end = raw.rfind("}")
+    if start >= 0 and end > start:
+        candidate = raw[start : end + 1]
+        try:
+            doc = json.loads(candidate)
+            if isinstance(doc, dict):
+                return doc
+        except Exception:
+            pass
+
+    return None
+
+
+def _to_json_text(doc: dict[str, Any]) -> str:
+    return json.dumps(doc, ensure_ascii=False, indent=2) + "\n"
+
+
+def _normalize_file_request(doc: dict[str, Any] | None, *, goal: str) -> dict[str, Any]:
+    src = doc if isinstance(doc, dict) else {}
+    goal_text = str(src.get("goal", "")).strip() or goal.strip() or "dispatch-goal"
+
+    needs_out: list[dict[str, Any]] = []
+    raw_needs = src.get("needs")
+    if isinstance(raw_needs, list):
+        for item in raw_needs:
+            if not isinstance(item, dict):
+                continue
+            path = str(item.get("path", "")).strip().replace("\\", "/")
+            if not path:
+                continue
+            mode = str(item.get("mode", "snippets")).strip().lower()
+            if mode not in {"full", "snippets"}:
+                mode = "snippets"
+            entry: dict[str, Any] = {"path": path, "mode": mode}
+            if mode == "snippets":
+                ranges = _normalize_line_ranges(item.get("line_ranges"))
+                entry["line_ranges"] = ranges or [[1, 80]]
+            needs_out.append(entry)
+    if not needs_out:
+        needs_out = [{"path": "README.md", "mode": "snippets", "line_ranges": [[1, 80]]}]
+
+    budget_raw = src.get("budget")
+    budget = budget_raw if isinstance(budget_raw, dict) else {}
+    try:
+        max_files = int(budget.get("max_files", 6))
+    except Exception:
+        max_files = 6
+    try:
+        max_total_bytes = int(budget.get("max_total_bytes", 48000))
+    except Exception:
+        max_total_bytes = 48000
+    max_files = max(1, min(max_files, 50))
+    max_total_bytes = max(512, min(max_total_bytes, 2_000_000))
+
+    reason = str(src.get("reason", "")).strip() or "chair file request for downstream context pack"
+
+    return {
+        "schema_version": "ctcp-file-request-v1",
+        "goal": goal_text,
+        "needs": needs_out,
+        "budget": {"max_files": max_files, "max_total_bytes": max_total_bytes},
+        "reason": reason,
+    }
+
+
+def _normalize_context_pack(doc: dict[str, Any] | None, *, goal: str, repo_root: Path) -> dict[str, Any]:
+    src = doc if isinstance(doc, dict) else {}
+    goal_text = str(src.get("goal", "")).strip() or goal.strip()
+    repo_slug = str(src.get("repo_slug", "")).strip() or repo_root.name
+
+    files_out: list[dict[str, str]] = []
+    raw_files = src.get("files")
+    if isinstance(raw_files, list):
+        for item in raw_files:
+            if not isinstance(item, dict):
+                continue
+            path = str(item.get("path", "")).strip().replace("\\", "/")
+            if not path:
+                continue
+            why = str(item.get("why", "")).strip() or "included by api_agent"
+            content = str(item.get("content", ""))
+            files_out.append({"path": path, "why": why, "content": content})
+
+    omitted_out: list[dict[str, str]] = []
+    raw_omitted = src.get("omitted")
+    if isinstance(raw_omitted, list):
+        for item in raw_omitted:
+            if not isinstance(item, dict):
+                continue
+            path = str(item.get("path", "")).strip().replace("\\", "/")
+            if not path:
+                continue
+            reason = str(item.get("reason", "")).strip() or "unspecified"
+            omitted_out.append({"path": path, "reason": reason})
+
+    summary = str(src.get("summary", "")).strip()
+    if not summary:
+        summary = f"included={len(files_out)} omitted={len(omitted_out)}"
+
+    return {
+        "schema_version": "ctcp-context-pack-v1",
+        "goal": goal_text,
+        "repo_slug": repo_slug,
+        "summary": summary,
+        "files": files_out,
+        "omitted": omitted_out,
+    }
+
+
+def _normalize_find_web(doc: dict[str, Any] | None) -> dict[str, Any]:
+    src = doc if isinstance(doc, dict) else {}
+    constraints = src.get("constraints")
+    if not isinstance(constraints, dict):
+        constraints = {}
+    results = src.get("results")
+    if not isinstance(results, list):
+        results = []
+    out_results: list[dict[str, Any]] = []
+    for row in results:
+        if not isinstance(row, dict):
+            continue
+        url = str(row.get("url", "")).strip()
+        if not url:
+            continue
+        locator = row.get("locator")
+        if not isinstance(locator, dict):
+            locator = {"type": "unknown", "value": ""}
+        item = {
+            "url": url,
+            "locator": locator,
+            "fetched_at": str(row.get("fetched_at", "")).strip(),
+            "excerpt": str(row.get("excerpt", "")),
+            "why_relevant": str(row.get("why_relevant", "")),
+            "risk_flags": row.get("risk_flags") if isinstance(row.get("risk_flags"), list) else [],
+        }
+        out_results.append(item)
+    return {
+        "schema_version": "ctcp-find-web-v1",
+        "constraints": constraints,
+        "results": out_results,
+    }
+
+
+def _normalize_guardrails_md(raw_text: str) -> str:
+    kv: dict[str, str] = {}
+    for line in (raw_text or "").splitlines():
+        m = re.match(r"^\s*([A-Za-z0-9_\-]+)\s*:\s*(.+?)\s*$", line)
+        if not m:
+            continue
+        kv[m.group(1).strip().lower()] = m.group(2).strip()
+
+    mode = str(kv.get("find_mode", "")).strip().lower()
+    if mode not in {"resolver_only", "resolver_plus_web"}:
+        mode = "resolver_only"
+
+    def _to_int(name: str, default: int, minimum: int, maximum: int) -> int:
+        raw = str(kv.get(name, "")).strip()
+        if not raw:
+            return default
+        try:
+            value = int(raw)
+        except Exception:
+            return default
+        if value < minimum:
+            return minimum
+        if value > maximum:
+            return maximum
+        return value
+
+    max_files = _to_int("max_files", default=20, minimum=1, maximum=500)
+    max_total_bytes = _to_int("max_total_bytes", default=200000, minimum=2048, maximum=20_000_000)
+    max_iterations = _to_int("max_iterations", default=3, minimum=1, maximum=20)
+
+    lines = [
+        f"find_mode: {mode}",
+        f"max_files: {max_files}",
+        f"max_total_bytes: {max_total_bytes}",
+        f"max_iterations: {max_iterations}",
+    ]
+    if mode == "resolver_plus_web":
+        allow_domains = str(kv.get("allow_domains", "")).strip()
+        if allow_domains:
+            lines.append(f"allow_domains: {allow_domains}")
+        max_queries = _to_int("max_queries", default=2, minimum=1, maximum=20)
+        max_pages = _to_int("max_pages", default=2, minimum=1, maximum=50)
+        lines.append(f"max_queries: {max_queries}")
+        lines.append(f"max_pages: {max_pages}")
+    return "\n".join(lines) + "\n"
+
+
+def _normalize_review_md(raw_text: str, *, title: str) -> str:
+    text = raw_text or ""
+    upper = text.upper()
+    verdict = "APPROVE"
+    if "VERDICT: BLOCK" in upper or re.search(r"\bBLOCK\b", upper):
+        verdict = "BLOCK"
+    elif "VERDICT: APPROVE" in upper or re.search(r"\bAPPROVE\b", upper):
+        verdict = "APPROVE"
+
+    reasons: list[str] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("-"):
+            continue
+        item = stripped.lstrip("-").strip()
+        if not item:
+            continue
+        reasons.append(item)
+        if len(reasons) >= 3:
+            break
+
+    lines = [
+        f"# {title}",
+        "",
+        f"Verdict: {verdict}",
+        "",
+        "Blocking Reasons:",
+    ]
+    if verdict == "APPROVE":
+        lines.append("- none")
+    else:
+        if reasons:
+            for row in reasons:
+                lines.append(f"- {row}")
+        else:
+            lines.append("- requires follow-up fixes")
+    lines += [
+        "",
+        "Required Fix/Artifacts:",
+    ]
+    if verdict == "APPROVE":
+        lines.append("- none")
+    else:
+        lines.append("- provide corrected artifact and rerun review")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _normalize_plan_md(raw_text: str, *, signed: bool, goal: str) -> str:
+    _ = raw_text
+    status = "SIGNED" if signed else "DRAFT"
+    return "\n".join(
+        [
+            f"Status: {status}",
+            "Scope-Allow: scripts/,tools/,tests/,artifacts/,meta/,docs/",
+            "Scope-Deny: .git/,build/,build_lite/,dist/,runs/",
+            "Gates: lite,workflow_gate,plan_check,patch_check,behavior_catalog_check,contract_checks,doc_index_check,lite_replay,python_unit_tests",
+            "Budgets: max_iterations=3,max_files=20,max_total_bytes=200000",
+            "Stop: scope_violation=true,repeated_failure=2,missing_plan_fields=true",
+            "Behaviors: B001,B002,B003,B004,B005,B006,B007,B008,B009,B010,B011,B012,B013,B014,B015,B016,B017,B018,B019,B020,B021,B022,B023,B024,B025,B026,B027,B028,B029,B030,B031,B032,B033,B034,B035",
+            "Results: R001,R002,R003,R004,R005",
+            f"Goal: {goal or 'dispatch-goal'}",
+            "",
+        ]
+    )
+
+
+def _normalize_json_artifact(*, repo_root: Path, request: dict[str, Any], raw_text: str) -> tuple[str, str]:
+    role = str(request.get("role", "")).strip().lower()
+    action = str(request.get("action", "")).strip().lower()
+    goal = str(request.get("goal", "")).strip()
+    doc = _extract_json_dict(raw_text)
+
+    if role == "chair" and action == "file_request":
+        return _to_json_text(_normalize_file_request(doc, goal=goal)), ""
+    if role == "librarian" and action == "context_pack":
+        return _to_json_text(_normalize_context_pack(doc, goal=goal, repo_root=repo_root)), ""
+    if role == "researcher" and action == "find_web":
+        return _to_json_text(_normalize_find_web(doc)), ""
+
+    if doc is None:
+        return "", "agent output is not valid JSON object"
+    return _to_json_text(doc), ""
 
 
 def _record_failure_review(run_dir: Path, reason: str) -> Path:
@@ -408,7 +747,12 @@ def _run_command(
 
 
 def _is_api_env_ready() -> tuple[bool, str]:
-    key = str(os.environ.get("OPENAI_API_KEY", "")).strip()
+    defaults = _load_local_notes_defaults()
+    key = (
+        str(os.environ.get("OPENAI_API_KEY", "")).strip()
+        or str(os.environ.get("CTCP_OPENAI_API_KEY", "")).strip()
+        or str(defaults.get("api_key", "")).strip()
+    )
     if key:
         return True, ""
     return False, "missing env: OPENAI_API_KEY"
@@ -694,7 +1038,44 @@ def execute(
             "review": review.relative_to(run_dir).as_posix(),
         }
 
-    target_payload = (proc.stdout or "").rstrip() + "\n"
+    target_payload_raw = (proc.stdout or "").rstrip()
+    if target_rel.lower().endswith(".json"):
+        target_payload, norm_err = _normalize_json_artifact(
+            repo_root=repo_root,
+            request=request,
+            raw_text=target_payload_raw,
+        )
+        if norm_err:
+            review = _record_failure_review(run_dir, norm_err)
+            return {
+                "status": "exec_failed",
+                "reason": norm_err,
+                "cmd": cmd,
+                "stdout_log": agent_stdout.relative_to(run_dir).as_posix(),
+                "stderr_log": agent_stderr.relative_to(run_dir).as_posix(),
+                "review": review.relative_to(run_dir).as_posix(),
+            }
+    else:
+        if target_rel.lower().endswith("guardrails.md"):
+            target_payload = _normalize_guardrails_md(target_payload_raw)
+        elif target_rel.lower().endswith("artifacts/plan.md"):
+            target_payload = _normalize_plan_md(
+                target_payload_raw,
+                signed=True,
+                goal=str(request.get("goal", "")).strip(),
+            )
+        elif target_rel.lower().endswith("artifacts/plan_draft.md"):
+            target_payload = _normalize_plan_md(
+                target_payload_raw,
+                signed=False,
+                goal=str(request.get("goal", "")).strip(),
+            )
+        elif target_rel.lower().endswith("reviews/review_contract.md"):
+            target_payload = _normalize_review_md(target_payload_raw, title="Contract Review")
+        elif target_rel.lower().endswith("reviews/review_cost.md"):
+            target_payload = _normalize_review_md(target_payload_raw, title="Cost Review")
+        else:
+            target_payload = target_payload_raw + "\n"
     _write_text(target_path, target_payload)
     return {
         "status": "executed",

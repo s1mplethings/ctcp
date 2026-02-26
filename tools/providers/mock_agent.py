@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -264,16 +265,20 @@ def _mock_find_web() -> dict[str, Any]:
     }
 
 
-def _mock_patch() -> str:
+def _mock_patch(run_dir: Path) -> str:
+    run_token = re.sub(r"[^A-Za-z0-9_.-]+", "-", run_dir.name).strip("-")
+    if not run_token:
+        run_token = "run"
+    rel = f"docs/mock_agent_probe_{run_token}.txt"
     return "\n".join(
         [
-            "diff --git a/docs/mock_agent_probe.txt b/docs/mock_agent_probe.txt",
+            f"diff --git a/{rel} b/{rel}",
             "new file mode 100644",
             "index 0000000..88f4248",
             "--- /dev/null",
-            "+++ b/docs/mock_agent_probe.txt",
+            f"+++ b/{rel}",
             "@@ -0,0 +1 @@",
-            "+mock agent deterministic patch",
+            f"+mock agent deterministic patch {run_token}",
             "",
         ]
     )
@@ -403,7 +408,7 @@ def execute(
         elif role == "cost_controller" and action == "review_cost":
             payload = _mock_review("Cost Review")
         elif role in {"patchmaker", "fixer"} and action in {"make_patch", "fix_patch"}:
-            payload = _mock_patch()
+            payload = _mock_patch(run_dir)
         elif role == "researcher" and action == "find_web":
             payload_type = "json"
             payload = _mock_find_web()

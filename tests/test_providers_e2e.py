@@ -71,7 +71,7 @@ def _init_repo(repo: Path) -> None:
 
 @unittest.skipUnless(shutil.which("git"), "git is required")
 class ProviderE2ETests(unittest.TestCase):
-    def test_api_agent_and_guardian_local_exec_flow(self) -> None:
+    def test_api_agent_and_guardian_ollama_agent_flow(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td)
             _init_repo(repo)
@@ -82,7 +82,7 @@ class ProviderE2ETests(unittest.TestCase):
                 "schema_version": "ctcp-dispatch-config-v1",
                 "mode": "manual_outbox",
                 "role_providers": {
-                    "contract_guardian": "local_exec",
+                    "contract_guardian": "ollama_agent",
                     "patchmaker": "api_agent",
                     "fixer": "api_agent",
                 },
@@ -95,15 +95,41 @@ class ProviderE2ETests(unittest.TestCase):
 
             run_doc = {"goal": "provider e2e"}
 
+            agent_script = repo / "agent_stub.py"
+            agent_script.write_text(
+                "\n".join(
+                    [
+                        "print('# Contract Review')",
+                        "print('')",
+                        "print('Verdict: APPROVE')",
+                        "print('')",
+                        "print('Blocking Reasons:')",
+                        "print('- none')",
+                        "print('')",
+                        "print('Required Fix/Artifacts:')",
+                        "print('- none')",
+                        "",
+                    ]
+                ),
+                encoding="utf-8",
+            )
             guard_gate = {
                 "state": "blocked",
                 "owner": "Contract Guardian",
                 "path": "reviews/review_contract.md",
                 "reason": "waiting for review_contract.md",
             }
-            guard_result = ctcp_dispatch.dispatch_once(run_dir, run_doc, guard_gate, repo)
+            with mock.patch.dict(
+                os.environ,
+                {
+                    "SDDAI_AGENT_CMD": f'"{sys.executable}" "{agent_script}"',
+                    "OPENAI_API_KEY": "dummy-key",
+                    "OPENAI_BASE_URL": "http://127.0.0.1:1/v1",
+                },
+                clear=False,
+            ):
+                guard_result = ctcp_dispatch.dispatch_once(run_dir, run_doc, guard_gate, repo)
             self.assertEqual(guard_result.get("status"), "executed", msg=str(guard_result))
-            self.assertTrue((run_dir / "reviews" / "contract_review.json").exists())
             self.assertTrue((run_dir / "reviews" / "review_contract.md").exists())
 
             plan_script = repo / "plan_stub.py"

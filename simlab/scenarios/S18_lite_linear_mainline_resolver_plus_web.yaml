@@ -1,0 +1,83 @@
+{
+  "id": "S18_lite_linear_mainline_resolver_plus_web",
+  "name": "lite linear: resolver_plus_web researcher branch",
+  "suite": "lite",
+  "steps": [
+    {
+      "run": {
+        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-linear-mainline-resolver-plus-web > artifacts/_s18_newrun.out.txt 2>&1",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; art.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'local_exec','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_plus_web\\nallow_domains: docs.python.org,openai.com\\nmax_queries: 2\\nmax_pages: 2\\nmax_files: 10\\nmax_total_bytes: 200000\\nmax_iterations: 3\\n', encoding='utf-8'); (art/'analysis.md').write_text('# Analysis\\n- Goal: simlab-linear-mainline-resolver-plus-web\\n- Needs: researcher\\n', encoding='utf-8')\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s18_adv_01.out.txt 2>&1",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; outbox=r/'outbox'; doc=json.loads((art/'find_result.json').read_text(encoding='utf-8')); assert doc.get('schema_version')=='ctcp-find-result-v1', doc.get('schema_version'); md=[p for p in outbox.glob('*.md')]; assert len(md)==0, f'expected 0 outbox prompts, got {len(md)}'\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s18_adv_02.out.txt 2>&1",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='researcher'; action='find_web'; target='artifacts/find_web.json'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s18_outbox_find_web.md')\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "expect_text": {
+        "path": "artifacts/_s18_outbox_find_web.md",
+        "includes": [
+          "Role: researcher",
+          "Action: find_web",
+          "Target-Path: artifacts/find_web.json",
+          "write to: artifacts/find_web.json"
+        ]
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; doc={'schema_version':'ctcp-find-web-v1','constraints':{'allow_domains':['docs.python.org','openai.com'],'max_queries':2,'max_pages':2},'results':[{'url':'https://docs.python.org/3/','locator':{'type':'heading','value':'Python 3 Documentation'},'fetched_at':'2024-01-01T00:00:00Z','excerpt':'Python documentation reference.','why_relevant':'simlab stub','risk_flags':[]}]} ; (art/'find_web.json').write_text(json.dumps(doc, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s18_adv_03.out.txt 2>&1",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='chair'; action='file_request'; target='artifacts/file_request.json'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s18_outbox_file_request.md')\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "expect_text": {
+        "path": "artifacts/_s18_outbox_file_request.md",
+        "includes": [
+          "Role: chair",
+          "Action: file_request",
+          "Target-Path: artifacts/file_request.json",
+          "write to: artifacts/file_request.json"
+        ]
+      }
+    }
+  ]
+}

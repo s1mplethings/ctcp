@@ -2,8 +2,8 @@
   "schema_version": "ctcp-dispatch-config-v1",
   "mode": "manual_outbox",
   "role_providers": {
-    "librarian": "local_exec",
-    "contract_guardian": "local_exec",
+    "librarian": "ollama_agent",
+    "contract_guardian": "ollama_agent",
     "patchmaker": "codex_agent",
     "fixer": "codex_agent"
   },

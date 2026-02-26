@@ -61,7 +61,7 @@
 - Orchestrator MAY call a local dispatcher when blocked by missing artifacts.
 - Dispatcher input authority remains the same gate state; it does not change workflow selection authority.
 - Provider types:
-  - `local_exec`: local script execution, restricted to librarian context-pack generation.
+  - `ollama_agent`: local Ollama-backed provider, default for `librarian` and `contract_guardian`.
   - `manual_outbox`: writes standardized outbox prompts for external/manual agents.
 - `manual_outbox` prompts must constrain write scope to run_dir target artifacts only.
 - `manual_outbox` prompts must not instruct any direct repo edits.

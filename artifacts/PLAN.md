@@ -1,9 +1,9 @@
 Status: SIGNED
-Scope-Allow: README.md,APPLY_OVERLAY.md,scripts/,tools/,docs/,tests/,simlab/,artifacts/,meta/,workflow_registry/
+Scope-Allow: AGENTS.md,README.md,BUILD.md,PATCH_README.md,APPLY_OVERLAY.md,scripts/,tools/,agents/,ai_context/,docs/,tests/,simlab/,artifacts/,meta/,workflow_registry/
 Scope-Deny: .git/,build/,build_lite/,build_verify/,dist/,generated_projects/,runs/,simlab/_runs/,meta/runs/
 Gates: lite,workflow_gate,plan_check,patch_check,behavior_catalog_check,contract_checks,doc_index_check,lite_replay,python_unit_tests
 Budgets: max_iterations=3,max_files=200,max_total_bytes=300000
-Stop: scope_violation=true,repeated_failure=2,missing_plan_fields=true
+Stop: scope_violation=true,repeated_failure=2,missing_plan_fields=true,docs_plan_mismatch=true
 Behaviors: B001,B002,B003,B004,B005,B006,B007,B008,B009,B010,B011,B012,B015,B016,B017,B018,B019,B020,B021,B022,B023,B024,B025,B026,B027,B028,B029,B030,B031,B032,B033,B034,B035
 Results: R001,R002,R003,R004,R005
 Behavior-Refs: B001,B002,B003,B004,B005,B006,B007,B008,B009,B010,B011,B012,B015,B016,B017,B018,B019,B020,B021,B022,B023,B024,B025,B026,B027,B028,B029,B030,B031,B032,B033,B034,B035

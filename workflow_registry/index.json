@@ -45,7 +45,7 @@
       "dependency_level": "low",
       "cost_hint": {
         "time_level": "low",
-        "api_level": "low"
+        "api_level": "high"
       },
       "last_known_good": {
         "status": "pass",
