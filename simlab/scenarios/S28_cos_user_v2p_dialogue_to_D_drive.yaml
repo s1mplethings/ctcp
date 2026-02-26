@@ -1,0 +1,19 @@
+{
+  "id": "S28_cos_user_v2p_dialogue_to_D_drive",
+  "name": "cos-user-v2p runs dialogue and copies outputs to destination out dir",
+  "suite": "lite",
+  "steps": [
+    {
+      "run": {
+        "cmd": "python scripts/ctcp_orchestrate.py cos-user-v2p --repo . --project v2p_lab --testkit-zip tests/fixtures/testkits/stub_ok.zip --entry \"python run_all.py\" --dialogue-script tests/fixtures/dialogues/v2p_cos_user.jsonl --skip-verify",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; import json; run_dir=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(run_dir); req=[r/'TRACE.md', r/'events.jsonl', r/'artifacts'/'USER_SIM_PLAN.md', r/'artifacts'/'v2p_report.json']; miss=[str(p) for p in req if not p.exists()]; assert not miss, miss; rep=json.loads((r/'artifacts'/'v2p_report.json').read_text(encoding='utf-8')); out_dir=Path(rep['paths']['dest_out_dir']); need=['scorecard.json','eval.json','cloud.ply','cloud_sem.ply']; miss2=[n for n in need if not (out_dir/n).exists()]; assert not miss2, miss2\"",
+        "expect_exit": 0
+      }
+    }
+  ]
+}

@@ -49,6 +49,34 @@ B.1) Librarian mandatory contract injection (hard)
 - If `budget.max_files` or `budget.max_total_bytes` cannot cover mandatory docs, librarian MUST fail with a clear "increase budget" error.
 - Chair/Planner MUST reserve budget for mandatory docs before adding extra `needs[]`.
 
+B.2) Context pack generation rules (MUST, deterministic)
+
+The librarian output MUST be deterministic for the same `(repo, file_request.json)`.
+
+Path rules:
+- `needs[].path` MUST be repo-relative POSIX paths (no drive letters, no `..`, no leading `/`).
+- Denylist by prefix (MUST omit with `reason: denied`): `.git/`, `runs/`, `build/`, `dist/`, `node_modules/`, `__pycache__/`.
+- If a path does not exist: omit with `reason: not_found`.
+
+Mode rules:
+- `mode="full"`: include verbatim file bytes as UTF-8 (replacement allowed) and MAY truncate to fit budget.
+- `mode="snippets"`: include only requested line ranges.
+- `line_ranges` are 1-indexed inclusive `[start,end]`.
+- If `mode="snippets"` and `line_ranges` is missing/empty: omit with `reason: invalid_request`.
+- Out-of-range line ranges MUST be clamped deterministically to file bounds.
+
+Budget rules:
+- Apply B.1 mandatory injection first.
+- Then process `needs[]` in order.
+- When the next file/snippet would exceed `budget.max_files` or `budget.max_total_bytes`, omit with `reason: budget_exceeded`.
+
+Truncation:
+- For `mode="full"` when remaining budget is smaller than file size, include prefix that fits and mark `truncated: true`.
+
+Verbatim-only rule:
+- `files[].content` MUST be copied from repo files; librarian MUST NOT invent/summarize/paraphrase.
+- `files[].why` MUST be short provenance text (for example `mandatory_contract`, `requested:<reason>`).
+
 C) artifacts/context_pack.json (Librarian output)
 
 Fields:
@@ -62,12 +90,14 @@ repo_slug
 summary
 
 files[]: { "path": "...", "why": "...", "content": "..." }
+files[] MAY include: { "truncated": true }
 
-omitted[]: { "path": "...", "reason": "too_large|denied|irrelevant" }
+omitted[]: { "path": "...", "reason": "too_large|denied|irrelevant|not_found|invalid_request|budget_exceeded" }
 
 Notes:
 - `files[]` MUST include the mandatory contract docs listed in B.1 when budget is sufficient.
 - If mandatory docs cannot fit, context generation MUST fail instead of silently omitting them.
+- `summary` MUST report high-level omitted reasons; MUST NOT include plans/solutions.
 
 D) artifacts/find_result.json (resolver final)
 
@@ -225,12 +255,12 @@ Fields:
 
 schema_version: "ctcp-dispatch-config-v1"
 
-mode: "manual_outbox" | "ollama_agent" | "api_agent"
+mode: "manual_outbox" | "ollama_agent" | "api_agent" | "local_exec"
 
 role_providers: {
-  "librarian": "ollama_agent|manual_outbox",
+  "librarian": "local_exec|manual_outbox",
   "chair": "manual_outbox|api_agent",
-  "contract_guardian": "manual_outbox|ollama_agent",
+  "contract_guardian": "local_exec",
   "cost_controller": "manual_outbox",
   "patchmaker": "manual_outbox|api_agent",
   "fixer": "manual_outbox|api_agent",
@@ -240,7 +270,9 @@ role_providers: {
 budgets: { "max_outbox_prompts": int }
 
 Rules:
-- `ollama_agent` MUST only auto-execute `librarian` or `contract_guardian`.
+- Default path for missing `artifacts/context_pack.json` is deterministic local librarian execution (`local_exec` -> `scripts/ctcp_librarian.py`).
+- Manual outbox for librarian is allowed only when explicitly configured (`mode: manual_outbox` and `role_providers.librarian: manual_outbox`).
+- `local_exec` librarian execution MUST follow B.1/B.2 (deterministic, verbatim-only, repo-scoped read-only).
 - `api_agent` executes configured external command templates (`SDDAI_PLAN_CMD`, `SDDAI_PATCH_CMD`, `SDDAI_AGENT_CMD`) and records stdout/stderr logs.
 - For patch targets, `api_agent` output MUST start with `diff --git`, otherwise provider execution fails with explicit logs/reason.
 

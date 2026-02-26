@@ -1,0 +1,31 @@
+{
+  "result": "PASS",
+  "experiment": "V2P testkit + verify_repo gate",
+  "repo_sha": "620b6e0b2b61246f4dc1e3a27aed326584a18a38",
+  "v2p": {
+    "result": "PASS",
+    "fps": 9.076324102703188,
+    "points_down": 40022,
+    "voxel_fscore": 0.996370601875189,
+    "outputs": {
+      "cloud": "C:/Users/sunom/AppData/Local/Temp/v2p_user_sim_testkit_20260226_161858/out/cloud.ply",
+      "cloud_sem": "C:/Users/sunom/AppData/Local/Temp/v2p_user_sim_testkit_20260226_161858/out/cloud_sem.ply",
+      "scorecard": "C:/Users/sunom/AppData/Local/Temp/v2p_user_sim_testkit_20260226_161858/out/scorecard.json",
+      "eval": "C:/Users/sunom/AppData/Local/Temp/v2p_user_sim_testkit_20260226_161858/out/eval.json"
+    }
+  },
+  "verify_repo": {
+    "result": "PASS",
+    "exit_code": 0,
+    "first_failure_stage": "patch_check (changed file count exceeds PLAN max_files: 221 > 200)",
+    "first_failing_file": null,
+    "final_log": "artifacts/verify_repo.log"
+  },
+  "fixes_applied": [
+    "Move extracted v2p_user_sim_testkit directory out of repo worktree",
+    "Revert specs/modules/dispatcher_providers.md",
+    "Revert specs/modules/librarian_context_pack.md",
+    "Move v2p_user_sim_testkit.zip out of repo worktree"
+  ],
+  "trace": "artifacts/TRACE.md"
+}

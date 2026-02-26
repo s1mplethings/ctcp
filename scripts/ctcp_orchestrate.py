@@ -26,10 +26,10 @@ REPORT_LAST = REPORTS_DIR / "LAST.md"
 DEFAULT_MAX_ITERATIONS = 3
 
 try:
-    from tools.run_paths import get_repo_slug, make_run_dir
+    from tools.run_paths import get_repo_slug, get_runs_root, make_run_dir
 except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
-    from tools.run_paths import get_repo_slug, make_run_dir
+    from tools.run_paths import get_repo_slug, get_runs_root, make_run_dir
 
 try:
     import ctcp_dispatch
@@ -42,6 +42,18 @@ try:
 except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
     from tools.patch_first import PatchPolicy, apply_patch_safely
+
+try:
+    from tools import scaffold as scaffold_tools
+except ModuleNotFoundError:
+    sys.path.insert(0, str(ROOT))
+    from tools import scaffold as scaffold_tools
+
+try:
+    from tools import testkit_runner
+except ModuleNotFoundError:
+    sys.path.insert(0, str(ROOT))
+    from tools import testkit_runner
 
 
 def now_iso() -> str:
@@ -158,6 +170,32 @@ def resolve_run_dir(raw: str) -> Path:
     run_dir = Path(pointed).expanduser().resolve()
     ensure_external_run_dir(run_dir)
     return run_dir
+
+
+def resolve_scaffold_runs_root(raw: str) -> Path:
+    if str(raw or "").strip():
+        return Path(raw).expanduser().resolve()
+    env_raw = str(os.environ.get("CTCP_RUNS_ROOT", "")).strip()
+    if env_raw:
+        return Path(env_raw).expanduser().resolve()
+    return (ROOT / "simlab" / "_runs").resolve()
+
+
+def resolve_scaffold_out_dir(raw: str) -> Path:
+    if not str(raw or "").strip():
+        raise SystemExit("[ctcp_orchestrate] scaffold requires --out")
+    out_dir = Path(raw).expanduser().resolve()
+    if is_within(out_dir, ROOT):
+        raise SystemExit(
+            f"[ctcp_orchestrate] scaffold --out must be outside repo root: {out_dir}"
+        )
+    return out_dir
+
+
+def default_scaffold_run_id(project_name: str) -> str:
+    slug = goal_slug(project_name or "project")
+    ts = dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+    return f"{ts}-scaffold-{slug}"
 
 
 def append_trace(run_dir: Path, text: str) -> None:
@@ -882,6 +920,676 @@ def verify_run_env() -> dict[str, str]:
         env["OPENAI_API_KEY"] = ""
         env["CTCP_OPENAI_API_KEY"] = ""
     return env
+
+
+def render_scaffold_plan_markdown(*, profile: str, out_dir: Path, project_name: str, force: bool, files: list[str]) -> str:
+    lines = [
+        "# Scaffold Plan",
+        "",
+        f"- Profile: {profile}",
+        f"- Project-Name: {project_name}",
+        f"- Out-Dir: {out_dir.resolve()}",
+        f"- Force: {'true' if force else 'false'}",
+        f"- Planned-Files: {len(files)}",
+        "",
+        "## Files",
+    ]
+    for rel in files:
+        lines.append(f"- {rel}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def scaffold_verify_cmd(out_dir: Path) -> tuple[list[str], str]:
+    ps1 = out_dir / "scripts" / "verify_repo.ps1"
+    sh = out_dir / "scripts" / "verify_repo.sh"
+    if os.name == "nt" and ps1.exists():
+        return (
+            ["powershell", "-ExecutionPolicy", "Bypass", "-File", str(ps1.resolve())],
+            "scripts/verify_repo.ps1",
+        )
+    if os.name != "nt" and sh.exists():
+        return (["bash", str(sh.resolve())], "scripts/verify_repo.sh")
+    return ([], "")
+
+
+def default_cos_user_run_id(project: str) -> str:
+    slug = goal_slug(project or "project")
+    ts = dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+    return f"{ts}-cos-user-v2p-{slug}"
+
+
+def resolve_cos_runs_root(raw: str) -> Path:
+    if str(raw or "").strip():
+        return Path(raw).expanduser().resolve()
+    env_raw = str(os.environ.get("CTCP_RUNS_ROOT", "")).strip()
+    if env_raw:
+        return Path(env_raw).expanduser().resolve()
+    return get_runs_root().resolve()
+
+
+def run_shell_cmd(command: str, cwd: Path) -> tuple[int, str, str]:
+    proc = subprocess.run(
+        str(command),
+        cwd=str(cwd),
+        shell=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    return int(proc.returncode), proc.stdout, proc.stderr
+
+
+def load_dialogue_script_answers(path: Path) -> dict[str, str]:
+    if not path.exists() or not path.is_file():
+        raise SystemExit(f"[ctcp_orchestrate] dialogue script not found: {path}")
+    answers: dict[str, str] = {}
+    for idx, raw in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), start=1):
+        line = raw.strip()
+        if not line:
+            continue
+        try:
+            doc = json.loads(line)
+        except Exception as exc:
+            raise SystemExit(f"[ctcp_orchestrate] dialogue script parse failed at line {idx}: {exc}") from exc
+        if not isinstance(doc, dict):
+            raise SystemExit(f"[ctcp_orchestrate] dialogue script line {idx} must be object")
+        qid = str(doc.get("id") or doc.get("qid") or doc.get("question_id") or "").strip()
+        ref = str(doc.get("ref") or doc.get("reply_to") or doc.get("question_ref") or "").strip()
+        source = str(doc.get("from") or doc.get("role") or "").strip().lower()
+        row_type = str(doc.get("type") or "").strip().lower()
+
+        # taskpack JSONL format: explicit answer rows use `ref` to map back to Q id.
+        if ref:
+            answer = str(doc.get("answer") or doc.get("response") or doc.get("text") or "").strip()
+            if answer:
+                answers[ref] = answer
+            continue
+
+        if not qid:
+            continue
+
+        if "answer" in doc or "response" in doc or row_type == "answer" or source == "agent":
+            answer = str(doc.get("answer") or doc.get("response") or doc.get("text") or "").strip()
+            if answer:
+                answers[qid] = answer
+            continue
+
+        default_answer = str(doc.get("default") or "").strip()
+        if default_answer and qid not in answers:
+            answers[qid] = default_answer
+    return answers
+
+
+def ask_dialogue_question(
+    *,
+    qid: str,
+    question: str,
+    default_answer: str,
+    script_answers: dict[str, str] | None,
+    agent_cmd: str,
+) -> tuple[str, str]:
+    if script_answers is not None:
+        return script_answers.get(qid, default_answer), "script"
+    if str(agent_cmd or "").strip():
+        payload = json.dumps({"qid": qid, "question": question}, ensure_ascii=False) + "\n"
+        proc = subprocess.run(
+            str(agent_cmd),
+            shell=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            input=payload,
+        )
+        if int(proc.returncode) != 0:
+            raise SystemExit(
+                f"[ctcp_orchestrate] agent command failed for {qid}: rc={proc.returncode}, stderr={proc.stderr.strip()}"
+            )
+        answer = str(proc.stdout or "").strip() or default_answer
+        return answer, "agent_cmd"
+    return default_answer, "default"
+
+
+def parse_semantics_answer(answer: str) -> bool:
+    text = str(answer or "").strip().lower()
+    if text in {"0", "off", "false", "no", "n"}:
+        return False
+    if text in {"1", "on", "true", "yes", "y"}:
+        return True
+    return True
+
+
+def parse_threshold_answer(answer: str) -> dict[str, float]:
+    defaults = {"fps_min": 1.0, "points_min": 10000.0, "fscore_min": 0.85}
+    text = str(answer or "").strip()
+    if not text:
+        return defaults
+    try:
+        doc = json.loads(text)
+    except Exception:
+        doc = None
+    if isinstance(doc, dict):
+        for k in ("fps_min", "points_min", "fscore_min"):
+            value = doc.get(k)
+            if isinstance(value, (int, float)):
+                defaults[k] = float(value)
+        return defaults
+    nums = re.findall(r"[-+]?\d*\.?\d+", text)
+    if len(nums) >= 3:
+        defaults["fps_min"] = float(nums[0])
+        defaults["points_min"] = float(nums[1])
+        defaults["fscore_min"] = float(nums[2])
+    return defaults
+
+
+def resolve_repo_verify_cmd(repo_path: Path) -> tuple[str, str]:
+    candidates = [
+        (repo_path / "verify_repo.ps1", "verify_repo.ps1"),
+        (repo_path / "verify_repo.sh", "verify_repo.sh"),
+        (repo_path / "scripts" / "verify_repo.ps1", "scripts/verify_repo.ps1"),
+        (repo_path / "scripts" / "verify_repo.sh", "scripts/verify_repo.sh"),
+    ]
+    ps1_candidates = [(p, rel) for p, rel in candidates if p.suffix.lower() == ".ps1" and p.exists()]
+    sh_candidates = [(p, rel) for p, rel in candidates if p.suffix.lower() == ".sh" and p.exists()]
+    if os.name == "nt":
+        if ps1_candidates:
+            p, rel = ps1_candidates[0]
+            return (f'powershell -ExecutionPolicy Bypass -File "{p.resolve()}"', rel)
+        if sh_candidates:
+            p, rel = sh_candidates[0]
+            return (f'bash "{p.resolve()}"', rel)
+    else:
+        if sh_candidates:
+            p, rel = sh_candidates[0]
+            return (f'bash "{p.resolve()}"', rel)
+        if ps1_candidates:
+            p, rel = ps1_candidates[0]
+            return (f'powershell -ExecutionPolicy Bypass -File "{p.resolve()}"', rel)
+    return "", ""
+
+
+def render_user_sim_plan_md(
+    *,
+    run_id: str,
+    repo_path: Path,
+    project: str,
+    testkit_zip: Path,
+    out_root: Path,
+    out_note: str,
+    copy_csv: str,
+    entry: str,
+    pre_verify_cmd: str,
+    post_verify_cmd: str,
+    semantics_enabled: bool,
+    thresholds: dict[str, float],
+    dialogue_mode: str,
+) -> str:
+    return "\n".join(
+        [
+            "# USER SIM PLAN",
+            "",
+            f"- Run-Id: {run_id}",
+            f"- Repo: {repo_path.resolve()}",
+            f"- Project: {project}",
+            f"- Testkit-Zip: {testkit_zip.resolve()}",
+            f"- Out-Root: {out_root.resolve()}",
+            f"- Out-Root-Note: {out_note or 'none'}",
+            f"- Entry: {entry}",
+            f"- Copy: {copy_csv}",
+            f"- Pre-Verify-Cmd: {pre_verify_cmd or '(disabled)'}",
+            f"- Post-Verify-Cmd: {post_verify_cmd or '(disabled)'}",
+            f"- Dialogue-Mode: {dialogue_mode}",
+            "",
+            "## Decisions",
+            f"- Semantics-Enabled: {'true' if semantics_enabled else 'false'}",
+            f"- Thresholds: fps_min={thresholds['fps_min']}, points_min={thresholds['points_min']}, fscore_min={thresholds['fscore_min']}",
+            "",
+            "## Acceptance",
+            "- testkit rc == 0",
+            "- required copied outputs exist",
+            "- if verify enabled: pre_verify rc == 0 and post_verify rc == 0",
+            "",
+        ]
+    )
+
+
+def render_dialogue_transcript(turns: list[dict[str, Any]]) -> str:
+    lines = ["# Dialogue Transcript", ""]
+    for idx, row in enumerate(turns, start=1):
+        lines.append(f"## Turn {idx} ({row.get('qid', '')})")
+        lines.append(f"- Question: {row.get('question', '')}")
+        lines.append(f"- Answer: {row.get('answer', '')}")
+        lines.append(f"- Source: {row.get('source', '')}")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def cmd_cos_user_v2p(
+    *,
+    repo: str,
+    project: str,
+    testkit_zip: str,
+    out_root: str,
+    runs_root: str,
+    entry: str,
+    copy_csv: str,
+    dialogue_script: str,
+    agent_cmd: str,
+    pre_verify_cmd: str,
+    post_verify_cmd: str,
+    skip_verify: bool,
+    force: bool,
+) -> int:
+    # BEHAVIOR_ID: B038
+    repo_path = Path(str(repo or "").strip()).expanduser().resolve()
+    if not repo_path.exists() or not repo_path.is_dir():
+        print(f"[ctcp_orchestrate] --repo not found or not directory: {repo_path}")
+        return 1
+    project_name = str(project or "").strip()
+    if not project_name:
+        print("[ctcp_orchestrate] --project is required")
+        return 1
+    zip_path = Path(str(testkit_zip or "").strip()).expanduser().resolve()
+    if not zip_path.exists() or not zip_path.is_file():
+        print(f"[ctcp_orchestrate] --testkit-zip not found: {zip_path}")
+        return 1
+
+    run_id = default_cos_user_run_id(project_name)
+    runs_root_path = resolve_cos_runs_root(runs_root)
+    run_dir = (runs_root_path / "cos_user_v2p" / run_id).resolve()
+    if run_dir.exists() and any(run_dir.iterdir()):
+        print(f"[ctcp_orchestrate] run dir exists and not empty: {run_dir}")
+        return 1
+    ensure_external_run_dir(run_dir)
+    ensure_layout(run_dir)
+    write_text(
+        run_dir / "TRACE.md",
+        "\n".join(
+            [
+                f"# CTCP COS User V2P Trace - {run_id}",
+                "",
+                f"- Repo: {repo_path}",
+                f"- Project: {project_name}",
+                f"- Testkit-Zip: {zip_path}",
+                "",
+                "## Events",
+                "",
+            ]
+        ),
+    )
+    write_text(run_dir / "events.jsonl", "")
+    write_pointer(LAST_RUN_POINTER, run_dir)
+    append_event(run_dir, "Local Orchestrator", "cos_user_v2p_run_created", "TRACE.md")
+
+    explicit_out = bool(str(out_root or "").strip())
+    out_root_path, out_note = testkit_runner.resolve_out_root(out_root, explicit=explicit_out)
+
+    script_answers: dict[str, str] | None = None
+    dialogue_mode = "default"
+    if str(dialogue_script or "").strip():
+        script_path = Path(dialogue_script).expanduser().resolve()
+        script_answers = load_dialogue_script_answers(script_path)
+        dialogue_mode = "script"
+    elif str(agent_cmd or "").strip():
+        dialogue_mode = "agent_cmd"
+
+    q1_text = f"Confirm ProjectName + output destination: project={project_name}, out_root={out_root_path}."
+    q2_text = "Semantics on/off? (on/off)"
+    q3_text = "Thresholds? Provide fps_min,points_min,fscore_min (default 1.0,10000,0.85)."
+    q1_answer, q1_source = ask_dialogue_question(
+        qid="Q1",
+        question=q1_text,
+        default_answer=f"confirm:{project_name}:{out_root_path}",
+        script_answers=script_answers,
+        agent_cmd=agent_cmd,
+    )
+    q2_answer, q2_source = ask_dialogue_question(
+        qid="Q2",
+        question=q2_text,
+        default_answer="on",
+        script_answers=script_answers,
+        agent_cmd=agent_cmd,
+    )
+    q3_answer, q3_source = ask_dialogue_question(
+        qid="Q3",
+        question=q3_text,
+        default_answer="1.0,10000,0.85",
+        script_answers=script_answers,
+        agent_cmd=agent_cmd,
+    )
+    turns = [
+        {"ts": now_iso(), "qid": "Q1", "question": q1_text, "answer": q1_answer, "source": q1_source},
+        {"ts": now_iso(), "qid": "Q2", "question": q2_text, "answer": q2_answer, "source": q2_source},
+        {"ts": now_iso(), "qid": "Q3", "question": q3_text, "answer": q3_answer, "source": q3_source},
+    ]
+    write_text(run_dir / "artifacts" / "dialogue.jsonl", "\n".join(json.dumps(x, ensure_ascii=False) for x in turns) + "\n")
+    write_text(run_dir / "artifacts" / "dialogue_transcript.md", render_dialogue_transcript(turns))
+    for row in turns:
+        append_event(
+            run_dir,
+            "CTCP",
+            "dialogue_turn",
+            "artifacts/dialogue.jsonl",
+            qid=str(row["qid"]),
+            answer=str(row["answer"]),
+            source=str(row["source"]),
+        )
+
+    semantics_enabled = parse_semantics_answer(q2_answer)
+    thresholds = parse_threshold_answer(q3_answer)
+    resolved_pre_cmd = str(pre_verify_cmd or "").strip()
+    resolved_post_cmd = str(post_verify_cmd or "").strip()
+    verify_entry = ""
+    if not skip_verify and ((not resolved_pre_cmd) or (not resolved_post_cmd)):
+        default_verify_cmd, verify_entry = resolve_repo_verify_cmd(repo_path)
+        if not default_verify_cmd:
+            print("[ctcp_orchestrate] verify command not found in --repo (expected verify_repo.ps1 or verify_repo.sh).")
+            print("[ctcp_orchestrate] use --skip-verify to bypass verify.")
+            return 1
+        if not resolved_pre_cmd:
+            resolved_pre_cmd = default_verify_cmd
+        if not resolved_post_cmd:
+            resolved_post_cmd = default_verify_cmd
+
+    plan_md = render_user_sim_plan_md(
+        run_id=run_id,
+        repo_path=repo_path,
+        project=project_name,
+        testkit_zip=zip_path,
+        out_root=out_root_path,
+        out_note=out_note,
+        copy_csv=copy_csv,
+        entry=entry,
+        pre_verify_cmd=resolved_pre_cmd,
+        post_verify_cmd=resolved_post_cmd,
+        semantics_enabled=semantics_enabled,
+        thresholds=thresholds,
+        dialogue_mode=dialogue_mode,
+    )
+    write_text(run_dir / "artifacts" / "USER_SIM_PLAN.md", plan_md + "\n")
+    append_event(run_dir, "Local Orchestrator", "user_sim_plan_written", "artifacts/USER_SIM_PLAN.md")
+
+    pre_rc: int | None = None
+    post_rc: int | None = None
+    if not skip_verify:
+        pre_rc, pre_out, pre_err = run_shell_cmd(resolved_pre_cmd, repo_path)
+        write_text(run_dir / "logs" / "verify_pre.log", pre_out + ("\n" if pre_out and pre_err else "") + pre_err)
+        append_event(
+            run_dir,
+            "Local Verifier",
+            "verify_pre_complete",
+            "logs/verify_pre.log",
+            rc=int(pre_rc),
+            cmd=resolved_pre_cmd,
+            verify_entry=verify_entry,
+        )
+    else:
+        append_event(run_dir, "Local Verifier", "verify_pre_skipped", "logs/verify_pre.log")
+
+    testkit_result: dict[str, Any]
+    testkit_error = ""
+    try:
+        testkit_result = testkit_runner.run_testkit(
+            run_dir=run_dir,
+            testkit_zip=zip_path,
+            entry_cmd=entry,
+            copy_csv=copy_csv,
+            out_root=out_root_path,
+            project=project_name,
+            run_id=run_id,
+            force=bool(force),
+            semantics_enabled=semantics_enabled,
+        )
+    except Exception as exc:
+        testkit_result = {}
+        testkit_error = str(exc)
+    if testkit_result:
+        write_text(run_dir / "logs" / "testkit_stdout.log", str(testkit_result.get("stdout", "")))
+        write_text(run_dir / "logs" / "testkit_stderr.log", str(testkit_result.get("stderr", "")))
+        append_event(
+            run_dir,
+            "Local Orchestrator",
+            "testkit_run_complete",
+            "logs/testkit_stdout.log",
+            rc=int(testkit_result.get("testkit_rc", 1)),
+            runtime_sec=float(testkit_result.get("runtime_sec", 0.0)),
+        )
+    else:
+        append_event(run_dir, "Local Orchestrator", "testkit_run_failed", "logs/testkit_stderr.log", reason=testkit_error)
+
+    if not skip_verify and not testkit_error:
+        post_rc, post_out, post_err = run_shell_cmd(resolved_post_cmd, repo_path)
+        write_text(run_dir / "logs" / "verify_post.log", post_out + ("\n" if post_out and post_err else "") + post_err)
+        append_event(
+            run_dir,
+            "Local Verifier",
+            "verify_post_complete",
+            "logs/verify_post.log",
+            rc=int(post_rc),
+            cmd=resolved_post_cmd,
+            verify_entry=verify_entry,
+        )
+    elif skip_verify:
+        append_event(run_dir, "Local Verifier", "verify_post_skipped", "logs/verify_post.log")
+
+    missing_outputs = list(testkit_result.get("missing_outputs", [])) if testkit_result else ["testkit_not_run"]
+    required_outputs_ok = len(missing_outputs) == 0
+    testkit_rc = int(testkit_result.get("testkit_rc", 1)) if testkit_result else 1
+    verify_ok = True if skip_verify else (pre_rc == 0 and post_rc == 0)
+    dialogue_ok = len(turns) >= 3
+    passed = (testkit_rc == 0) and required_outputs_ok and verify_ok and (not testkit_error) and dialogue_ok
+
+    report = {
+        "schema_version": "ctcp-v2p-report-v1",
+        "result": "PASS" if passed else "FAIL",
+        "run_id": run_id,
+        "timestamps": {
+            "generated_at": now_iso(),
+        },
+        "paths": {
+            "repo": str(repo_path.resolve()),
+            "testkit_zip": str(zip_path.resolve()),
+            "run_dir": str(run_dir.resolve()),
+            "out_root": str(out_root_path.resolve()),
+            "dest_run_root": str(testkit_result.get("run_root", "")) if testkit_result else "",
+            "dest_out_dir": str(testkit_result.get("out_dir", "")) if testkit_result else "",
+        },
+        "dialogue": {
+            "mode": dialogue_mode,
+            "turn_count": len(turns),
+            "script": str(Path(dialogue_script).expanduser().resolve()) if str(dialogue_script or "").strip() else "",
+        },
+        "dialogue_turns": len(turns),
+        "decisions": {
+            "semantics_enabled": bool(semantics_enabled),
+            "thresholds": thresholds,
+        },
+        "verify": {
+            "skip_verify": bool(skip_verify),
+            "pre_cmd": resolved_pre_cmd,
+            "post_cmd": resolved_post_cmd,
+            "pre_rc": pre_rc,
+            "post_rc": post_rc,
+            "pre_log": "logs/verify_pre.log",
+            "post_log": "logs/verify_post.log",
+        },
+        "testkit": {
+            "entry": entry,
+            "copy_csv": copy_csv,
+            "rc": testkit_rc,
+            "runtime_sec": float(testkit_result.get("runtime_sec", 0.0)) if testkit_result else 0.0,
+            "copied": list(testkit_result.get("copied", [])) if testkit_result else [],
+            "missing_outputs": missing_outputs,
+            "metrics": dict(testkit_result.get("metrics", {})) if testkit_result else {},
+            "stdout_log": "logs/testkit_stdout.log",
+            "stderr_log": "logs/testkit_stderr.log",
+            "error": testkit_error,
+        },
+        "acceptance": {
+            "testkit_rc_zero": testkit_rc == 0,
+            "required_outputs_exist": required_outputs_ok,
+            "verify_ok": verify_ok,
+            "dialogue_turns_at_least_3": dialogue_ok,
+        },
+    }
+    write_json(run_dir / "artifacts" / "v2p_report.json", report)
+    append_event(run_dir, "Local Orchestrator", "v2p_report_written", "artifacts/v2p_report.json", result=report["result"])
+
+    print(f"[ctcp_orchestrate] run_dir={run_dir.resolve()}")
+    print(f"[ctcp_orchestrate] out_dir={report['paths']['dest_out_dir']}")
+    if passed:
+        return 0
+    return 1
+
+
+def cmd_scaffold(*, out: str, name: str, profile: str, force: bool, runs_root: str) -> int:
+    # BEHAVIOR_ID: B037
+    t0 = dt.datetime.now()
+    out_dir = resolve_scaffold_out_dir(out)
+    project_name = str(name or "").strip() or out_dir.name
+    if not project_name:
+        print("[ctcp_orchestrate] scaffold requires --name or a resolvable --out folder name")
+        return 1
+
+    profile_name = str(profile or "minimal").strip().lower()
+    template_root = ROOT / "templates" / "ctcp_ref"
+    try:
+        profile_doc = scaffold_tools.load_profile_manifest(template_root, profile_name)
+        plan = scaffold_tools.build_scaffold_plan(
+            out_dir=out_dir,
+            project_name=project_name,
+            profile_doc=profile_doc,
+        )
+    except Exception as exc:
+        print(f"[ctcp_orchestrate] scaffold setup failed: {exc}")
+        return 1
+
+    runs_root_path = resolve_scaffold_runs_root(runs_root)
+    run_dir = runs_root_path / get_repo_slug(ROOT) / default_scaffold_run_id(project_name)
+    if run_dir.exists() and any(run_dir.iterdir()):
+        print(f"[ctcp_orchestrate] scaffold run dir exists and not empty: {run_dir}")
+        return 1
+
+    ensure_layout(run_dir)
+    write_text(
+        run_dir / "TRACE.md",
+        "\n".join(
+            [
+                f"# CTCP Scaffold Trace - {run_dir.name}",
+                "",
+                f"- Out: {out_dir.resolve()}",
+                f"- Project: {project_name}",
+                f"- Profile: {profile_name}",
+                "",
+                "## Events",
+                "",
+            ]
+        ),
+    )
+    write_text(run_dir / "events.jsonl", "")
+    append_event(run_dir, "Local Orchestrator", "scaffold_run_created", "TRACE.md")
+
+    plan_md = render_scaffold_plan_markdown(
+        profile=profile_name,
+        out_dir=out_dir,
+        project_name=project_name,
+        force=bool(force),
+        files=list(plan.get("files", [])),
+    )
+    write_text(run_dir / "artifacts" / "scaffold_plan.md", plan_md + "\n")
+    append_event(run_dir, "Local Orchestrator", "scaffold_plan_written", "artifacts/scaffold_plan.md")
+
+    tokens = {
+        "PROJECT_NAME": project_name,
+        "UTC_ISO": now_iso(),
+        "PROFILE": profile_name,
+    }
+
+    scaffold_error = ""
+    scaffold_result: dict[str, Any] = {}
+    try:
+        scaffold_result = scaffold_tools.scaffold_project(
+            template_root=template_root,
+            out_dir=out_dir,
+            project_name=project_name,
+            profile=profile_name,
+            force=bool(force),
+            tokens=tokens,
+        )
+        append_event(run_dir, "Local Orchestrator", "scaffold_written", "manifest.json")
+    except Exception as exc:
+        scaffold_error = str(exc)
+        append_event(run_dir, "Local Orchestrator", "scaffold_failed", "artifacts/scaffold_report.json", reason=scaffold_error)
+
+    verify_cmdline, verify_entry = scaffold_verify_cmd(out_dir)
+    verify_rc: int | None = None
+    verify_stdout_log = ""
+    verify_stderr_log = ""
+    if not scaffold_error and verify_cmdline:
+        verify_rc, verify_out, verify_err = run_cmd(verify_cmdline, out_dir)
+        out_log = run_dir / "logs" / "scaffold_verify.stdout.txt"
+        err_log = run_dir / "logs" / "scaffold_verify.stderr.txt"
+        write_text(out_log, verify_out)
+        write_text(err_log, verify_err)
+        verify_stdout_log = out_log.relative_to(run_dir).as_posix()
+        verify_stderr_log = err_log.relative_to(run_dir).as_posix()
+        append_event(
+            run_dir,
+            "Local Verifier",
+            "scaffold_verify_complete",
+            "artifacts/scaffold_report.json",
+            rc=int(verify_rc),
+            verify_entry=verify_entry,
+        )
+
+    elapsed_ms = int((dt.datetime.now() - t0).total_seconds() * 1000)
+    validation = scaffold_result.get("validation", {"ok": False}) if scaffold_result else {"ok": False}
+    passed = (not scaffold_error) and bool(validation.get("ok", False)) and (verify_rc in (None, 0))
+    report = {
+        "schema_version": "ctcp-scaffold-report-v1",
+        "result": "PASS" if passed else "FAIL",
+        "profile": profile_name,
+        "project_name": project_name,
+        "out_dir": str(out_dir.resolve()),
+        "run_dir": str(run_dir.resolve()),
+        "elapsed_ms": elapsed_ms,
+        "written_count": int(scaffold_result.get("written_count", 0) if scaffold_result else 0),
+        "written_files": list(scaffold_result.get("written_files", []) if scaffold_result else []),
+        "removed_files": list(
+            (scaffold_result.get("prepared", {}) or {}).get("removed_files", [])
+            if scaffold_result
+            else []
+        ),
+        "validation": validation,
+        "verify": {
+            "attempted": bool(verify_cmdline),
+            "entry": verify_entry,
+            "command": " ".join(verify_cmdline) if verify_cmdline else "",
+            "exit_code": verify_rc,
+            "stdout_log": verify_stdout_log,
+            "stderr_log": verify_stderr_log,
+        },
+        "error": scaffold_error,
+        "paths": {
+            "trace": "TRACE.md",
+            "plan": "artifacts/scaffold_plan.md",
+            "report": "artifacts/scaffold_report.json",
+        },
+    }
+    write_json(run_dir / "artifacts" / "scaffold_report.json", report)
+
+    if passed:
+        append_event(run_dir, "Local Orchestrator", "scaffold_pass", "artifacts/scaffold_report.json")
+        print(f"[ctcp_orchestrate] scaffold out={out_dir.resolve()}")
+        print(f"[ctcp_orchestrate] run_dir={run_dir.resolve()}")
+        return 0
+
+    append_event(run_dir, "Local Orchestrator", "scaffold_fail", "artifacts/scaffold_report.json")
+    print(f"[ctcp_orchestrate] scaffold failed: {scaffold_error or 'validation/verify failed'}")
+    print(f"[ctcp_orchestrate] run_dir={run_dir.resolve()}")
+    return 1
 
 
 def cmd_new_run(goal: str, run_id: str) -> int:
@@ -1650,6 +2358,52 @@ def main() -> int:
     p_adv.add_argument("--run-dir", default="")
     p_adv.add_argument("--max-steps", type=int, default=16)
 
+    p_cos = sub.add_parser(
+        "cos-user-v2p",
+        help="Run external V2P testkit with CTCP dialogue, evidence and fixed destination copy",
+    )
+    p_cos.add_argument("--repo", required=True, help="Target project repo path to verify before/after testkit run")
+    p_cos.add_argument("--project", required=True, help="Project name used for destination folder")
+    p_cos.add_argument("--testkit-zip", required=True, help="External testkit zip file path")
+    p_cos.add_argument(
+        "--out-root",
+        default="",
+        help="Destination root (default: D:/v2p_tests, with CI-safe fallback when unavailable)",
+    )
+    p_cos.add_argument(
+        "--runs-root",
+        default="",
+        help="Run evidence root (default: CTCP_RUNS_ROOT or CTCP default runs root)",
+    )
+    p_cos.add_argument("--entry", default="python run_all.py", help="Testkit entry command")
+    p_cos.add_argument(
+        "--copy",
+        default="out/scorecard.json,out/eval.json,out/cloud.ply,out/cloud_sem.ply",
+        help="CSV of relative output files to copy from testkit workspace",
+    )
+    p_cos.add_argument("--dialogue-script", default="", help="JSONL script for deterministic dialogue answers")
+    p_cos.add_argument("--agent-cmd", default="", help="Live agent command for answering dialogue questions")
+    p_cos.add_argument("--pre-verify-cmd", default="", help="Verify command executed inside --repo before testkit run")
+    p_cos.add_argument("--post-verify-cmd", default="", help="Verify command executed inside --repo after testkit run")
+    p_cos.add_argument("--skip-verify", action="store_true", help="Skip repo verify commands")
+    p_cos.add_argument("--force", action="store_true", help="Overwrite destination run folder if already exists")
+
+    p_scaffold = sub.add_parser("scaffold", help="Generate a reference CTCP project skeleton")
+    p_scaffold.add_argument("--out", required=True, help="Output directory for the generated project")
+    p_scaffold.add_argument("--name", default="", help="Project name (default: basename of --out)")
+    p_scaffold.add_argument(
+        "--profile",
+        default="minimal",
+        choices=["minimal", "standard", "full"],
+        help="Scaffold profile",
+    )
+    p_scaffold.add_argument("--force", action="store_true", help="Regenerate into an existing output directory")
+    p_scaffold.add_argument(
+        "--runs-root",
+        default="",
+        help="Optional run root for scaffold evidence (default: CTCP_RUNS_ROOT or simlab/_runs)",
+    )
+
     args = ap.parse_args()
     if args.cmd == "new-run":
         return cmd_new_run(goal=args.goal, run_id=args.run_id)
@@ -1657,6 +2411,30 @@ def main() -> int:
         return cmd_status(resolve_run_dir(args.run_dir))
     if args.cmd == "advance":
         return cmd_advance(resolve_run_dir(args.run_dir), max_steps=max(1, int(args.max_steps)))
+    if args.cmd == "cos-user-v2p":
+        return cmd_cos_user_v2p(
+            repo=args.repo,
+            project=args.project,
+            testkit_zip=args.testkit_zip,
+            out_root=args.out_root,
+            runs_root=args.runs_root,
+            entry=args.entry,
+            copy_csv=args.copy,
+            dialogue_script=args.dialogue_script,
+            agent_cmd=args.agent_cmd,
+            pre_verify_cmd=args.pre_verify_cmd,
+            post_verify_cmd=args.post_verify_cmd,
+            skip_verify=bool(args.skip_verify),
+            force=bool(args.force),
+        )
+    if args.cmd == "scaffold":
+        return cmd_scaffold(
+            out=args.out,
+            name=args.name,
+            profile=args.profile,
+            force=bool(args.force),
+            runs_root=args.runs_root,
+        )
 
     ap.print_help()
     return 1

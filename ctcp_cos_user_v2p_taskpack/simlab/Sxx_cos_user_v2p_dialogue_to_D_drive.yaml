@@ -1,0 +1,13 @@
+# SimLab scenario template for cos-user-v2p
+steps:
+  - type: run
+    name: cos_user_v2p_stub
+    cmd: >
+      python scripts/ctcp_orchestrate.py cos-user-v2p
+      --repo .
+      --project v2p_lab
+      --out-root D:\v2p_tests
+      --testkit-zip tests/fixtures/testkits/stub_ok.zip
+      --entry "python run_all.py"
+      --dialogue-script tests/fixtures/dialogues/v2p_cos_user.jsonl
+      --runs-root D:\ctcp_runs

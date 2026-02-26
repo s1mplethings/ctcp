@@ -1,0 +1,1 @@
+{"id":"S00_smoke","name":"smoke","suite":"lite","steps": [{"run": {"cmd": "echo ok", "expect_exit": 0}}]}

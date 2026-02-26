@@ -20,6 +20,8 @@ verify_repo 必须保证：
 - ai_context/00_AI_CONTRACT.md 存在
 - ai_context/templates/aidoc 存在
 - 默认禁止代码：未授权时不允许改代码目录
+- 代码改动必须同 patch 包含 doc/spec-first 变更（`docs/`、`specs/`、`meta/tasks/`、`meta/externals/`、`ai_context/` 或核心文档文件）
+- 代码改动必须同 patch 更新 `meta/reports/LAST.md`（仅更新 LAST 不可替代 doc/spec-first）
 
 3) contract checks
 - scripts/contract_checks.py 通过

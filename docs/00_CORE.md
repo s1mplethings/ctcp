@@ -2,7 +2,7 @@ CTCP Core Contract (v0.1)
 0. Purpose
 
 CTCP is a contract-first engineering loop:
-doc -> analysis -> find -> plan -> [build <-> verify] -> contrast -> fix -> deploy/merge
+doc -> analysis -> find -> context_pack -> plan -> [build <-> verify] -> contrast -> fix -> deploy/merge
 All progress is driven by artifacts stored in the run directory ("Blackboard").
 
 1. Definitions
@@ -40,11 +40,17 @@ MUST: create run_dir, emit events, gate on artifact presence, run verify, genera
 
 MUST NOT: choose workflow strategy, write patch content, approve plan.
 
-Local Librarian (read-only)
+Local Librarian (read-only, deterministic)
 
-MUST: provide minimal context packs based on Chair's file_request.
+MUST: deterministically transform artifacts/file_request.json -> artifacts/context_pack.json.
 
-MUST NOT: decide, propose solutions, modify code.
+MUST: include mandatory contract docs first (see docs/30_artifact_contracts.md B.1), then process needs[] in order.
+
+MUST: include verbatim content copied from repo files only (full or requested line ranges); no invented/summarized/paraphrased content.
+
+MUST: remain local, repo-scoped, read-only (no network access, no repo writes).
+
+MUST NOT: decide, propose solutions, modify code, or call LLM/API providers for context generation.
 
 Local Verifier (fact judge)
 

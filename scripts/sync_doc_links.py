@@ -29,6 +29,7 @@ CURATED_DOCS = [
     "docs/22_teamnet_adlc.md",
     "docs/22_agent_teamnet.md",
     "docs/30_artifact_contracts.md",
+    "docs/40_reference_project.md",
     "docs/12_modules_index.md",
     "docs/13_contracts_index.md",
     "docs/SELF_CHECK_SYSTEM.md",

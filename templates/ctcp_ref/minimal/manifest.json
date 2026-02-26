@@ -1,0 +1,13 @@
+{
+    "schema_version":  "ctcp-scaffold-template-manifest-v1",
+    "files":  [
+                  ".gitignore",
+                  "README.md",
+                  "docs/00_CORE.md",
+                  "meta/tasks/CURRENT.md",
+                  "meta/reports/LAST.md",
+                  "scripts/verify_repo.ps1",
+                  "scripts/verify_repo.sh"
+              ],
+    "profile":  "minimal"
+}

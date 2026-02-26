@@ -42,7 +42,7 @@
 |---|---|---|---|---|
 | Chair/Planner | `analysis.md`, `find_result.json`, reviews, context pack | `PLAN_draft.md`, signed `PLAN.md`, adjudication | Delegate final decision | `analysis`, `plan`, `deploy/merge` |
 | Local Orchestrator | artifact presence/state, signed plan, gate results | status transitions, run pointer updates, gate triggers | Decide workflow/plan, write patch, approve reviews | all steps as driver |
-| Local Librarian | `file_request.json` | `context_pack.json` | Decide solution, patch code | `analysis -> plan` support |
+| Local Librarian | `file_request.json` | `context_pack.json` | Decide solution, patch code, call LLM/API providers | `analysis -> plan` support |
 | Web Researcher | guardrails + query budget | `meta/externals/<goal_slug>/externals_pack.json` | Replace resolver result, execute patch | optional input before `plan` |
 | ContractGuardian | `PLAN_draft.md`, contract docs | `reviews/review_contract.md` (`APPROVE/BLOCK`) | Edit source code or patch | `plan` gate |
 | CostController | `PLAN_draft.md`, budgets, stop conditions | `reviews/review_cost.md` (`APPROVE/BLOCK`) | Edit source code or patch | `plan` gate |
@@ -61,8 +61,11 @@
 - Orchestrator MAY call a local dispatcher when blocked by missing artifacts.
 - Dispatcher input authority remains the same gate state; it does not change workflow selection authority.
 - Provider types:
-  - `ollama_agent`: local Ollama-backed provider, default for `librarian` and `contract_guardian`.
+  - `local_exec`: deterministic local provider for `librarian/context_pack` (default) and `contract_guardian/review_contract`.
+  - `api_agent`: external command-template provider for API roles.
   - `manual_outbox`: writes standardized outbox prompts for external/manual agents.
+- For missing `artifacts/context_pack.json`, dispatcher must default to local deterministic librarian execution (`local_exec`).
+- `manual_outbox` for librarian is allowed only under explicit `mode: manual_outbox` configuration.
 - `manual_outbox` prompts must constrain write scope to run_dir target artifacts only.
 - `manual_outbox` prompts must not instruct any direct repo edits.
 - When `max_outbox_prompts` budget is exceeded, dispatcher must stop creating prompts (`budget_exceeded`).

@@ -4,9 +4,9 @@ If this file conflicts with `docs/00_CORE.md`, `docs/00_CORE.md` wins.
 
 ## ADLC Mainline
 
-`doc -> analysis -> find -> plan -> [build<->verify] -> contrast -> fix -> deploy/merge`
+`doc -> analysis -> find -> context_pack -> plan -> [build<->verify] -> contrast -> fix -> deploy/merge`
 
-Execution starts only after signed `artifacts/PLAN.md` and required adversarial reviews are `APPROVE`.
+Execution starts only after signed `artifacts/PLAN.md`, required adversarial reviews are `APPROVE`, and `artifacts/context_pack.json` exists.
 
 ## Canonical Entrypoint
 
@@ -21,11 +21,18 @@ Execution starts only after signed `artifacts/PLAN.md` and required adversarial 
 | `doc` | Goal + hard constraints | `artifacts/guardrails.md` | Chair/Planner |
 | `analysis` | guardrails + scoped context | `artifacts/analysis.md`, `artifacts/file_request.json` | Chair/Planner |
 | `find` | goal + `workflow_registry/index.json` + historical successful runs | `artifacts/find_result.json` | Resolver (under Chair policy) |
-| `plan` | analysis + find result + reviews | `artifacts/PLAN_draft.md`, signed `artifacts/PLAN.md` | Chair/Planner |
+| `context_pack` | `artifacts/file_request.json` | `artifacts/context_pack.json` | Local Librarian |
+| `plan` | analysis + find result + context pack + reviews | `artifacts/PLAN_draft.md`, signed `artifacts/PLAN.md` | Chair/Planner |
 | `[build<->verify]` | signed plan + patch | `TRACE.md`, `artifacts/verify_report.json` | Local Verifier |
 | `contrast` | verify report + trace | `failure_bundle.zip` (if fail) | Local Verifier |
 | `fix` | failure bundle + signed plan scope | `artifacts/diff.patch` | PatchMaker/Fixer |
 | `deploy/merge` | passing verify + final decision | `artifacts/release_report.md` | Chair/Planner |
+
+### Hard gate rule for `context_pack`
+
+- Orchestrator/dispatcher MUST block plan signing and execution until `artifacts/context_pack.json` exists.
+- If context_pack is missing, dispatcher MUST route to deterministic local Librarian execution by default (`scripts/ctcp_librarian.py`).
+- Manual outbox for librarian is allowed only under explicit `mode: manual_outbox` configuration.
 
 ## Standard Artifact Paths
 

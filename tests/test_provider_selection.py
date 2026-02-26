@@ -41,8 +41,8 @@ class ProviderSelectionTests(unittest.TestCase):
             cfg, msg = ctcp_dispatch.load_dispatch_config(run_dir)
             self.assertIsNotNone(cfg, msg)
             role_providers = cfg.get("role_providers", {})
-            self.assertEqual(role_providers.get("contract_guardian"), "ollama_agent")
-            self.assertEqual(role_providers.get("librarian"), "ollama_agent")
+            self.assertEqual(role_providers.get("contract_guardian"), "local_exec")
+            self.assertEqual(role_providers.get("librarian"), "local_exec")
             self.assertEqual(role_providers.get("patchmaker"), "api_agent")
             self.assertEqual(role_providers.get("fixer"), "api_agent")
 
@@ -84,10 +84,10 @@ class ProviderSelectionTests(unittest.TestCase):
             self.assertIsNotNone(cfg, msg)
             role_providers = cfg.get("role_providers", {})
             self.assertEqual(role_providers.get("patchmaker"), "manual_outbox")
-            self.assertEqual(role_providers.get("contract_guardian"), "ollama_agent")
-            self.assertEqual(role_providers.get("librarian"), "ollama_agent")
+            self.assertEqual(role_providers.get("contract_guardian"), "local_exec")
+            self.assertEqual(role_providers.get("librarian"), "local_exec")
 
-    def test_legacy_local_exec_alias_maps_to_ollama_agent(self) -> None:
+    def test_local_exec_provider_is_preserved(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             run_dir = Path(td)
             artifacts = run_dir / "artifacts"
@@ -111,8 +111,8 @@ class ProviderSelectionTests(unittest.TestCase):
             cfg, msg = ctcp_dispatch.load_dispatch_config(run_dir)
             self.assertIsNotNone(cfg, msg)
             role_providers = cfg.get("role_providers", {})
-            self.assertEqual(role_providers.get("librarian"), "ollama_agent")
-            self.assertEqual(role_providers.get("contract_guardian"), "ollama_agent")
+            self.assertEqual(role_providers.get("librarian"), "local_exec")
+            self.assertEqual(role_providers.get("contract_guardian"), "local_exec")
 
     def test_api_agent_preview_disabled_without_env_or_cmd(self) -> None:
         with tempfile.TemporaryDirectory() as td:

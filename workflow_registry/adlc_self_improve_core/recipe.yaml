@@ -25,7 +25,7 @@ outputs:
 
 roles:
   guardian:
-    provider: ollama_agent
+    provider: local_exec
     target: reviews/contract_review.json
   patchmaker:
     provider: api_agent

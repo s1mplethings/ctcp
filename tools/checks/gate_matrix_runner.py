@@ -332,14 +332,16 @@ def run_matrix(repo: Path, preflight: dict[str, Any]) -> list[dict[str, Any]]:
                     {"rc": out.rc, "stdout_tail": out.stdout[-1200:], "stderr_tail": out.stderr[-1200:], "diff": diff.stdout[-1200:]})
 
     # 02
-    with preserve_files(repo, ["meta/tasks/CURRENT.md", "src/main.cpp"]):
+    with preserve_files(repo, ["meta/tasks/CURRENT.md", "src/main.cpp", "docs/00_overview.md"]):
         set_code_allowed(repo, allow=True)
         p = repo / "src/main.cpp"
         p.write_text(p.read_text(encoding="utf-8") + "\n// matrix-case-02\n", encoding="utf-8")
+        doc = repo / "docs/00_overview.md"
+        doc.write_text(doc.read_text(encoding="utf-8") + "\n<!-- matrix-case-02-doc-first -->\n", encoding="utf-8")
         out = run_verify_repo(repo)
         ok = out.rc == 0 and contains(out.stdout + out.stderr, "[workflow_checks] ok")
         record_case(cases, 2, "禁止代码门禁（授权后必须通过）", "pass" if ok else "fail",
-                    "workflow gate should pass with authorization",
+                    "workflow gate should pass with authorization and doc/spec-first change",
                     {"rc": out.rc, "stdout_tail": out.stdout[-1200:], "stderr_tail": out.stderr[-1200:]})
 
     # 03

@@ -287,9 +287,9 @@ def _expected_provider_for_gate(*, gate: dict[str, str], force_provider: bool) -
         return "api_agent"
     gate_path = str(gate.get("path", "")).strip().lower()
     if "context_pack.json" in gate_path:
-        return "ollama_agent"
+        return "local_exec"
     if "review_contract.md" in gate_path:
-        return "ollama_agent"
+        return "local_exec"
     return "api_agent"
 
 

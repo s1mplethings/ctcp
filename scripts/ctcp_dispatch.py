@@ -15,16 +15,16 @@ FIND_RESULT_PATH = Path("artifacts") / "find_result.json"
 WORKFLOW_INDEX_PATH = ROOT / "workflow_registry" / "index.json"
 
 try:
-    from tools.providers import api_agent, codex_agent, manual_outbox, mock_agent, ollama_agent
+    from tools.providers import api_agent, codex_agent, local_exec, manual_outbox, mock_agent, ollama_agent
 except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
-    from tools.providers import api_agent, codex_agent, manual_outbox, mock_agent, ollama_agent
+    from tools.providers import api_agent, codex_agent, local_exec, manual_outbox, mock_agent, ollama_agent
 
-KNOWN_PROVIDERS = {"manual_outbox", "ollama_agent", "api_agent", "codex_agent", "mock_agent"}
+KNOWN_PROVIDERS = {"manual_outbox", "ollama_agent", "api_agent", "codex_agent", "mock_agent", "local_exec"}
 STEP_META_PATH = Path("step_meta.jsonl")
 HARD_ROLE_PROVIDERS = {
-    "librarian": "ollama_agent",
-    "contract_guardian": "ollama_agent",
+    "librarian": "local_exec",
+    "contract_guardian": "local_exec",
 }
 
 # BEHAVIOR_ID: B017
@@ -70,8 +70,6 @@ def default_dispatch_config_doc(role_defaults: dict[str, str] | None = None) -> 
 
 def _normalize_provider(value: str) -> str:
     text = (value or "").strip().lower()
-    if text == "local_exec":
-        return "ollama_agent"
     if text in KNOWN_PROVIDERS:
         return text
     return "manual_outbox"
@@ -82,9 +80,13 @@ def _apply_hard_role_providers(role_providers: dict[str, str], *, mode: str) -> 
     if isinstance(role_providers, dict):
         for role, provider in role_providers.items():
             out[str(role).strip().lower()] = _normalize_provider(str(provider))
-    if str(mode).strip().lower() == "mock_agent":
+    mode_norm = str(mode).strip().lower()
+    if mode_norm == "mock_agent":
         return out
+    librarian_manual_override = mode_norm == "manual_outbox" and out.get("librarian") == "manual_outbox"
     for role, provider in HARD_ROLE_PROVIDERS.items():
+        if role == "librarian" and librarian_manual_override:
+            continue
         out[role] = provider
     return out
 
@@ -467,7 +469,7 @@ def derive_request(gate: dict[str, str], run_doc: dict[str, Any]) -> dict[str, A
     }
 
 
-def _resolve_provider(config: dict[str, Any], role: str) -> tuple[str, str]:
+def _resolve_provider(config: dict[str, Any], role: str, action: str) -> tuple[str, str]:
     # BEHAVIOR_ID: B027
     forced = _forced_provider()
     if forced:
@@ -477,6 +479,14 @@ def _resolve_provider(config: dict[str, Any], role: str) -> tuple[str, str]:
     if not isinstance(role_providers, dict):
         role_providers = {}
     provider = _normalize_provider(str(role_providers.get(role, config.get("mode", "manual_outbox"))))
+    if provider == "local_exec" and (role, action) not in {
+        ("librarian", "context_pack"),
+        ("contract_guardian", "review_contract"),
+    }:
+        return (
+            "manual_outbox",
+            "local_exec restricted to librarian/context_pack and contract_guardian/review_contract; fallback to manual_outbox",
+        )
     if provider == "ollama_agent" and role not in {"librarian", "contract_guardian"}:
         if role in {"patchmaker", "fixer"}:
             return (
@@ -499,7 +509,7 @@ def dispatch_preview(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str
     if request is None:
         return {"status": "no_request"}
 
-    provider, note = _resolve_provider(config, str(request["role"]))
+    provider, note = _resolve_provider(config, str(request["role"]), str(request["action"]))
     violation = _live_provider_violation(
         run_dir=run_dir,
         gate=gate,
@@ -513,6 +523,8 @@ def dispatch_preview(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str
     preview: dict[str, Any]
     if provider == "manual_outbox":
         preview = manual_outbox.preview(run_dir=run_dir, request=request, config=config)
+    elif provider == "local_exec":
+        preview = {"status": "can_execute_local"}
     elif provider == "ollama_agent":
         preview = ollama_agent.preview(run_dir=run_dir, request=request, config=config)
     elif provider == "api_agent":
@@ -543,7 +555,7 @@ def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], 
     if request is None:
         return {"status": "no_request"}
 
-    provider, note = _resolve_provider(config, str(request["role"]))
+    provider, note = _resolve_provider(config, str(request["role"]), str(request["action"]))
     violation = _live_provider_violation(
         run_dir=run_dir,
         gate=gate,
@@ -568,6 +580,12 @@ def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], 
             request=request,
             config=config,
             guardrails_budgets=_parse_guardrails_budgets(run_dir),
+        )
+    elif provider == "local_exec":
+        result = local_exec.execute(
+            repo_root=repo_root,
+            run_dir=run_dir,
+            request=request,
         )
     elif provider == "ollama_agent":
         result = ollama_agent.execute(

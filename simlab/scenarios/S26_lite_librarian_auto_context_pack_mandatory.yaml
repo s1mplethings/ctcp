@@ -1,0 +1,44 @@
+{
+  "id": "S26_lite_librarian_auto_context_pack_mandatory",
+  "name": "lite librarian auto-generates deterministic context_pack with mandatory contracts",
+  "suite": "lite",
+  "steps": [
+    {
+      "run": {
+        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-librarian-auto-context-pack > artifacts/_s26_newrun.out.txt 2>&1",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; art.mkdir(parents=True, exist_ok=True); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 20\\nmax_total_bytes: 500000\\nmax_iterations: 3\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_orchestrator_only','selected_version':'1.0','candidates':[{'workflow_id':'wf_orchestrator_only','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-librarian-auto-context-pack','needs':[{'path':'README.md','mode':'snippets','line_ranges':[[1,20]]}], 'budget':{'max_files':20,'max_total_bytes':500000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s26_advance.out.txt 2>&1",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; outbox=r/'outbox'; cp=art/'context_pack.json'; assert cp.exists(), str(cp); doc=json.loads(cp.read_text(encoding='utf-8')); assert doc.get('schema_version')=='ctcp-context-pack-v1', doc.get('schema_version'); paths=[str(x.get('path','')) for x in doc.get('files',[]) if isinstance(x,dict)]; req={'AGENTS.md','ai_context/00_AI_CONTRACT.md','ai_context/CTCP_FAST_RULES.md','docs/00_CORE.md','PATCH_README.md'}; assert req.issubset(set(paths)), paths; prompts=[p for p in outbox.glob('*.md') if 'Role: librarian' in p.read_text(encoding='utf-8', errors='replace')]; assert not prompts, [str(p) for p in prompts]; Path('artifacts/_s26_context_pack.json').write_text(cp.read_text(encoding='utf-8'), encoding='utf-8')\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "expect_text": {
+        "path": "artifacts/_s26_context_pack.json",
+        "includes": [
+          "\"schema_version\": \"ctcp-context-pack-v1\"",
+          "\"path\": \"AGENTS.md\"",
+          "\"path\": \"ai_context/00_AI_CONTRACT.md\"",
+          "\"path\": \"ai_context/CTCP_FAST_RULES.md\"",
+          "\"path\": \"docs/00_CORE.md\"",
+          "\"path\": \"PATCH_README.md\""
+        ]
+      }
+    }
+  ]
+}

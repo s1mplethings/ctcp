@@ -405,7 +405,7 @@ class MockAgentPipelineTests(unittest.TestCase):
             rows.append(
                 {
                     "case": "default_librarian",
-                    "expected": "ollama_agent",
+                    "expected": "local_exec",
                     "actual": str(preview_librarian.get("provider", "")),
                 }
             )
@@ -450,7 +450,7 @@ class MockAgentPipelineTests(unittest.TestCase):
             rows.append(
                 {
                     "case": "recipe_guardian",
-                    "expected": "ollama_agent",
+                    "expected": "local_exec",
                     "actual": str(preview_guardian.get("provider", "")),
                 }
             )

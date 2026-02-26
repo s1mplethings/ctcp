@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -31,8 +32,21 @@ def _changed_files(repo: Path) -> list[str]:
     a = _run_git(repo, ["diff", "--name-only"])
     b = _run_git(repo, ["diff", "--cached", "--name-only"])
     c = _run_git(repo, ["ls-files", "--others", "--exclude-standard"])
-    files = {x.strip().replace("\\", "/") for x in (a + "\n" + b + "\n" + c).splitlines() if x.strip()}
+    files = {
+        _decode_git_path(x.strip()).replace("\\", "/")
+        for x in (a + "\n" + b + "\n" + c).splitlines()
+        if x.strip()
+    }
     return sorted(files)
+
+
+def _decode_git_path(raw: str) -> str:
+    text = str(raw or "").strip()
+    if len(text) >= 2 and text[0] == '"' and text[-1] == '"':
+        text = text[1:-1]
+        text = re.sub(r"\\([0-7]{3})", lambda m: chr(int(m.group(1), 8)), text)
+        text = text.replace('\\"', '"').replace("\\\\", "\\")
+    return text
 
 
 def _path_in_root(path: str, root: str) -> bool:

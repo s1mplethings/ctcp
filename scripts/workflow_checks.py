@@ -26,6 +26,22 @@ CODE_FILES = (
     "web/package-lock.json",
 )
 
+DOC_FIRST_DIR_PREFIXES = (
+    "docs/",
+    "specs/",
+    "meta/tasks/",
+    "meta/externals/",
+    "ai_context/",
+)
+
+DOC_FIRST_FILES = (
+    "README.md",
+    "BUILD.md",
+    "PATCH_README.md",
+    "TREE.md",
+    "AGENTS.md",
+)
+
 ALLOW_RE = re.compile(r"\[\s*[xX]\s*\]\s*Code changes allowed")
 
 
@@ -47,6 +63,12 @@ def _is_code_change(path: str) -> bool:
     if path in CODE_FILES:
         return True
     return any(path.startswith(p) for p in CODE_DIR_PREFIXES)
+
+
+def _is_doc_first_change(path: str) -> bool:
+    if path in DOC_FIRST_FILES:
+        return True
+    return any(path.startswith(p) for p in DOC_FIRST_DIR_PREFIXES)
 
 
 def main() -> int:
@@ -90,6 +112,18 @@ def main() -> int:
     if "meta/reports/LAST.md" not in changed:
         print("[workflow_checks][error] code changes detected but meta/reports/LAST.md was not updated.")
         print("Please update meta/reports/LAST.md in the same patch when touching code directories.")
+        print("Code changes:")
+        for p in code_changes:
+            print(f"  - {p}")
+        return 1
+
+    doc_first_changes = [p for p in changed if _is_doc_first_change(p)]
+    if not doc_first_changes:
+        print("[workflow_checks][error] code changes detected but no docs/spec-first update was found.")
+        print("Add at least one docs/spec/meta task change in the same patch (report-only updates do not count).")
+        print("Accepted doc/spec-first roots:")
+        for root in (*DOC_FIRST_DIR_PREFIXES, *DOC_FIRST_FILES):
+            print(f"  - {root}")
         print("Code changes:")
         for p in code_changes:
             print(f"  - {p}")

@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import json
+import os
+import stat
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def _run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        cmd,
+        cwd=str(cwd),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+
+
+def _parse_run_dir(stdout: str) -> Path:
+    for line in (stdout or "").splitlines():
+        if "run_dir=" in line:
+            raw = line.split("run_dir=", 1)[1].strip()
+            return Path(raw)
+    raise AssertionError(f"run_dir not found in output:\n{stdout}")
+
+
+class CosUserV2PRunnerTests(unittest.TestCase):
+    def test_cos_user_v2p_stub_generates_outputs_and_report(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            base = Path(td)
+            pointer_path = ROOT / "meta" / "run_pointers" / "LAST_RUN.txt"
+            pointer_exists = pointer_path.exists()
+            pointer_before = pointer_path.read_text(encoding="utf-8") if pointer_exists else ""
+            target_repo = base / "target_repo"
+            target_repo.mkdir(parents=True, exist_ok=True)
+            (target_repo / "verify_repo.ps1").write_text('Write-Output "verify ok"\nexit 0\n', encoding="utf-8")
+            verify_sh = target_repo / "verify_repo.sh"
+            verify_sh.write_text('#!/usr/bin/env bash\necho "verify ok"\nexit 0\n', encoding="utf-8")
+            try:
+                verify_sh.chmod(verify_sh.stat().st_mode | stat.S_IXUSR)
+            except OSError:
+                pass
+
+            out_root = base / "v2p_tests"
+            runs_root = base / "ctcp_runs"
+            cmd = [
+                sys.executable,
+                "scripts/ctcp_orchestrate.py",
+                "cos-user-v2p",
+                "--repo",
+                str(target_repo),
+                "--project",
+                "v2p_lab",
+                "--out-root",
+                str(out_root),
+                "--testkit-zip",
+                str(ROOT / "tests" / "fixtures" / "testkits" / "stub_ok.zip"),
+                "--entry",
+                "python run_all.py",
+                "--dialogue-script",
+                str(ROOT / "tests" / "fixtures" / "dialogues" / "v2p_cos_user.jsonl"),
+                "--runs-root",
+                str(runs_root),
+                "--force",
+            ]
+            try:
+                proc = _run(cmd, ROOT)
+                self.assertEqual(proc.returncode, 0, msg=f"{proc.stdout}\n{proc.stderr}")
+
+                run_dir = _parse_run_dir(proc.stdout)
+                self.assertTrue(run_dir.exists(), msg=f"missing run_dir: {run_dir}")
+                self.assertTrue((run_dir / "TRACE.md").exists())
+                self.assertTrue((run_dir / "events.jsonl").exists())
+                self.assertTrue((run_dir / "artifacts" / "USER_SIM_PLAN.md").exists())
+                self.assertTrue((run_dir / "artifacts" / "dialogue.jsonl").exists())
+                self.assertTrue((run_dir / "artifacts" / "dialogue_transcript.md").exists())
+                self.assertTrue((run_dir / "artifacts" / "v2p_report.json").exists())
+
+                report = json.loads((run_dir / "artifacts" / "v2p_report.json").read_text(encoding="utf-8"))
+                self.assertEqual(report.get("result"), "PASS")
+                self.assertGreaterEqual(int(report.get("dialogue_turns", 0)), 3)
+                self.assertEqual((report.get("verify", {}) or {}).get("pre_rc"), 0)
+                self.assertEqual((report.get("verify", {}) or {}).get("post_rc"), 0)
+
+                run_id = str(report.get("run_id"))
+                out_dir = out_root / "v2p_lab" / run_id / "out"
+                self.assertTrue((out_dir / "scorecard.json").exists())
+                self.assertTrue((out_dir / "eval.json").exists())
+                self.assertTrue((out_dir / "cloud.ply").exists())
+                self.assertTrue((out_dir / "cloud_sem.ply").exists())
+
+                self.assertTrue((run_dir / "logs" / "verify_pre.log").exists())
+                self.assertTrue((run_dir / "logs" / "verify_post.log").exists())
+                self.assertTrue((run_dir / "logs" / "testkit_stdout.log").exists())
+                self.assertTrue((run_dir / "logs" / "testkit_stderr.log").exists())
+            finally:
+                pointer_path.parent.mkdir(parents=True, exist_ok=True)
+                if pointer_exists:
+                    pointer_path.write_text(pointer_before, encoding="utf-8")
+                else:
+                    if pointer_path.exists():
+                        pointer_path.unlink()
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,0 +1,42 @@
+{
+  "id": "S27_lite_librarian_budget_mandatory_fail",
+  "name": "lite librarian fails with clear increase-budget error when mandatory docs exceed budget",
+  "suite": "lite",
+  "steps": [
+    {
+      "run": {
+        "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-librarian-budget-fail > artifacts/_s27_newrun.out.txt 2>&1",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; art.mkdir(parents=True, exist_ok=True); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 2\\nmax_total_bytes: 64\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_orchestrator_only','selected_version':'1.0','candidates':[{'workflow_id':'wf_orchestrator_only','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-librarian-budget-fail','needs':[{'path':'README.md','mode':'full'}], 'budget':{'max_files':2,'max_total_bytes':64},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; import subprocess, sys; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); cmd=[sys.executable,'scripts/ctcp_librarian.py','--run-dir',rd]; p=subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace'); print(p.stdout, end=''); print(p.stderr, end=''); raise SystemExit(p.returncode)\"",
+        "expect_exit": "nonzero",
+        "expect_output_includes": [
+          "increase budget"
+        ]
+      }
+    },
+    {
+      "run": {
+        "cmd": "python -c \"from pathlib import Path; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); cp=Path(rd)/'artifacts'/'context_pack.json'; assert not cp.exists(), str(cp); Path('artifacts/_s27_budget_fail_ok.txt').write_text('ok\\n', encoding='utf-8')\"",
+        "expect_exit": 0
+      }
+    },
+    {
+      "expect_text": {
+        "path": "artifacts/_s27_budget_fail_ok.txt",
+        "includes": [
+          "ok"
+        ]
+      }
+    }
+  ]
+}

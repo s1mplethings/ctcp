@@ -71,7 +71,7 @@ def _init_repo(repo: Path) -> None:
 
 @unittest.skipUnless(shutil.which("git"), "git is required")
 class ProviderE2ETests(unittest.TestCase):
-    def test_api_agent_and_guardian_ollama_agent_flow(self) -> None:
+    def test_api_agent_and_guardian_local_exec_flow(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td)
             _init_repo(repo)
@@ -82,7 +82,7 @@ class ProviderE2ETests(unittest.TestCase):
                 "schema_version": "ctcp-dispatch-config-v1",
                 "mode": "manual_outbox",
                 "role_providers": {
-                    "contract_guardian": "ollama_agent",
+                    "contract_guardian": "local_exec",
                     "patchmaker": "api_agent",
                     "fixer": "api_agent",
                 },

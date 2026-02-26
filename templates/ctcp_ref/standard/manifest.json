@@ -1,0 +1,17 @@
+{
+    "schema_version":  "ctcp-scaffold-template-manifest-v1",
+    "files":  [
+                  ".gitignore",
+                  "README.md",
+                  "docs/00_CORE.md",
+                  "docs/30_artifact_contracts.md",
+                  "docs/behaviors/INDEX.md",
+                  "meta/tasks/CURRENT.md",
+                  "meta/reports/LAST.md",
+                  "scripts/verify_repo.ps1",
+                  "scripts/verify_repo.sh",
+                  "workflow_registry/README.md",
+                  "simlab/scenarios/S00_smoke.yaml"
+              ],
+    "profile":  "standard"
+}
