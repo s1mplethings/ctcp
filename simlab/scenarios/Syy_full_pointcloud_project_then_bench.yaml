@@ -1,0 +1,19 @@
+{
+  "id": "Syy_full_pointcloud_project_then_bench",
+  "name": "scaffold full pointcloud project and run cos-user benchmark",
+  "suite": "integration",
+  "steps": [
+    {
+      "run": {
+        "cmd": "python scripts/ctcp_orchestrate.py scaffold-pointcloud --out D:\\\\v2p_projects\\\\v2p_lab --name v2p_lab --profile minimal --force --runs-root D:\\\\ctcp_runs --dialogue-script tests/fixtures/dialogues/scaffold_pointcloud.jsonl",
+        "expect_exit": 0
+      }
+    },
+    {
+      "run": {
+        "cmd": "python scripts/ctcp_orchestrate.py cos-user-v2p --repo D:\\\\v2p_projects\\\\v2p_lab --project v2p_lab --out-root D:\\\\v2p_tests --testkit-zip tests/fixtures/testkits/stub_ok.zip --entry \"python run_all.py\" --dialogue-script tests/fixtures/dialogues/v2p_cos_user.jsonl --runs-root D:\\\\ctcp_runs",
+        "expect_exit": 0
+      }
+    }
+  ]
+}

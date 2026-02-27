@@ -55,9 +55,19 @@ except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
     from tools import testkit_runner
 
+try:
+    from tools import v2p_fixtures
+except ModuleNotFoundError:
+    sys.path.insert(0, str(ROOT))
+    from tools import v2p_fixtures
+
 
 def now_iso() -> str:
     return dt.datetime.now().isoformat(timespec="seconds")
+
+
+def now_utc_iso() -> str:
+    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def run_cmd(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> tuple[int, str, str]:
@@ -196,6 +206,12 @@ def default_scaffold_run_id(project_name: str) -> str:
     slug = goal_slug(project_name or "project")
     ts = dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     return f"{ts}-scaffold-{slug}"
+
+
+def default_scaffold_pointcloud_run_id(project_name: str) -> str:
+    slug = goal_slug(project_name or "project")
+    ts = dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+    return f"{ts}-scaffold-pointcloud-{slug}"
 
 
 def append_trace(run_dir: Path, text: str) -> None:
@@ -953,6 +969,181 @@ def scaffold_verify_cmd(out_dir: Path) -> tuple[list[str], str]:
     return ([], "")
 
 
+def _is_path_root(path: Path) -> bool:
+    resolved = path.resolve()
+    return resolved.parent == resolved
+
+
+def _safe_clear_directory_contents(path: Path) -> list[str]:
+    removed: list[str] = []
+    for child in sorted(path.iterdir(), key=lambda p: p.name):
+        rel = child.relative_to(path).as_posix()
+        if child.is_dir() and not child.is_symlink():
+            shutil.rmtree(child)
+        else:
+            child.unlink()
+        removed.append(rel)
+    return removed
+
+
+def _render_template_to_path(src: Path, dst: Path, tokens: dict[str, str]) -> None:
+    raw = src.read_bytes()
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_bytes(raw)
+        return
+    rendered = text
+    for key, value in tokens.items():
+        rendered = rendered.replace(f"{{{{{key}}}}}", str(value))
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    dst.write_text(rendered, encoding="utf-8")
+
+
+POINTCLOUD_IGNORED_SEGMENTS = {
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    "out",
+    "fixture",
+    "runs",
+}
+POINTCLOUD_IGNORED_FILENAMES = {
+    ".DS_Store",
+    "Thumbs.db",
+}
+
+
+def _is_pointcloud_scaffold_file(rel: str) -> bool:
+    path = str(rel or "").strip().replace("\\", "/")
+    if not path:
+        return False
+    parts = [p for p in path.split("/") if p]
+    if not parts:
+        return False
+    if any(seg in POINTCLOUD_IGNORED_SEGMENTS for seg in parts):
+        return False
+    if parts[-1] in POINTCLOUD_IGNORED_FILENAMES:
+        return False
+    if parts[-1].endswith(".pyc"):
+        return False
+    return True
+
+
+def _collect_pointcloud_template_files(profile: str) -> dict[str, Path]:
+    profile_name = str(profile or "").strip().lower()
+    if profile_name not in {"minimal", "standard"}:
+        raise SystemExit(f"[ctcp_orchestrate] unsupported pointcloud profile: {profile}")
+    template_root = ROOT / "templates" / "pointcloud_project"
+    minimal_root = template_root / "minimal"
+    standard_root = template_root / "standard"
+    if not minimal_root.exists():
+        raise SystemExit(f"[ctcp_orchestrate] missing pointcloud template profile: {minimal_root}")
+    roots = [minimal_root] if profile_name == "minimal" else [minimal_root, standard_root]
+    rows: dict[str, Path] = {}
+    for root in roots:
+        if not root.exists():
+            raise SystemExit(f"[ctcp_orchestrate] missing pointcloud template profile: {root}")
+        for node in root.rglob("*"):
+            if not node.is_file():
+                continue
+            rel = node.relative_to(root).as_posix()
+            if not _is_pointcloud_scaffold_file(rel):
+                continue
+            rows[rel] = node
+    if not rows:
+        raise SystemExit(f"[ctcp_orchestrate] no template files found for profile={profile_name}")
+    return rows
+
+
+def _write_pointcloud_manifest(
+    *,
+    out_dir: Path,
+    profile: str,
+    project_name: str,
+    generated_at_utc: str,
+    files: list[str],
+) -> str:
+    rel = "meta/manifest.json"
+    manifest_path = out_dir / Path("meta") / "manifest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    all_files = sorted(
+        set(
+            [x for x in files if _is_pointcloud_scaffold_file(x)]
+            + [rel]
+        )
+    )
+    doc = {
+        "schema_version": "ctcp-pointcloud-manifest-v1",
+        "generated_by": "ctcp_orchestrate scaffold-pointcloud",
+        "profile": profile,
+        "project_name": project_name,
+        "generated_at_utc": generated_at_utc,
+        "files": all_files,
+        "file_count": len(all_files),
+    }
+    manifest_path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return rel
+
+
+def _required_pointcloud_paths(profile: str) -> list[str]:
+    required = [
+        "README.md",
+        ".gitignore",
+        "docs/00_CORE.md",
+        "meta/tasks/CURRENT.md",
+        "meta/reports/LAST.md",
+        "meta/manifest.json",
+        "scripts/make_synth_fixture.py",
+        "scripts/eval_v2p.py",
+        "scripts/clean_project.py",
+        "scripts/run_v2p.py",
+        "scripts/verify_repo.ps1",
+        "tests/test_clean_project.py",
+        "tests/test_pipeline_synth.py",
+        "tests/test_smoke.py",
+        "pyproject.toml",
+    ]
+    if str(profile).strip().lower() == "standard":
+        required.extend(
+            [
+                "docs/behaviors/INDEX.md",
+                "workflow_registry/README.md",
+            ]
+        )
+    return required
+
+
+def render_scaffold_pointcloud_plan_markdown(
+    *,
+    profile: str,
+    out_dir: Path,
+    project_name: str,
+    force: bool,
+    dialogue_mode: str,
+    files: list[str],
+) -> str:
+    lines = [
+        "# SCAFFOLD PLAN",
+        "",
+        f"- Command: scaffold-pointcloud",
+        f"- Profile: {profile}",
+        f"- Project-Name: {project_name}",
+        f"- Out-Dir: {out_dir.resolve()}",
+        f"- Force: {'true' if force else 'false'}",
+        f"- Dialogue-Mode: {dialogue_mode}",
+        f"- Planned-Files: {len(files)}",
+        "",
+        "## Files",
+    ]
+    for rel in files:
+        lines.append(f"- {rel}")
+    lines.append("")
+    return "\n".join(lines)
+
+
 def default_cos_user_run_id(project: str) -> str:
     slug = goal_slug(project or "project")
     ts = dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
@@ -1086,26 +1277,34 @@ def parse_threshold_answer(answer: str) -> dict[str, float]:
 
 def resolve_repo_verify_cmd(repo_path: Path) -> tuple[str, str]:
     candidates = [
-        (repo_path / "verify_repo.ps1", "verify_repo.ps1"),
-        (repo_path / "verify_repo.sh", "verify_repo.sh"),
         (repo_path / "scripts" / "verify_repo.ps1", "scripts/verify_repo.ps1"),
         (repo_path / "scripts" / "verify_repo.sh", "scripts/verify_repo.sh"),
+        (repo_path / "verify_repo.ps1", "verify_repo.ps1"),
+        (repo_path / "verify_repo.sh", "verify_repo.sh"),
     ]
     ps1_candidates = [(p, rel) for p, rel in candidates if p.suffix.lower() == ".ps1" and p.exists()]
     sh_candidates = [(p, rel) for p, rel in candidates if p.suffix.lower() == ".sh" and p.exists()]
     if os.name == "nt":
         if ps1_candidates:
             p, rel = ps1_candidates[0]
+            if rel == "scripts/verify_repo.ps1":
+                return ("powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1", rel)
             return (f'powershell -ExecutionPolicy Bypass -File "{p.resolve()}"', rel)
         if sh_candidates:
             p, rel = sh_candidates[0]
+            if rel == "scripts/verify_repo.sh":
+                return ("bash scripts/verify_repo.sh", rel)
             return (f'bash "{p.resolve()}"', rel)
     else:
         if sh_candidates:
             p, rel = sh_candidates[0]
+            if rel == "scripts/verify_repo.sh":
+                return ("bash scripts/verify_repo.sh", rel)
             return (f'bash "{p.resolve()}"', rel)
         if ps1_candidates:
             p, rel = ps1_candidates[0]
+            if rel == "scripts/verify_repo.ps1":
+                return ("powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1", rel)
             return (f'powershell -ExecutionPolicy Bypass -File "{p.resolve()}"', rel)
     return "", ""
 
@@ -1122,6 +1321,9 @@ def render_user_sim_plan_md(
     entry: str,
     pre_verify_cmd: str,
     post_verify_cmd: str,
+    fixture_mode: str,
+    fixture_source: str,
+    fixture_path: Path,
     semantics_enabled: bool,
     thresholds: dict[str, float],
     dialogue_mode: str,
@@ -1141,6 +1343,9 @@ def render_user_sim_plan_md(
             f"- Pre-Verify-Cmd: {pre_verify_cmd or '(disabled)'}",
             f"- Post-Verify-Cmd: {post_verify_cmd or '(disabled)'}",
             f"- Dialogue-Mode: {dialogue_mode}",
+            f"- Fixture-Mode: {fixture_mode}",
+            f"- Fixture-Source: {fixture_source}",
+            f"- Fixture-Path: {fixture_path.resolve()}",
             "",
             "## Decisions",
             f"- Semantics-Enabled: {'true' if semantics_enabled else 'false'}",
@@ -1166,6 +1371,243 @@ def render_dialogue_transcript(turns: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def cmd_scaffold_pointcloud(
+    *,
+    out: str,
+    name: str,
+    profile: str,
+    force: bool,
+    runs_root: str,
+    dialogue_script: str,
+    agent_cmd: str,
+) -> int:
+    # BEHAVIOR_ID: B039
+    t0 = dt.datetime.now()
+    out_dir = resolve_scaffold_out_dir(out)
+    profile_name = str(profile or "minimal").strip().lower()
+    if profile_name not in {"minimal", "standard"}:
+        print(f"[ctcp_orchestrate] unsupported --profile for scaffold-pointcloud: {profile_name}")
+        return 1
+    project_name = str(name or "").strip() or out_dir.name
+    if not project_name:
+        print("[ctcp_orchestrate] scaffold-pointcloud requires --name or a resolvable --out folder name")
+        return 1
+
+    run_id = default_scaffold_pointcloud_run_id(project_name)
+    runs_root_path = resolve_scaffold_runs_root(runs_root)
+    run_dir = (runs_root_path / "scaffold_pointcloud" / run_id).resolve()
+    if run_dir.exists() and any(run_dir.iterdir()):
+        print(f"[ctcp_orchestrate] scaffold-pointcloud run dir exists and not empty: {run_dir}")
+        return 1
+
+    ensure_layout(run_dir)
+    write_text(
+        run_dir / "TRACE.md",
+        "\n".join(
+            [
+                f"# CTCP Pointcloud Scaffold Trace - {run_id}",
+                "",
+                f"- Out: {out_dir.resolve()}",
+                f"- Project: {project_name}",
+                f"- Profile: {profile_name}",
+                "",
+                "## Events",
+                "",
+            ]
+        ),
+    )
+    write_text(run_dir / "events.jsonl", "")
+    write_pointer(LAST_RUN_POINTER, run_dir)
+    append_event(run_dir, "Local Orchestrator", "scaffold_pointcloud_run_created", "TRACE.md")
+
+    script_answers: dict[str, str] | None = None
+    dialogue_mode = "default"
+    if str(dialogue_script or "").strip():
+        script_path = Path(dialogue_script).expanduser().resolve()
+        script_answers = load_dialogue_script_answers(script_path)
+        dialogue_mode = "script"
+    elif str(agent_cmd or "").strip():
+        dialogue_mode = "agent_cmd"
+
+    q1_text = f"Choose profile minimal|standard (current={profile_name})."
+    q2_text = f"Confirm project name (current={project_name})."
+    q3_text = f"Confirm output root and force flag: out={out_dir.resolve()}, force={'true' if force else 'false'}."
+    q1_answer, q1_source = ask_dialogue_question(
+        qid="S1",
+        question=q1_text,
+        default_answer=profile_name,
+        script_answers=script_answers,
+        agent_cmd=agent_cmd,
+    )
+    q2_answer, q2_source = ask_dialogue_question(
+        qid="S2",
+        question=q2_text,
+        default_answer=project_name,
+        script_answers=script_answers,
+        agent_cmd=agent_cmd,
+    )
+    q3_answer, q3_source = ask_dialogue_question(
+        qid="S3",
+        question=q3_text,
+        default_answer=str(out_dir.resolve()),
+        script_answers=script_answers,
+        agent_cmd=agent_cmd,
+    )
+    turns = [
+        {"ts": now_iso(), "qid": "S1", "question": q1_text, "answer": q1_answer, "source": q1_source},
+        {"ts": now_iso(), "qid": "S2", "question": q2_text, "answer": q2_answer, "source": q2_source},
+        {"ts": now_iso(), "qid": "S3", "question": q3_text, "answer": q3_answer, "source": q3_source},
+    ]
+    write_text(run_dir / "artifacts" / "dialogue.jsonl", "\n".join(json.dumps(x, ensure_ascii=False) for x in turns) + "\n")
+    write_text(run_dir / "artifacts" / "dialogue_transcript.md", render_dialogue_transcript(turns))
+    for row in turns:
+        append_event(
+            run_dir,
+            "CTCP",
+            "dialogue_turn",
+            "artifacts/dialogue.jsonl",
+            qid=str(row["qid"]),
+            answer=str(row["answer"]),
+            source=str(row["source"]),
+        )
+
+    profile_from_dialogue = str(q1_answer or "").strip().lower()
+    if profile_from_dialogue in {"minimal", "standard"}:
+        profile_name = profile_from_dialogue
+    project_from_dialogue = str(q2_answer or "").strip()
+    if project_from_dialogue:
+        project_name = project_from_dialogue
+
+    try:
+        template_files = _collect_pointcloud_template_files(profile_name)
+    except SystemExit as exc:
+        append_event(
+            run_dir,
+            "Local Orchestrator",
+            "scaffold_pointcloud_template_error",
+            "artifacts/scaffold_pointcloud_report.json",
+            reason=str(exc),
+        )
+        print(str(exc))
+        print(f"[ctcp_orchestrate] run_dir={run_dir.resolve()}")
+        return 1
+
+    planned_files = sorted(set(list(template_files.keys()) + ["meta/manifest.json"]))
+    plan_md = render_scaffold_pointcloud_plan_markdown(
+        profile=profile_name,
+        out_dir=out_dir,
+        project_name=project_name,
+        force=bool(force),
+        dialogue_mode=dialogue_mode,
+        files=planned_files,
+    )
+    write_text(run_dir / "artifacts" / "SCAFFOLD_PLAN.md", plan_md + "\n")
+    append_event(run_dir, "Local Orchestrator", "scaffold_pointcloud_plan_written", "artifacts/SCAFFOLD_PLAN.md")
+
+    generated_at_utc = now_utc_iso()
+    tokens = {
+        "PROJECT_NAME": project_name,
+        "UTC_ISO": generated_at_utc,
+    }
+
+    removed_entries: list[str] = []
+    written_files: list[str] = []
+    scaffold_error = ""
+    try:
+        if out_dir.exists():
+            if not out_dir.is_dir():
+                raise RuntimeError(f"--out exists but is not a directory: {out_dir}")
+            if not force:
+                raise RuntimeError(f"--out already exists (use --force to overwrite): {out_dir}")
+            if _is_path_root(out_dir):
+                raise RuntimeError(f"--force refuses drive/filesystem root --out: {out_dir}")
+            removed_entries = _safe_clear_directory_contents(out_dir)
+        else:
+            out_dir.mkdir(parents=True, exist_ok=True)
+
+        for rel in sorted(template_files.keys()):
+            src = template_files[rel]
+            dst = out_dir / Path(*rel.split("/"))
+            _render_template_to_path(src, dst, tokens)
+            written_files.append(rel)
+
+        manifest_rel = _write_pointcloud_manifest(
+            out_dir=out_dir,
+            profile=profile_name,
+            project_name=project_name,
+            generated_at_utc=generated_at_utc,
+            files=written_files,
+        )
+        if manifest_rel not in written_files:
+            written_files.append(manifest_rel)
+
+        missing_required: list[str] = []
+        for rel in _required_pointcloud_paths(profile_name):
+            path = out_dir / Path(*rel.split("/"))
+            if not path.exists():
+                missing_required.append(rel)
+        if missing_required:
+            raise RuntimeError(f"missing required generated files: {', '.join(missing_required)}")
+        append_event(run_dir, "Local Orchestrator", "scaffold_pointcloud_written", "meta/manifest.json")
+    except Exception as exc:
+        scaffold_error = str(exc)
+        append_event(
+            run_dir,
+            "Local Orchestrator",
+            "scaffold_pointcloud_failed",
+            "artifacts/scaffold_pointcloud_report.json",
+            reason=scaffold_error,
+        )
+
+    elapsed_ms = int((dt.datetime.now() - t0).total_seconds() * 1000)
+    passed = not scaffold_error
+    report = {
+        "schema_version": "ctcp-pointcloud-scaffold-report-v1",
+        "result": "PASS" if passed else "FAIL",
+        "run_id": run_id,
+        "profile": profile_name,
+        "project_name": project_name,
+        "dialogue": {
+            "mode": dialogue_mode,
+            "turn_count": len(turns),
+            "script": str(Path(dialogue_script).expanduser().resolve()) if str(dialogue_script or "").strip() else "",
+        },
+        "paths": {
+            "out_dir": str(out_dir.resolve()),
+            "run_dir": str(run_dir.resolve()),
+            "plan": "artifacts/SCAFFOLD_PLAN.md",
+            "dialogue_jsonl": "artifacts/dialogue.jsonl",
+            "dialogue_transcript": "artifacts/dialogue_transcript.md",
+            "manifest": "meta/manifest.json",
+            "report": "artifacts/scaffold_pointcloud_report.json",
+        },
+        "counts": {
+            "planned_files": len(planned_files),
+            "written_files": len(written_files),
+            "removed_entries": len(removed_entries),
+        },
+        "written_files": sorted(written_files),
+        "removed_entries": sorted(removed_entries),
+        "elapsed_ms": elapsed_ms,
+        "error": scaffold_error,
+    }
+    write_json(run_dir / "artifacts" / "scaffold_pointcloud_report.json", report)
+    append_event(
+        run_dir,
+        "Local Orchestrator",
+        "scaffold_pointcloud_report_written",
+        "artifacts/scaffold_pointcloud_report.json",
+        result=report["result"],
+    )
+
+    print(f"[ctcp_orchestrate] run_dir={run_dir.resolve()}")
+    print(f"[ctcp_orchestrate] out_dir={out_dir.resolve()}")
+    if passed:
+        return 0
+    print(f"[ctcp_orchestrate] scaffold-pointcloud failed: {scaffold_error}")
+    return 1
+
+
 def cmd_cos_user_v2p(
     *,
     repo: str,
@@ -1175,6 +1617,8 @@ def cmd_cos_user_v2p(
     runs_root: str,
     entry: str,
     copy_csv: str,
+    fixture_mode: str,
+    fixture_path: str,
     dialogue_script: str,
     agent_cmd: str,
     pre_verify_cmd: str,
@@ -1201,6 +1645,12 @@ def cmd_cos_user_v2p(
     run_dir = (runs_root_path / "cos_user_v2p" / run_id).resolve()
     if run_dir.exists() and any(run_dir.iterdir()):
         print(f"[ctcp_orchestrate] run dir exists and not empty: {run_dir}")
+        return 1
+    if is_within(run_dir, ROOT):
+        print(f"[ctcp_orchestrate] cos-user-v2p requires external run_dir (outside CTCP repo): {run_dir}")
+        return 1
+    if is_within(run_dir, repo_path):
+        print(f"[ctcp_orchestrate] cos-user-v2p requires run_dir outside tested repo: {run_dir}")
         return 1
     ensure_external_run_dir(run_dir)
     ensure_layout(run_dir)
@@ -1235,47 +1685,45 @@ def cmd_cos_user_v2p(
     elif str(agent_cmd or "").strip():
         dialogue_mode = "agent_cmd"
 
+    turns: list[dict[str, Any]] = []
+
+    def _ask_turn(*, qid: str, question: str, default_answer: str) -> str:
+        answer, source = ask_dialogue_question(
+            qid=qid,
+            question=question,
+            default_answer=default_answer,
+            script_answers=script_answers,
+            agent_cmd=agent_cmd,
+        )
+        turns.append(
+            {
+                "ts": now_iso(),
+                "qid": qid,
+                "question": question,
+                "answer": answer,
+                "source": source,
+            }
+        )
+        return answer
+
     q1_text = f"Confirm ProjectName + output destination: project={project_name}, out_root={out_root_path}."
     q2_text = "Semantics on/off? (on/off)"
     q3_text = "Thresholds? Provide fps_min,points_min,fscore_min (default 1.0,10000,0.85)."
-    q1_answer, q1_source = ask_dialogue_question(
+    q1_answer = _ask_turn(
         qid="Q1",
         question=q1_text,
         default_answer=f"confirm:{project_name}:{out_root_path}",
-        script_answers=script_answers,
-        agent_cmd=agent_cmd,
     )
-    q2_answer, q2_source = ask_dialogue_question(
+    q2_answer = _ask_turn(
         qid="Q2",
         question=q2_text,
         default_answer="on",
-        script_answers=script_answers,
-        agent_cmd=agent_cmd,
     )
-    q3_answer, q3_source = ask_dialogue_question(
+    q3_answer = _ask_turn(
         qid="Q3",
         question=q3_text,
         default_answer="1.0,10000,0.85",
-        script_answers=script_answers,
-        agent_cmd=agent_cmd,
     )
-    turns = [
-        {"ts": now_iso(), "qid": "Q1", "question": q1_text, "answer": q1_answer, "source": q1_source},
-        {"ts": now_iso(), "qid": "Q2", "question": q2_text, "answer": q2_answer, "source": q2_source},
-        {"ts": now_iso(), "qid": "Q3", "question": q3_text, "answer": q3_answer, "source": q3_source},
-    ]
-    write_text(run_dir / "artifacts" / "dialogue.jsonl", "\n".join(json.dumps(x, ensure_ascii=False) for x in turns) + "\n")
-    write_text(run_dir / "artifacts" / "dialogue_transcript.md", render_dialogue_transcript(turns))
-    for row in turns:
-        append_event(
-            run_dir,
-            "CTCP",
-            "dialogue_turn",
-            "artifacts/dialogue.jsonl",
-            qid=str(row["qid"]),
-            answer=str(row["answer"]),
-            source=str(row["source"]),
-        )
 
     semantics_enabled = parse_semantics_answer(q2_answer)
     thresholds = parse_threshold_answer(q3_answer)
@@ -1293,6 +1741,52 @@ def cmd_cos_user_v2p(
         if not resolved_post_cmd:
             resolved_post_cmd = default_verify_cmd
 
+    requested_fixture_mode = str(fixture_mode or "auto").strip().lower() or "auto"
+    if requested_fixture_mode not in {"auto", "synth", "path"}:
+        print(f"[ctcp_orchestrate] unsupported --fixture-mode: {requested_fixture_mode}")
+        return 1
+
+    def _fixture_dialogue(qid: str, question: str, default_answer: str) -> str:
+        return _ask_turn(qid=qid, question=question, default_answer=default_answer)
+
+    try:
+        fixture_result = v2p_fixtures.ensure_fixture(
+            mode=requested_fixture_mode,
+            repo=repo_path,
+            run_dir=run_dir,
+            user_dialogue=_fixture_dialogue,
+            fixture_path=str(fixture_path or ""),
+            runs_root=runs_root_path,
+        )
+    except Exception as exc:
+        print(f"[ctcp_orchestrate] fixture selection failed: {exc}")
+        return 1
+
+    fixture_meta = fixture_result.to_json_dict()
+    write_json(run_dir / "artifacts" / "fixture_meta.json", fixture_meta)
+    append_event(
+        run_dir,
+        "Local Orchestrator",
+        "fixture_selected",
+        "artifacts/fixture_meta.json",
+        mode=str(fixture_meta.get("mode", requested_fixture_mode)),
+        source=str(fixture_meta.get("source", "")),
+        fixture_path=str(fixture_meta.get("path", "")),
+    )
+
+    write_text(run_dir / "artifacts" / "dialogue.jsonl", "\n".join(json.dumps(x, ensure_ascii=False) for x in turns) + "\n")
+    write_text(run_dir / "artifacts" / "dialogue_transcript.md", render_dialogue_transcript(turns))
+    for row in turns:
+        append_event(
+            run_dir,
+            "CTCP",
+            "dialogue_turn",
+            "artifacts/dialogue.jsonl",
+            qid=str(row["qid"]),
+            answer=str(row["answer"]),
+            source=str(row["source"]),
+        )
+
     plan_md = render_user_sim_plan_md(
         run_id=run_id,
         repo_path=repo_path,
@@ -1304,6 +1798,9 @@ def cmd_cos_user_v2p(
         entry=entry,
         pre_verify_cmd=resolved_pre_cmd,
         post_verify_cmd=resolved_post_cmd,
+        fixture_mode=str(fixture_meta.get("mode", requested_fixture_mode)),
+        fixture_source=str(fixture_meta.get("source", "")),
+        fixture_path=Path(str(fixture_meta.get("path", ""))),
         semantics_enabled=semantics_enabled,
         thresholds=thresholds,
         dialogue_mode=dialogue_mode,
@@ -1341,6 +1838,8 @@ def cmd_cos_user_v2p(
             run_id=run_id,
             force=bool(force),
             semantics_enabled=semantics_enabled,
+            fixture_path=Path(str(fixture_meta.get("path", ""))),
+            forbidden_roots=[ROOT.resolve(), repo_path.resolve()],
         )
     except Exception as exc:
         testkit_result = {}
@@ -1385,6 +1884,12 @@ def cmd_cos_user_v2p(
         "schema_version": "ctcp-v2p-report-v1",
         "result": "PASS" if passed else "FAIL",
         "run_id": run_id,
+        "rc": {
+            "overall": 0 if passed else 1,
+            "testkit": testkit_rc,
+            "pre_verify": pre_rc,
+            "post_verify": post_rc,
+        },
         "timestamps": {
             "generated_at": now_iso(),
         },
@@ -1393,6 +1898,9 @@ def cmd_cos_user_v2p(
             "testkit_zip": str(zip_path.resolve()),
             "run_dir": str(run_dir.resolve()),
             "out_root": str(out_root_path.resolve()),
+            "fixture_meta": "artifacts/fixture_meta.json",
+            "fixture_path": str(fixture_meta.get("path", "")),
+            "sandbox_dir": str(testkit_result.get("sandbox_dir", "")) if testkit_result else "",
             "dest_run_root": str(testkit_result.get("run_root", "")) if testkit_result else "",
             "dest_out_dir": str(testkit_result.get("out_dir", "")) if testkit_result else "",
         },
@@ -1405,7 +1913,10 @@ def cmd_cos_user_v2p(
         "decisions": {
             "semantics_enabled": bool(semantics_enabled),
             "thresholds": thresholds,
+            "fixture_mode": str(fixture_meta.get("mode", requested_fixture_mode)),
         },
+        "fixture": fixture_meta,
+        "metrics": dict(testkit_result.get("metrics", {})) if testkit_result else {},
         "verify": {
             "skip_verify": bool(skip_verify),
             "pre_cmd": resolved_pre_cmd,
@@ -2381,6 +2892,17 @@ def main() -> int:
         default="out/scorecard.json,out/eval.json,out/cloud.ply,out/cloud_sem.ply",
         help="CSV of relative output files to copy from testkit workspace",
     )
+    p_cos.add_argument(
+        "--fixture-mode",
+        default="auto",
+        choices=["auto", "synth", "path"],
+        help="Fixture acquisition mode for V2P flow",
+    )
+    p_cos.add_argument(
+        "--fixture-path",
+        default="",
+        help="Fixture directory path (required when --fixture-mode=path)",
+    )
     p_cos.add_argument("--dialogue-script", default="", help="JSONL script for deterministic dialogue answers")
     p_cos.add_argument("--agent-cmd", default="", help="Live agent command for answering dialogue questions")
     p_cos.add_argument("--pre-verify-cmd", default="", help="Verify command executed inside --repo before testkit run")
@@ -2404,6 +2926,24 @@ def main() -> int:
         help="Optional run root for scaffold evidence (default: CTCP_RUNS_ROOT or simlab/_runs)",
     )
 
+    p_scaffold_pc = sub.add_parser("scaffold-pointcloud", help="Generate a point-cloud project scaffold from templates")
+    p_scaffold_pc.add_argument("--out", required=True, help="Output directory (project root)")
+    p_scaffold_pc.add_argument("--name", default="", help="Project name (default: basename of --out)")
+    p_scaffold_pc.add_argument(
+        "--profile",
+        default="minimal",
+        choices=["minimal", "standard"],
+        help="Pointcloud scaffold profile",
+    )
+    p_scaffold_pc.add_argument("--force", action="store_true", help="Overwrite existing --out directory contents")
+    p_scaffold_pc.add_argument(
+        "--runs-root",
+        default="",
+        help="Optional run root for scaffold evidence (default: CTCP_RUNS_ROOT or simlab/_runs)",
+    )
+    p_scaffold_pc.add_argument("--dialogue-script", default="", help="JSONL script for deterministic dialogue answers")
+    p_scaffold_pc.add_argument("--agent-cmd", default="", help="Live agent command for answering dialogue questions")
+
     args = ap.parse_args()
     if args.cmd == "new-run":
         return cmd_new_run(goal=args.goal, run_id=args.run_id)
@@ -2420,6 +2960,8 @@ def main() -> int:
             runs_root=args.runs_root,
             entry=args.entry,
             copy_csv=args.copy,
+            fixture_mode=args.fixture_mode,
+            fixture_path=args.fixture_path,
             dialogue_script=args.dialogue_script,
             agent_cmd=args.agent_cmd,
             pre_verify_cmd=args.pre_verify_cmd,
@@ -2434,6 +2976,16 @@ def main() -> int:
             profile=args.profile,
             force=bool(args.force),
             runs_root=args.runs_root,
+        )
+    if args.cmd == "scaffold-pointcloud":
+        return cmd_scaffold_pointcloud(
+            out=args.out,
+            name=args.name,
+            profile=args.profile,
+            force=bool(args.force),
+            runs_root=args.runs_root,
+            dialogue_script=args.dialogue_script,
+            agent_cmd=args.agent_cmd,
         )
 
     ap.print_help()

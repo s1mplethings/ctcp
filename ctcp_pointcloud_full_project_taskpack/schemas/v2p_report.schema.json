@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CTCP cos-user-v2p report",
+  "type": "object",
+  "required": [
+    "run_id",
+    "paths",
+    "rc"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string"
+    },
+    "paths": {
+      "type": "object",
+      "properties": {
+        "run_dir": {
+          "type": "string"
+        },
+        "out_dir": {
+          "type": "string"
+        }
+      }
+    },
+    "rc": {
+      "type": "object"
+    },
+    "metrics": {
+      "type": "object"
+    },
+    "dialogue_turns": {
+      "type": "integer"
+    }
+  }
+}

@@ -215,10 +215,17 @@ def run_testkit(
     run_id: str,
     force: bool,
     semantics_enabled: bool,
+    fixture_path: Path,
+    forbidden_roots: list[Path] | None = None,
 ) -> dict[str, Any]:
     copy_list = parse_copy_csv(copy_csv)
     run_root, out_dir = ensure_destination(out_root=out_root, project=project, run_id=run_id, force=force)
     sandbox_dir = (run_dir / "sandbox" / "testkit").resolve()
+    for forbidden in forbidden_roots or []:
+        if _is_within(sandbox_dir, forbidden):
+            raise TestkitRunnerError(
+                f"testkit sandbox must be outside forbidden root: sandbox={sandbox_dir} forbidden={forbidden}"
+            )
     unzip_testkit(testkit_zip, sandbox_dir)
     exec_result = run_entry(
         entry_cmd=entry_cmd,
@@ -226,6 +233,8 @@ def run_testkit(
         env_extra={
             "CTCP_SEMANTICS_ENABLED": "1" if semantics_enabled else "0",
             "V2P_SEMANTICS": "1" if semantics_enabled else "0",
+            "CTCP_V2P_FIXTURE_PATH": str(fixture_path.resolve()),
+            "V2P_FIXTURE_PATH": str(fixture_path.resolve()),
         },
     )
     copy_result = copy_outputs(work_dir=sandbox_dir, copy_list=copy_list, out_dir=run_root)
@@ -233,6 +242,7 @@ def run_testkit(
     return {
         "run_root": run_root.as_posix(),
         "out_dir": out_dir.as_posix(),
+        "sandbox_dir": sandbox_dir.as_posix(),
         "copy_list": copy_list,
         "testkit_rc": int(exec_result["rc"]),
         "runtime_sec": float(exec_result["runtime_sec"]),
@@ -242,4 +252,3 @@ def run_testkit(
         "missing_outputs": list(copy_result["missing"]),
         "metrics": metrics,
     }
-

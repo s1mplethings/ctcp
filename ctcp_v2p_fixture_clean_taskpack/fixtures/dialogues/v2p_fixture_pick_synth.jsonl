@@ -1,0 +1,2 @@
+{"from": "ctcp", "to": "agent", "type": "ask", "id": "F1", "text": "No fixture found. Provide fixture path or reply 'synth' to generate.", "default": "synth"}
+{"from": "agent", "to": "ctcp", "type": "answer", "ref": "F1", "text": "synth"}

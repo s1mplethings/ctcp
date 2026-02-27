@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "V2P fixture meta",
+  "type": "object",
+  "required": [
+    "mode",
+    "path"
+  ],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "synth",
+        "path"
+      ]
+    },
+    "path": {
+      "type": "string"
+    },
+    "has_semantics": {
+      "type": "boolean"
+    },
+    "has_ref": {
+      "type": "boolean"
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

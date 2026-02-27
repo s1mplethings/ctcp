@@ -1,6 +1,0 @@
-{"from": "ctcp", "to": "agent", "type": "ask", "id": "Q1", "text": "Confirm ProjectName and output destination folder. Provide project name only.", "default": "v2p_lab"}
-{"from": "agent", "to": "ctcp", "type": "answer", "ref": "Q1", "text": "v2p_lab"}
-{"from": "ctcp", "to": "agent", "type": "ask", "id": "Q2", "text": "Enable semantics output? Reply 'on' or 'off'.", "default": "off"}
-{"from": "agent", "to": "ctcp", "type": "answer", "ref": "Q2", "text": "on"}
-{"from": "ctcp", "to": "agent", "type": "ask", "id": "Q3", "text": "Confirm thresholds as 'fps_min,points_min,fscore_min' (comma-separated).", "default": "1.0,10000,0.85"}
-{"from": "agent", "to": "ctcp", "type": "answer", "ref": "Q3", "text": "1.0,10000,0.85"}

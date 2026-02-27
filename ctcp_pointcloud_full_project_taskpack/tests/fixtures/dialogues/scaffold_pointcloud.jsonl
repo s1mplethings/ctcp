@@ -1,0 +1,4 @@
+{"from": "ctcp", "to": "agent", "type": "ask", "id": "S1", "text": "Choose profile minimal|standard", "default": "minimal"}
+{"from": "agent", "to": "ctcp", "type": "answer", "ref": "S1", "text": "minimal"}
+{"from": "ctcp", "to": "agent", "type": "ask", "id": "S2", "text": "Confirm project name", "default": "v2p_lab"}
+{"from": "agent", "to": "ctcp", "type": "answer", "ref": "S2", "text": "v2p_lab"}

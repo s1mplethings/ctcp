@@ -742,3 +742,346 @@ Evidence paths:
   - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => exit `0`
   - replay run_dir: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260226-212626`
   - summary: `passed=14 failed=0`
+
+## Update 2026-02-26 (full pointcloud project + dialogue benchmark runner)
+
+### Readlist
+- `ai_context/00_AI_CONTRACT.md`
+- `ai_context/CTCP_FAST_RULES.md`
+- `README.md`
+- `BUILD.md`
+- `PATCH_README.md`
+- `TREE.md`
+- `docs/00_CORE.md`
+- `docs/03_quality_gates.md`
+- `ai_context/problem_registry.md`
+- `ai_context/decision_log.md`
+- `AGENTS.md`
+- `.agents/skills/ctcp-workflow/SKILL.md`
+- `.agents/skills/ctcp-verify/SKILL.md`
+
+### Plan
+1) Docs/Spec: update `meta/tasks/CURRENT.md`, behavior docs, and behavior index.
+2) Code: add `scaffold-pointcloud` command and harden `cos-user-v2p`/`testkit_runner` constraints.
+3) Assets: add pointcloud templates, fixtures, tests, and SimLab scenario.
+4) Verify: run targeted tests and `scripts/verify_repo.ps1`.
+5) Report: write full evidence and demo pointers in `meta/reports/LAST.md`.
+
+### Changes
+- Added command: `scripts/ctcp_orchestrate.py scaffold-pointcloud` (`BEHAVIOR_ID: B039`)
+  - doc-first `artifacts/SCAFFOLD_PLAN.md` before file generation.
+  - safe `--force` cleanup (inside `--out` only; filesystem root blocked).
+  - profile templates from `templates/pointcloud_project/{minimal,standard}` with token replacement (`{{PROJECT_NAME}}`, `{{UTC_ISO}}`).
+  - generated `meta/manifest.json` with relative file list.
+  - run evidence: `TRACE.md`, `events.jsonl`, `artifacts/dialogue.jsonl`, `artifacts/dialogue_transcript.md`, `artifacts/scaffold_pointcloud_report.json`.
+- Updated `scripts/ctcp_orchestrate.py` `cos-user-v2p`
+  - default verify command now prefers `scripts/verify_repo.ps1` (or shell equivalent) in tested repo.
+  - enforces run_dir outside CTCP repo and outside tested repo.
+  - report now includes `rc` object and top-level `metrics` and `paths.sandbox_dir`.
+- Updated `tools/testkit_runner.py`
+  - added forbidden-root sandbox guard to ensure testkit execution stays outside CTCP repo and tested repo.
+  - returns sandbox path in result for auditable reporting.
+- Added templates:
+  - `templates/pointcloud_project/minimal/*`
+  - `templates/pointcloud_project/standard/*`
+- Added fixtures:
+  - `tests/fixtures/dialogues/scaffold_pointcloud.jsonl`
+  - `tests/fixtures/dialogues/v2p_cos_user.jsonl` (taskpack version)
+  - `tests/fixtures/testkits/stub_ok.zip` (taskpack version)
+- Added/updated tests:
+  - `tests/test_scaffold_pointcloud_project.py`
+  - `tests/test_cos_user_v2p_runner.py`
+- Added scenario:
+  - `simlab/scenarios/Syy_full_pointcloud_project_then_bench.yaml`
+- Behavior docs:
+  - added `docs/behaviors/B039-scaffold-pointcloud.md`
+  - updated `docs/behaviors/B038-cos-user-v2p-dialogue-runner.md`
+  - registered B039 in `docs/behaviors/INDEX.md`
+- Updated task card:
+  - `meta/tasks/CURRENT.md`
+
+### Verify
+- `python -m py_compile scripts/ctcp_orchestrate.py tools/testkit_runner.py tests/test_scaffold_pointcloud_project.py tests/test_cos_user_v2p_runner.py` => exit `0`
+- `python -m unittest discover -s tests -p "test_scaffold_pointcloud_project.py" -v` => exit `0`
+- `python -m unittest discover -s tests -p "test_cos_user_v2p_runner.py" -v` => exit `0`
+- `python -m unittest discover -s tests -p "test_scaffold_reference_project.py" -v` => exit `0`
+- Acceptance demo run (external temp roots) => both commands exit `0`
+  - scaffold run_dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_pointcloud_demo_20260226_222831/ctcp_runs/scaffold_pointcloud/20260226-222831-836580-scaffold-pointcloud-v2p_lab`
+  - benchmark run_dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_pointcloud_demo_20260226_222831/ctcp_runs/cos_user_v2p/20260226-222832-058628-cos-user-v2p-v2p_lab`
+  - copied out_dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_pointcloud_demo_20260226_222831/v2p_tests/v2p_lab/20260226-222832-058628-cos-user-v2p-v2p_lab/out`
+- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => first run exit `1`
+  - first failure gate/check: `workflow gate (workflow checks)`
+  - first failure reason: code changes detected but `meta/reports/LAST.md` not updated.
+  - minimal repair: update `meta/reports/LAST.md` in same patch.
+
+### Questions
+- None.
+
+### Demo
+- Report: `meta/reports/LAST.md`
+- Task card: `meta/tasks/CURRENT.md`
+- Run pointer: `meta/run_pointers/LAST_RUN.txt`
+- External evidence roots:
+  - `C:/Users/sunom/AppData/Local/Temp/ctcp_pointcloud_demo_20260226_222831/ctcp_runs/scaffold_pointcloud/20260226-222831-836580-scaffold-pointcloud-v2p_lab`
+  - `C:/Users/sunom/AppData/Local/Temp/ctcp_pointcloud_demo_20260226_222831/ctcp_runs/cos_user_v2p/20260226-222832-058628-cos-user-v2p-v2p_lab`
+
+### Final Recheck
+- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` (second run) => exit `1`
+  - first failure gate/check: `patch check (scope from PLAN)`
+  - first failure reason: out-of-scope path `ctcp_pointcloud_full_project_taskpack/00_USE_THIS_PROMPT.md`
+  - minimal repair: add `ctcp_pointcloud_full_project_taskpack/` to `artifacts/PLAN.md` `Scope-Allow`.
+- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` (third run) => exit `1`
+  - first failure gate/check: `lite scenario replay`
+  - first failing scenario: `S16_lite_fixer_loop_pass` (`step 7 expect_exit mismatch`)
+  - root cause: new scaffold test changed `meta/run_pointers/LAST_RUN.txt` and did not restore pointer inside verify-run unit tests.
+  - minimal repair: restore pointer in `tests/test_scaffold_pointcloud_project.py` (same strategy as cos-user test).
+- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` (final run) => exit `0`
+  - replay summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260226-223903/summary.json` (`passed=14 failed=0`)
+  - python unit tests: `Ran 69 tests, OK (skipped=3)`.
+
+## Update 2026-02-27 (pointcloud template concrete implementation + customer test)
+
+### Goal
+- Upgrade generated pointcloud project from placeholder skeleton to a concrete runnable baseline implementation, then run customer-style acceptance tests.
+
+### Changes
+- Updated template implementation:
+  - `templates/pointcloud_project/minimal/scripts/run_v2p.py`
+    - deterministic seed derivation from optional input file hash
+    - parameterized generation (`--frames`, `--points`, `--voxel-size`, `--seed`, `--semantics`)
+    - realistic multi-point cloud generation (not single-point stub)
+    - outputs: `cloud.ply`, optional `cloud_sem.ply`, `scorecard.json`, `eval.json`, `stage_trace.json`
+- Updated template smoke test:
+  - `templates/pointcloud_project/minimal/tests/test_smoke.py`
+    - validates semantics output + metrics + stage trace
+- Updated template verify script for environment robustness:
+  - `templates/pointcloud_project/minimal/scripts/verify_repo.ps1`
+    - sets `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`
+    - runs `pytest` on `tests/test_smoke.py` to avoid host plugin pollution
+- Updated template README usage:
+  - `templates/pointcloud_project/minimal/README.md`
+
+### Customer Test (real run)
+- Scaffolded project:
+  - `python scripts/ctcp_orchestrate.py scaffold-pointcloud --out C:\Users\sunom\AppData\Local\Temp\ctcp_customer_impl_20260227_000242\v2p_projects\v2p_impl_demo --name v2p_impl_demo --profile minimal --force --runs-root C:\Users\sunom\AppData\Local\Temp\ctcp_customer_impl_20260227_000242\ctcp_runs --dialogue-script tests/fixtures/dialogues/scaffold_pointcloud.jsonl`
+  - exit `0`
+- Project-local verify:
+  - `powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1` (inside generated project)
+  - exit `0` (`1 passed`)
+- Project pipeline run:
+  - `python scripts\run_v2p.py --out out --semantics --frames 48 --points 12000`
+  - exit `0`
+  - observed metrics:
+    - `fps: 1275.0259`
+    - `points_down: 12000`
+    - `voxel_fscore: 0.9029`
+- Dialogue benchmark run:
+  - `python scripts/ctcp_orchestrate.py cos-user-v2p --repo <generated_project> --project v2p_impl_demo --testkit-zip tests/fixtures/testkits/stub_ok.zip --out-root <temp>/v2p_tests --runs-root <temp>/ctcp_runs --entry "python run_all.py" --dialogue-script tests/fixtures/dialogues/v2p_cos_user.jsonl --force`
+  - exit `0`
+  - report: `C:/Users/sunom/AppData/Local/Temp/ctcp_customer_impl_20260227_000242/ctcp_runs/cos_user_v2p/20260227-000322-520265-cos-user-v2p-v2p_impl_demo/artifacts/v2p_report.json`
+  - result: `PASS` (testkit rc=0, pre/post verify rc=0, dialogue_turns=3)
+
+### Verify
+- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => exit `0`
+  - replay summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260227-000359/summary.json` (`passed=14 failed=0`)
+  - python unit tests: `Ran 69 tests, OK (skipped=3)`
+
+## Update 2026-02-26 (scaffold-pointcloud concrete V2P baseline)
+
+### Readlist
+- `AGENTS.md`
+- `docs/00_CORE.md`
+- `ai_context/00_AI_CONTRACT.md`
+- `ai_context/CTCP_FAST_RULES.md`
+- `README.md`
+- `BUILD.md`
+- `PATCH_README.md`
+- `TREE.md`
+- `docs/03_quality_gates.md`
+- `ai_context/problem_registry.md`
+- `ai_context/decision_log.md`
+- `.agents/skills/ctcp-workflow/SKILL.md`
+- `.agents/skills/ctcp-gate-precheck/SKILL.md`
+- `.agents/skills/ctcp-verify/SKILL.md`
+
+### Plan
+1) Docs/Spec first: update `meta/tasks/CURRENT.md` for this task before template code edits.
+2) Implement concrete minimal template baseline (`run_v2p.py`, synth fixture, voxel eval, numpy dep).
+3) Update scaffold checks/tests to require and validate new template files.
+4) Verify with targeted tests, generated-project verify, then repo gate `scripts/verify_repo.ps1`.
+5) Record first failure + minimal fix and final pass evidence.
+
+### Changes
+- Template baseline implementation:
+  - `templates/pointcloud_project/minimal/scripts/run_v2p.py`
+    - Replaced placeholder random cloud generation with fixture-driven depth backprojection pipeline.
+    - Added support for fixture inputs: `depth.npy`, `poses.npy`, `intrinsics.json`, optional `rgb.npy`/`rgb_frames.npy`, optional `sem.npy`.
+    - Added voxel downsample + ASCII PLY writer + `scorecard.json` output (`fps`, `points_down`, `runtime_sec`, `num_frames`).
+    - Added semantic cloud output `out/cloud_sem.ply` when semantics mask exists.
+  - Added `templates/pointcloud_project/minimal/scripts/make_synth_fixture.py`
+    - Deterministic synthetic fixture generation (`rgb_frames.npy`, `rgb.npy`, `depth.npy`, `poses.npy`, `intrinsics.json`, optional `sem.npy`).
+    - Emits `fixture/ref_cloud.ply` built from the same fixture geometry for evaluation.
+  - Added `templates/pointcloud_project/minimal/scripts/eval_v2p.py`
+    - Reads cloud/ref PLY and computes voxel occupancy precision/recall/F-score.
+    - Writes `out/eval.json` with `voxel_fscore` and counts.
+- Template tests/deps/docs:
+  - Added `templates/pointcloud_project/minimal/tests/test_pipeline_synth.py` (full fixture -> run -> eval assertion, `voxel_fscore >= 0.8`).
+  - Updated `templates/pointcloud_project/minimal/tests/test_smoke.py` to use synth fixture pipeline.
+  - Updated `templates/pointcloud_project/minimal/scripts/verify_repo.ps1` to run both tests and resolve project root via `$PSScriptRoot`.
+  - Updated `templates/pointcloud_project/minimal/pyproject.toml` to include `numpy`.
+  - Updated `templates/pointcloud_project/minimal/README.md` quickstart to concrete fixture/run/eval flow.
+- Scaffold contract/test updates:
+  - `scripts/ctcp_orchestrate.py`
+    - `_required_pointcloud_paths()` now enforces new script/test files in generated minimal project.
+    - `_collect_pointcloud_template_files()` now skips `__pycache__/` and `.pyc` artifacts.
+  - `tests/test_scaffold_pointcloud_project.py`
+    - Extended required generated-file assertions for new pipeline files.
+- Gate compatibility update:
+  - `artifacts/PLAN.md`
+    - Added `ctcp_pointcloud_concrete_impl_taskpack/` to `Scope-Allow` to clear `patch_check` failure caused by existing untracked taskpack files.
+- Task tracking:
+  - Updated `meta/tasks/CURRENT.md` for this run and marked DoD completion.
+
+### Verify
+- Targeted template tests:
+  - `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q tests/test_smoke.py tests/test_pipeline_synth.py` (cwd `templates/pointcloud_project/minimal`) => exit 0 (`2 passed`).
+- Scaffold generation test:
+  - `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q tests/test_scaffold_pointcloud_project.py` => exit 0 (`1 passed`).
+- Generated project direct verify:
+  - `python scripts/ctcp_orchestrate.py scaffold-pointcloud --profile minimal --name demo_pc --out <tmp>/proj --runs-root <tmp>/runs --dialogue-script tests/fixtures/dialogues/scaffold_pointcloud.jsonl` => exit 0.
+  - `powershell -ExecutionPolicy Bypass -File <tmp>/proj/scripts/verify_repo.ps1` (invoked outside project cwd) => exit 0 (`2 passed`).
+- Repo gate (first run):
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => exit 1.
+  - First failure: `patch_check` out-of-scope path `ctcp_pointcloud_concrete_impl_taskpack/...`.
+  - Minimal fix: add `ctcp_pointcloud_concrete_impl_taskpack/` to `artifacts/PLAN.md` `Scope-Allow`.
+- Repo gate (after minimal fix):
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => exit 0.
+  - Key checkpoints: `workflow_checks` ok, `patch_check` ok (`changed_files=69`), `sync_doc_links --check` ok, lite replay pass (`passed=14 failed=0`), python unit tests pass (`Ran 69, OK, skipped=3`).
+
+### Questions
+- None.
+
+### Demo
+- Report: `meta/reports/LAST.md`
+- Task card: `meta/tasks/CURRENT.md`
+- verify_repo lite replay summary run: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260227-002805/summary.json`
+- Generated scaffold run sample: `C:/Users/sunom/AppData/Local/Temp/ctcp_pc_0a66676ebc8c44e9a331754bfdd0d780/runs/scaffold_pointcloud/20260227-002702-387832-scaffold-pointcloud-demo_pc`
+
+## Update 2026-02-27 (V2P fixtures auto-acquire + cleanliness hardening)
+
+### Readlist
+- `AGENTS.md`
+- `docs/00_CORE.md`
+- `ai_context/00_AI_CONTRACT.md`
+- `ai_context/CTCP_FAST_RULES.md`
+- `README.md`
+- `BUILD.md`
+- `PATCH_README.md`
+- `TREE.md`
+- `docs/03_quality_gates.md`
+- `ai_context/problem_registry.md`
+- `ai_context/decision_log.md`
+- `.agents/skills/ctcp-workflow/SKILL.md`
+- `.agents/skills/ctcp-gate-precheck/SKILL.md`
+- `.agents/skills/ctcp-verify/SKILL.md`
+
+### Plan
+1) Doc-first: update task/report records for this run.
+2) Add fixture helper (`discover_fixtures` + `ensure_fixture`) and wire into `cos-user-v2p` args/plan/report.
+3) Harden scaffold/template hygiene and manifest exclusions.
+4) Add generated-project clean utility script/test and CTCP unit tests.
+5) Run targeted tests + full `scripts/verify_repo.ps1`, then record first failure + minimal fix.
+
+### Changes
+- Added fixture helper module:
+  - `tools/v2p_fixtures.py`
+    - `discover_fixtures(search_roots, max_depth=4)`
+    - `ensure_fixture(mode, repo, run_dir, user_dialogue, fixture_path=..., runs_root=...)`
+    - modes: `auto|synth|path`
+    - auto root order:
+      1. `V2P_FIXTURES_ROOT` (if set)
+      2. `D:\v2p_fixtures` (Windows)
+      3. `<repo>/fixtures`, `<repo>/tests/fixtures`
+      4. `<runs_root>/fixtures_cache`
+    - auto mode prompts:
+      - multiple fixtures: choose index (`F1`)
+      - none found: `Provide fixture path, or reply 'synth' to use generated synthetic fixture.` (`F2`)
+    - synth path default: `<run_dir>/sandbox/fixture`
+- Wired fixture flow into orchestrator:
+  - `scripts/ctcp_orchestrate.py`
+    - `cos-user-v2p` new args: `--fixture-mode`, `--fixture-path`
+    - `USER_SIM_PLAN.md` now records fixture mode/source/path
+    - always writes `artifacts/fixture_meta.json`
+    - passes fixture path into testkit env (`V2P_FIXTURE_PATH`, `CTCP_V2P_FIXTURE_PATH`)
+    - `v2p_report.json` now includes fixture metadata
+- Updated testkit runner env wiring:
+  - `tools/testkit_runner.py`
+    - `run_testkit(..., fixture_path=...)` and fixture env export
+- Template/scaffold cleanliness hardening:
+  - `scripts/ctcp_orchestrate.py`
+    - pointcloud template collector now excludes cache/runtime artifacts (`.pytest_cache`, `__pycache__`, `*.pyc`, `.DS_Store`, `Thumbs.db`, `.mypy_cache`, `.ruff_cache`, `out`, `fixture`, `runs`)
+    - `meta/manifest.json` file list filtered with same exclusion rules
+    - pointcloud required outputs now include `scripts/clean_project.py` and `tests/test_clean_project.py`
+  - `templates/pointcloud_project/minimal/.gitignore`
+    - added cache/runtime ignore entries (`.pytest_cache`, `.mypy_cache`, `.ruff_cache`, `fixture`, etc.)
+  - removed runtime artifacts from template tree (`.pytest_cache`, `__pycache__`)
+- Generated project clean utility:
+  - added `templates/pointcloud_project/minimal/scripts/clean_project.py`
+    - deletes only within project root: `out/`, `fixture/`, `runs/`, plus recursive `__pycache__/`, `.pytest_cache/`
+  - added `templates/pointcloud_project/minimal/tests/test_clean_project.py`
+  - updated `templates/pointcloud_project/minimal/scripts/verify_repo.ps1` to run clean test too
+  - updated `templates/pointcloud_project/minimal/README.md` clean command section
+- Tests:
+  - added `tests/test_v2p_fixture_discovery.py`
+  - updated `tests/test_cos_user_v2p_runner.py`
+    - uses `--fixture-mode synth`
+    - asserts `artifacts/fixture_meta.json` exists and source is synth
+  - updated `tests/test_scaffold_pointcloud_project.py`
+    - asserts new clean files are generated
+    - asserts manifest excludes cache/runtime paths
+    - adds template hygiene check (no runtime artifacts under template tree)
+- Behavior catalog:
+  - added `docs/behaviors/B040-v2p-fixture-acquisition-cleanliness.md`
+  - registered in `docs/behaviors/INDEX.md`
+  - linked code marker in `tools/v2p_fixtures.py` (`BEHAVIOR_ID: B040`)
+- Gate scope sync:
+  - updated `artifacts/PLAN.md` `Scope-Allow` to include existing taskpack root `ctcp_v2p_fixture_clean_taskpack/` (minimal patch_check unblocking).
+
+### Verify
+- Static compile:
+  - `python -m py_compile scripts/ctcp_orchestrate.py tools/testkit_runner.py tools/v2p_fixtures.py tests/test_v2p_fixture_discovery.py tests/test_cos_user_v2p_runner.py tests/test_scaffold_pointcloud_project.py` => exit 0
+- Targeted tests:
+  - `python -m unittest discover -s tests -p "test_v2p_fixture_discovery.py" -v` => exit 0
+  - `python -m unittest discover -s tests -p "test_cos_user_v2p_runner.py" -v` => exit 0
+  - `python -m unittest discover -s tests -p "test_scaffold_pointcloud_project.py" -v` => exit 0
+- Generated project verify:
+  - scaffold minimal project + run generated `scripts/verify_repo.ps1` => `3 passed`
+- Full gate first failure #1:
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => exit 1
+  - first failed gate: `patch_check`
+  - reason: out-of-scope existing taskpack files under `ctcp_v2p_fixture_clean_taskpack/`
+  - minimal fix: add `ctcp_v2p_fixture_clean_taskpack/` to `artifacts/PLAN.md` `Scope-Allow`
+- Full gate first failure #2 (after fix #1):
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => exit 1
+  - first failed gate: `lite scenario replay` (S28)
+  - reason: `cos-user-v2p` auto->synth fallback failed when repo lacks `scripts/make_synth_fixture.py`
+  - minimal fix: `tools/v2p_fixtures.py` synth fallback now creates deterministic minimal fixture in run sandbox when script is absent
+- Full gate final:
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => exit 0
+  - lite replay summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260227-083025/summary.json` (`passed=14 failed=0`)
+  - python unit tests: `Ran 73 tests, OK (skipped=3)`
+
+### Questions
+- None.
+
+### Demo
+- Report: `meta/reports/LAST.md`
+- Task card: `meta/tasks/CURRENT.md`
+- Full verify replay summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260227-083025/summary.json`
+- Example scaffold run with updated template verify (3 tests): `C:/Users/sunom/AppData/Local/Temp/ctcp_pc_fixture_6910133437be4a6ab280a3f2b70eb4c9/runs/scaffold_pointcloud/20260227-082136-948030-scaffold-pointcloud-demo_fixture`
+
+### Final Recheck (post-report update)
+- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => exit 0
+- lite replay summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260227-083443/summary.json` (`passed=14 failed=0`)
+- python unit tests: `Ran 73 tests, OK (skipped=3)`
+- recheck refresh: `scripts/verify_repo.ps1` rerun => exit 0; lite replay run=`C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260227-083812/summary.json`.

@@ -10,10 +10,11 @@
   - run_dir is created under external runs root and writes `TRACE.md` + `events.jsonl`.
   - doc-first evidence (`artifacts/USER_SIM_PLAN.md`) is written before verify/testkit execution.
   - dialogue collects at least 3 Q/A turns and stores both JSONL and transcript artifacts.
-  - testkit is unpacked/executed outside CTCP repo (`run_dir/sandbox/testkit`), and only declared outputs are copied.
+  - default verify command resolves to `scripts/verify_repo.ps1` (or shell equivalent) inside `--repo` when available.
+  - testkit is unpacked/executed in run sandbox that is outside both CTCP repo and tested repo, and only declared outputs are copied.
   - return code is PASS only when testkit succeeds, required outputs exist, and verify commands pass (unless `--skip-verify`).
 
 ## Result
 - Acceptance: reproducible v2p report with verify status, copied outputs, extracted metrics, and dialogue turn count.
-- Evidence: `scripts/ctcp_orchestrate.py`, `tools/testkit_runner.py`, `tests/test_cos_user_v2p_runner.py`, `simlab/scenarios/S28_cos_user_v2p_dialogue_to_D_drive.yaml`.
+- Evidence: `scripts/ctcp_orchestrate.py`, `tools/testkit_runner.py`, `tests/test_cos_user_v2p_runner.py`, `simlab/scenarios/S28_cos_user_v2p_dialogue_to_D_drive.yaml`, `simlab/scenarios/Syy_full_pointcloud_project_then_bench.yaml`.
 - Related Gates: workflow_gate
