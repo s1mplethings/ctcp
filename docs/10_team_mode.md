@@ -53,6 +53,8 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
   - bot 可通过 OpenAI 兼容 API 做意图路由和客服回复（默认开启，可用 `CTCP_TG_API_ENABLED=0` 关闭）。
   - 每次对话可产出 `artifacts/API_BOT_SUMMARY.md`，并生成 `inbox/apibot/requests/REQ_*.json`。
   - 派发 `Type: agent_request` 时会自动附带 `USER_NOTES` 与 `API_BOT_SUMMARY` 尾部，帮助其他 agent 快速执行。
+  - 员工感增强：无论 API/非 API 路径，bot 默认先确认用户诉求、说明下一步动作，并在缺关键信息时最多追问 1~2 个澄清问题（渠道、转人工、知识库来源）。
+  - 进度口径增强：`status/advance/TRACE` 主动推送默认使用“现在打算做什么 / 刚做完什么 / 关键问题”三段式，面向客户可直接理解。
 - 启动示例：
 ```powershell
 $env:CTCP_TG_BOT_TOKEN="<token>"

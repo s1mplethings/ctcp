@@ -244,6 +244,82 @@ def smalltalk_reply(text: str, lang: str) -> str:
     return ""
 
 
+def _contains_any(text: str, keywords: tuple[str, ...]) -> bool:
+    raw = str(text or "").lower()
+    return any(k.lower() in raw for k in keywords)
+
+
+def build_employee_note_reply(text: str, lang: str) -> str:
+    raw = str(text or "").strip()
+    if not raw:
+        return ""
+    brief = _brief_text(raw, max_chars=70) or raw[:70]
+    need_channel = not _contains_any(
+        raw,
+        (
+            "telegram",
+            "tg",
+            "微信",
+            "wechat",
+            "web",
+            "网页",
+            "网站",
+            "app",
+            "电话",
+            "email",
+            "邮件",
+        ),
+    )
+    need_handoff = not _contains_any(
+        raw,
+        (
+            "人工",
+            "转人工",
+            "escalat",
+            "handoff",
+            "ticket",
+            "工单",
+            "crm",
+        ),
+    )
+    need_knowledge = not _contains_any(
+        raw,
+        (
+            "知识库",
+            "faq",
+            "kb",
+            "文档",
+            "manual",
+            "api",
+            "手册",
+            "规则",
+        ),
+    )
+    followups: list[str] = []
+    if str(lang).lower() == "en":
+        if need_channel:
+            followups.append("Which channel do you want first (Telegram/Web/WeChat)?")
+        if need_handoff:
+            followups.append("Should we support handoff to a human agent?")
+        if need_knowledge:
+            followups.append("Do you already have FAQ/knowledge-base content to import?")
+        if followups:
+            return (
+                f"Understood. I will move forward with: {brief}\n"
+                f"To make it feel like a real employee, please confirm: {' '.join(followups[:2])}"
+            )
+        return f"Understood. I will proceed with: {brief}"
+    if need_channel:
+        followups.append("你希望先上线在哪个渠道（Telegram / Web / 微信）？")
+    if need_handoff:
+        followups.append("是否要支持转人工客服？")
+    if need_knowledge:
+        followups.append("你是否已有 FAQ/知识库内容要导入？")
+    if followups:
+        return f"收到，我先按“{brief}”推进。\n为了更像真实员工客服，请再确认：{' '.join(followups[:2])}"
+    return f"收到，我先按“{brief}”推进。"
+
+
 def last_trace_event(trace_text: str) -> str:
     for ln in reversed((trace_text or "").splitlines()):
         s = ln.strip()
@@ -368,9 +444,91 @@ def _humanize_trace_delta(delta: str, lang: str) -> str:
             return "Progress updated. Send 'status' for current state."
         return "进度已更新。发送“进度”可查看当前状态。"
     picked = dedup[-4:]
+    compact = [x[2:].strip().replace("`", "") if x.startswith("- ") else x.replace("`", "") for x in picked]
+    if str(lang).lower() == "en":
+        done = [x for x in compact if any(k in x.lower() for k in ("completed", "passed", "workflow completed"))]
+        issues = [x for x in compact if any(k in x.lower() for k in ("failed", "blocked", "waiting"))]
+        doing = [x for x in compact if any(k in x.lower() for k in ("started", "in progress"))]
+        lines_out: list[str] = []
+        if done:
+            lines_out.append(f"- Done: {done[-1]}")
+        if doing:
+            lines_out.append(f"- Doing now: {doing[-1]}")
+        if issues:
+            lines_out.append(f"- Key issue: {issues[-1]}")
+        if lines_out:
+            return "Progress update:\n" + "\n".join(lines_out)
+        return "Progress update:\n" + "\n".join(picked)
+    done = [x for x in compact if any(k in x for k in ("已完成", "验收通过", "流程已完成"))]
+    issues = [x for x in compact if any(k in x for k in ("失败", "拦截", "等待"))]
+    doing = [x for x in compact if any(k in x for k in ("已开始", "进行中"))]
+    lines_out = []
+    if done:
+        lines_out.append(f"- 刚做完：{done[-1]}")
+    if doing:
+        lines_out.append(f"- 现在在做：{doing[-1]}")
+    if issues:
+        lines_out.append(f"- 关键问题：{issues[-1]}")
+    if lines_out:
+        return "进展更新：\n" + "\n".join(lines_out)
     if str(lang).lower() == "en":
         return "Progress update:\n" + "\n".join(picked)
     return "进展更新：\n" + "\n".join(picked)
+
+
+def describe_artifact_for_customer(path: str, lang: str) -> str:
+    p = str(path or "").strip().replace("\\", "/")
+    low = p.lower()
+    if str(lang).lower() == "en":
+        if low.endswith("artifacts/plan_draft.md"):
+            return "project plan draft"
+        if low.endswith("reviews/review_contract.md"):
+            return "contract review"
+        if low.endswith("reviews/review_cost.md"):
+            return "cost review"
+        if low.endswith("artifacts/plan.md"):
+            return "signed execution plan"
+        if low.endswith("artifacts/diff.patch"):
+            return "code change patch"
+        if low.endswith("artifacts/verify_report.json"):
+            return "verification report"
+        return Path(p).name if p else "next task item"
+    if low.endswith("artifacts/plan_draft.md"):
+        return "项目方案草稿"
+    if low.endswith("reviews/review_contract.md"):
+        return "规范审查结果"
+    if low.endswith("reviews/review_cost.md"):
+        return "成本审查结果"
+    if low.endswith("artifacts/plan.md"):
+        return "签署后的执行计划"
+    if low.endswith("artifacts/diff.patch"):
+        return "代码改动包"
+    if low.endswith("artifacts/verify_report.json"):
+        return "验收报告"
+    return Path(p).name if p else "下一项任务"
+
+
+def describe_reason_for_customer(reason: str, path: str, lang: str) -> str:
+    r = str(reason or "").strip()
+    if not r:
+        if str(lang).lower() == "en":
+            return "Waiting for required input."
+        return "等待必要输入。"
+    low = r.lower()
+    p = describe_artifact_for_customer(path, lang)
+    if "plan_draft" in low:
+        if str(lang).lower() == "en":
+            return f"Waiting for {p} to be prepared."
+        return f"等待{p}产出。"
+    if "review_contract" in low:
+        if str(lang).lower() == "en":
+            return f"Waiting for {p}."
+        return f"等待{p}。"
+    if "review_cost" in low:
+        if str(lang).lower() == "en":
+            return f"Waiting for {p}."
+        return f"等待{p}。"
+    return r
 
 
 def parse_orchestrate_output(text: str) -> dict[str, str]:
@@ -630,6 +788,7 @@ class ApiDecision:
     note: str
     summary: str
     steps: int
+    follow_up: str
 
 
 def parse_outbox_prompt(run_dir: Path, prompt_path: Path) -> PromptItem | None:
@@ -736,6 +895,65 @@ class Bot:
         except Exception:
             return ""
 
+    def _first_failure_text(self, run_dir: Path) -> str:
+        vr = run_dir / "artifacts" / "verify_report.json"
+        if not vr.exists():
+            return ""
+        try:
+            doc = json.loads(vr.read_text(encoding="utf-8", errors="replace"))
+        except Exception:
+            return ""
+        fails = doc.get("failures", [])
+        if isinstance(fails, list) and fails and isinstance(fails[0], dict):
+            return str(fails[0].get("message", "")).strip()
+        return ""
+
+    def _customer_done_text(self, trace_text: str, lang: str) -> str:
+        rows: list[str] = []
+        for ln in (trace_text or "").splitlines():
+            t = _humanize_trace_event_line(ln, lang)
+            if not t:
+                continue
+            body = t[2:].strip().replace("`", "") if t.startswith("- ") else t.strip().replace("`", "")
+            rows.append(body)
+        rows = rows[-8:]
+        if str(lang).lower() == "en":
+            done = [x for x in rows if any(k in x.lower() for k in ("completed", "passed", "workflow completed"))]
+            return done[-1] if done else "No completed milestone yet."
+        done = [x for x in rows if any(k in x for k in ("已完成", "验收通过", "流程已完成"))]
+        return done[-1] if done else "还没有可确认的阶段完成项。"
+
+    def _customer_next_plan_text(self, prompts: list[tuple[Path, PromptItem]], run_state: str, lang: str) -> str:
+        for _p, item in prompts:
+            if item.prompt_type == "question":
+                brief = _brief_text(item.prompt_text, max_chars=80)
+                if str(lang).lower() == "en":
+                    return f"Wait for your decision: {brief or 'a required project choice'}."
+                return f"先等你确认一个关键选项：{brief or '项目关键选择'}。"
+        for _p, item in prompts:
+            if item.prompt_type == "agent_request" and item.recipient:
+                brief = _brief_text(item.prompt_text, max_chars=80)
+                if str(lang).lower() == "en":
+                    return f"Internal specialist is preparing: {brief or 'a delegated task'}."
+                return f"内部模块正在处理：{brief or '已派发的任务'}。"
+        for _p, item in prompts:
+            brief = _brief_text(item.prompt_text, max_chars=80)
+            if str(lang).lower() == "en":
+                return f"Collect one missing input: {brief or 'required business details'}."
+            return f"先补齐一条关键信息：{brief or '业务细节'}。"
+        state = str(run_state or "").strip().lower()
+        if str(lang).lower() == "en":
+            if state in {"pass", "done"}:
+                return "Prepare delivery summary for customer handoff."
+            if state in {"blocked", "failed", "error"}:
+                return "Fix the first blocking issue, then rerun verification."
+            return "Continue to the next workflow milestone automatically."
+        if state in {"pass", "done"}:
+            return "整理交付说明，准备给客户验收。"
+        if state in {"blocked", "failed", "error"}:
+            return "先处理首个阻塞问题，再继续复验。"
+        return "继续自动推进到下一里程碑。"
+
     def _require_run(self, chat_id: int, lang: str) -> Path | None:
         s = self.db.get_session(chat_id)
         raw = str(s.get("run_dir", "")).strip()
@@ -773,10 +991,15 @@ class Bot:
         self.db.bind_run(chat_id, resolved)
         self.db.set_lang(chat_id, lang)
         self._append_note(resolved, f"telegram/goal {goal}")
+        ack = build_employee_note_reply(goal, lang)
         if str(lang).lower() == "en":
             self.tg.send(chat_id=chat_id, text="Task created and bound. Keep chatting to add requirements, or send 'continue' to push progress.")
+            if ack:
+                self.tg.send(chat_id=chat_id, text=ack)
         else:
             self.tg.send(chat_id=chat_id, text="已创建并绑定新任务。你可以继续聊天补充需求，或发送“继续”推进流程。")
+            if ack:
+                self.tg.send(chat_id=chat_id, text=ack)
 
     def _collect_prompts(self, run_dir: Path) -> list[tuple[Path, PromptItem]]:
         outbox = run_dir / "outbox"
@@ -835,20 +1058,37 @@ class Bot:
         q = sum(1 for _, i in prompts if i.prompt_type == "question")
         a = sum(1 for _, i in prompts if i.prompt_type == "agent_request" and i.recipient)
         n = len(prompts) - q - a
+        run_state = self._run_status(run_dir) or ("unknown" if str(lang).lower() == "en" else "未知")
         trace = run_dir / "TRACE.md"
         t = ""
         if trace.exists():
             t = trace.read_text(encoding="utf-8", errors="replace")
-        evt = last_trace_event(t)
-        evt_human = _humanize_trace_event_line("- " + evt, lang) if evt else ""
+        done_text = self._customer_done_text(t, lang)
+        plan_text = self._customer_next_plan_text(prompts, run_state, lang)
+        fail_text = self._first_failure_text(run_dir)
+        if fail_text:
+            issue_text = fail_text
+        elif q > 0:
+            if str(lang).lower() == "en":
+                issue_text = "Waiting for your decision on a key choice."
+            else:
+                issue_text = "等待你确认一个关键选项。"
+        else:
+            issue_text = "none" if str(lang).lower() == "en" else "暂无明显阻塞"
         if str(lang).lower() == "en":
             return (
-                f"Current todo: decisions {q}, agent tasks {a}, info requests {n}.\n"
-                f"Latest progress: {(evt_human or evt or 'No new progress yet.')}"
+                f"Current run state: {run_state}.\n"
+                f"Doing now: {plan_text}\n"
+                f"Done: {done_text}\n"
+                f"Key issue: {issue_text}\n"
+                f"Current todo: decisions {q}, agent tasks {a}, info requests {n}."
             )
         return (
-            f"当前待办：提问 {q}，agent 任务 {a}，信息补充 {n}。\n"
-            f"最新进展：{(evt_human or evt or '暂无新的进展。')}"
+            f"当前运行状态：{run_state}。\n"
+            f"现在打算做：{plan_text}\n"
+            f"刚做完：{done_text}\n"
+            f"关键问题：{issue_text}\n"
+            f"当前待办：提问 {q}，agent 任务 {a}，信息补充 {n}。"
         )
 
     def _decision_text(self, run_dir: Path, lang: str) -> str:
@@ -971,25 +1211,37 @@ class Bot:
         iterations = parsed.get("iterations", "")
         is_blocked = (next_step == "blocked") or ("blocked" in parsed and bool(parsed.get("blocked", "")))
         if rc == 0 and is_blocked:
+            item_name = describe_artifact_for_customer(path, lang)
+            owner_name = _role_label(owner, lang) if owner else ("N/A" if str(lang).lower() == "en" else "未给出")
+            issue_text = describe_reason_for_customer(reason, path, lang)
             if str(lang).lower() == "en":
                 msg = (
-                    f"I moved forward {max(1, steps)} step(s), but we are waiting now.\n"
-                    f"Reason: {reason or 'waiting for required artifact'}.\n"
-                    f"Responsible stage: {owner or 'N/A'}."
+                    f"Done: moved forward {max(1, steps)} step(s).\n"
+                    f"Doing now: prepare {item_name}.\n"
+                    f"Key issue: {issue_text}.\n"
+                    f"Owner: {owner_name}."
                 )
             else:
                 msg = (
-                    f"我已推进 {max(1, steps)} 步，但现在在等待中。\n"
-                    f"原因：{reason or '等待必要产物'}。\n"
-                    f"当前负责环节：{owner or '未给出'}。"
+                    f"刚做完：已推进 {max(1, steps)} 步。\n"
+                    f"现在打算做：先完成{item_name}。\n"
+                    f"关键问题：{issue_text}\n"
+                    f"当前负责人：{owner_name}。"
                 )
             self.tg.send(chat_id=chat_id, text=msg)
             return
         if rc == 0:
+            item_name = describe_artifact_for_customer(path or next_step, lang)
             if str(lang).lower() == "en":
-                msg = f"Advance completed. Next: {next_step or 'unknown'}."
+                msg = (
+                    f"Done: moved forward {max(1, steps)} step(s).\n"
+                    f"Doing now: continue with {item_name}."
+                )
             else:
-                msg = f"推进完成。下一步：{next_step or '未给出'}。"
+                msg = (
+                    f"刚做完：已推进 {max(1, steps)} 步。\n"
+                    f"现在打算做：继续处理{item_name}。"
+                )
             self.tg.send(chat_id=chat_id, text=msg)
             return
         detail = short_tail(merged, max_lines=16, max_chars=1400)
@@ -1241,7 +1493,9 @@ class Bot:
             trace_tail = short_tail(trace.read_text(encoding="utf-8", errors="replace"), max_lines=10, max_chars=1000)
         prompt = (
             "You are CTCP Telegram customer-service router. Return JSON only.\n"
-            "Keys: intent,reply,note,agent_summary,advance_steps.\n"
+            "Speak like a professional support employee: acknowledge, action, and concise next step.\n"
+            "If key info is missing, ask at most one clarification question in follow_up.\n"
+            "Keys: intent,reply,note,agent_summary,advance_steps,follow_up.\n"
             "intent in: note,status,advance,outbox,bundle,report,decision,lang_zh,lang_en.\n"
             "Use concise reply. note should be concise requirement line. agent_summary <=180 chars.\n"
             f"lang={lang}\nrun_dir={run_dir}\npending: question={q}, agent_request={a}, prompt={n}\n"
@@ -1257,7 +1511,14 @@ class Bot:
             intent = str(doc.get("intent", "note")).strip().lower()
             if intent not in {"note", "status", "advance", "outbox", "bundle", "report", "decision", "lang_zh", "lang_en"}:
                 intent = "note"
-            return ApiDecision(intent=intent, reply=str(doc.get("reply", "")).strip(), note=str(doc.get("note", "")).strip(), summary=str(doc.get("agent_summary", "")).strip(), steps=max(1, min(3, parse_int(str(doc.get("advance_steps", "1")), 1))))
+            return ApiDecision(
+                intent=intent,
+                reply=str(doc.get("reply", "")).strip(),
+                note=str(doc.get("note", "")).strip(),
+                summary=str(doc.get("agent_summary", "")).strip(),
+                steps=max(1, min(3, parse_int(str(doc.get("advance_steps", "1")), 1))),
+                follow_up=str(doc.get("follow_up", "")).strip(),
+            )
         except Exception:
             return None
 
@@ -1306,12 +1567,13 @@ class Bot:
                 self.tg.send(chat_id=chat_id, text=d.reply)
             self.tg.send(chat_id=chat_id, text=self._decision_text(run_dir, lang))
         else:
-            chat_reply = d.reply or smalltalk_reply(text, lang)
+            chat_reply = d.reply or smalltalk_reply(text, lang) or build_employee_note_reply(note, lang)
             if chat_reply:
                 self.tg.send(chat_id=chat_id, text=chat_reply)
-            else:
-                p = self._append_note(run_dir, f"telegram/note {note}")
-                self.tg.send(chat_id=chat_id, text=f"{i18n(lang, 'saved_note')}: {p.relative_to(run_dir).as_posix()}")
+            p = self._append_note(run_dir, f"telegram/note {note}")
+            self.tg.send(chat_id=chat_id, text=f"{i18n(lang, 'saved_note')}: {p.relative_to(run_dir).as_posix()}")
+        if d.follow_up:
+            self.tg.send(chat_id=chat_id, text=d.follow_up)
         if summary:
             self._append_summary(run_dir, text, summary, d.intent)
         return True
@@ -1344,6 +1606,7 @@ class Bot:
             if chat_reply:
                 self.tg.send(chat_id=chat_id, text=chat_reply)
             else:
+                self.tg.send(chat_id=chat_id, text=build_employee_note_reply(text, lang))
                 p = self._append_note(run_dir, f"telegram/note {text}")
                 self.tg.send(chat_id=chat_id, text=f"{i18n(lang, 'saved_note')}: {p.relative_to(run_dir).as_posix()}")
 

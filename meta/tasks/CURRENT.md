@@ -96,9 +96,37 @@
 - [x] Code changes allowed
 - [x] Doc/spec-first change included in same patch (`docs/10_team_mode.md`)
 - [x] `meta/reports/LAST.md` updated in same patch
+
+## Update 2026-03-01 - 客户可理解的项目进度口径
+
+### Context
+- 用户要求项目播报直接可被客户理解，重点是“现在打算做什么功能、做完什么功能、关键问题是什么”。  
+
+### DoD Mapping (from request)
+- [x] DoD-1: `status` 输出包含“现在打算做 / 刚做完 / 关键问题”三段式。
+- [x] DoD-2: `advance` 输出改为客户口径，避免仅给内部流水状态。
+- [x] DoD-3: TRACE 主动推送优先总结“Done / Doing / Key issue”。
+- [x] DoD-4: 增加测试覆盖新口径函数。
 - [x] `scripts/verify_repo.ps1` final pass recorded
 
 ### Follow-up (UX polish)
 - [x] `advance/status` 在对话中改为自然语言总结，减少原始日志直出。
 - [x] 保留关键信息：阻塞原因、owner、target-path、run 状态、迭代信息。
 - [x] 修复 API agent 编码异常（surrogate 字符导致的 `UnicodeEncodeError`）以恢复连续推进。
+
+## Update 2026-03-01 - Telegram 客服“员工感”增强
+
+### Context
+- 用户希望客服 bot 更像真实员工，而不是仅做命令路由或消息记录。
+- 约束：保持现有 CTCP run_dir 协作协议不变，不新增第三方依赖，不改变 verify 入口。
+
+### DoD Mapping (from request)
+- [x] DoD-1: 普通对话进入 note 分支时，先给出员工式确认/推进回复，而非仅回写路径提示。
+- [x] DoD-2: API 路由 prompt 加入“确认-行动-下一步”客服口吻约束，并支持可选 follow-up 澄清问题。
+- [x] DoD-3: 状态消息包含 run state，提升客户感知。
+- [x] DoD-4: 新增测试覆盖员工式回复核心逻辑。
+
+### Acceptance (this update)
+- [x] Code changes allowed
+- [x] Doc/spec-first change included in same patch (`docs/10_team_mode.md`)
+- [x] `meta/reports/LAST.md` updated in same patch
