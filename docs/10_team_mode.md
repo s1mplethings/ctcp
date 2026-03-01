@@ -40,3 +40,32 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
 - 产物与日志：
   - 目标产物写入 `${run_dir}/<target_path>`（严格 run_dir 范围）。
   - 执行日志写入 `${run_dir}/logs/dispatch_codex_agent.stdout.log` 与 `${run_dir}/logs/dispatch_codex_agent.stderr.log`。
+
+## 对话式 Telegram 客服（可选）
+- 用途：把 `run_dir/outbox/TRACE` 变成聊天入口，不改变默认 headless/离线流程。
+- 主用法（自然语言）：
+  - 用户第一句直接说目标，例如“做一个新程序”，bot 自动 `new-run` 并绑定 `run_dir`。
+  - 绑定后继续聊天补充需求，bot 会记录到 `artifacts/USER_NOTES.md`。
+  - 用户问“进度/卡点/继续/发报告”，bot 自动识别并执行 `status/advance/report` 类动作。
+  - `status/advance` 回复会优先用自然语言总结（阻塞原因、负责人、目标路径等），避免直接暴露原始日志块。
+  - bot 后台主动推送：`Type: question`、普通 outbox、`failure_bundle.zip`、`TRACE` 增量。
+- API 客服层（可选）：
+  - bot 可通过 OpenAI 兼容 API 做意图路由和客服回复（默认开启，可用 `CTCP_TG_API_ENABLED=0` 关闭）。
+  - 每次对话可产出 `artifacts/API_BOT_SUMMARY.md`，并生成 `inbox/apibot/requests/REQ_*.json`。
+  - 派发 `Type: agent_request` 时会自动附带 `USER_NOTES` 与 `API_BOT_SUMMARY` 尾部，帮助其他 agent 快速执行。
+- 启动示例：
+```powershell
+$env:CTCP_TG_BOT_TOKEN="<token>"
+$env:CTCP_TG_ALLOWLIST="123456789"               # 可选
+$env:CTCP_REPO_ROOT="D:\.c_projects\adc\ctcp"    # 可选
+$env:CTCP_TG_STATE_DB="$HOME\.ctcp\telegram_bot\state.sqlite3"  # 可选
+$env:CTCP_TG_POLL_SECONDS="2"                    # 可选
+$env:CTCP_TG_TICK_SECONDS="2"                    # 可选
+$env:CTCP_TG_API_ENABLED="1"                     # 可选（默认 1）
+$env:CTCP_TG_API_MODEL="gpt-4.1-mini"            # 可选
+python tools\telegram_cs_bot.py
+```
+- 安全建议：
+  - 强烈建议配置 `CTCP_TG_ALLOWLIST`。
+  - 不要把 token 写入仓库文件或日志。
+  - 所有回写仅允许 `run_dir` 内 `Target-Path`，禁止绝对路径和 `..` 逃逸。

@@ -154,6 +154,15 @@ def _safe_float_env(name: str, default: float, *, minimum: float, maximum: float
     return value
 
 
+def _sanitize_text_for_json(value: str) -> str:
+    text = str(value or "")
+    try:
+        text.encode("utf-8")
+        return text
+    except UnicodeEncodeError:
+        return text.encode("utf-8", errors="replace").decode("utf-8", errors="replace")
+
+
 def _post_json(
     *,
     endpoint: str,
@@ -255,10 +264,11 @@ def call_openai_responses(
     max_attempts = _safe_int_env("SDDAI_OPENAI_MAX_ATTEMPTS", 3, minimum=1, maximum=6)
     base_delay_sec = _safe_float_env("SDDAI_OPENAI_RETRY_BASE_DELAY_SEC", 0.75, minimum=0.0, maximum=10.0)
 
+    safe_prompt = _sanitize_text_for_json(prompt)
     responses_endpoint = root.rstrip("/") + "/responses"
     responses_payload = {
         "model": model,
-        "input": prompt,
+        "input": safe_prompt,
     }
     doc: dict[str, Any] | None = None
     reason = ""
@@ -285,7 +295,7 @@ def call_openai_responses(
         chat_endpoint = root.rstrip("/") + "/chat/completions"
         chat_payload = {
             "model": model,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": [{"role": "user", "content": safe_prompt}],
         }
         chat_doc, chat_reason = _call_with_retry(
             endpoint=chat_endpoint,
