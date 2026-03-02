@@ -29,6 +29,31 @@ MAX_MESSAGE_CHARS = 3800
 MAX_OUTBOX_PUSH_PER_TICK = 3
 MAX_AGENT_DISPATCH_PER_TICK = 1
 TRACE_COOLDOWN_SECONDS = 10.0
+AUTO_ADVANCE_STEPS_PER_TICK = 1
+INTERNAL_REPLY_MARKERS = (
+    "trace",
+    "trace.md",
+    "outbox",
+    "artifacts/",
+    "logs/",
+    "diff --git",
+    "run.json",
+    "guardrails",
+    "guardrails_written",
+    "run_created",
+    "run_dir",
+    "orchestrator",
+    "step",
+)
+TRACE_MILESTONES_ZH = {
+    "guardrails_written": "已完成范围与约束初始化",
+    "run_created": "已创建本次运行并准备推进",
+}
+TRACE_MILESTONES_EN = {
+    "guardrails_written": "Scope and constraints initialization completed.",
+    "run_created": "Run created and ready to proceed.",
+}
+BACKTICK_FILE_RE = re.compile(r"`[^`\n]+\.(md|json|patch|txt|yaml|yml|log|zip|py)`", flags=re.IGNORECASE)
 
 
 def now_iso() -> str:
@@ -163,6 +188,8 @@ def parse_api_json(text: str) -> dict[str, Any] | None:
 def detect_intent(text: str) -> tuple[str, str]:
     raw = str(text or "").strip()
     low = raw.lower()
+    if any(k in raw for k in ("查看进度", "看进度", "调试")) or re.search(r"\bdebug\b", low):
+        return ("debug", "")
     if "英文" in raw or re.search(r"\benglish\b|\ben\b", low):
         return ("lang", "en")
     if "中文" in raw or re.search(r"\bchinese\b|\bzh\b", low):
@@ -239,14 +266,221 @@ def smalltalk_reply(text: str, lang: str) -> str:
         return "不客气。你继续说需求，我会按客服模式整理并派发。"
     if any(x in raw for x in ("你是谁", "你能做什么", "怎么用")) or "what can you do" in low:
         if str(lang).lower() == "en":
-            return "I can chat naturally, track your requirements into run_dir, push outbox/questions, and coordinate agent requests/results."
-        return "我可以自然对话、把需求写入 run_dir、主动推送 outbox/question，并协调 agent 的 request/result。"
+            return _compose_three_part_reply(
+                lang=lang,
+                conclusion="I can lead this delivery as your support owner.",
+                plans=["I translate your needs into an actionable plan and keep execution moving."],
+                next_question="Do you want me to start from your highest-priority outcome?",
+            )
+        return _compose_three_part_reply(
+            lang=lang,
+            conclusion="我可以作为负责人推进你的客服项目。",
+            plans=["我会把你的需求转成可执行计划，并持续推进落地。"],
+            next_question="你希望我先从最高优先级目标开始吗？",
+        )
     return ""
 
 
 def _contains_any(text: str, keywords: tuple[str, ...]) -> bool:
     raw = str(text or "").lower()
     return any(k.lower() in raw for k in keywords)
+
+
+def _extract_single_question(text: str) -> str:
+    raw = str(text or "").strip()
+    if not raw:
+        return ""
+    for ln in raw.splitlines():
+        line = ln.strip()
+        if not line:
+            continue
+        line = re.sub(r"^(下一步|next)\s*[:：]\s*", "", line, flags=re.IGNORECASE).strip()
+        if "？" in line or "?" in line:
+            q = re.split(r"[?？]", line, maxsplit=1)[0].strip()
+            if q:
+                return q
+    return ""
+
+
+def _default_plan_rows(lang: str, context_text: str) -> list[str]:
+    raw = str(context_text or "").strip()
+    low = raw.lower()
+    if str(lang).lower() == "en":
+        if any(k in low for k in ("point cloud", "3d", "mapping", "drone", "semantic", "video")):
+            return [
+                "I will first lock output format, data quality target, and latency constraints.",
+                "Then I will provide an executable technical path with concrete milestones.",
+            ]
+        if any(k in low for k in ("support", "telegram", "wechat", "faq", "handoff", "knowledge")):
+            return [
+                "I will align customer journey and first-channel scope before implementation.",
+                "Then I will push a short execution plan with milestone check-ins.",
+            ]
+        return [
+            "I will align priorities first, then execute in concrete steps.",
+            "I will keep milestone updates concise and ask for one key confirmation when needed.",
+        ]
+    if any(k in raw for k in ("点云", "3D", "3d", "建图", "无人机", "语义", "视频")):
+        return [
+            "我会先对齐输出格式、质量目标和时延约束。",
+            "再给出可执行技术路线与里程碑推进计划。",
+        ]
+    if any(k in raw for k in ("客服", "Telegram", "微信", "知识库", "FAQ", "转人工")):
+        return [
+            "我会先对齐客户旅程与首发渠道范围，再进入实现。",
+            "之后按里程碑推进，并在关键节点只向你确认一个问题。",
+        ]
+    return [
+        "我会先确认目标与优先级，再拆成可执行步骤。",
+        "我会持续同步里程碑，并在关键点向你确认。",
+    ]
+
+
+def _default_next_question(lang: str) -> str:
+    if str(lang).lower() == "en":
+        return "Which key outcome should I prioritize first?"
+    return "你希望我先优先哪个关键目标？"
+
+
+def _normalize_next_question(text: str, lang: str) -> str:
+    raw = re.sub(r"\s+", " ", str(text or "").strip())
+    if not raw:
+        raw = _default_next_question(lang)
+    head = re.split(r"[?？]", raw, maxsplit=1)[0].strip()
+    if head:
+        raw = head
+    suffix = "?" if str(lang).lower() == "en" else "？"
+    if not raw.endswith(("?", "？")):
+        raw += suffix
+    return raw
+
+
+def _compose_three_part_reply(
+    *,
+    lang: str,
+    conclusion: str,
+    plans: list[str] | tuple[str, ...],
+    next_question: str,
+) -> str:
+    plan_rows = [re.sub(r"\s+", " ", str(p).strip()) for p in plans if str(p).strip()]
+    if not plan_rows:
+        if str(lang).lower() == "en":
+            plan_rows = ["I will clarify priorities and move execution in small, verifiable steps."]
+        else:
+            plan_rows = ["我会先对齐优先级，再按可验证的小步执行推进。"]
+    plan_rows = plan_rows[:2]
+    question = _normalize_next_question(next_question, lang)
+
+    if str(lang).lower() == "en":
+        if len(plan_rows) == 1:
+            plan_text = plan_rows[0]
+        else:
+            plan_text = f"1) {plan_rows[0]} 2) {plan_rows[1]}"
+        return "\n".join(
+            [
+                f"Conclusion: {re.sub(r'\\s+', ' ', str(conclusion).strip())}",
+                f"Plan: {plan_text}",
+                f"Next: {question}",
+            ]
+        )
+    if len(plan_rows) == 1:
+        plan_text = plan_rows[0]
+    else:
+        plan_text = f"1) {plan_rows[0]}；2) {plan_rows[1]}"
+    return "\n".join(
+        [
+            f"结论：{re.sub(r'\\s+', ' ', str(conclusion).strip())}",
+            f"方案：{plan_text}",
+            f"下一步：{question}",
+        ]
+    )
+
+
+def _line_has_internal_marker(line: str) -> bool:
+    text = str(line or "").strip()
+    if not text:
+        return False
+    low = text.lower()
+    if any(marker in low for marker in INTERNAL_REPLY_MARKERS):
+        return True
+    if BACKTICK_FILE_RE.search(text):
+        return True
+    if re.search(r"\b[a-z0-9_.-]+\.(md|json|patch|txt|yaml|yml|log|zip|py)\b", low):
+        return True
+    if "/" in text and re.search(r"(artifacts|outbox|logs|trace)\b", low):
+        return True
+    return False
+
+
+def sanitize_customer_reply_text(text: str, lang: str) -> tuple[str, list[str]]:
+    lines = [ln.strip() for ln in str(text or "").splitlines() if ln.strip()]
+    kept: list[str] = []
+    removed: list[str] = []
+    for ln in lines:
+        if _line_has_internal_marker(ln):
+            removed.append(ln)
+            continue
+        kept.append(ln)
+    if not kept:
+        if str(lang).lower() == "en":
+            kept = ["I have completed initialization and moved to the next milestone."]
+        else:
+            kept = ["我已经完成任务初始化，下一步进入方案与执行计划。"]
+    return "\n".join(kept), removed
+
+
+def build_user_reply_payload(
+    *,
+    reply_text: str,
+    next_question: str,
+    lang: str,
+    ops_status: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    cleaned, removed = sanitize_customer_reply_text(reply_text, lang)
+    extracted_question = _extract_single_question(cleaned)
+    question = _normalize_next_question(next_question or extracted_question, lang)
+    labels = ("结论：", "方案：", "下一步：") if str(lang).lower() != "en" else ("Conclusion:", "Plan:", "Next:")
+    final_text = cleaned
+    if not all(label in final_text for label in labels):
+        cleaned_lines = [ln.strip() for ln in cleaned.splitlines() if ln.strip()]
+        only_question = bool(extracted_question) and len(cleaned_lines) <= 2
+        conclusion = _brief_text(cleaned, max_chars=90)
+        if only_question:
+            if str(lang).lower() == "en":
+                conclusion = "I have taken ownership and I am moving this forward."
+            else:
+                conclusion = "我已接手并会继续负责推进。"
+        if not conclusion:
+            if str(lang).lower() == "en":
+                conclusion = "I have taken ownership and I am moving this forward."
+            else:
+                conclusion = "我已接手并会持续负责推进。"
+        final_text = _compose_three_part_reply(
+            lang=lang,
+            conclusion=conclusion,
+            plans=_default_plan_rows(lang, cleaned),
+            next_question=question,
+        )
+    ops = dict(ops_status or {})
+    ops["raw_reply_text"] = str(reply_text or "")
+    if removed:
+        ops["removed_internal_lines"] = removed
+    return {
+        "reply_text": final_text,
+        "next_question": question,
+        "ops_status": ops,
+    }
+
+
+def _event_milestone_text(event_key: str, lang: str) -> str:
+    key = str(event_key or "").strip().lower()
+    if str(lang).lower() == "en":
+        if key in TRACE_MILESTONES_EN:
+            return TRACE_MILESTONES_EN[key]
+        return "Advanced to the next stage (internal record saved)."
+    if key in TRACE_MILESTONES_ZH:
+        return TRACE_MILESTONES_ZH[key]
+    return "已推进到下一阶段（内部记录已保存）"
 
 
 def build_employee_note_reply(text: str, lang: str) -> str:
@@ -303,21 +537,30 @@ def build_employee_note_reply(text: str, lang: str) -> str:
             followups.append("Should we support handoff to a human agent?")
         if need_knowledge:
             followups.append("Do you already have FAQ/knowledge-base content to import?")
-        if followups:
-            return (
-                f"Understood. I will move forward with: {brief}\n"
-                f"To make it feel like a real employee, please confirm: {' '.join(followups[:2])}"
-            )
-        return f"Understood. I will proceed with: {brief}"
+        return _compose_three_part_reply(
+            lang=lang,
+            conclusion=f"I have taken ownership of: {brief}",
+            plans=[
+                "I will keep this customer-facing and execution-oriented.",
+                "I will prioritize one path first and expand after first validation.",
+            ],
+            next_question=followups[0] if followups else _default_next_question(lang),
+        )
     if need_channel:
         followups.append("你希望先上线在哪个渠道（Telegram / Web / 微信）？")
     if need_handoff:
         followups.append("是否要支持转人工客服？")
     if need_knowledge:
         followups.append("你是否已有 FAQ/知识库内容要导入？")
-    if followups:
-        return f"收到，我先按“{brief}”推进。\n为了更像真实员工客服，请再确认：{' '.join(followups[:2])}"
-    return f"收到，我先按“{brief}”推进。"
+    return _compose_three_part_reply(
+        lang=lang,
+        conclusion=f"我已接手这项需求：{brief}",
+        plans=[
+            "我会先给出可执行方案，并按里程碑推进。",
+            "默认采用最短路径先落地，再根据反馈扩展。",
+        ],
+        next_question=followups[0] if followups else _default_next_question(lang),
+    )
 
 
 def last_trace_event(trace_text: str) -> str:
@@ -382,47 +625,18 @@ def _humanize_trace_event_line(line: str, lang: str) -> str:
     body = s[2:].strip()
     m = re.search(r"\|\s*([^:]+):\s*([A-Za-z0-9_]+)\s*\(([^)]+)\)", body)
     if m:
-        role = _role_label(m.group(1).strip(), lang)
-        evt = m.group(2).strip().upper()
-        path = m.group(3).strip()
-        name = Path(path).name or path
-        if str(lang).lower() == "en":
-            if evt in {"LOCAL_EXEC_COMPLETED", "GIT_IDENTITY_CAPTURED", "PLAN_TEMPLATE_WRITTEN"}:
-                return f"- {role}: completed `{name}`"
-            if evt in {"LOCAL_EXEC_FAILED", "PATCH_REJECTED"}:
-                return f"- {role}: failed at `{name}`"
-            if evt in {"VERIFY_PASSED", "RUN_PASS"}:
-                return "- verification passed, workflow completed"
-            if evt in {"VERIFY_STARTED"}:
-                return "- verification started"
-            if evt in {"BUNDLE_CREATED"}:
-                return "- failure bundle generated"
-            if evt in {"APPLY_BLOCKED_DIRTY"}:
-                return "- apply blocked because repo is dirty"
-            return f"- {role}: {evt.lower()} (`{name}`)"
-        if evt in {"LOCAL_EXEC_COMPLETED", "GIT_IDENTITY_CAPTURED", "PLAN_TEMPLATE_WRITTEN"}:
-            return f"- {role}已完成：`{name}`"
-        if evt in {"LOCAL_EXEC_FAILED", "PATCH_REJECTED"}:
-            return f"- {role}执行失败：`{name}`"
-        if evt in {"VERIFY_PASSED", "RUN_PASS"}:
-            return "- 验收通过，流程已完成"
-        if evt in {"VERIFY_STARTED"}:
-            return "- 已开始验收检查"
-        if evt in {"BUNDLE_CREATED"}:
-            return "- 已生成失败证据包"
-        if evt in {"APPLY_BLOCKED_DIRTY"}:
-            return "- 应用补丁被拦截：仓库当前有未提交改动"
-        return f"- {role}：{evt.lower()}（`{name}`）"
+        evt = m.group(2).strip().lower()
+        return f"- {_event_milestone_text(evt, lang)}"
     if str(lang).lower() == "en":
         if "run already PASS" in body:
-            return "- run already passed"
+            return "- Workflow verification has passed."
         if "blocked:" in body:
-            return "- currently blocked; waiting for required artifact"
+            return "- Waiting for one required input before continuing."
     else:
         if "run already PASS" in body:
-            return "- 当前流程已是通过状态"
+            return "- 当前流程已通过验收。"
         if "blocked:" in body:
-            return "- 当前处于等待状态，需要补齐产物后继续"
+            return "- 当前等待一项必要输入后继续推进。"
     return ""
 
 
@@ -441,39 +655,47 @@ def _humanize_trace_delta(delta: str, lang: str) -> str:
         dedup.append(ln)
     if not dedup:
         if str(lang).lower() == "en":
-            return "Progress updated. Send 'status' for current state."
-        return "进度已更新。发送“进度”可查看当前状态。"
+            return _compose_three_part_reply(
+                lang=lang,
+                conclusion="Progress is continuing normally.",
+                plans=["I have advanced the workflow to the next milestone."],
+                next_question=_default_next_question(lang),
+            )
+        return _compose_three_part_reply(
+            lang=lang,
+            conclusion="当前推进正常。",
+            plans=["我已把流程推进到下一里程碑。"],
+            next_question=_default_next_question(lang),
+        )
     picked = dedup[-4:]
     compact = [x[2:].strip().replace("`", "") if x.startswith("- ") else x.replace("`", "") for x in picked]
     if str(lang).lower() == "en":
         done = [x for x in compact if any(k in x.lower() for k in ("completed", "passed", "workflow completed"))]
         issues = [x for x in compact if any(k in x.lower() for k in ("failed", "blocked", "waiting"))]
         doing = [x for x in compact if any(k in x.lower() for k in ("started", "in progress"))]
-        lines_out: list[str] = []
-        if done:
-            lines_out.append(f"- Done: {done[-1]}")
-        if doing:
-            lines_out.append(f"- Doing now: {doing[-1]}")
+        conclusion = done[-1] if done else "Progress is continuing."
+        plan_rows = [doing[-1] if doing else "Continue advancing the next milestone."]
         if issues:
-            lines_out.append(f"- Key issue: {issues[-1]}")
-        if lines_out:
-            return "Progress update:\n" + "\n".join(lines_out)
-        return "Progress update:\n" + "\n".join(picked)
+            plan_rows.append(f"Risk to handle: {issues[-1]}")
+        return _compose_three_part_reply(
+            lang=lang,
+            conclusion=conclusion,
+            plans=plan_rows,
+            next_question=_default_next_question(lang),
+        )
     done = [x for x in compact if any(k in x for k in ("已完成", "验收通过", "流程已完成"))]
     issues = [x for x in compact if any(k in x for k in ("失败", "拦截", "等待"))]
     doing = [x for x in compact if any(k in x for k in ("已开始", "进行中"))]
-    lines_out = []
-    if done:
-        lines_out.append(f"- 刚做完：{done[-1]}")
-    if doing:
-        lines_out.append(f"- 现在在做：{doing[-1]}")
+    conclusion = done[-1] if done else "已推进到下一里程碑。"
+    plan_rows = [doing[-1] if doing else "继续推进下一阶段里程碑。"]
     if issues:
-        lines_out.append(f"- 关键问题：{issues[-1]}")
-    if lines_out:
-        return "进展更新：\n" + "\n".join(lines_out)
-    if str(lang).lower() == "en":
-        return "Progress update:\n" + "\n".join(picked)
-    return "进展更新：\n" + "\n".join(picked)
+        plan_rows.append(f"当前风险：{issues[-1]}")
+    return _compose_three_part_reply(
+        lang=lang,
+        conclusion=conclusion,
+        plans=plan_rows,
+        next_question=_default_next_question(lang),
+    )
 
 
 def describe_artifact_for_customer(path: str, lang: str) -> str:
@@ -492,7 +714,7 @@ def describe_artifact_for_customer(path: str, lang: str) -> str:
             return "code change patch"
         if low.endswith("artifacts/verify_report.json"):
             return "verification report"
-        return Path(p).name if p else "next task item"
+        return "next milestone task"
     if low.endswith("artifacts/plan_draft.md"):
         return "项目方案草稿"
     if low.endswith("reviews/review_contract.md"):
@@ -505,7 +727,7 @@ def describe_artifact_for_customer(path: str, lang: str) -> str:
         return "代码改动包"
     if low.endswith("artifacts/verify_report.json"):
         return "验收报告"
-    return Path(p).name if p else "下一项任务"
+    return "下一阶段任务"
 
 
 def describe_reason_for_customer(reason: str, path: str, lang: str) -> str:
@@ -562,6 +784,8 @@ class Config:
     api_enabled: bool
     api_model: str
     api_timeout_sec: int
+    note_ack_path: bool
+    progress_push_enabled: bool
 
     @staticmethod
     def load() -> "Config":
@@ -586,7 +810,8 @@ class Config:
             state_db=state_db,
             poll_seconds=parse_int(os.environ.get("CTCP_TG_POLL_SECONDS", "2"), 2),
             tick_seconds=parse_int(os.environ.get("CTCP_TG_TICK_SECONDS", "2"), 2),
-            auto_advance=parse_bool(os.environ.get("CTCP_TG_AUTO_ADVANCE", "0"), False),
+            # Full-auto mode is mandatory: the bot keeps advancing whenever no user decision is pending.
+            auto_advance=True,
             api_enabled=parse_bool(os.environ.get("CTCP_TG_API_ENABLED", "1"), True),
             api_model=(
                 os.environ.get("CTCP_TG_API_MODEL", "")
@@ -595,6 +820,8 @@ class Config:
                 or "gpt-4.1-mini"
             ).strip(),
             api_timeout_sec=parse_int(os.environ.get("CTCP_TG_API_TIMEOUT_SEC", "60"), 60),
+            note_ack_path=parse_bool(os.environ.get("CTCP_TG_NOTE_ACK_PATH", "0"), False),
+            progress_push_enabled=parse_bool(os.environ.get("CTCP_TG_PROGRESS_PUSH", "0"), False),
         )
 
 
@@ -885,6 +1112,34 @@ class Bot:
         atomic_write_text(req_path, json.dumps({"type": "apibot_summary", "req_id": req_id, "run_dir": str(run_dir), "summary": summary.strip(), "source_text": user_text.strip(), "created_at": now_iso()}, ensure_ascii=False, indent=2) + "\n")
         return s_path, req_path
 
+    def _append_ops_status(self, run_dir: Path, stage: str, payload: dict[str, Any]) -> None:
+        row = {
+            "ts": now_iso(),
+            "stage": stage,
+            "payload": payload,
+        }
+        append_text(run_dir / "logs" / "telegram_cs_bot.ops.jsonl", json.dumps(row, ensure_ascii=False) + "\n")
+
+    def _send_customer_reply(
+        self,
+        *,
+        chat_id: int,
+        lang: str,
+        run_dir: Path,
+        stage: str,
+        reply_text: str,
+        next_question: str = "",
+        ops_status: dict[str, Any] | None = None,
+    ) -> None:
+        payload = build_user_reply_payload(
+            reply_text=reply_text,
+            next_question=next_question,
+            lang=lang,
+            ops_status=ops_status,
+        )
+        self._append_ops_status(run_dir, stage, payload.get("ops_status", {}))
+        self.tg.send(chat_id=chat_id, text=str(payload.get("reply_text", "")))
+
     def _run_status(self, run_dir: Path) -> str:
         p = run_dir / "RUN.json"
         if not p.exists():
@@ -974,7 +1229,15 @@ class Bot:
             return
         rc, out, err = self._run_orchestrate(["new-run", "--goal", goal])
         if rc != 0:
-            self.tg.send(chat_id=chat_id, text=f"new-run rc={rc}\n{short_tail((out or '') + '\n' + (err or ''), max_lines=16, max_chars=1800)}")
+            self.tg.send(
+                chat_id=chat_id,
+                text=_compose_three_part_reply(
+                    lang=lang,
+                    conclusion="当前初始化未成功完成。",
+                    plans=["我会先检查失败原因并立即重试。"],
+                    next_question="你希望我继续自动重试，还是先把关键报错摘要发你确认？",
+                ),
+            )
             return
         run_dir = ""
         for ln in (out or "").splitlines():
@@ -992,14 +1255,15 @@ class Bot:
         self.db.set_lang(chat_id, lang)
         self._append_note(resolved, f"telegram/goal {goal}")
         ack = build_employee_note_reply(goal, lang)
-        if str(lang).lower() == "en":
-            self.tg.send(chat_id=chat_id, text="Task created and bound. Keep chatting to add requirements, or send 'continue' to push progress.")
-            if ack:
-                self.tg.send(chat_id=chat_id, text=ack)
-        else:
-            self.tg.send(chat_id=chat_id, text="已创建并绑定新任务。你可以继续聊天补充需求，或发送“继续”推进流程。")
-            if ack:
-                self.tg.send(chat_id=chat_id, text=ack)
+        self._send_customer_reply(
+            chat_id=chat_id,
+            lang=lang,
+            run_dir=resolved,
+            stage="new_run_created",
+            reply_text=ack,
+            next_question=_default_next_question(lang),
+            ops_status={"goal": goal, "run_created": True},
+        )
 
     def _collect_prompts(self, run_dir: Path) -> list[tuple[Path, PromptItem]]:
         outbox = run_dir / "outbox"
@@ -1076,19 +1340,23 @@ class Bot:
         else:
             issue_text = "none" if str(lang).lower() == "en" else "暂无明显阻塞"
         if str(lang).lower() == "en":
-            return (
-                f"Current run state: {run_state}.\n"
-                f"Doing now: {plan_text}\n"
-                f"Done: {done_text}\n"
-                f"Key issue: {issue_text}\n"
-                f"Current todo: decisions {q}, agent tasks {a}, info requests {n}."
+            return _compose_three_part_reply(
+                lang=lang,
+                conclusion=f"Run is active at state: {run_state}.",
+                plans=[
+                    f"Current focus: {plan_text}",
+                    f"Latest milestone: {done_text}; Key issue: {issue_text}",
+                ],
+                next_question="Should I keep auto-advancing, or pause at the next decision point?",
             )
-        return (
-            f"当前运行状态：{run_state}。\n"
-            f"现在打算做：{plan_text}\n"
-            f"刚做完：{done_text}\n"
-            f"关键问题：{issue_text}\n"
-            f"当前待办：提问 {q}，agent 任务 {a}，信息补充 {n}。"
+        return _compose_three_part_reply(
+            lang=lang,
+            conclusion=f"当前运行状态：{run_state}。",
+            plans=[
+                f"当前重点：{plan_text}",
+                f"最新里程碑：{done_text}；关键问题：{issue_text}；待办项（提问{q}/代理{a}/补充{n}）",
+            ],
+            next_question="我继续自动推进，还是在下一个决策点先停下来让你确认？",
         )
 
     def _decision_text(self, run_dir: Path, lang: str) -> str:
@@ -1103,29 +1371,47 @@ class Bot:
             user_items.append(item)
         if not user_items:
             if str(lang).lower() == "en":
-                return "No decisions needed from you right now. You can send 'continue' to keep progressing."
-            return "目前没有需要你拍板的事项。你可以发送“继续”让我自动推进。"
-        lines: list[str] = []
+                return _compose_three_part_reply(
+                    lang=lang,
+                    conclusion="No decision is needed from you right now.",
+                    plans=["I will continue to push execution automatically."],
+                    next_question="Would you like me to pause only when a key decision appears?",
+                )
+            return _compose_three_part_reply(
+                lang=lang,
+                conclusion="目前没有需要你拍板的事项。",
+                plans=["我会继续自动推进执行。"],
+                next_question="是否仅在出现关键决策时再提醒你确认？",
+            )
+        top_briefs = [short_tail(item.prompt_text, max_lines=1, max_chars=80).replace("\n", " / ") for item in user_items[:2]]
+        top_briefs = [b for b in top_briefs if b]
+        if not top_briefs:
+            top_briefs = ["需要你确认一个关键选择" if str(lang).lower() != "en" else "A key decision needs your input."]
         if str(lang).lower() == "en":
-            lines.append(f"There are {len(user_items)} item(s) needing your decision/input:")
-        else:
-            lines.append(f"当前有 {len(user_items)} 项需要你决定/补充：")
-        for idx, item in enumerate(user_items[:3], start=1):
-            brief = short_tail(item.prompt_text, max_lines=2, max_chars=120).replace("\n", " / ")
-            lines.append(f"{idx}. [{item.prompt_type or 'prompt'}] {item.rel_prompt_path}")
-            if brief:
-                lines.append(f"   - {brief}")
-            lines.append(f"   - Target: {item.target_path}")
-        if len(user_items) > 3:
-            if str(lang).lower() == "en":
-                lines.append(f"...and {len(user_items)-3} more. Send /outbox to review all.")
-            else:
-                lines.append(f"……还有 {len(user_items)-3} 项。发送 /outbox 可查看全部。")
-        return "\n".join(lines)
+            return _compose_three_part_reply(
+                lang=lang,
+                conclusion=f"{len(user_items)} item(s) need your decision.",
+                plans=[f"Top pending topic: {top_briefs[0]}"],
+                next_question="Should I prioritize this decision now?",
+            )
+        return _compose_three_part_reply(
+            lang=lang,
+            conclusion=f"当前有 {len(user_items)} 项需要你确认。",
+            plans=[f"最关键的待确认事项：{top_briefs[0]}"],
+            next_question="你希望我先处理这一项吗？",
+        )
 
     def _send_status(self, chat_id: int, run_dir: Path) -> None:
         lang = str(self.db.get_session(chat_id).get("lang", DEFAULT_LANG) or DEFAULT_LANG)
-        self.tg.send(chat_id=chat_id, text=self._status_text(run_dir, lang))
+        self._send_customer_reply(
+            chat_id=chat_id,
+            lang=lang,
+            run_dir=run_dir,
+            stage="status_reply",
+            reply_text=self._status_text(run_dir, lang),
+            next_question="查看进度后你希望我继续自动推进吗？" if str(lang).lower() != "en" else "After this update, should I keep auto-advancing?",
+            ops_status={"run_status": self._run_status(run_dir), "pending_prompts": len(self._collect_prompts(run_dir))},
+        )
 
     def _send_file(self, chat_id: int, lang: str, run_dir: Path, rel_path: str, caption: str = "") -> None:
         try:
@@ -1196,7 +1482,20 @@ class Bot:
         p = str(mapping.get("prompt_path", "")).strip()
         if p:
             self.db.del_pending(str(run_dir), p)
-        self.tg.send(chat_id=chat_id, text=f"{i18n(lang, 'write_ok')}: {rel}")
+        self._send_customer_reply(
+            chat_id=chat_id,
+            lang=lang,
+            run_dir=run_dir,
+            stage="write_reply_ok",
+            reply_text=_compose_three_part_reply(
+                lang=lang,
+                conclusion="我已收到并记录你的回复。",
+                plans=["这条信息已经进入后续执行链路。"],
+                next_question="我继续自动推进下一步可以吗？",
+            ),
+            next_question=_default_next_question(lang),
+            ops_status={"target_path": rel, "prompt_path": p},
+        )
 
     def _advance_once(self, chat_id: int, run_dir: Path, steps: int) -> None:
         rc, out, err = self._run_orchestrate(["advance", "--max-steps", str(max(1, steps)), "--run-dir", str(run_dir)])
@@ -1215,44 +1514,99 @@ class Bot:
             owner_name = _role_label(owner, lang) if owner else ("N/A" if str(lang).lower() == "en" else "未给出")
             issue_text = describe_reason_for_customer(reason, path, lang)
             if str(lang).lower() == "en":
-                msg = (
-                    f"Done: moved forward {max(1, steps)} step(s).\n"
-                    f"Doing now: prepare {item_name}.\n"
-                    f"Key issue: {issue_text}.\n"
-                    f"Owner: {owner_name}."
+                msg = _compose_three_part_reply(
+                    lang=lang,
+                    conclusion=f"Advanced {max(1, steps)} step(s), now waiting for one input.",
+                    plans=[f"Current focus: {item_name}", f"Key issue: {issue_text}"],
+                    next_question="Should I keep auto-advancing once this input is ready?",
                 )
             else:
-                msg = (
-                    f"刚做完：已推进 {max(1, steps)} 步。\n"
-                    f"现在打算做：先完成{item_name}。\n"
-                    f"关键问题：{issue_text}\n"
-                    f"当前负责人：{owner_name}。"
+                msg = _compose_three_part_reply(
+                    lang=lang,
+                    conclusion=f"已推进 {max(1, steps)} 步，当前进入等待关键输入。",
+                    plans=[f"当前重点：{item_name}", f"关键问题：{issue_text}"],
+                    next_question="这项输入补齐后，我继续自动推进可以吗？",
                 )
-            self.tg.send(chat_id=chat_id, text=msg)
+            self._send_customer_reply(
+                chat_id=chat_id,
+                lang=lang,
+                run_dir=run_dir,
+                stage="advance_blocked",
+                reply_text=msg,
+                next_question=_default_next_question(lang),
+                ops_status={
+                    "rc": rc,
+                    "owner": owner_name,
+                    "next_step": next_step,
+                    "reason": reason,
+                    "path": path,
+                },
+            )
             return
         if rc == 0:
             item_name = describe_artifact_for_customer(path or next_step, lang)
             if str(lang).lower() == "en":
-                msg = (
-                    f"Done: moved forward {max(1, steps)} step(s).\n"
-                    f"Doing now: continue with {item_name}."
+                msg = _compose_three_part_reply(
+                    lang=lang,
+                    conclusion=f"Advanced {max(1, steps)} step(s) successfully.",
+                    plans=[f"Now continuing: {item_name}"],
+                    next_question="Do you want me to continue with full auto mode?",
                 )
             else:
-                msg = (
-                    f"刚做完：已推进 {max(1, steps)} 步。\n"
-                    f"现在打算做：继续处理{item_name}。"
+                msg = _compose_three_part_reply(
+                    lang=lang,
+                    conclusion=f"已成功推进 {max(1, steps)} 步。",
+                    plans=[f"现在继续推进：{item_name}"],
+                    next_question="要继续保持全自动推进吗？",
                 )
-            self.tg.send(chat_id=chat_id, text=msg)
+            self._send_customer_reply(
+                chat_id=chat_id,
+                lang=lang,
+                run_dir=run_dir,
+                stage="advance_success",
+                reply_text=msg,
+                next_question=_default_next_question(lang),
+                ops_status={"rc": rc, "next_step": next_step, "owner": owner, "iterations": iterations},
+            )
             return
         detail = short_tail(merged, max_lines=16, max_chars=1400)
         if str(lang).lower() == "en":
-            self.tg.send(chat_id=chat_id, text=f"Advance failed (rc={rc}).\n{detail}")
+            msg = _compose_three_part_reply(
+                lang=lang,
+                conclusion="The latest advance attempt failed.",
+                plans=["I will inspect the first failure point and retry with a minimal fix."],
+                next_question="Should I retry automatically after the first fix?",
+            )
         else:
-            self.tg.send(chat_id=chat_id, text=f"推进失败（rc={rc}）。\n{detail}")
+            msg = _compose_three_part_reply(
+                lang=lang,
+                conclusion="刚才这次推进失败了。",
+                plans=["我会先定位首个失败点，并用最小修复继续重试。"],
+                next_question="我修复后直接自动重试，可以吗？",
+            )
+        self._send_customer_reply(
+            chat_id=chat_id,
+            lang=lang,
+            run_dir=run_dir,
+            stage="advance_failed",
+            reply_text=msg,
+            next_question=_default_next_question(lang),
+            ops_status={"rc": rc, "stdout_stderr_tail": detail, "parsed": parsed},
+        )
 
     def _allow_auto_advance(self, run_dir: Path) -> bool:
         prompts = self._collect_prompts(run_dir)
         return (not prompts) or (not any(i.prompt_type == "question" for _p, i in prompts))
+
+    def _is_terminal_status(self, status: str) -> bool:
+        return str(status or "").strip().lower() in {
+            "pass",
+            "failed",
+            "error",
+            "done",
+            "stopped",
+            "cancelled",
+        }
 
     def _push_question(self, chat_id: int, run_dir: Path, prompts: list[tuple[Path, PromptItem]], seen_q: list[str]) -> bool:
         for _p, item in prompts:
@@ -1427,6 +1781,8 @@ class Bot:
         self.db.update_cursors(chat_id, last_bundle_mtime=mtime)
 
     def _push_trace_delta(self, chat_id: int, run_dir: Path, session: dict[str, Any]) -> None:
+        if not self.cfg.progress_push_enabled:
+            return
         trace = run_dir / "TRACE.md"
         if not trace.exists():
             return
@@ -1447,7 +1803,15 @@ class Bot:
         if now_ts - cool < TRACE_COOLDOWN_SECONDS:
             return
         lang = str(self.db.get_session(chat_id).get("lang", DEFAULT_LANG) or DEFAULT_LANG)
-        self.tg.send(chat_id=chat_id, text=_humanize_trace_delta(delta, lang))
+        self._send_customer_reply(
+            chat_id=chat_id,
+            lang=lang,
+            run_dir=run_dir,
+            stage="trace_progress_push",
+            reply_text=_humanize_trace_delta(delta, lang),
+            next_question=_default_next_question(lang),
+            ops_status={"trace_delta_tail": short_tail(delta, max_lines=20, max_chars=1800)},
+        )
         self.db.update_cursors(chat_id, trace_offset=size, cooldown_ts=now_ts)
 
     def _scan_push(self, chat_id: int, run_dir: Path) -> dict[str, int]:
@@ -1465,6 +1829,20 @@ class Bot:
         normal = self._push_normals(chat_id, run_dir, prompts, seen_outbox)
         self._push_bundle_if_new(chat_id, run_dir, s)
         self._push_trace_delta(chat_id, run_dir, s)
+        if self.cfg.auto_advance:
+            run_status = self._run_status(run_dir)
+            pending_now = self._collect_prompts(run_dir)
+            if (
+                not self._is_terminal_status(run_status)
+                and str(run_status).strip().lower() != "blocked"
+                and self._allow_auto_advance(run_dir)
+                and not pending_now
+            ):
+                self._advance_once(chat_id, run_dir, AUTO_ADVANCE_STEPS_PER_TICK)
+                # One extra scan so newly produced prompts/results are pushed immediately.
+                s2 = self.db.get_session(chat_id)
+                self._push_bundle_if_new(chat_id, run_dir, s2)
+                self._push_trace_delta(chat_id, run_dir, s2)
         return {"questions": 0, "agent_dispatch": 0, "normal": normal, "agent_results": done}
 
     def run_tick(self) -> None:
@@ -1528,52 +1906,180 @@ class Bot:
             return False
         note = d.note.strip() or text.strip()
         summary = d.summary.strip()
+        follow_up_consumed = False
         if len(summary) > 180:
             summary = summary[:180]
         if d.intent == "lang_zh":
             self.db.set_lang(chat_id, "zh")
             self._append_note(run_dir, "telegram/lang zh (api)")
-            self.tg.send(chat_id=chat_id, text=d.reply or "已切换中文。")
+            self._send_customer_reply(
+                chat_id=chat_id,
+                lang="zh",
+                run_dir=run_dir,
+                stage="api_lang_zh",
+                reply_text=d.reply or _compose_three_part_reply(
+                    lang="zh",
+                    conclusion="语言已切换为中文。",
+                    plans=["后续我会继续用中文推进并同步。"],
+                    next_question="是否继续自动推进当前任务？",
+                ),
+                next_question=_default_next_question("zh"),
+                ops_status={"intent": d.intent},
+            )
         elif d.intent == "lang_en":
             self.db.set_lang(chat_id, "en")
             self._append_note(run_dir, "telegram/lang en (api)")
-            self.tg.send(chat_id=chat_id, text=d.reply or "Switched to English.")
+            self._send_customer_reply(
+                chat_id=chat_id,
+                lang="en",
+                run_dir=run_dir,
+                stage="api_lang_en",
+                reply_text=d.reply
+                or _compose_three_part_reply(
+                    lang="en",
+                    conclusion="Language switched to English.",
+                    plans=["I will continue updates and execution in English."],
+                    next_question="Should I keep auto-advancing this run?",
+                ),
+                next_question=_default_next_question("en"),
+                ops_status={"intent": d.intent},
+            )
         elif d.intent == "status":
             if d.reply:
-                self.tg.send(chat_id=chat_id, text=d.reply)
+                self._send_customer_reply(
+                    chat_id=chat_id,
+                    lang=lang,
+                    run_dir=run_dir,
+                    stage="api_preface_status",
+                    reply_text=d.reply,
+                    next_question=_default_next_question(lang),
+                    ops_status={"intent": d.intent},
+                )
             self._send_status(chat_id, run_dir)
         elif d.intent == "advance":
             self._append_note(run_dir, f"telegram/advance request(api): {text}")
             if d.reply:
-                self.tg.send(chat_id=chat_id, text=d.reply)
+                self._send_customer_reply(
+                    chat_id=chat_id,
+                    lang=lang,
+                    run_dir=run_dir,
+                    stage="api_preface_advance",
+                    reply_text=d.reply,
+                    next_question=_default_next_question(lang),
+                    ops_status={"intent": d.intent},
+                )
             self._advance_once(chat_id, run_dir, d.steps)
             self._scan_push(chat_id, run_dir)
         elif d.intent == "outbox":
             if d.reply:
-                self.tg.send(chat_id=chat_id, text=d.reply)
+                self._send_customer_reply(
+                    chat_id=chat_id,
+                    lang=lang,
+                    run_dir=run_dir,
+                    stage="api_preface_outbox",
+                    reply_text=d.reply,
+                    next_question=_default_next_question(lang),
+                    ops_status={"intent": d.intent},
+                )
             stats = self._scan_push(chat_id, run_dir)
             if stats["questions"] + stats["agent_dispatch"] + stats["normal"] + stats["agent_results"] == 0:
-                self.tg.send(chat_id=chat_id, text="No pending outbox items.")
+                self._send_customer_reply(
+                    chat_id=chat_id,
+                    lang=lang,
+                    run_dir=run_dir,
+                    stage="api_no_pending_input",
+                    reply_text=_compose_three_part_reply(
+                        lang=lang,
+                        conclusion="当前没有待确认事项。",
+                        plans=["我会继续自动推进下一步。"],
+                        next_question="你希望我继续自动推进吗？",
+                    ),
+                    next_question=_default_next_question(lang),
+                    ops_status={"intent": d.intent},
+                )
         elif d.intent == "bundle":
             if d.reply:
-                self.tg.send(chat_id=chat_id, text=d.reply)
+                self._send_customer_reply(
+                    chat_id=chat_id,
+                    lang=lang,
+                    run_dir=run_dir,
+                    stage="api_preface_bundle",
+                    reply_text=d.reply,
+                    next_question=_default_next_question(lang),
+                    ops_status={"intent": d.intent},
+                )
             self._send_bundle(chat_id, run_dir, True)
         elif d.intent == "report":
             if d.reply:
-                self.tg.send(chat_id=chat_id, text=d.reply)
+                self._send_customer_reply(
+                    chat_id=chat_id,
+                    lang=lang,
+                    run_dir=run_dir,
+                    stage="api_preface_report",
+                    reply_text=d.reply,
+                    next_question=_default_next_question(lang),
+                    ops_status={"intent": d.intent},
+                )
             self._send_verify(chat_id, run_dir)
         elif d.intent == "decision":
             if d.reply:
-                self.tg.send(chat_id=chat_id, text=d.reply)
-            self.tg.send(chat_id=chat_id, text=self._decision_text(run_dir, lang))
+                self._send_customer_reply(
+                    chat_id=chat_id,
+                    lang=lang,
+                    run_dir=run_dir,
+                    stage="api_preface_decision",
+                    reply_text=d.reply,
+                    next_question=_default_next_question(lang),
+                    ops_status={"intent": d.intent},
+                )
+            self._send_customer_reply(
+                chat_id=chat_id,
+                lang=lang,
+                run_dir=run_dir,
+                stage="api_decision",
+                reply_text=self._decision_text(run_dir, lang),
+                next_question=_default_next_question(lang),
+                ops_status={"intent": d.intent},
+            )
         else:
             chat_reply = d.reply or smalltalk_reply(text, lang) or build_employee_note_reply(note, lang)
             if chat_reply:
-                self.tg.send(chat_id=chat_id, text=chat_reply)
+                self._send_customer_reply(
+                    chat_id=chat_id,
+                    lang=lang,
+                    run_dir=run_dir,
+                    stage="api_note_reply",
+                    reply_text=chat_reply,
+                    next_question=d.follow_up or _default_next_question(lang),
+                    ops_status={"intent": d.intent, "source_text": text},
+                )
+                follow_up_consumed = bool(str(d.follow_up or "").strip())
             p = self._append_note(run_dir, f"telegram/note {note}")
-            self.tg.send(chat_id=chat_id, text=f"{i18n(lang, 'saved_note')}: {p.relative_to(run_dir).as_posix()}")
-        if d.follow_up:
-            self.tg.send(chat_id=chat_id, text=d.follow_up)
+            if self.cfg.note_ack_path:
+                self._send_customer_reply(
+                    chat_id=chat_id,
+                    lang=lang,
+                    run_dir=run_dir,
+                    stage="api_note_saved_ack",
+                    reply_text=_compose_three_part_reply(
+                        lang=lang,
+                        conclusion="我已记录你的补充信息。",
+                        plans=["内部记录已保存并纳入后续推进。"],
+                        next_question="我继续自动推进当前计划可以吗？",
+                    ),
+                    next_question=_default_next_question(lang),
+                    ops_status={"notes_path": p.relative_to(run_dir).as_posix()},
+                )
+        if d.follow_up and not follow_up_consumed:
+            self._send_customer_reply(
+                chat_id=chat_id,
+                lang=lang,
+                run_dir=run_dir,
+                stage="api_follow_up",
+                reply_text=d.follow_up,
+                next_question=_default_next_question(lang),
+                ops_status={"intent": d.intent},
+            )
         if summary:
             self._append_summary(run_dir, text, summary, d.intent)
         return True
@@ -1584,7 +2090,22 @@ class Bot:
             nxt = val if val in {"zh", "en"} else lang
             self.db.set_lang(chat_id, nxt)
             self._append_note(run_dir, f"telegram/lang {nxt}")
-            self.tg.send(chat_id=chat_id, text=f"language={nxt}")
+            self._send_customer_reply(
+                chat_id=chat_id,
+                lang=nxt,
+                run_dir=run_dir,
+                stage="fallback_lang_switch",
+                reply_text=_compose_three_part_reply(
+                    lang=nxt,
+                    conclusion=("Language switched." if nxt == "en" else "语言已切换。"),
+                    plans=[("I will continue in this language." if nxt == "en" else "后续我会使用该语言继续推进。")],
+                    next_question=("Should I keep auto-advancing?" if nxt == "en" else "是否继续自动推进当前任务？"),
+                ),
+                next_question=_default_next_question(nxt),
+                ops_status={"intent": intent, "lang": nxt},
+            )
+        elif intent == "debug":
+            self._send_status(chat_id, run_dir)
         elif intent == "status":
             self._send_status(chat_id, run_dir)
         elif intent == "advance":
@@ -1596,19 +2117,70 @@ class Bot:
         elif intent == "report":
             self._send_verify(chat_id, run_dir)
         elif intent == "decision":
-            self.tg.send(chat_id=chat_id, text=self._decision_text(run_dir, lang))
+            self._send_customer_reply(
+                chat_id=chat_id,
+                lang=lang,
+                run_dir=run_dir,
+                stage="fallback_decision",
+                reply_text=self._decision_text(run_dir, lang),
+                next_question=_default_next_question(lang),
+                ops_status={"source_text": text},
+            )
         elif intent == "outbox":
             stats = self._scan_push(chat_id, run_dir)
             if stats["questions"] + stats["agent_dispatch"] + stats["normal"] + stats["agent_results"] == 0:
-                self.tg.send(chat_id=chat_id, text="No pending outbox items.")
+                self._send_customer_reply(
+                    chat_id=chat_id,
+                    lang=lang,
+                    run_dir=run_dir,
+                    stage="fallback_no_pending_input",
+                    reply_text=_compose_three_part_reply(
+                        lang=lang,
+                        conclusion="目前没有新的待确认事项。",
+                        plans=["我会继续自动推进，除非你希望暂停确认。"],
+                        next_question="要我继续自动推进吗？",
+                    ),
+                    next_question=_default_next_question(lang),
+                    ops_status={"source_text": text},
+                )
         else:
             chat_reply = smalltalk_reply(text, lang)
             if chat_reply:
-                self.tg.send(chat_id=chat_id, text=chat_reply)
+                self._send_customer_reply(
+                    chat_id=chat_id,
+                    lang=lang,
+                    run_dir=run_dir,
+                    stage="smalltalk_reply",
+                    reply_text=chat_reply,
+                    next_question=_default_next_question(lang),
+                    ops_status={"source_text": text},
+                )
             else:
-                self.tg.send(chat_id=chat_id, text=build_employee_note_reply(text, lang))
+                self._send_customer_reply(
+                    chat_id=chat_id,
+                    lang=lang,
+                    run_dir=run_dir,
+                    stage="note_reply",
+                    reply_text=build_employee_note_reply(text, lang),
+                    next_question=_default_next_question(lang),
+                    ops_status={"source_text": text},
+                )
                 p = self._append_note(run_dir, f"telegram/note {text}")
-                self.tg.send(chat_id=chat_id, text=f"{i18n(lang, 'saved_note')}: {p.relative_to(run_dir).as_posix()}")
+                if self.cfg.note_ack_path:
+                    self._send_customer_reply(
+                        chat_id=chat_id,
+                        lang=lang,
+                        run_dir=run_dir,
+                        stage="note_saved_ack",
+                        reply_text=_compose_three_part_reply(
+                            lang=lang,
+                            conclusion="我已记录你的补充信息。",
+                            plans=["内部记录已保存并纳入后续推进。"],
+                            next_question="我继续自动推进当前计划可以吗？",
+                        ),
+                        next_question=_default_next_question(lang),
+                        ops_status={"notes_path": p.relative_to(run_dir).as_posix()},
+                    )
 
     def _handle_cb(self, query: dict[str, Any]) -> None:
         msg = query.get("message", {}) or {}
@@ -1633,13 +2205,39 @@ class Bot:
                 return
             if action == "stop":
                 self._append_note(run_dir, "telegram/failure_action stop")
-                self.tg.send(chat_id=chat_id, text="Recorded stop request in USER_NOTES.")
+                self._send_customer_reply(
+                    chat_id=chat_id,
+                    lang=lang,
+                    run_dir=run_dir,
+                    stage="failure_action_stop",
+                    reply_text=_compose_three_part_reply(
+                        lang=lang,
+                        conclusion="我已记录你的暂停指令。",
+                        plans=["后续推进会先暂停，等待你下一步决定。"],
+                        next_question="你希望我何时恢复自动推进？",
+                    ),
+                    next_question=_default_next_question(lang),
+                    ops_status={"action": action},
+                )
                 self.tg.answer_cb(cb_id, text="stop recorded")
                 return
             if action == "relax":
                 ap = run_dir / "artifacts" / "answers" / "RELAX_LIMITS.md"
                 append_text(ap, f"- {now_iso()} | chat_id={chat_id} | relax_limits\n")
-                self.tg.send(chat_id=chat_id, text="Recorded relax request at artifacts/answers/RELAX_LIMITS.md.")
+                self._send_customer_reply(
+                    chat_id=chat_id,
+                    lang=lang,
+                    run_dir=run_dir,
+                    stage="failure_action_relax",
+                    reply_text=_compose_three_part_reply(
+                        lang=lang,
+                        conclusion="我已记录你放宽限制的请求。",
+                        plans=["我会按新限制继续推进并观察结果。"],
+                        next_question="确认后我继续自动推进可以吗？",
+                    ),
+                    next_question=_default_next_question(lang),
+                    ops_status={"action": action, "answer_path": ap.relative_to(run_dir).as_posix()},
+                )
                 self.tg.answer_cb(cb_id, text="relax recorded")
                 return
             self.tg.answer_cb(cb_id, text="unknown action")
@@ -1692,6 +2290,8 @@ class Bot:
             return
         if cmd == "/status":
             self._send_status(chat_id, run_dir)
+        elif cmd == "/debug":
+            self._send_status(chat_id, run_dir)
         elif cmd == "/advance":
             n = parse_int(arg or "1", 1)
             self._advance_once(chat_id, run_dir, n)
@@ -1699,7 +2299,20 @@ class Bot:
         elif cmd == "/outbox":
             stats = self._scan_push(chat_id, run_dir)
             if stats["questions"] + stats["agent_dispatch"] + stats["normal"] + stats["agent_results"] == 0:
-                self.tg.send(chat_id=chat_id, text="No new pending outbox prompts.")
+                self._send_customer_reply(
+                    chat_id=chat_id,
+                    lang=lang,
+                    run_dir=run_dir,
+                    stage="command_no_pending_input",
+                    reply_text=_compose_three_part_reply(
+                        lang=lang,
+                        conclusion="当前没有新的待确认事项。",
+                        plans=["我会继续自动推进当前计划。"],
+                        next_question="你希望我继续自动推进吗？",
+                    ),
+                    next_question=_default_next_question(lang),
+                    ops_status={"command": "/outbox"},
+                )
         elif cmd == "/get":
             if not arg:
                 self.tg.send(chat_id=chat_id, text="/get <relpath>")
@@ -1720,7 +2333,20 @@ class Bot:
                 self.tg.send(chat_id=chat_id, text="/note <text>")
             else:
                 p = self._append_note(run_dir, f"telegram/note {arg}")
-                self.tg.send(chat_id=chat_id, text=f"{i18n(lang, 'saved_note')}: {p.relative_to(run_dir).as_posix()}")
+                self._send_customer_reply(
+                    chat_id=chat_id,
+                    lang=lang,
+                    run_dir=run_dir,
+                    stage="command_note_saved",
+                    reply_text=_compose_three_part_reply(
+                        lang=lang,
+                        conclusion="我已记录这条备注。",
+                        plans=["它会作为后续推进输入继续使用。"],
+                        next_question="你希望我现在继续自动推进吗？",
+                    ),
+                    next_question=_default_next_question(lang),
+                    ops_status={"command": "/note", "notes_path": p.relative_to(run_dir).as_posix()},
+                )
         else:
             self.tg.send(chat_id=chat_id, text=i18n(lang, "help"))
 
@@ -1755,10 +2381,10 @@ class Bot:
         run_dir = Path(run_raw).expanduser().resolve()
         if not run_dir.exists():
             self.db.clear_run(chat_id)
-            self.tg.send(chat_id=chat_id, text="bound run_dir no longer exists; send a new goal.")
+            self.tg.send(chat_id=chat_id, text="当前会话已失效，请发一个新目标重新开始。")
             return
         if msg.get("document"):
-            self.tg.send(chat_id=chat_id, text="请回复某条 outbox 提示消息后再上传文件。")
+            self.tg.send(chat_id=chat_id, text="请先回复我上一条待确认消息，再上传文件。")
             return
         if text:
             direct_intent, _ = detect_intent(text)
@@ -1772,7 +2398,18 @@ class Bot:
                     self._create_run(chat_id, lang, text)
                     return
             if direct_intent == "decision":
-                self.tg.send(chat_id=chat_id, text=self._decision_text(run_dir, lang))
+                self._send_customer_reply(
+                    chat_id=chat_id,
+                    lang=lang,
+                    run_dir=run_dir,
+                    stage="decision_reply",
+                    reply_text=self._decision_text(run_dir, lang),
+                    next_question="你是否现在就要我先处理这项决策？" if str(lang).lower() != "en" else "Should I prioritize this decision now?",
+                    ops_status={"source_text": text},
+                )
+                return
+            if direct_intent == "debug":
+                self._send_status(chat_id, run_dir)
                 return
             if self._handle_bound_api(chat_id, lang, run_dir, text):
                 return

@@ -14,6 +14,7 @@ TEMPLATE_BY_ROLE_ACTION = {
     ("chair", "plan_signed"): "chair_plan_draft.md",
     ("contract_guardian", "review_contract"): "contract_guardian_review.md",
     ("cost_controller", "review_cost"): "cost_controller_review.md",
+    ("support_lead", "reply"): "support_lead_reply.md",
     ("patchmaker", "make_patch"): "patchmaker_patch.md",
     ("fixer", "fix_patch"): "fixer_patch.md",
     ("researcher", "find_web"): "researcher_find_web.md",

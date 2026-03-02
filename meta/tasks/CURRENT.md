@@ -97,6 +97,24 @@
 - [x] Doc/spec-first change included in same patch (`docs/10_team_mode.md`)
 - [x] `meta/reports/LAST.md` updated in same patch
 
+## Update 2026-03-02 - my_test_bot 对话输出去机械化（双通道）
+
+### Context
+- 用户反馈 my_test_bot 对话仍夹杂内部事件/文件名（如 `guardrails_written`、`RUN.json`），影响客户体验。
+- 目标：默认用户回复只保留负责人口吻三段式；内部细节仅落 run_dir ops/debug 通道。
+
+### DoD Mapping (from request)
+- [x] DoD-1: 默认聊天不输出内部 key/path/log 痕迹（`TRACE/outbox/RUN.json/guardrails` 等）。
+- [x] DoD-2: 统一用户回复为“结论 -> 方案 -> 下一步（仅 1 个问题）”。
+- [x] DoD-3: 引入回复双通道结构（`reply_text/next_question/ops_status`），ops 写入 run_dir 日志。
+- [x] DoD-4: 增加显式进度开关：用户发送“查看进度”/`debug`（或 `/debug`）才看里程碑摘要；默认关闭自动推进播报。
+- [x] DoD-5: 新增最小单测覆盖净化器与 ops 保留。
+
+### Acceptance (this update)
+- [x] Code changes allowed
+- [x] Doc/spec-first change included in same patch (`docs/10_team_mode.md`)
+- [x] `meta/reports/LAST.md` updated in same patch
+
 ## Update 2026-03-01 - 客户可理解的项目进度口径
 
 ### Context
@@ -107,6 +125,28 @@
 - [x] DoD-2: `advance` 输出改为客户口径，避免仅给内部流水状态。
 - [x] DoD-3: TRACE 主动推送优先总结“Done / Doing / Key issue”。
 - [x] DoD-4: 增加测试覆盖新口径函数。
+
+## Update 2026-03-01 - USER_NOTES 回显降噪
+
+### Context
+- 用户反馈聊天中频繁出现 `已记录到 USER_NOTES: ...`，影响对话连续性。
+
+### DoD Mapping (from request)
+- [x] DoD-1: 自然聊天写入 `USER_NOTES` 时默认不回显文件路径。
+- [x] DoD-2: 保留可配置能力（`CTCP_TG_NOTE_ACK_PATH=1` 可恢复路径回显）。
+- [x] DoD-3: `/note` 显式命令行为保持不变。
+- [x] DoD-4: 增加测试覆盖默认静默与可开启回显两种模式。
+
+## Update 2026-03-01 - 仅保留全自动推进模式
+
+### Context
+- 用户要求 bot 不再停等“继续”指令；在无待决问题时必须自动推进项目流程。
+
+### DoD Mapping (from request)
+- [x] DoD-1: 运行配置固定为全自动推进，不再依赖 `CTCP_TG_AUTO_ADVANCE` 开关。
+- [x] DoD-2: 每个 tick 在无待决事项且非终态时自动执行一步 `advance`。
+- [x] DoD-3: 决策提示文案去掉“你可以发送继续”，改为“我会自动推进”。
+- [x] DoD-4: 增加测试覆盖 `Config.load` 强制全自动与空闲自动推进行为。
 - [x] `scripts/verify_repo.ps1` final pass recorded
 
 ### Follow-up (UX polish)
@@ -125,6 +165,26 @@
 - [x] DoD-2: API 路由 prompt 加入“确认-行动-下一步”客服口吻约束，并支持可选 follow-up 澄清问题。
 - [x] DoD-3: 状态消息包含 run state，提升客户感知。
 - [x] DoD-4: 新增测试覆盖员工式回复核心逻辑。
+
+### Acceptance (this update)
+- [x] Code changes allowed
+- [x] Doc/spec-first change included in same patch (`docs/10_team_mode.md`)
+- [x] `meta/reports/LAST.md` updated in same patch
+
+## Update 2026-03-02 - CTCP Support Bot（CEO口径 + 双通道）
+
+### Context
+- 用户要求新增一个“更像 CEO/团队负责人”的客服 bot：
+  - 对用户只输出自然客服结论，不夹杂任何日志。
+  - 对内复用 CTCP provider 体系（本地 ollama / 外部 codex/api）进行分析与执行。
+- 约束：不新增第三方依赖；run_dir 必须在仓库外；verify 入口保持 `scripts/verify_repo.*`。
+
+### DoD Mapping (from request)
+- [x] DoD-1: 新增 `scripts/ctcp_support_bot.py`，支持 `--stdin` 与 `telegram --token` 两种模式。
+- [x] DoD-2: 新增 `agents/prompts/support_lead_reply.md`，强制 JSON 输出和“结论->方案->下一步”口径。
+- [x] DoD-3: 新增 `docs/dispatch_config.support_bot.sample.json`，可配置本地 ollama 与外部 codex 路由。
+- [x] DoD-4: 实现双通道输出：用户只收 `reply_text`；provider/debug 细节写入 `${run_dir}/logs/support_bot.*.log`。
+- [x] DoD-5: 提供离线 `--selftest`，验证 `artifacts/support_reply.json` 产出与回复脱敏规则。
 
 ### Acceptance (this update)
 - [x] Code changes allowed

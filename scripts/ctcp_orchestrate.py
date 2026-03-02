@@ -2158,20 +2158,21 @@ def cmd_new_run(goal: str, run_id: str) -> int:
         "",
     )
     ctcp_dispatch.ensure_dispatch_config(run_dir)
-    write_text(
-        run_dir / "artifacts" / "guardrails.template.md",
-        "\n".join(
-            [
-                "# guardrails template",
-                "find_mode: resolver_only",
-                "max_files: 20",
-                "max_total_bytes: 200000",
-                "max_iterations: 3",
-                "web_find_policy: allow_domains=..., max_queries=..., max_pages=...",
-                "",
-            ]
-        ),
+    _default_guardrails = "\n".join(
+        [
+            "# guardrails (auto-generated defaults — edit before advancing if needed)",
+            "find_mode: resolver_only",
+            "max_files: 20",
+            "max_total_bytes: 200000",
+            "max_iterations: 3",
+            "",
+        ]
     )
+    # Write both the live guardrails.md (valid defaults so advance doesn't block immediately)
+    # and a template copy for reference.
+    write_text(run_dir / "artifacts" / "guardrails.md", _default_guardrails)
+    write_text(run_dir / "artifacts" / "guardrails.template.md", _default_guardrails)
+    append_event(run_dir, "Local Orchestrator", "guardrails_written", "artifacts/guardrails.md")
     write_pointer(LAST_RUN_POINTER, run_dir)
     append_event(run_dir, "Local Orchestrator", "run_created", "RUN.json")
     print(f"[ctcp_orchestrate] run_dir={run_dir}")

@@ -1,0 +1,30 @@
+{
+  "schema_version": "ctcp-dispatch-config-v1",
+  "mode": "manual_outbox",
+  "role_providers": {
+    "support_lead": "ollama_agent",
+    "patchmaker": "codex_agent",
+    "fixer": "codex_agent"
+  },
+  "budgets": {
+    "max_outbox_prompts": 20
+  },
+  "providers": {
+    "ollama_agent": {
+      "base_url": "http://127.0.0.1:11434/v1",
+      "api_key": "ollama",
+      "model": "qwen2.5:12b",
+      "auto_start": true,
+      "start_timeout_sec": 20,
+      "start_cmd": "ollama serve"
+    },
+    "codex_agent": {
+      "enabled": false,
+      "dry_run": true,
+      "cmd": "codex",
+      "model": "",
+      "timeout_sec": 900,
+      "fallback_to_manual_outbox": true
+    }
+  }
+}
