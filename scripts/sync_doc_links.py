@@ -17,6 +17,7 @@ CURATED_DOCS = [
     "README.md",
     "BUILD.md",
     "PATCH_README.md",
+    "docs/20_conventions.md",
     "docs/PATCH_CONTRACT.md",
     "TREE.md",
     "docs/00_CORE.md",
@@ -24,6 +25,7 @@ CURATED_DOCS = [
     "docs/01_architecture.md",
     "docs/02_workflow.md",
     "docs/03_quality_gates.md",
+    "docs/25_project_plan.md",
     "docs/10_team_mode.md",
     "docs/21_paths_and_locations.md",
     "docs/22_teamnet_adlc.md",
@@ -34,6 +36,9 @@ CURATED_DOCS = [
     "docs/13_contracts_index.md",
     "docs/SELF_CHECK_SYSTEM.md",
     "ai_context/00_AI_CONTRACT.md",
+    "ai_context/CTCP_FAST_RULES.md",
+    "ai_context/problem_registry.md",
+    "ai_context/decision_log.md",
 ]
 
 

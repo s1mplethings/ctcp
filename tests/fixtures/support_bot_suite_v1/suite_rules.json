@@ -1,0 +1,42 @@
+{
+  "version": "v1",
+  "global": {
+    "paragraphs_min": 1,
+    "paragraphs_max": 4,
+    "max_questions": 1,
+    "max_total_chars": 900,
+    "ban_phrases": [
+      "收到，了解你想咨询的是",
+      "方便的话再补充一些细节",
+      "为了不耽误进度",
+      "我记得你在推进",
+      "你这轮最想解决哪一点",
+      "我先按默认方案继续推进，避免你这边被卡住"
+    ],
+    "ban_contains_any": [
+      "TRACE", "trace.md", "outbox", "artifacts/", "logs/", "diff --git",
+      "RUN.json", "guardrails", "guardrails_written", "run_created",
+      "stdout", "stderr", "stack trace"
+    ],
+    "ban_regex": [
+      "[A-Za-z]:\\\\[^ \\n]+",
+      "/(home|users|tmp|var|opt)/[^ \\n]+",
+      "```[\\s\\S]*?```"
+    ],
+    "ban_list_format": {
+      "line_prefixes": ["- ", "* ", "1.", "1)", "2.", "2)"],
+      "max_consecutive_prefixed_lines": 1
+    },
+    "echo_user_exact_substring": false
+  },
+  "style": {
+    "require_action_sentence": true,
+    "require_accountable_tone": true,
+    "discourage_meta": true,
+    "variation_required": true
+  },
+  "routing": {
+    "allow_fallback_when_api_disabled": true,
+    "api_threshold_default": 0.70
+  }
+}

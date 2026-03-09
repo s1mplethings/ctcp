@@ -184,6 +184,11 @@ cython_debug/
 _tmp_patch.py
 patch_debug.txt
 *.bak
+runs/
+_tmp_final*.diff
+final_output.patch
+final_patch_out.diff
+diff.patch
 artifacts/verify/
 simlab/_runs/
 simlab/_runs*/

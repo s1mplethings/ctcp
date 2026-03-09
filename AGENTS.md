@@ -46,7 +46,8 @@
 2. **输出规则（Chat/控制台/patch 输出）**
    - Chat/控制台最终输出：**patch-only**（unified diff），不得包含报告正文。
    - 报告正文落盘：`meta/reports/LAST.md`
-   - run_dir 证据链：`TRACE.md`、`artifacts/verify_report.json` 等
+   - run_dir 证据链主产物：`TRACE.md`、`artifacts/verify_report.json`
+   - `proof.json` 为兼容遗留项（非权威）；`verify_report.md` 为可选人类可读摘要（非权威）
    - 快速硬规则速览：`ai_context/CTCP_FAST_RULES.md`
 3. **允许提问的唯一条件**
    - 仅限：密钥/账号/权限；互斥方案拍板；缺少关键约束导致无法继续。
@@ -103,11 +104,14 @@
 
 `verify_repo` 必须覆盖：
 
-- build / web build（可跳过但要明确日志原因）
-- workflow gate（禁止代码/必须任务单/必须契约文件）
-- contract checks
-- doc index check
-- tests（如果存在）
+- anti-pollution gate（禁止 build/run 产物进入 repo）
+- headless lite build gate（`CTCP_ENABLE_GUI=OFF`；无 cmake 时可跳过并记录）
+- workflow gate（`scripts/workflow_checks.py`）
+- plan/patch/behavior gate（`plan_check.py`、`patch_check.py`、`behavior_catalog_check.py`）
+- contract + doc index gate（`contract_checks.py`、`sync_doc_links.py --check`）
+- lite replay + python unit tests（可按环境变量跳过 lite replay）
+- plan declared-gates/evidence 复检（`plan_check.py --executed-gates ... --check-evidence`）
+- full gate（`CTCP_FULL_GATE=1` 或 `--full` 时附加执行）
 
 ---
 

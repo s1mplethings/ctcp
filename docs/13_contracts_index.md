@@ -1,4 +1,3 @@
-
 # Contracts Index（协议索引）
 
 | Contract | Schema | Producer / Consumer |
@@ -11,3 +10,10 @@
 | Contract Review Spec | [ctcp_review_contract_v1.json](../specs/ctcp_review_contract_v1.json) | ContractGuardian → Orchestrator gate |
 | Cost Review Spec | [ctcp_review_cost_v1.json](../specs/ctcp_review_cost_v1.json) | CostController → Orchestrator gate |
 | Find Web JSON | [ctcp_find_web_v1.json](../specs/ctcp_find_web_v1.json) | Researcher (external) → Local Orchestrator |
+
+## Frontend Gateway Contracts
+
+| Contract | Schema | Producer / Consumer |
+|---|---|---|
+| [frontend_bridge_contract.md](../contracts/frontend_bridge_contract.md) | Markdown contract | Frontend bridge → CTCP orchestrator + run artifacts |
+| [frontend_session_contract.md](../contracts/frontend_session_contract.md) | Markdown contract | Frontend session manager → frontend gateway adapters |

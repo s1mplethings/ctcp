@@ -2,6 +2,9 @@
   "schema_version": "ctcp-dispatch-config-v1",
   "mode": "manual_outbox",
   "role_providers": {
+    "support_lead_router": "ollama_agent",
+    "support_lead_reply": "ollama_agent",
+    "support_lead_handoff": "api_agent",
     "support_lead": "ollama_agent",
     "patchmaker": "codex_agent",
     "fixer": "codex_agent"
@@ -13,10 +16,13 @@
     "ollama_agent": {
       "base_url": "http://127.0.0.1:11434/v1",
       "api_key": "ollama",
-      "model": "qwen2.5:12b",
+      "model": "qwen2.5:7b-instruct",
       "auto_start": true,
       "start_timeout_sec": 20,
       "start_cmd": "ollama serve"
+    },
+    "api_agent": {
+      "enabled": true
     },
     "codex_agent": {
       "enabled": false,

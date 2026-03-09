@@ -52,13 +52,31 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
   - bot 后台主动推送：`Type: question`、普通 outbox、`failure_bundle.zip`、`TRACE` 增量。
 - API 客服层（可选）：
   - bot 可通过 OpenAI 兼容 API 做意图路由和客服回复（默认开启，可用 `CTCP_TG_API_ENABLED=0` 关闭）。
+  - 每条用户消息先走本地 router（建议 `support_lead_router -> ollama_agent`），输出严格 JSON：`route/intent/confidence/followup_question/style_seed/risk_flags`。
+  - router 路由枚举：`local`（默认）、`api`（复杂任务升级）、`need_more_info`（仅一个关键问题）、`handoff_human`（人工升级）。
+  - 当 route 为 `api` 或 `handoff_human` 时，bot 会把 `handoff_brief` 交给 API agent（建议 `support_lead_handoff -> api_agent/codex_agent`）生成最终客服回复。
+  - 当本地模型或 API provider 任一失败时，bot 自动优雅降级：用户侧仍给自然回复（最多 1 个关键问题 + 默认推进假设），失败细节仅写 run_dir 运维日志。
+  - 会话状态会落盘到 `artifacts/support_session_state.json`（`user_goal/confirmed/open_questions/last_action_taken/session_summary/turn_index/last_intent/last_style_seed`）。
+  - 会话记忆采用 slot-like 结构：在 `support_session_state.json` 里维护 `memory_slots`（`customer_name/preferred_style/current_topic/last_request`）用于跨轮延续语境。
+  - 目标对齐采用 `execution_focus`：每轮维护 `execution_goal + execution_next_action`，确保 bot 始终知道“当前要做什么”并在回复中体现推进动作。
+  - StyleBank 使用确定性算法：`sha256(chat_id|intent|turn_index|style_seed)`，保证同输入可回放、跨轮次可变化。
+  - 清理/删除项目策略：默认先 `archive + unbind`，若用户要求永久删除，必须显式确认后再执行。
+  - 纯寒暄（如“你好/谢谢/你能做什么”）优先走本地小回复路径，不触发工程路由问题，避免“想到什么说什么”。
+  - 关键追问去重：同一追问在未获得新信息前不重复发送，默认改为“我先继续推进”的执行口径。
+  - 任务导向硬约束：
+    - 禁止“接着聊/我在呢/先聊聊看”式空泛续聊开场；
+    - 首句必须完成任务定向（问题排查/需求咨询/项目继续/方案比较/资料收集）；
+    - 每轮至少推进一个具体动作（请求明确输入或给出有限选项）；
+    - 仅在用户显式表示“继续上次项目”时引用历史项目上下文。
   - 每次对话可产出 `artifacts/API_BOT_SUMMARY.md`，并生成 `inbox/apibot/requests/REQ_*.json`。
   - 派发 `Type: agent_request` 时会自动附带 `USER_NOTES` 与 `API_BOT_SUMMARY` 尾部，帮助其他 agent 快速执行。
-  - 员工感增强：无论 API/非 API 路径，bot 默认先确认用户诉求、说明下一步动作，并在缺关键信息时最多追问 1~2 个澄清问题（渠道、转人工、知识库来源）。
+  - 员工感增强：默认输出 2-4 段自然对话，避免条目列表；每轮都包含“我现在就推进的下一步”。
   - 进度口径增强：`status/advance/TRACE` 主动推送默认使用“现在打算做什么 / 刚做完什么 / 关键问题”三段式，面向客户可直接理解。
   - 对话降噪：自然聊天写入 `USER_NOTES` 时默认不再回显文件路径；如需保留路径回显可设置 `CTCP_TG_NOTE_ACK_PATH=1`。
   - 双通道契约：用户通道只发“结论 -> 方案 -> 下一步”三段式；内部事件/key/path 仅写入 run_dir 日志。
-  - 显式进度开关：用户发送“查看进度”或 `debug`（或 `/debug`）时才推送里程碑摘要；默认不主动展示内部推进细节。
+  - 显式进度开关：用户发送“查看进度”或 `debug`（或 `/debug`）时才推送里程碑摘要；默认只输出可客户理解的里程碑摘要，不回显内部 key/path/trace。
+  - blocked 去重与冷却：同一阻塞原因短时间内只提醒一次；默认不再循环追问“是否继续自动推进”。
+  - 用户补充信息后会自动清除 blocked 冷却并继续推进，不需要额外发“继续”。
   - 运维日志位置：run_dir 下 `logs/telegram_cs_bot.ops.jsonl`（仅内部使用，不回显给用户）。
 - 启动示例：
 ```powershell

@@ -51,3 +51,19 @@
 - docs/06_graph_map.md
 - docs/12_modules_index.md
 - docs/13_contracts_index.md
+
+## Front Gateway Overlay（Nanobot 风格前台）
+
+新增 Front Gateway 仅作为“对话壳层”，不替代 CTCP ADLC 核心：
+
+- Bridge：`scripts/ctcp_front_bridge.py` + `scripts/ctcp_front_api.py`
+  - 只允许调用受限桥接 API（new-run/status/advance/report/decision/upload）。
+  - 执行入口仍是 `scripts/ctcp_orchestrate.py`。
+  - 验收入口仍是 `scripts/verify_repo.ps1` / `scripts/verify_repo.sh`。
+- Frontend Gateway：`web/frontend_gateway/*`
+  - 负责会话管理、消息归一化、进度口径翻译、决策提问路由。
+  - 会话记忆与工程事实分离：工程事实必须回读 run artifacts。
+
+契约见：
+- `contracts/frontend_bridge_contract.md`
+- `contracts/frontend_session_contract.md`

@@ -38,6 +38,13 @@ FORBIDDEN_REPLY_PATTERNS = (
     "failure_bundle.zip",
 )
 
+SMALLTALK_PATTERNS_ZH = (
+    re.compile(r"^\s*(你好|您好|嗨|哈喽|在吗|早上好|下午好|晚上好|谢谢|辛苦了)\s*[!！。.\?？]*\s*$"),
+)
+SMALLTALK_PATTERNS_EN = (
+    re.compile(r"^\s*(hi|hello|hey|thanks|thank you)\s*[!.\?]*\s*$", re.IGNORECASE),
+)
+
 
 try:
     from tools.run_paths import get_repo_slug, get_runs_root
@@ -59,6 +66,18 @@ except ModuleNotFoundError:
     if str(SCRIPTS_DIR) not in sys.path:
         sys.path.insert(0, str(SCRIPTS_DIR))
     import ctcp_dispatch
+
+try:
+    from frontend.conversation_mode_router import is_greeting_only as frontend_is_greeting_only
+    from frontend.response_composer import render_frontend_output
+except ModuleNotFoundError:
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    from frontend.conversation_mode_router import is_greeting_only as frontend_is_greeting_only
+    from frontend.response_composer import render_frontend_output
+except Exception:
+    frontend_is_greeting_only = None  # type: ignore[assignment]
+    render_frontend_output = None  # type: ignore[assignment]
 
 
 def now_iso() -> str:
@@ -172,7 +191,7 @@ def default_support_dispatch_config() -> dict[str, Any]:
             "ollama_agent": {
                 "base_url": "http://127.0.0.1:11434/v1",
                 "api_key": "ollama",
-                "model": "qwen2.5:12b",
+                "model": "qwen2.5:7b-instruct",
                 "auto_start": True,
                 "start_timeout_sec": 20,
                 "start_cmd": "ollama serve",
@@ -244,7 +263,8 @@ def default_prompt_template() -> str:
         "You are CTCP Support Lead. Return JSON only.\n"
         "Keys: reply_text,next_question,actions,debug_notes.\n"
         "reply_text must be customer-facing only and never include logs, file paths, or stack traces.\n"
-        "reply_text format: Conclusion -> Plan -> Next step (one question).\n"
+        "reply_text must be natural conversational prose (no rigid section labels).\n"
+        "Ask at most one high-leverage follow-up question when route-changing details are missing.\n"
     )
 
 
@@ -423,6 +443,38 @@ def normalize_question(raw: str) -> str:
     return q
 
 
+def detect_lang_hint(*texts: str) -> str:
+    merged = " ".join(str(x or "") for x in texts)
+    if not merged.strip():
+        return "zh"
+    zh_count = sum(1 for ch in merged if "\u4e00" <= ch <= "\u9fff")
+    en_count = sum(1 for ch in merged if ("a" <= ch.lower() <= "z"))
+    return "zh" if zh_count >= max(1, en_count // 3) else "en"
+
+
+def is_smalltalk_only_message(text: str) -> bool:
+    raw = str(text or "").strip()
+    if not raw:
+        return False
+    if frontend_is_greeting_only is not None:
+        try:
+            if frontend_is_greeting_only(raw):
+                return True
+        except Exception:
+            pass
+    if any(p.match(raw) for p in SMALLTALK_PATTERNS_ZH):
+        return True
+    if any(p.match(raw) for p in SMALLTALK_PATTERNS_EN):
+        return True
+    return False
+
+
+def smalltalk_reply_text(text: str, lang: str) -> str:
+    if str(lang).lower() == "en":
+        return "Hi there. I'm here to help. What would you like me to prioritize first?"
+    return "你好，我在。你现在最希望我先帮你处理哪一件事？"
+
+
 def normalize_actions(raw: Any) -> list[dict[str, Any]]:
     if not isinstance(raw, list):
         return []
@@ -449,21 +501,17 @@ def normalize_reply_text(raw_reply: str, next_question: str) -> str:
     raw = str(raw_reply or "").strip()
     raw = re.sub(r"```[\s\S]*?```", "", raw).strip()
 
-    if raw and not contains_forbidden_reply(raw) and all(tag in raw for tag in ("结论", "方案", "下一步")):
+    if raw and not contains_forbidden_reply(raw):
         return raw
 
     conclusion = sanitize_inline_text(raw, max_chars=120)
     if (not conclusion) or contains_forbidden_reply(conclusion):
-        conclusion = "我已理解你的诉求，并会按负责人方式推进"
-    plan = "我会先确认当前问题与优先级，再给出可执行方案并持续推进"
+        conclusion = "我已理解你的诉求，并会按项目经理方式推进。"
+    plan = "我会先确认当前优先级并补齐默认项，再给你可执行方案并持续推进。"
 
-    reply = f"结论：{conclusion}\n方案：{plan}\n下一步：{next_question}"
+    reply = f"{conclusion}\n\n{plan}\n\n{next_question}"
     if contains_forbidden_reply(reply):
-        reply = (
-            "结论：我已收到你的需求，并会继续负责推进。\n"
-            "方案：我会先完成现状判断与方案拆解，再安排执行。\n"
-            f"下一步：{next_question}"
-        )
+        reply = "我已接手你的需求。你可以先告诉我这轮最想达成的目标，我马上推进。"
     return reply
 
 
@@ -471,9 +519,9 @@ def fallback_reply_doc(result: dict[str, Any]) -> dict[str, Any]:
     reason = sanitize_inline_text(str(result.get("reason", "")), max_chars=180)
     return {
         "reply_text": (
-            "结论：我已收到你的需求，当前会先按客服负责人口径接管。\n"
-            "方案：我已生成内部处理请求，会在拿到执行反馈后继续推进。\n"
-            "下一步：你现在最希望我先解决的一个具体问题是什么？"
+            "我已经接手你的需求，并会按项目经理方式继续推进。"
+            "我会先补齐默认项并给你可执行路径，只在关键分歧点向你确认问题。"
+            "你先告诉我这轮最想达成的目标，我就继续推进。"
         ),
         "next_question": "你现在最希望我先解决的一个具体问题是什么？",
         "actions": [{"type": "request_file", "hint": "如有失败包或截图，请直接上传"}],
@@ -489,9 +537,90 @@ def build_final_reply_doc(
     provider_doc: dict[str, Any] | None,
 ) -> dict[str, Any]:
     raw_doc = provider_doc if isinstance(provider_doc, dict) else fallback_reply_doc(provider_result)
+    raw_reply_text = str(raw_doc.get("reply_text", ""))
+    raw_next_question = str(raw_doc.get("next_question", ""))
+    lang = detect_lang_hint(raw_reply_text, raw_next_question, str(raw_doc.get("debug_notes", "")))
+    provider_reason_text = str(provider_result.get("reason", "")).strip().lower()
+    smalltalk_fast_path = str(provider or "").strip().lower() == "local_smalltalk" or "smalltalk_fast_path" in provider_reason_text
 
-    next_question = normalize_question(str(raw_doc.get("next_question", "")))
-    reply_text = normalize_reply_text(str(raw_doc.get("reply_text", "")), next_question)
+    pipeline_state: dict[str, Any] | None = None
+    rendered_used = False
+    rendered_visible_state = ""
+    reply_text = ""
+    next_question = ""
+    if render_frontend_output is not None and not smalltalk_fast_path:
+        try:
+            history = load_inbox_history(run_dir, limit=12)
+            user_msgs = [str(item.get("text", "")).strip() for item in history if str(item.get("text", "")).strip()]
+            status_text = str(provider_result.get("status", "")).strip().lower()
+            reason_text = str(provider_result.get("reason", "")).strip().lower()
+            is_executed = status_text == "executed"
+            is_deferred = status_text in {"outbox_created", "outbox_exists", "pending", "deferred"}
+            is_hard_failure = status_text in {"exec_failed", "failed", "error"} or any(
+                token in reason_text for token in ("traceback", "stack trace", "command failed", "exception")
+            )
+            if is_executed:
+                stage = "support_provider_executed"
+            elif is_deferred:
+                stage = "support_provider_deferred"
+            else:
+                stage = "support_provider_failed"
+            backend_state = {
+                "stage": stage,
+                "run_status": "",
+                "reason": str(provider_result.get("reason", "")).strip(),
+                "missing_fields": raw_doc.get("missing_fields", []),
+                "blocked_needs_input": bool(is_hard_failure),
+                "needs_input": bool(raw_next_question.strip()) or bool(is_hard_failure),
+                "has_actionable_goal": bool(user_msgs),
+                "first_pass_understood": bool(user_msgs),
+            }
+            rendered = render_frontend_output(
+                raw_backend_state=backend_state,
+                task_summary=(user_msgs[-1] if user_msgs else raw_reply_text),
+                raw_reply_text=raw_reply_text,
+                raw_next_question=raw_next_question,
+                notes={
+                    "lang": lang,
+                    "max_questions": 2,
+                    "recent_user_messages": user_msgs,
+                },
+            )
+            reply_text = str(getattr(rendered, "reply_text", "")).strip()
+            followups = list(getattr(rendered, "followup_questions", ()) or [])
+            if followups:
+                next_question = normalize_question(str(followups[0]))
+            rendered_visible_state = str(getattr(rendered, "visible_state", "")).strip()
+            pipeline_state = getattr(rendered, "pipeline_state", None)
+            rendered_used = True
+            if (not rendered_visible_state) and isinstance(pipeline_state, dict):
+                rendered_visible_state = str(pipeline_state.get("visible_state", "")).strip()
+        except Exception as exc:
+            append_log(run_dir / "logs" / "support_bot.debug.log", f"[{now_iso()}] frontend render failed: {exc}\n")
+            pipeline_state = {"error": str(exc)}
+    elif smalltalk_fast_path:
+        next_question = ""
+        reply_text = normalize_reply_text(raw_reply_text, "")
+
+    if smalltalk_fast_path:
+        next_question = ""
+    elif rendered_used:
+        if not next_question:
+            if rendered_visible_state in {
+                "NEEDS_ONE_OR_TWO_DETAILS",
+                "WAITING_FOR_DECISION",
+                "BLOCKED_NEEDS_INPUT",
+            }:
+                next_question = normalize_question(raw_next_question)
+            elif rendered_visible_state in {"UNDERSTOOD", "EXECUTING", "DONE"}:
+                next_question = ""
+            else:
+                next_question = normalize_question(raw_next_question)
+    elif not next_question:
+        next_question = normalize_question(raw_next_question)
+    if not reply_text:
+        reply_text = normalize_reply_text(raw_reply_text, next_question)
+
     actions = normalize_actions(raw_doc.get("actions"))
 
     debug_notes = sanitize_inline_text(str(raw_doc.get("debug_notes", "")), max_chars=400)
@@ -500,6 +629,13 @@ def build_final_reply_doc(
     debug_combined = f"provider={provider}; status={provider_status}; reason={provider_reason}"
     if debug_notes:
         debug_combined += f"; notes={debug_notes}"
+    if isinstance(pipeline_state, dict):
+        selected = sanitize_inline_text(str(pipeline_state.get("selected_requirement_source", "")), max_chars=160)
+        visible = sanitize_inline_text(str(pipeline_state.get("visible_state", "")), max_chars=60)
+        if selected:
+            debug_combined += f"; selected_requirement={selected}"
+        if visible:
+            debug_combined += f"; visible_state={visible}"
 
     append_log(run_dir / "logs" / "support_bot.debug.log", f"[{now_iso()}] {debug_combined}\n")
 
@@ -536,6 +672,24 @@ def process_message(
         },
     )
     append_event(run_dir, "SUPPORT_MESSAGE_RECEIVED", SUPPORT_INBOX_REL_PATH.as_posix(), source=source)
+
+    # Smalltalk fast-path: do not route through provider failures for greeting-only turns.
+    if is_smalltalk_only_message(user_text):
+        lang = detect_lang_hint(user_text)
+        final_doc = build_final_reply_doc(
+            run_dir=run_dir,
+            provider="local_smalltalk",
+            provider_result={"status": "executed", "reason": "smalltalk_fast_path"},
+            provider_doc={
+                "reply_text": smalltalk_reply_text(user_text, lang),
+                "next_question": "",
+                "actions": [],
+                "debug_notes": "smalltalk_fast_path",
+            },
+        )
+        write_json(run_dir / SUPPORT_REPLY_REL_PATH, final_doc)
+        append_event(run_dir, "SUPPORT_REPLY_WRITTEN", SUPPORT_REPLY_REL_PATH.as_posix(), provider="local_smalltalk")
+        return final_doc, run_dir
 
     prompt_text = build_support_prompt(run_dir, chat_id, user_text)
     config, cfg_msg = load_dispatch_config(run_dir)
@@ -624,6 +778,11 @@ class TelegramClient:
         self._post("sendMessage", {"chat_id": chat_id, "text": text[:3800]})
 
 
+def emit_public_message(tg: TelegramClient, chat_id: int, text: str) -> None:
+    # Single public-output gate for this support bot script.
+    tg.send_message(chat_id, str(text or ""))
+
+
 def run_stdin_mode(chat_id: str, provider_override: str = "") -> int:
     user_text = utf8_clean(sys.stdin.read()).strip()
     if not user_text:
@@ -670,7 +829,11 @@ def run_telegram_mode(token: str, poll_seconds: int, allowlist_raw: str, provide
                     continue
 
                 if user_text.startswith("/start"):
-                    tg.send_message(chat_id, "结论：欢迎使用 CTCP Support Bot。\n方案：请直接告诉我你的需求。\n下一步：你现在最希望先解决哪个问题？")
+                    emit_public_message(
+                        tg,
+                        chat_id,
+                        "欢迎使用 CTCP Support Bot。你把这轮最想推进的目标发我，我现在就开始处理。",
+                    )
                     continue
 
                 doc, _ = process_message(
@@ -679,7 +842,7 @@ def run_telegram_mode(token: str, poll_seconds: int, allowlist_raw: str, provide
                     source="telegram",
                     provider_override=provider_override,
                 )
-                tg.send_message(chat_id, str(doc.get("reply_text", "")).strip())
+                emit_public_message(tg, chat_id, str(doc.get("reply_text", "")).strip())
             except Exception as exc:
                 print(f"[ctcp_support_bot] telegram update error: {exc}", file=sys.stderr)
                 continue

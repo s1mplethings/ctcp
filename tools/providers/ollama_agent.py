@@ -23,7 +23,7 @@ except ModuleNotFoundError:
 
 DEFAULT_OLLAMA_BASE_URL = "http://127.0.0.1:11434/v1"
 DEFAULT_OLLAMA_API_KEY = "ollama"
-DEFAULT_OLLAMA_MODEL = "qwen2.5:12b"
+DEFAULT_OLLAMA_MODEL = "qwen2.5:7b-instruct"
 DEFAULT_OLLAMA_START_CMD = "ollama serve"
 
 

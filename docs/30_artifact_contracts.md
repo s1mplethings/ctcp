@@ -1,6 +1,13 @@
-Artifact Contracts (v0.1)
+# Artifact Contracts (v0.2)
 
 All files live under the external run directory unless stated otherwise.
+
+## Verify Naming Policy (Global)
+
+- Canonical verify artifact: `artifacts/verify_report.json`.
+- `proof.json` is deprecated and non-authoritative in current CTCP contract.
+- `verify_report.md` is optional human-readable material only.
+- DoD pass/fail entrypoint remains `scripts/verify_repo.ps1` / `scripts/verify_repo.sh`.
 
 A) artifacts/guardrails.md
 
@@ -215,7 +222,7 @@ On patch reject:
 - write rejection review to `reviews/review_patch.md`
 - request fixer retry through outbox with "patch only" instruction
 
-I) artifacts/verify_report.json
+I) artifacts/verify_report.json (canonical verify artifact)
 
 Fields:
 
@@ -242,6 +249,10 @@ paths: {
 }
 
 (compat) `artifacts` MAY mirror `paths`.
+
+Compatibility policy:
+- Legacy tools MAY emit `proof.json` or `verify_report.md` for migration,
+  but gate decisions MUST rely on `artifacts/verify_report.json` (or direct verify command exit code/logs in repo-only gate runs).
 
 J) events.jsonl
 

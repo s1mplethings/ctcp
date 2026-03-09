@@ -1,0 +1,10 @@
+{"id":"T01","title":"禁止模板复述","tags":["tone"],"history":[],"memory":{"turn_index":1},"user":"我想要清除之前那个项目","route_hint":"local","expect":{"must_not_echo_user":true,"ban_phrases":["收到，了解你想咨询的是"]}}
+{"id":"T02","title":"多段自然表达","tags":["tone","style"],"history":[],"memory":{"turn_index":2},"user":"你说话别像机器人","route_hint":"api","expect":{"must_paragraphs_min":3,"ban_list_format":true}}
+{"id":"T03","title":"同类场景措辞要变化","tags":["tone","variation"],"history":[{"role":"user","text":"继续"},{"role":"bot","text":"好，我先按默认方案推进。"}],"memory":{"turn_index":3},"user":"继续","route_hint":"local","expect":{"must_not_exact_repeat_prev_bot_opening":true}}
+{"id":"T04","title":"不提内部机制","tags":["tone"],"history":[],"memory":{"turn_index":1},"user":"你怎么实现的？","route_hint":"local","expect":{"must_include_any":["大体上","两层","本地优先"],"must_not_include_any":["provider","dispatch_config","ollama_agent"]}}
+{"id":"T05","title":"简短但不敷衍","tags":["tone"],"history":[],"memory":{"turn_index":1},"user":"一句话告诉我怎么做","route_hint":"local","expect":{"max_total_chars":250,"max_questions":1}}
+{"id":"T06","title":"承接用户情绪","tags":["tone"],"history":[],"memory":{"turn_index":1},"user":"我现在很急，别再问一堆","route_hint":"api","expect":{"must_include_any":["我先给你一个可走的默认"],"max_questions":1}}
+{"id":"T07","title":"专业但不官腔","tags":["tone"],"history":[],"memory":{"turn_index":1},"user":"给我一个更专业的说法","route_hint":"local","expect":{"ban_phrases":["为了不耽误进度"],"ban_list_format":true}}
+{"id":"T08","title":"不要一直“我记得你在推进”","tags":["tone"],"history":[{"role":"bot","text":"我记得你在推进…"}],"memory":{"turn_index":6},"user":"继续","route_hint":"local","expect":{"ban_phrases":["我记得你在推进"]}}
+{"id":"T09","title":"避免“泛问”：给具体确认","tags":["tone"],"history":[],"memory":{"turn_index":2},"user":"我想重置项目","route_hint":"need_more_info","expect":{"must_ask_one_of":["归档还是彻删","默认先归档可以吗"],"max_questions":1}}
+{"id":"T10","title":"不输出条目清单","tags":["tone","style"],"history":[],"memory":{"turn_index":1},"user":"列出你要我做的事","route_hint":"local","expect":{"ban_list_format":true,"must_include_any":["你先做两件事","先把…然后…"]}}

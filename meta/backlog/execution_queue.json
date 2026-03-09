@@ -79,7 +79,7 @@
       "dod": [
         "execution_queue.json exists and is current authority",
         "docs/25_project_plan.md explains queue vs CURRENT vs run PLAN",
-        "meta/tasks/TEMPLATE.md contains queue item fields"
+        "meta/tasks/TEMPLATE.md contains queue item fields and forbids Queue Item N/A escape"
       ],
       "artifacts": {
         "produces": [
@@ -93,7 +93,7 @@
         ]
       },
       "status": "doing",
-      "notes": "This task updates long-horizon project planning and queue discipline."
+      "notes": "Queue/current/report closure and verify naming consistency are being unified in docs-first patch."
     },
     {
       "id": "L1-ORCH-001",
@@ -310,6 +310,38 @@
       },
       "status": "doing",
       "notes": "P0 slice in progress: simlab worktree sandbox + unified build root/launcher/parallel verify path."
+    },
+    {
+      "id": "ADHOC-20260307-support-task-oriented-dialogue",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Telegram support bot task-oriented dialogue guardrails",
+      "owner_role": "Support Lead",
+      "deps": [
+        "L1-DISP-001"
+      ],
+      "dod": [
+        "remove generic chitchat fallback and enforce task-entry first sentence",
+        "only reference previous project context on explicit continuation intent",
+        "each customer-facing turn includes one concrete next action or constrained option set"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/telegram_cs_bot.py",
+          "agents/prompts/support_lead_router.md",
+          "agents/prompts/support_lead_reply.md",
+          "tests/test_telegram_cs_bot_employee_style.py",
+          "meta/reports/LAST.md",
+          "meta/tasks/CURRENT.md"
+        ],
+        "tests": [
+          "python tests/test_telegram_cs_bot_employee_style.py",
+          "python tests/test_support_bot_humanization.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "doing",
+      "notes": "User requested MD-driven execution to shift from generic assistant-style chatting to professional task-oriented support dialogue."
     }
   ]
 }

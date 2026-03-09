@@ -1,45 +1,63 @@
 # Quality Gates (DoD)
 
-本仓库的“合格交付”主判定方式：`scripts/verify.*` 通过（证据 gate）。
-`scripts/verify_repo.*` 仍用于 workflow/contract/doc-index 的基础门禁。
+If this file conflicts with `docs/00_CORE.md`, `docs/00_CORE.md` wins.
 
-“没证据=没测试”硬规则：
-- 必须生成 `artifacts/verify/<timestamp>/proof.json` 与步骤日志。
-- 必须通过 `tools/adlc_gate.py`。
-- `proof.result != PASS` 或日志缺失 -> 直接 fail。
+## 1) Single DoD Entrypoint
 
-verify_repo 必须保证：
+Only these commands are valid acceptance gate entrypoints:
 
-1) headless lite path (default)
-- `CTCP_ENABLE_GUI=OFF` build path (if cmake exists)
-- lite ctest set
-- lite replay scenario(s)
+- Windows: `scripts/verify_repo.ps1`
+- Unix: `scripts/verify_repo.sh`
 
-2) workflow gate
-- meta/tasks/CURRENT.md 存在
-- ai_context/00_AI_CONTRACT.md 存在
-- ai_context/templates/aidoc 存在
-- 默认禁止代码：未授权时不允许改代码目录
-- 代码改动必须同 patch 包含 doc/spec-first 变更（`docs/`、`specs/`、`meta/tasks/`、`meta/externals/`、`ai_context/` 或核心文档文件）
-- 代码改动必须同 patch 更新 `meta/reports/LAST.md`（仅更新 LAST 不可替代 doc/spec-first）
+No alternative `scripts/verify.*` family is authoritative for DoD in this repo.
 
-3) contract checks
-- scripts/contract_checks.py 通过
+## 2) Verify Evidence Naming (Unified Contract)
 
-4) doc index check
-- scripts/sync_doc_links.py --check 通过
+- Canonical machine verify artifact (run_dir): `artifacts/verify_report.json`.
+- `proof.json` is removed from hard DoD contract; it is not required by `verify_repo.*`.
+- `verify_report.md` may exist as optional human summary, but it is non-authoritative.
+- Running `verify_repo.*` directly decides pass/fail by command exit code + logs.
+  For repo-level tasks, command/evidence summary MUST be recorded in `meta/reports/LAST.md`.
 
-5) full checks（可选）
-- `CTCP_FULL_GATE=1` 时才跑更重测试（如 GUI 相关）
+## 3) Current `verify_repo.*` Gate Sequence (Script-Aligned)
 
-附加约束（forge full suite preflight）：
-- 入口脚本必须存在：`tools/checks/suite_gate.py`
-- live suite 清单必须存在：`tests/fixtures/adlc_forge_full_bundle/suites/forge_full_suite.live.yaml`
-- 若入口缺失，必须在预检中给出明确缺失路径，避免误判为功能通过
+`scripts/verify_repo.ps1` and `.sh` currently execute gates in this order:
 
-如果你发现 verify_repo 没覆盖到某类失败，就把它补进 verify_repo，并新增一个 tests/cases 用例。
+1. Anti-pollution gate
+   - Fail if tracked/unignored build outputs exist in repo (`build*/**`).
+   - Fail if tracked/unignored run outputs exist in repo (`simlab/_runs*/**`, `meta/runs/**`).
+2. Headless lite build path (if CMake exists)
+   - Configure/build with `CTCP_ENABLE_GUI=OFF` and `BUILD_TESTING=ON`.
+   - Run lite `ctest` selector when test files exist.
+3. Workflow gate
+   - Run `python scripts/workflow_checks.py`.
+4. Plan/scope/behavior contract gates
+   - `python scripts/plan_check.py`
+   - `python scripts/patch_check.py`
+   - `python scripts/behavior_catalog_check.py`
+5. Contract and doc index gates
+   - `python scripts/contract_checks.py`
+   - `python scripts/sync_doc_links.py --check`
+6. Lite replay + Python unit tests
+   - `python simlab/run.py --suite lite` (unless `CTCP_SKIP_LITE_REPLAY=1`)
+   - `python -m unittest discover -s tests -p "test_*.py"`
+7. Plan declared-gate/evidence replay check
+   - `python scripts/plan_check.py --executed-gates <csv> --check-evidence`
 
-证据闭环工具：
-- `tools/run_verify.py`
-- `tools/adlc_gate.py`
-- `tools/contrast_proof.py`
+Passing all required steps is a DoD pass.
+First non-zero step is the first failure point for repair.
+
+## 4) Optional Full Gate
+
+- Enable via `--full` or `CTCP_FULL_GATE=1`.
+- Windows runs `scripts/test_all.ps1` when present.
+- Unix runs `scripts/test_all.sh` when present.
+- Missing full test script is logged as skip, not silent pass.
+
+## 5) Contract Update Rule
+
+If a failure class is not covered by current gates:
+
+1. Add the check to `scripts/verify_repo.ps1` and `.sh` (or shared gate script invoked by both).
+2. Add/adjust tests or scenarios so the new gate is reproducible.
+3. Update this document and `docs/30_artifact_contracts.md` in the same patch.

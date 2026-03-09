@@ -63,3 +63,16 @@ When `externals_pack` exists, it is treated as candidate evidence only:
 1. Chair may cite it in `PLAN_draft.md` as implementation options.
 2. Resolver selection (`selected_workflow_id`) remains from `find_result.json`.
 3. If externals conflict with local contracts, contracts win and externals are discarded.
+
+## Frontend Gateway Flow (Presentation Layer Only)
+
+Frontend conversational flow must remain a shell over CTCP:
+
+1. frontend receives user message / attachments
+2. frontend calls `ctcp_front_bridge` operation (`ctcp_new_run`, `ctcp_get_status`, `ctcp_advance`, etc.)
+3. CTCP orchestrator (`scripts/ctcp_orchestrate.py`) remains the only execution driver
+4. frontend reads run artifacts and renders user-facing progress/decision prompts
+5. when decision is needed, frontend writes only requested target artifact through `ctcp_submit_decision`
+6. frontend resumes execution by calling `ctcp_advance`
+
+Frontend must not become a second workflow engine and must not claim engineering progress without run artifact evidence.

@@ -5,7 +5,6 @@
 - GUI 仅作为示例/可视化器，可选开启，不影响核心流程。
 - find = workflow resolver（从本地 `workflow_registry/` + 历史成功记录解析最佳 workflow，不依赖联网检索）。
 - 可选开启受控 web find（`resolver_plus_web`，由外部 Researcher 提供 `find_web.json`），默认仍不依赖联网。
-- GUI 可选/默认挂起（不影响核心 gate）。
 
 系统目标：
 - 你只需给一个目标（Goal）
@@ -36,6 +35,13 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
 bash scripts/verify_repo.sh
 ```
 
+## Verify Contract (Canonical Names)
+
+- DoD gate entrypoint 只有 `scripts/verify_repo.ps1` / `scripts/verify_repo.sh`。
+- 运行级机器可读验收主产物是 `artifacts/verify_report.json`（位于外部 run_dir）。
+- `proof.json` 不是当前硬规则验收产物，仅可作为兼容遗留项。
+- `verify_report.md` 是可选的人类可读总结，不是权威 gate 判据。
+
 ---
 
 ## What Orchestrator Produces
@@ -44,6 +50,7 @@ bash scripts/verify_repo.sh
 - `meta/reports/LAST.md`：演示报告（首次缺失时自动生成最小文件）
 - `${CTCP_RUNS_ROOT:-~/.ctcp/runs}/ctcp/<run_id>/`：一次运行目录（artifacts/reviews/outbox/logs）
 - `meta/run_pointers/LAST_RUN.txt`：仓库内指针，指向最新外部 run 包绝对路径
+- `${run_dir}/artifacts/verify_report.json`：运行级机器可读验收报告（canonical）
 
 ---
 
@@ -78,6 +85,7 @@ cmake --build build_gui --config Release
 - [README.md](README.md)
 - [BUILD.md](BUILD.md)
 - [PATCH_README.md](PATCH_README.md)
+- [docs/20_conventions.md](docs/20_conventions.md)
 - [docs/PATCH_CONTRACT.md](docs/PATCH_CONTRACT.md)
 - [TREE.md](TREE.md)
 - [docs/00_CORE.md](docs/00_CORE.md)
@@ -85,6 +93,7 @@ cmake --build build_gui --config Release
 - [docs/01_architecture.md](docs/01_architecture.md)
 - [docs/02_workflow.md](docs/02_workflow.md)
 - [docs/03_quality_gates.md](docs/03_quality_gates.md)
+- [docs/25_project_plan.md](docs/25_project_plan.md)
 - [docs/10_team_mode.md](docs/10_team_mode.md)
 - [docs/21_paths_and_locations.md](docs/21_paths_and_locations.md)
 - [docs/22_teamnet_adlc.md](docs/22_teamnet_adlc.md)
@@ -95,6 +104,9 @@ cmake --build build_gui --config Release
 - [docs/13_contracts_index.md](docs/13_contracts_index.md)
 - [docs/SELF_CHECK_SYSTEM.md](docs/SELF_CHECK_SYSTEM.md)
 - [ai_context/00_AI_CONTRACT.md](ai_context/00_AI_CONTRACT.md)
+- [ai_context/CTCP_FAST_RULES.md](ai_context/CTCP_FAST_RULES.md)
+- [ai_context/problem_registry.md](ai_context/problem_registry.md)
+- [ai_context/decision_log.md](ai_context/decision_log.md)
 
 <!-- CTCP:DOC_INDEX:END -->
 

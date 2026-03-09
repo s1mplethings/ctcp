@@ -80,6 +80,7 @@ class OpenAiExternalApiWrappersTests(unittest.TestCase):
                 env["OPENAI_API_KEY"] = "sk-test"
                 env["OPENAI_BASE_URL"] = base_url
                 env["SDDAI_OPENAI_PLAN_MODEL"] = "gpt-4.1-mini"
+                env["SDDAI_OPENAI_ENDPOINT_MODE"] = "responses"
                 proc = self._run_script(
                     [
                         sys.executable,
@@ -142,6 +143,7 @@ class OpenAiExternalApiWrappersTests(unittest.TestCase):
                 env["OPENAI_API_KEY"] = "sk-test"
                 env["OPENAI_BASE_URL"] = base_url
                 env["SDDAI_OPENAI_PATCH_MODEL"] = "gpt-4.1-mini"
+                env["SDDAI_OPENAI_ENDPOINT_MODE"] = "responses"
                 proc = self._run_script(
                     [
                         sys.executable,
