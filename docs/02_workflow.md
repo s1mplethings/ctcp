@@ -1,8 +1,12 @@
-# Workflow Contract (ADLC Primary)
+# Runtime ADLC Pipeline Contract (Execution Lane)
 
-If this file conflicts with `docs/00_CORE.md`, `docs/00_CORE.md` wins.
+Scope boundary:
 
-## ADLC Mainline
+- This file defines runtime ADLC execution inside a run (orchestrator lane).
+- This file is NOT the canonical repository modification workflow.
+- Canonical repository workflow source: `docs/04_execution_flow.md`.
+
+## Runtime ADLC Mainline
 
 `doc -> analysis -> find -> context_pack -> plan -> [build<->verify] -> contrast -> fix -> deploy/merge`
 
@@ -12,7 +16,7 @@ Execution starts only after signed `artifacts/PLAN.md`, required adversarial rev
 
 - Only `scripts/ctcp_orchestrate.py` is supported for execution.
 - Legacy alternate entry scripts no longer exist and are unsupported.
-- User flow always follows the ADLC mainline above.
+- Frontend/user-facing lanes must not bypass this runtime mainline.
 
 ## Step I/O Contract (MUST)
 

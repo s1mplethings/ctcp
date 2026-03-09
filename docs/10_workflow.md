@@ -1,5 +1,10 @@
+# GUI Lane Quickstart (Non-Canonical Flow Doc)
 
-# Quickstart（最短路径）
+Scope boundary:
+
+- This file is only a GUI/operator quickstart lane document.
+- This file does not define repository purpose or canonical execution flow.
+- Canonical repository workflow source: `docs/04_execution_flow.md`.
 
 1) 编译运行本 GUI（QtWebEngine + WebChannel）
 2) Open Project 选择你的 SDDAI 工程根目录
@@ -10,7 +15,7 @@
    - Linux/macOS：`bash scripts/verify_repo.sh`
    - Windows：`powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
 
-Auto loop（给 AI 代理用）：Discover → Plan → Patch → Verify → Record → Report
+AI 代理执行顺序请使用 `docs/04_execution_flow.md` 定义的 canonical 10-step flow。
 
 
 ## WebEngine 资源加载

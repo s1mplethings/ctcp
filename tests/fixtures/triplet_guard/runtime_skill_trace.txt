@@ -1,0 +1,4 @@
+[runtime] entrypoint=scripts/ctcp_orchestrate.py advance
+[runtime] skill_invoked=ctcp-workflow
+[runtime] trigger=workflow_stage:spec_first
+[runtime] observable=spec-first -> gate -> verify -> report

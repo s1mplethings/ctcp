@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import tempfile
 import unittest
@@ -11,7 +12,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+def _run(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    proc_env = os.environ.copy()
+    if env:
+        proc_env.update(env)
     return subprocess.run(
         cmd,
         cwd=str(cwd),
@@ -19,6 +23,7 @@ def _run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
         text=True,
         encoding="utf-8",
         errors="replace",
+        env=proc_env,
     )
 
 
@@ -80,6 +85,116 @@ class ScaffoldReferenceProjectTests(unittest.TestCase):
             report_doc = json.loads((run_dir / "artifacts" / "scaffold_report.json").read_text(encoding="utf-8"))
             self.assertEqual(report_doc.get("result"), "PASS")
             self.assertEqual(report_doc.get("out_dir"), str(out_dir.resolve()))
+
+    def test_scaffold_live_reference_generates_reference_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            base = Path(td)
+            out_dir = base / "my_live_ref_proj"
+            runs_root = base / "runs_root"
+            cmd = [
+                "python",
+                "scripts/ctcp_orchestrate.py",
+                "scaffold",
+                "--profile",
+                "minimal",
+                "--source-mode",
+                "live-reference",
+                "--out",
+                str(out_dir),
+                "--name",
+                "my_live_ref_proj",
+                "--runs-root",
+                str(runs_root),
+            ]
+            proc = _run(cmd, ROOT)
+            self.assertEqual(proc.returncode, 0, msg=f"{proc.stdout}\n{proc.stderr}")
+
+            required = [
+                out_dir / "README.md",
+                out_dir / "docs" / "00_CORE.md",
+                out_dir / "meta" / "tasks" / "CURRENT.md",
+                out_dir / "meta" / "reports" / "LAST.md",
+                out_dir / "scripts" / "verify_repo.ps1",
+                out_dir / "scripts" / "verify_repo.sh",
+                out_dir / "manifest.json",
+                out_dir / "TREE.md",
+                out_dir / "meta" / "reference_source.json",
+            ]
+            for path in required:
+                self.assertTrue(path.exists(), msg=f"missing expected file: {path}")
+
+            manifest_doc = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest_doc.get("source_mode"), "live-reference")
+            self.assertTrue(str(manifest_doc.get("source_commit", "")).strip())
+            self.assertEqual(str(manifest_doc.get("export_manifest", "")), "meta/reference_export_manifest.yaml")
+            self.assertIsInstance(manifest_doc.get("inherited_copy"), list)
+            self.assertIsInstance(manifest_doc.get("inherited_transform"), list)
+            self.assertIsInstance(manifest_doc.get("generated"), list)
+
+            reference_doc = json.loads((out_dir / "meta" / "reference_source.json").read_text(encoding="utf-8"))
+            self.assertEqual(reference_doc.get("source_mode"), "live-reference")
+            self.assertTrue(str(reference_doc.get("source_commit", "")).strip())
+            self.assertEqual(reference_doc.get("profile"), "minimal")
+
+            run_dir = _parse_run_dir(proc.stdout)
+            report_doc = json.loads((run_dir / "artifacts" / "scaffold_report.json").read_text(encoding="utf-8"))
+            self.assertEqual(report_doc.get("result"), "PASS")
+            self.assertEqual(report_doc.get("source_mode"), "live-reference")
+            self.assertTrue(str(report_doc.get("source_commit", "")).strip())
+            self.assertTrue(str(report_doc.get("export_manifest_path", "")).strip())
+
+    def test_scaffold_live_reference_source_commit_fallback_unknown(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            base = Path(td)
+            out_dir = base / "my_live_ref_proj_unknown"
+            runs_root = base / "runs_root"
+            cmd = [
+                "python",
+                "scripts/ctcp_orchestrate.py",
+                "scaffold",
+                "--profile",
+                "minimal",
+                "--source-mode",
+                "live-reference",
+                "--out",
+                str(out_dir),
+                "--name",
+                "my_live_ref_proj_unknown",
+                "--runs-root",
+                str(runs_root),
+            ]
+            proc = _run(cmd, ROOT, env={"CTCP_DISABLE_GIT_SOURCE": "1"})
+            self.assertEqual(proc.returncode, 0, msg=f"{proc.stdout}\n{proc.stderr}")
+
+            manifest_doc = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest_doc.get("source_commit"), "unknown")
+            reference_doc = json.loads((out_dir / "meta" / "reference_source.json").read_text(encoding="utf-8"))
+            self.assertEqual(reference_doc.get("source_commit"), "unknown")
+
+    def test_scaffold_force_refuses_unmanaged_output_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            base = Path(td)
+            out_dir = base / "unmanaged_scaffold_out"
+            out_dir.mkdir(parents=True, exist_ok=True)
+            (out_dir / "unknown.txt").write_text("keep", encoding="utf-8")
+            runs_root = base / "runs_root"
+            cmd = [
+                "python",
+                "scripts/ctcp_orchestrate.py",
+                "scaffold",
+                "--profile",
+                "minimal",
+                "--out",
+                str(out_dir),
+                "--name",
+                "unmanaged_scaffold_out",
+                "--force",
+                "--runs-root",
+                str(runs_root),
+            ]
+            proc = _run(cmd, ROOT)
+            self.assertNotEqual(proc.returncode, 0, msg=f"{proc.stdout}\n{proc.stderr}")
+            self.assertIn("requires an existing generated manifest", f"{proc.stdout}\n{proc.stderr}")
 
 
 if __name__ == "__main__":

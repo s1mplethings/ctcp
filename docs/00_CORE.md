@@ -1,15 +1,97 @@
 # CTCP Core Contract (v0.2)
 
-If this file conflicts with other docs, precedence is:
-`docs/00_CORE.md` > `AGENTS.md` > `ai_context/00_AI_CONTRACT.md`.
+This file is the authoritative runtime-truth contract source.
 
-## 0) Purpose
+Source map (single source per concern):
 
-CTCP is a contract-first ADLC loop:
-`doc -> analysis -> find -> context_pack -> plan -> [build <-> verify] -> contrast -> fix -> deploy/merge`.
+- Repo purpose source: `docs/01_north_star.md`
+- Canonical execution flow source: `docs/04_execution_flow.md`
+- Current task source: `meta/tasks/CURRENT.md`
+- Runtime engineering truth source: `docs/00_CORE.md` (this file)
 
-All progress is artifact-driven and auditable.
-Execution evidence lives in an external run directory ("Blackboard"), not in repo.
+## 0) Runtime Truth Boundary
+
+All engineering progress is artifact-driven and auditable.
+Runtime engineering truth comes from run artifacts + verify outputs + explicit reports.
+User-visible chat, transient prompts, and vague notes are never runtime truth.
+
+## 0.W Fixed 10-Step Execution Flow Principle
+
+Repository modifications MUST follow the canonical 10-step flow defined only in `docs/04_execution_flow.md`.
+This file does not redefine step ordering.
+
+## 0.X Runtime Wiring Contract
+
+Any new capability is considered **not integrated** unless it satisfies all of the following:
+
+1. **Upstream declared**
+   - The feature MUST declare which entrypoint can trigger it.
+   - Example entrypoints: support bot, frontend gateway, `scripts/ctcp_front_api.py`, `scripts/ctcp_orchestrate.py`.
+2. **Downstream declared**
+   - The feature MUST declare which next stage consumes its output.
+   - A feature MUST NOT terminate in an internal side path unless that is the explicit final sink.
+3. **Single source of truth declared**
+   - The feature MUST declare which artifact or runtime state is authoritative.
+   - User-visible chat memory is never the engineering source of truth.
+   - CTCP run artifacts / run_dir / verify outputs remain authoritative for engineering state.
+4. **Fallback path declared**
+   - The feature MUST declare what happens when it fails, including:
+     - whether it retries
+     - whether it degrades
+     - whether it asks the user for a decision
+     - whether it blocks execution
+5. **Acceptance path declared**
+   - The feature MUST declare which test proves it is truly connected.
+   - "File exists" or "module imports successfully" is not sufficient.
+   - The acceptance test MUST prove the feature is reachable from its intended upstream entrypoint and that its output is consumed by the intended downstream stage.
+
+If any of the above is missing, the feature is treated as **implemented but not integrated**.
+
+## 0.Y Frontend-to-Execution Bridge Rule
+
+Any user-visible capability that can:
+- create a project run
+- advance a project run
+- submit a project decision
+- upload an artifact for a project run
+- query project execution state
+
+MUST go through the frontend execution bridge.
+
+Approved bridge path:
+- `scripts/ctcp_front_bridge.py`
+- `scripts/ctcp_front_api.py`
+
+Disallowed:
+- direct parallel execution paths inside support bot logic
+- direct project mutation from frontend reply code
+- hidden side routes that bypass the bridge and update execution state independently
+
+A frontend feature that does not use the bridge is considered **not wired into CTCP**, even if it appears to work in isolation.
+
+## 0.Z Conversation Mode Gate
+
+Frontend conversation MUST classify the incoming turn before entering any project pipeline.
+
+Minimum supported modes:
+- GREETING
+- SMALLTALK
+- PROJECT_INTAKE
+- PROJECT_DETAIL
+- PROJECT_DECISION_REPLY
+- STATUS_QUERY
+
+Rules:
+- GREETING and SMALLTALK MUST NOT enter planning / missing-info / tradeoff question logic.
+- Project-manager mode MAY only activate when sufficient task signal exists.
+- Internal error rewriting and project follow-up questions are forbidden when no valid active task summary exists.
+
+A capability is not considered complete when it merely exists in code or docs.
+It is only complete when:
+- it is reachable from the intended entrypoint,
+- its output is consumed by the intended downstream stage,
+- its regression is recorded if it failed before,
+- and its reusable nature has an explicit skill decision.
 
 ## 1) Core Positioning (Headless First)
 
@@ -142,10 +224,14 @@ Current required gate classes are:
 5. Contract and doc index checks:
    - `scripts/contract_checks.py`
    - `scripts/sync_doc_links.py --check`
-6. Lite replay and unit tests:
+6. Triplet integration guard tests:
+   - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
+   - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
+   - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
+7. Lite replay and unit tests:
    - `python simlab/run.py --suite lite` (unless explicitly skipped by env)
    - `python -m unittest discover -s tests -p "test_*.py"`
-7. PLAN gate evidence replay check:
+8. PLAN gate evidence replay check:
    - `scripts/plan_check.py --executed-gates ... --check-evidence`
 
 Full suite (`CTCP_FULL_GATE=1` or `--full`) is optional extension.

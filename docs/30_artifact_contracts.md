@@ -348,3 +348,41 @@ Event requirements around verify/bundle:
 - `VERIFY_FAILED` (on non-zero verify)
 - `BUNDLE_CREATED` (bundle created or validated/recreated)
 - `VERIFY_PASSED` (on zero verify)
+
+N) scaffold / scaffold-pointcloud live-reference metadata (project output + run evidence)
+
+When `--source-mode live-reference` is used:
+
+- Whitelist source of truth MUST be `meta/reference_export_manifest.yaml`.
+- Export MUST be allowlist-only (`inherit_copy`, `inherit_transform`, `generate`, `exclude`, `required_outputs`).
+- Path normalization and traversal protection are mandatory for source and target paths.
+
+Generated project metadata:
+
+- `meta/reference_source.json` MUST include:
+  - `source_commit`
+  - `source_mode`
+  - `export_manifest`
+  - `generated_at`
+  - `profile`
+  - `inherited_copy`
+  - `inherited_transform`
+  - `generated_files`
+
+- Generated manifest (`manifest.json` or `meta/manifest.json` depending on scaffold type) MUST preserve/extend:
+  - `files`
+  - `generated`
+  - `inherited_copy`
+  - `inherited_transform`
+  - `excluded`
+  - `source_commit`
+  - `source_mode`
+
+Run evidence extension:
+
+- Existing scaffold reports (`artifacts/scaffold_report.json`, `artifacts/scaffold_pointcloud_report.json`) MUST include:
+  - `source_mode`
+  - `source_commit`
+  - `export_manifest_path`
+  - `inherited_copy_count`
+  - `inherited_transform_count`

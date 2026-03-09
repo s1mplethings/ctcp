@@ -126,6 +126,31 @@ class PatchFirstTests(unittest.TestCase):
             self.assertTrue(result.ok)
             self.assertEqual((repo / "README.md").read_text(encoding="utf-8"), "patched\n")
 
+    def test_safe_apply_preserves_lf_hunks_on_windows(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            _run(["git", "init"], repo)
+            _run(["git", "config", "user.email", "test@example.com"], repo)
+            _run(["git", "config", "user.name", "patch-first-test"], repo)
+            _run(["git", "config", "core.autocrlf", "false"], repo)
+            (repo / "README.md").write_bytes(b"one\ntwo\n")
+            _run(["git", "add", "README.md"], repo)
+            _run(["git", "commit", "-m", "init"], repo)
+
+            patch = (
+                "diff --git a/README.md b/README.md\n"
+                "--- a/README.md\n"
+                "+++ b/README.md\n"
+                "@@ -1,2 +1,2 @@\n"
+                "-one\n"
+                "+ONE\n"
+                " two\n"
+            )
+            policy = PatchPolicy(allow_roots=("README.md",), deny_prefixes=(), deny_suffixes=())
+            result = apply_patch_safely(repo, patch, policy)
+            self.assertTrue(result.ok)
+            self.assertEqual((repo / "README.md").read_text(encoding="utf-8"), "ONE\ntwo\n")
+
 
 if __name__ == "__main__":
     unittest.main()

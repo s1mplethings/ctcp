@@ -1,8 +1,13 @@
 # Project Plan (Foundation-First)
 
-This document defines project-level planning discipline for CTCP.
-Contract precedence remains:
-`docs/00_CORE.md` > other docs.
+This document defines project-level planning discipline only.
+It does not redefine repository purpose or canonical execution flow.
+
+Source map:
+
+- Repo purpose: `docs/01_north_star.md`
+- Canonical flow: `docs/04_execution_flow.md`
+- Current task purpose/scope truth: `meta/tasks/CURRENT.md`
 
 ## 1) Three Planning Scopes
 
@@ -10,6 +15,7 @@ Contract precedence remains:
    - Source of truth for roadmap layers (`L0`..`L4`), dependencies, status, and DoD.
 2. Current task card (single active work item): `meta/tasks/CURRENT.md`
    - One active queue item at a time.
+   - Single source of truth for current task purpose/scope and allowed behavior changes.
    - Concrete plan + acceptance checklist for the current patch.
 3. Run-level execution plan (external run_dir):
    - `${CTCP_RUNS_ROOT}/<repo_slug>/<run_id>/artifacts/PLAN.md`
@@ -38,6 +44,7 @@ Execution should be dependency-safe: bottom-up by deps, top-down by urgency.
 
 ## 4) Agent Working Rule
 
+0. Follow canonical execution flow from `docs/04_execution_flow.md`.
 1. Read `meta/backlog/execution_queue.json`.
 2. Pick the highest-priority item whose `deps` are all `done`.
 3. Write/refresh `meta/tasks/CURRENT.md` for that exact item id.

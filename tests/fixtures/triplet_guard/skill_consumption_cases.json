@@ -1,0 +1,26 @@
+{
+  "usage_without_evidence": {
+    "feature": "frontend project routing",
+    "skill_name": "ctcp-workflow",
+    "claims_skill_usage": true,
+    "runtime_evidence": []
+  },
+  "usage_with_evidence": {
+    "feature": "orchestrator workflow handoff",
+    "skill_name": "ctcp-workflow",
+    "claims_skill_usage": true,
+    "runtime_evidence": [
+      "tests/fixtures/triplet_guard/runtime_skill_trace.txt"
+    ]
+  },
+  "not_skillized_with_reason": {
+    "feature": "triplet guard local validator",
+    "claims_skill_usage": false,
+    "decision": "skillized: no, because this workflow is test-local and intentionally one-off for contract validation."
+  },
+  "not_skillized_without_reason": {
+    "feature": "temporary local workflow",
+    "claims_skill_usage": false,
+    "decision": "skillized: no"
+  }
+}

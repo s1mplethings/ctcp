@@ -1,0 +1,110 @@
+{
+  "user_visible_failure": {
+    "timestamp": "2026-03-09T19:00:00Z",
+    "pass": false,
+    "issue_key": "frontend.greeting_misroute.project_mode",
+    "failures": [
+      {
+        "suite_id": "triplet_integration_guard",
+        "check_name": "user_visible_failure_captured",
+        "symptom": "Greeting turn was nearly routed into project planning and almost exposed internal error text.",
+        "likely_trigger": "Greeting-only input arrived with stale blocked_needs_input backend flags.",
+        "affected_entrypoint": "frontend gateway",
+        "affected_modules": [
+          "frontend/response_composer.py",
+          "frontend/conversation_mode_router.py"
+        ],
+        "observed_fallback_behavior": "Fallback kept one tradeoff question candidate.",
+        "expected_behavior": "Greeting mode should suppress planning pipeline and followup tradeoff questions.",
+        "fix_attempt_status": "captured",
+        "regression_test_status": "pending"
+      }
+    ]
+  },
+  "repeated_failure_first": {
+    "timestamp": "2026-03-09T19:00:10Z",
+    "pass": false,
+    "issue_key": "frontend.internal_error_leakage.guard",
+    "recurrence_count": 1,
+    "failures": [
+      {
+        "suite_id": "triplet_integration_guard",
+        "check_name": "repeated_failure_accumulates_or_updates",
+        "symptom": "Internal processing wording almost leaked to user-facing reply.",
+        "likely_trigger": "Raw backend text included command-failed markers.",
+        "affected_entrypoint": "support bot",
+        "affected_modules": [
+          "frontend/response_composer.py"
+        ],
+        "observed_fallback_behavior": "Sanitizer removed part of line but issue recurred.",
+        "expected_behavior": "Internal error tokens should be fully blocked in user channel.",
+        "fix_attempt_status": "captured",
+        "regression_test_status": "failing"
+      }
+    ]
+  },
+  "repeated_failure_second": {
+    "timestamp": "2026-03-09T19:00:20Z",
+    "pass": false,
+    "issue_key": "frontend.internal_error_leakage.guard",
+    "recurrence_count": 2,
+    "failures": [
+      {
+        "suite_id": "triplet_integration_guard",
+        "check_name": "repeated_failure_accumulates_or_updates",
+        "symptom": "Same internal leakage risk reappeared on second run.",
+        "likely_trigger": "Fallback branch still emitted stale intermediate text.",
+        "affected_entrypoint": "support bot",
+        "affected_modules": [
+          "frontend/response_composer.py"
+        ],
+        "observed_fallback_behavior": "Issue repeated after first capture.",
+        "expected_behavior": "Repeat occurrences should be tracked and not silently discarded.",
+        "fix_attempt_status": "captured",
+        "regression_test_status": "failing"
+      }
+    ]
+  },
+  "post_fix_failure": {
+    "timestamp": "2026-03-09T19:00:30Z",
+    "pass": false,
+    "issue_key": "frontend.greeting_misroute.project_mode",
+    "failures": [
+      {
+        "suite_id": "triplet_integration_guard",
+        "check_name": "post_fix_state_reflected",
+        "symptom": "Greeting was still classified as project intake once.",
+        "likely_trigger": "Task signal score bias from stale history context.",
+        "affected_entrypoint": "frontend gateway",
+        "affected_modules": [
+          "frontend/conversation_mode_router.py"
+        ],
+        "observed_fallback_behavior": "Generated one project followup question.",
+        "expected_behavior": "Greeting should remain in GREETING mode with no followups.",
+        "fix_attempt_status": "identified",
+        "regression_test_status": "failing"
+      }
+    ]
+  },
+  "post_fix_verified": {
+    "timestamp": "2026-03-09T19:00:40Z",
+    "pass": true,
+    "issue_key": "frontend.greeting_misroute.project_mode",
+    "failures": [
+      {
+        "suite_id": "triplet_integration_guard",
+        "check_name": "post_fix_state_reflected",
+        "symptom": "Greeting mode now stable and no project followup emitted.",
+        "likely_trigger": "N/A (post-fix verification)",
+        "affected_entrypoint": "frontend gateway",
+        "affected_modules": [
+          "frontend/conversation_mode_router.py"
+        ],
+        "observed_fallback_behavior": "No fallback path activated.",
+        "expected_behavior": "Greeting remains GREETING and passes sanitization guard.",
+        "fix_attempt_status": "applied",
+        "regression_test_status": "passing"
+      }
+    ]
+  }
+}

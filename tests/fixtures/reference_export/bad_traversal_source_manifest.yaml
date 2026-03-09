@@ -1,0 +1,26 @@
+{
+  "schema_version": "ctcp-reference-export-manifest-v1",
+  "default_exclude": [],
+  "targets": {
+    "scaffold-pointcloud": {
+      "profiles": {
+        "minimal": {
+          "inherit_copy": [
+            {
+              "source": "../README.md",
+              "target": "README.md"
+            }
+          ],
+          "inherit_transform": [],
+          "generate": [
+            "meta/manifest.json"
+          ],
+          "required_outputs": [
+            "README.md",
+            "meta/manifest.json"
+          ]
+        }
+      }
+    }
+  }
+}

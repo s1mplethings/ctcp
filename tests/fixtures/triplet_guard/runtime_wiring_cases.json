@@ -1,0 +1,4 @@
+{
+  "greeting_input": "你好",
+  "detailed_project_request": "我想做一个无人机视角的3D视频到点云工作流，优先速度，同时保留语义信息接入能力，目标是高速建图并输出PLY。"
+}

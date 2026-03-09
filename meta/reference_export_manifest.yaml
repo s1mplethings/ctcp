@@ -1,0 +1,345 @@
+{
+  "schema_version": "ctcp-reference-export-manifest-v1",
+  "default_exclude": [
+    ".git",
+    ".git/**",
+    "**/__pycache__/**",
+    "**/.pytest_cache/**",
+    "**/.mypy_cache/**",
+    "**/.ruff_cache/**",
+    "**/*.pyc",
+    "**/.DS_Store",
+    "**/Thumbs.db",
+    "runs/**",
+    "out/**",
+    "fixture/**",
+    "simlab/_runs/**",
+    "build/**",
+    "build_*/**",
+    "ctcp_build/**",
+    "meta/run_pointers/**",
+    "artifacts/**"
+  ],
+  "targets": {
+    "scaffold": {
+      "profiles": {
+        "minimal": {
+          "inherit_copy": [
+            ".gitignore",
+            "docs/00_CORE.md",
+            {
+              "source": "templates/ctcp_ref/minimal/scripts/verify_repo.ps1",
+              "target": "scripts/verify_repo.ps1"
+            },
+            {
+              "source": "templates/ctcp_ref/minimal/scripts/verify_repo.sh",
+              "target": "scripts/verify_repo.sh"
+            }
+          ],
+          "inherit_transform": [
+            {
+              "source": "templates/ctcp_ref/minimal/README.md",
+              "target": "README.md"
+            },
+            {
+              "source": "meta/tasks/TEMPLATE.md",
+              "target": "meta/tasks/CURRENT.md"
+            },
+            {
+              "source": "meta/reports/TEMPLATE_LAST.md",
+              "target": "meta/reports/LAST.md"
+            },
+            {
+              "source": "meta/templates/reference_tokens.md",
+              "target": "meta/reference_tokens.md"
+            }
+          ],
+          "generate": [
+            "TREE.md",
+            "manifest.json",
+            "meta/reference_source.json"
+          ],
+          "required_outputs": [
+            "README.md",
+            "docs/00_CORE.md",
+            "meta/tasks/CURRENT.md",
+            "meta/reports/LAST.md",
+            "scripts/verify_repo.ps1",
+            "scripts/verify_repo.sh",
+            "manifest.json",
+            "TREE.md",
+            "meta/reference_source.json"
+          ]
+        },
+        "standard": {
+          "inherit_copy": [
+            ".gitignore",
+            "docs/00_CORE.md",
+            "docs/30_artifact_contracts.md",
+            "docs/behaviors/INDEX.md",
+            {
+              "source": "templates/ctcp_ref/minimal/scripts/verify_repo.ps1",
+              "target": "scripts/verify_repo.ps1"
+            },
+            {
+              "source": "templates/ctcp_ref/minimal/scripts/verify_repo.sh",
+              "target": "scripts/verify_repo.sh"
+            },
+            {
+              "source": "templates/ctcp_ref/standard/workflow_registry/README.md",
+              "target": "workflow_registry/README.md"
+            },
+            {
+              "source": "templates/ctcp_ref/standard/simlab/scenarios/S00_smoke.yaml",
+              "target": "simlab/scenarios/S00_smoke.yaml"
+            }
+          ],
+          "inherit_transform": [
+            {
+              "source": "templates/ctcp_ref/standard/README.md",
+              "target": "README.md"
+            },
+            {
+              "source": "meta/tasks/TEMPLATE.md",
+              "target": "meta/tasks/CURRENT.md"
+            },
+            {
+              "source": "meta/reports/TEMPLATE_LAST.md",
+              "target": "meta/reports/LAST.md"
+            },
+            {
+              "source": "meta/templates/reference_tokens.md",
+              "target": "meta/reference_tokens.md"
+            }
+          ],
+          "generate": [
+            "TREE.md",
+            "manifest.json",
+            "meta/reference_source.json"
+          ],
+          "required_outputs": [
+            "README.md",
+            "docs/00_CORE.md",
+            "docs/30_artifact_contracts.md",
+            "docs/behaviors/INDEX.md",
+            "meta/tasks/CURRENT.md",
+            "meta/reports/LAST.md",
+            "scripts/verify_repo.ps1",
+            "scripts/verify_repo.sh",
+            "workflow_registry/README.md",
+            "simlab/scenarios/S00_smoke.yaml",
+            "manifest.json",
+            "TREE.md",
+            "meta/reference_source.json"
+          ]
+        },
+        "full": {
+          "inherit_copy": [
+            ".gitignore",
+            "docs/00_CORE.md",
+            "docs/02_workflow.md",
+            "docs/30_artifact_contracts.md",
+            "docs/behaviors/INDEX.md",
+            {
+              "source": "templates/ctcp_ref/minimal/scripts/verify_repo.ps1",
+              "target": "scripts/verify_repo.ps1"
+            },
+            {
+              "source": "templates/ctcp_ref/minimal/scripts/verify_repo.sh",
+              "target": "scripts/verify_repo.sh"
+            },
+            {
+              "source": "templates/ctcp_ref/full/workflow_registry/README.md",
+              "target": "workflow_registry/README.md"
+            },
+            {
+              "source": "templates/ctcp_ref/full/simlab/scenarios/S00_smoke.yaml",
+              "target": "simlab/scenarios/S00_smoke.yaml"
+            }
+          ],
+          "inherit_transform": [
+            {
+              "source": "templates/ctcp_ref/full/README.md",
+              "target": "README.md"
+            },
+            {
+              "source": "meta/tasks/TEMPLATE.md",
+              "target": "meta/tasks/CURRENT.md"
+            },
+            {
+              "source": "meta/reports/TEMPLATE_LAST.md",
+              "target": "meta/reports/LAST.md"
+            },
+            {
+              "source": "meta/templates/reference_tokens.md",
+              "target": "meta/reference_tokens.md"
+            }
+          ],
+          "generate": [
+            "TREE.md",
+            "manifest.json",
+            "meta/reference_source.json"
+          ],
+          "required_outputs": [
+            "README.md",
+            "docs/00_CORE.md",
+            "docs/02_workflow.md",
+            "docs/30_artifact_contracts.md",
+            "docs/behaviors/INDEX.md",
+            "meta/tasks/CURRENT.md",
+            "meta/reports/LAST.md",
+            "scripts/verify_repo.ps1",
+            "scripts/verify_repo.sh",
+            "workflow_registry/README.md",
+            "simlab/scenarios/S00_smoke.yaml",
+            "manifest.json",
+            "TREE.md",
+            "meta/reference_source.json"
+          ]
+        }
+      }
+    },
+    "scaffold-pointcloud": {
+      "profiles": {
+        "minimal": {
+          "inherit_copy": [
+            {
+              "source": "templates/pointcloud_project/minimal/.gitignore",
+              "target": ".gitignore"
+            },
+            {
+              "source": "docs/00_CORE.md",
+              "target": "docs/00_CORE.md"
+            },
+            {
+              "source": "templates/pointcloud_project/minimal/scripts",
+              "target": "scripts"
+            },
+            {
+              "source": "templates/pointcloud_project/minimal/tests",
+              "target": "tests"
+            },
+            {
+              "source": "templates/pointcloud_project/minimal/pyproject.toml",
+              "target": "pyproject.toml"
+            }
+          ],
+          "inherit_transform": [
+            {
+              "source": "templates/pointcloud_project/minimal/README.md",
+              "target": "README.md"
+            },
+            {
+              "source": "templates/pointcloud_project/minimal/meta/tasks/CURRENT.md",
+              "target": "meta/tasks/CURRENT.md"
+            },
+            {
+              "source": "templates/pointcloud_project/minimal/meta/reports/LAST.md",
+              "target": "meta/reports/LAST.md"
+            },
+            {
+              "source": "meta/templates/reference_tokens.md",
+              "target": "meta/reference_tokens.md"
+            }
+          ],
+          "generate": [
+            "meta/manifest.json",
+            "meta/reference_source.json"
+          ],
+          "required_outputs": [
+            "README.md",
+            ".gitignore",
+            "docs/00_CORE.md",
+            "meta/tasks/CURRENT.md",
+            "meta/reports/LAST.md",
+            "meta/manifest.json",
+            "meta/reference_source.json",
+            "scripts/make_synth_fixture.py",
+            "scripts/eval_v2p.py",
+            "scripts/clean_project.py",
+            "scripts/run_v2p.py",
+            "scripts/verify_repo.ps1",
+            "tests/test_clean_project.py",
+            "tests/test_pipeline_synth.py",
+            "tests/test_smoke.py",
+            "pyproject.toml"
+          ]
+        },
+        "standard": {
+          "inherit_copy": [
+            {
+              "source": "templates/pointcloud_project/minimal/.gitignore",
+              "target": ".gitignore"
+            },
+            {
+              "source": "docs/00_CORE.md",
+              "target": "docs/00_CORE.md"
+            },
+            {
+              "source": "templates/pointcloud_project/minimal/scripts",
+              "target": "scripts"
+            },
+            {
+              "source": "templates/pointcloud_project/minimal/tests",
+              "target": "tests"
+            },
+            {
+              "source": "templates/pointcloud_project/minimal/pyproject.toml",
+              "target": "pyproject.toml"
+            },
+            {
+              "source": "templates/pointcloud_project/standard/docs/behaviors",
+              "target": "docs/behaviors"
+            },
+            {
+              "source": "templates/pointcloud_project/standard/workflow_registry",
+              "target": "workflow_registry"
+            }
+          ],
+          "inherit_transform": [
+            {
+              "source": "templates/pointcloud_project/minimal/README.md",
+              "target": "README.md"
+            },
+            {
+              "source": "templates/pointcloud_project/minimal/meta/tasks/CURRENT.md",
+              "target": "meta/tasks/CURRENT.md"
+            },
+            {
+              "source": "templates/pointcloud_project/minimal/meta/reports/LAST.md",
+              "target": "meta/reports/LAST.md"
+            },
+            {
+              "source": "meta/templates/reference_tokens.md",
+              "target": "meta/reference_tokens.md"
+            }
+          ],
+          "generate": [
+            "meta/manifest.json",
+            "meta/reference_source.json"
+          ],
+          "required_outputs": [
+            "README.md",
+            ".gitignore",
+            "docs/00_CORE.md",
+            "docs/behaviors/INDEX.md",
+            "workflow_registry/README.md",
+            "meta/tasks/CURRENT.md",
+            "meta/reports/LAST.md",
+            "meta/manifest.json",
+            "meta/reference_source.json",
+            "scripts/make_synth_fixture.py",
+            "scripts/eval_v2p.py",
+            "scripts/clean_project.py",
+            "scripts/run_v2p.py",
+            "scripts/verify_repo.ps1",
+            "tests/test_clean_project.py",
+            "tests/test_pipeline_synth.py",
+            "tests/test_smoke.py",
+            "pyproject.toml"
+          ]
+        }
+      }
+    }
+  }
+}

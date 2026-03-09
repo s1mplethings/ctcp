@@ -191,7 +191,15 @@ def prepare_output_dir(out_dir: Path, *, force: bool, planned_files: list[str]) 
         raise ScaffoldError(f"--out already exists (use --force to regenerate): {out_dir}")
 
     known = _load_existing_generated_files(out_dir)
-    candidates = list(known) if known else list(planned_files)
+    remain_before = _remaining_files(out_dir)
+    if remain_before and not known:
+        raise ScaffoldError(
+            "--force requires an existing generated manifest in --out; "
+            "refusing to delete unmanaged files"
+        )
+
+    candidates = list(known)
+    candidates.extend(planned_files)
     candidates.extend(["manifest.json", "TREE.md"])
     removed = _remove_generated_files(out_dir, candidates)
 
@@ -232,11 +240,18 @@ def write_output_manifest(
     utc_iso: str,
     files: list[str],
     source_manifest: str,
+    generated: list[str] | None = None,
+    inherited_copy: list[str] | None = None,
+    inherited_transform: list[str] | None = None,
+    excluded: list[str] | None = None,
+    source_commit: str = "",
+    source_mode: str = "template",
+    export_manifest: str = "",
 ) -> str:
     rel = "manifest.json"
     target = out_dir / rel
     _must_be_within(out_dir, target)
-    doc = {
+    doc: dict[str, object] = {
         "schema_version": OUTPUT_MANIFEST_SCHEMA,
         "generated_by": "ctcp_orchestrate scaffold",
         "profile": profile,
@@ -245,7 +260,19 @@ def write_output_manifest(
         "source_template_manifest": source_manifest,
         "files": sorted(files),
         "file_count": len(files),
+        "source_mode": source_mode,
+        "source_commit": source_commit,
     }
+    if generated is not None:
+        doc["generated"] = sorted(set(str(x) for x in generated))
+    if inherited_copy is not None:
+        doc["inherited_copy"] = sorted(set(str(x) for x in inherited_copy))
+    if inherited_transform is not None:
+        doc["inherited_transform"] = sorted(set(str(x) for x in inherited_transform))
+    if excluded is not None:
+        doc["excluded"] = sorted(set(str(x) for x in excluded))
+    if export_manifest:
+        doc["export_manifest"] = export_manifest
     target.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return rel
 
@@ -339,4 +366,3 @@ def scaffold_project(
         "validation": validation,
         "elapsed_ms": elapsed_ms,
     }
-

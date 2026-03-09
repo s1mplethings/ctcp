@@ -68,6 +68,103 @@
 ### Questions
 - None.
 
+## Update 2026-03-09 - Frontend control plane + single CTCP bridge (Phase 1-2)
+
+### Readlist
+- `docs/00_CORE.md`
+- `docs/01_north_star.md`
+- `docs/04_execution_flow.md`
+- `AGENTS.md`
+- `ai_context/00_AI_CONTRACT.md`
+- `docs/03_quality_gates.md`
+- `ai_context/CTCP_FAST_RULES.md`
+- `README.md`
+- `BUILD.md`
+- `PATCH_README.md`
+- `TREE.md`
+- `ai_context/problem_registry.md`
+- `ai_context/decision_log.md`
+- `meta/tasks/CURRENT.md`
+- `meta/backlog/execution_queue.json`
+- `docs/10_team_mode.md`
+- `.agents/skills/ctcp-workflow/SKILL.md`
+- `.agents/skills/ctcp-failure-bundle/SKILL.md`
+- `frontend/conversation_mode_router.py`
+- `frontend/project_manager_mode.py`
+- `frontend/response_composer.py`
+- `frontend/message_sanitizer.py`
+- `scripts/ctcp_front_bridge.py`
+- `scripts/ctcp_front_api.py`
+- `tools/telegram_cs_bot.py`
+- `tests/test_frontend_rendering_boundary.py`
+- `tests/test_runtime_wiring_contract.py`
+- `tests/test_support_bot_humanization.py`
+- `tests/test_telegram_cs_bot_employee_style.py`
+
+### Plan
+1) 先绑定本轮 ADHOC queue 与 CURRENT task truth 字段，完成 integration check。
+2) 保持 text-first PM pipeline 结构不拆散，聚焦执行路径收敛：将 `telegram_cs_bot` 的 `new-run/status/advance/decision/upload/report` 接入 `ctcp_front_bridge`。
+3) 补 bridge enforcement 回归测试，覆盖 create/status/advance + decision write。
+4) 执行本地 check/fix loop（frontend + support + triplet guard）。
+5) 运行 canonical verify，记录首个失败点与最小修复策略。
+
+### Changes
+- `meta/backlog/execution_queue.json`
+  - 新增 `ADHOC-20260309-frontend-control-plane-single-bridge` 队列项（DoD、产物、测试清单）。
+- `meta/tasks/CURRENT.md`
+  - 追加本轮 Queue Binding / Task Truth / Analysis / Integration Check / Plan / Results。
+- `tools/telegram_cs_bot.py`
+  - 删除 direct subprocess orchestrate 主路径，`_run_orchestrate` 改为 bridge adapter（`ctcp_new_run` / `ctcp_advance` / `ctcp_get_status`）。
+  - `_run_status` 优先走 `ctcp_get_status`。
+  - `_collect_prompts` 增加 `ctcp_list_decisions_needed` 查询路径并保留 outbox fallback。
+  - `_write_reply` 改为 `ctcp_submit_decision`（文本）/`ctcp_upload_artifact`（文件）写入。
+  - `_send_verify` 通过 `ctcp_get_last_report` 获取 verify artifact path。
+- `tests/test_runtime_wiring_contract.py`
+  - 新增 telegram bridge wiring 回归：
+    - new-run/advance 经 bridge 调用
+    - status 查询经 bridge 调用
+    - decision 写入经 bridge submit 调用
+
+### Verify
+- `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` => exit `0` (8 passed)
+- `python -m unittest discover -s tests -p "test_frontend_rendering_boundary.py" -v` => exit `0` (15 passed)
+- `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v` => exit `0` (20 passed)
+- `python -m unittest discover -s tests -p "test_telegram_cs_bot_employee_style.py" -v` => exit `0` (22 passed)
+- `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` => exit `0` (3 passed)
+- `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` => exit `0` (3 passed)
+- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => exit `1`
+  - first failure point: `lite scenario replay`
+  - first failing check: `S16_lite_fixer_loop_pass` step 6 (`expect_exit mismatch, rc=1, expect=0`)
+  - failure chain:
+    - trigger: replay suite executes fixer-loop scenario after applying `lite_fix_remove_bad_readme_link.patch`
+    - failing gate: lite replay
+    - failing check: second `ctcp_orchestrate.py advance --max-steps 16` remains non-zero
+    - consequence: canonical verify fails at replay gate
+  - evidence paths:
+    - `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260309-225449/summary.json`
+    - `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260309-225449/S16_lite_fixer_loop_pass/TRACE.md`
+    - `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_external_runs/20260309-225449/S16_lite_fixer_loop_pass/sandbox/20260309-225622-687595-orchestrate/artifacts/verify_report.json`
+  - minimal fix strategy (first failure only):
+    - 更新 `S16` 使用的修复 patch fixture 及对应断言样本，使其与当前 frontend reply 文本基线（`B01-B06/U26`）一致。
+
+### Questions
+- None.
+
+### Demo
+- Current task card: `meta/tasks/CURRENT.md`
+- Current report: `meta/reports/LAST.md`
+- Queue source: `meta/backlog/execution_queue.json`
+- Bridge path (single execution bridge):
+  - `scripts/ctcp_front_bridge.py`
+  - `scripts/ctcp_front_api.py`
+- Frontend control plane modules:
+  - `frontend/conversation_mode_router.py`
+  - `frontend/project_manager_mode.py`
+  - `frontend/response_composer.py`
+  - `frontend/message_sanitizer.py`
+- Verify evidence:
+  - `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260309-225449/summary.json`
+
 ### Demo
 - Report: `meta/reports/LAST.md`
 - Task: `meta/tasks/CURRENT.md`
@@ -3296,3 +3393,488 @@ Evidence paths:
 - Regression: `tests/test_support_router_and_stylebank.py`
 - Verify replay summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260306-001423/summary.json`
 - Final recheck summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260306-001917/summary.json`
+
+## Update 2026-03-09 - Wiring Contract / Integration Proof / Skill Usage Contract
+
+### Readlist
+- `ai_context/00_AI_CONTRACT.md`
+- `ai_context/CTCP_FAST_RULES.md`
+- `README.md`
+- `BUILD.md`
+- `PATCH_README.md`
+- `TREE.md`
+- `docs/00_CORE.md`
+- `docs/03_quality_gates.md`
+- `ai_context/problem_registry.md`
+- `ai_context/decision_log.md`
+- `AGENTS.md`
+
+### Plan
+1) 在 `docs/00_CORE.md` 新增 runtime wiring、frontend bridge、conversation mode gate 三个硬规则段落。
+2) 在 `AGENTS.md` 新增 integration proof、wiring 问题禁止 prompt-only 完成、frontend boundary 规则。
+3) 在 `ai_context/00_AI_CONTRACT.md` 新增错误记忆积累、用户可见失败入库、skill 使用义务与 runtime skill 消费声明。
+4) 新建 `meta/templates/integration_check.md` 统一模板。
+5) 运行 `scripts/verify_repo.ps1` 并记录首个失败点。
+
+### Changes
+- `docs/00_CORE.md`
+  - 新增 `0.X Runtime Wiring Contract`。
+  - 新增 `0.Y Frontend-to-Execution Bridge Rule`。
+  - 新增 `0.Z Conversation Mode Gate`。
+  - 新增 capability complete 判定硬句（reachability/downstream/regression/skill decision）。
+- `AGENTS.md`
+  - 新增 `Integration Proof Requirement`（含固定输出字段）。
+  - 新增 `No Prompt-Only Completion for Wiring Problems`。
+  - 新增 `Frontend Boundary Rule`。
+- `ai_context/00_AI_CONTRACT.md`
+  - 新增 `Error Memory Accumulation Contract`。
+  - 新增 `User-Facing Failure Must Not Stay Local`。
+  - 新增 `Skill Usage Contract`。
+  - 新增 `Runtime Skill Consumption Declaration`。
+  - 新增 capability complete 判定硬句。
+- `meta/templates/integration_check.md`（新增）
+  - 新增统一 Integration Check 模板（Feature/Wiring/Memory/Skill/Verification/Completion）。
+
+### Verify
+- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => exit `1`
+  - passed gates:
+    - anti-pollution
+    - cmake headless lite configure/build + `ctest`（2/2）
+    - workflow / plan / patch / behavior / contract / doc-index checks
+  - first failure gate: `lite scenario replay`
+  - replay summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260309-183023/summary.json`
+  - failed scenarios:
+    - `S15_lite_fail_produces_bundle`: `missing expected text: failure_bundle.zip`
+    - `S16_lite_fixer_loop_pass`: `expect_exit mismatch, rc=1, expect=0`
+- Minimal repair strategy (first-failure focused)
+  - S15: 对齐 S15 用例中 outbox/assert 文案与当前失败闭环输出，确保 `failure_bundle.zip` 关键提示在预期路径可见。
+  - S16: 同步 `lite_fix_remove_bad_readme_link.patch` 与当前 `README.md` 上下文，恢复期望 `expect_exit=0` 的修复路径。
+
+### Questions
+- None.
+
+### Demo
+- Report: `meta/reports/LAST.md`
+- Task: `meta/tasks/CURRENT.md`
+- Updated contracts:
+  - `docs/00_CORE.md`
+  - `AGENTS.md`
+  - `ai_context/00_AI_CONTRACT.md`
+- New template:
+  - `meta/templates/integration_check.md`
+- Verify replay summary:
+  - `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260309-183023/summary.json`
+
+## Update 2026-03-09 - triplet_integration_guard（wiring + issue memory + skill consumption）
+
+### Readlist
+- `ai_context/00_AI_CONTRACT.md`
+- `ai_context/CTCP_FAST_RULES.md`
+- `README.md`
+- `BUILD.md`
+- `PATCH_README.md`
+- `TREE.md`
+- `docs/00_CORE.md`
+- `docs/03_quality_gates.md`
+- `ai_context/problem_registry.md`
+- `ai_context/decision_log.md`
+- `frontend/response_composer.py`
+- `frontend/conversation_mode_router.py`
+- `scripts/ctcp_front_api.py`
+- `scripts/ctcp_front_bridge.py`
+- `scripts/_issue_memory.py`
+- `tests/test_frontend_rendering_boundary.py`
+- `tests/test_support_bot_humanization.py`
+
+### Plan
+1) 新增 triplet guard fixtures，定义 runtime wiring / issue memory / skill consumption 的可重复输入。
+2) 新增 runtime wiring 合同测试，覆盖 conversation mode gate 与 front bridge 调用路径。
+3) 新增 issue memory 合同测试，覆盖捕获、重复累积、修复后状态回写。
+4) 新增 skill consumption 合同测试，覆盖 claim-evidence 与 non-skillized justification 双路径。
+5) 执行新增测试 + `scripts/verify_repo.ps1`，记录结果与首个失败点。
+
+### Changes
+- `tests/test_runtime_wiring_contract.py`（新增）
+  - Test A1: `"你好"` 输入下必须保持 `GREETING`，不得进入 project planning/missing-info/internal-error rewrite 话术。
+  - Test A2: 无人机点云详细需求必须进入 `PROJECT_*` 模式，回复保持项目摘要风格，问题数 1-2 且不回退通用 intake 问句。
+  - Test A3: `ctcp_front_api` 的 `new/status/advance` 命令必须调用 `ctcp_new_run/ctcp_get_status/ctcp_advance`（bridge traversal）。
+- `tests/test_issue_memory_accumulation_contract.py`（新增）
+  - Test B1: 用户可见失败被写入 `issue_memory/errors/latest.json|latest.md|index.jsonl`，并包含 `symptom/likely_trigger/affected_entrypoint/expected_behavior`。
+  - Test B2: 同类失败重复触发后，`index.jsonl` 至少保留 recurrence/update 证据，不得静默丢弃。
+  - Test B3: 失败后再通过场景，`latest.json` 中 `fix_attempt_status/regression_test_status` 必须更新为修复态。
+- `tests/test_skill_consumption_contract.py`（新增）
+  - Test C1: `.agents/skills` 目录存在本身不构成 skill runtime consumption 证据。
+  - Test C2: 当 `claims_skill_usage=true` 时，必须存在可观测 runtime evidence（日志/报告/trace）绑定到具体 skill。
+  - Test C3: 当 `claims_skill_usage=false` 时，必须有 `skillized: no, because ...` 的显式理由，否则判定失败。
+- `tests/fixtures/triplet_guard/runtime_wiring_cases.json`（新增）
+  - greeting 与 detailed request 固定输入。
+- `tests/fixtures/triplet_guard/issue_memory_cases.json`（新增）
+  - user-visible failure、repeated failure、post-fix 状态样本。
+- `tests/fixtures/triplet_guard/skill_consumption_cases.json`（新增）
+  - claimed-without-evidence / claimed-with-evidence / non-skillized-with-reason / non-skillized-without-reason 样本。
+- `tests/fixtures/triplet_guard/runtime_skill_trace.txt`（新增）
+  - skill runtime evidence 样例。
+- `meta/reports/triplet_integration_guard.md`（新增）
+  - triplet guard 结果记录模板（runtime wiring / issue memory / skill consumption）。
+- `meta/tasks/CURRENT.md`
+  - 新增本轮 DoD/Acceptance/Plan 任务更新。
+- `meta/reports/LAST.md`
+  - 新增本轮审计报告。
+
+### Verify
+- `$env:PYTHONPATH='.'; python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` => exit `0`
+  - result: 5 passed
+- `$env:PYTHONPATH='.'; python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` => exit `0`
+  - result: 3 passed
+- `$env:PYTHONPATH='.'; python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` => exit `0`
+  - result: 3 passed
+- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => exit `1`
+  - passed gates: anti-pollution / headless lite build+ctest / workflow / plan / patch / behavior / contract / doc-index
+  - first failure gate: `lite scenario replay`
+  - replay summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260309-184924/summary.json`
+  - failed scenarios:
+    - `S15_lite_fail_produces_bundle`: `step 8: include assertion failed: missing expected text: failure_bundle.zip`
+    - `S16_lite_fixer_loop_pass`: `step 6: expect_exit mismatch, rc=1, expect=0`
+- Minimal repair strategy (first-failure focused)
+  - S15: 对齐 S15 断言与当前 failure bundle 输出文案/路径，确保 `failure_bundle.zip` 关键提示文本可被场景断言命中。
+  - S16: 对齐 `tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch` 与当前 README 上下文，恢复预期 `expect_exit=0`。
+
+### Questions
+- None.
+
+### Demo
+- Report: `meta/reports/LAST.md`
+- Task: `meta/tasks/CURRENT.md`
+- New triplet guard tests:
+  - `tests/test_runtime_wiring_contract.py`
+  - `tests/test_issue_memory_accumulation_contract.py`
+  - `tests/test_skill_consumption_contract.py`
+- New fixtures:
+  - `tests/fixtures/triplet_guard/runtime_wiring_cases.json`
+  - `tests/fixtures/triplet_guard/issue_memory_cases.json`
+  - `tests/fixtures/triplet_guard/skill_consumption_cases.json`
+  - `tests/fixtures/triplet_guard/runtime_skill_trace.txt`
+- Optional report template:
+  - `meta/reports/triplet_integration_guard.md`
+- Verify replay summary:
+  - `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260309-184924/summary.json`
+
+## Update 2026-03-09 - Fixed 10-Step Workflow Hardening (analysis/plan/fix-loop enforced)
+
+### Readlist
+- `docs/00_CORE.md`
+- `AGENTS.md`
+- `ai_context/00_AI_CONTRACT.md`
+- `ai_context/CTCP_FAST_RULES.md`
+- `docs/03_quality_gates.md`
+- `meta/templates/integration_check.md`
+- `meta/tasks/TEMPLATE.md`
+- `scripts/workflow_checks.py`
+- `scripts/verify_repo.ps1`
+- `scripts/verify_repo.sh`
+- `tools/checks/plan_contract.py`
+- `scripts/plan_check.py`
+
+### Plan
+1) 先将流程契约统一为固定 10-step，明确 analysis/find -> plan -> implement -> check/fix -> verify。
+2) 将 Integration Check / Task 模板字段补齐到可执行流程所需最小集。
+3) 在 `scripts/workflow_checks.py` 增加 10-step 关键证据门禁，防止跳步。
+4) 在 `scripts/verify_repo.ps1/.sh` 接入 triplet guard gate，作为 canonical verify 的硬子门禁。
+5) 回归执行 workflow gate + triplet tests + verify_repo，记录首个失败点与最小修复策略。
+
+### Changes
+- `AGENTS.md`
+  - 执行顺序由 6 步重构为硬 10-step：bind -> read -> analyze/find -> integration-check -> plan -> spec-first -> implement -> local check/fix loop -> verify -> finalize。
+  - step 8 强制 triplet guard 三条命令。
+  - DoD gate 覆盖项新增 triplet guard gate。
+  - Integration proof 输出字段补齐：`current_module`、`forbidden_bypass`、`user_visible_effect`。
+- `docs/00_CORE.md`
+  - 新增 `0.W Fixed 10-Step Execution Flow Principle`（简洁硬规则），明确顺序约束与 final verify 位置。
+  - DoD gate contract 序列新增 triplet integration guard tests。
+- `ai_context/00_AI_CONTRACT.md`
+  - 新增 `Fixed 10-Step Workflow Contract`，禁止从 docs 直接跳实现或从实现直接跳最终 verify。
+  - 明确 integration completion proof 必须覆盖 `connected + accumulated + consumed`。
+- `ai_context/CTCP_FAST_RULES.md`
+  - Fast rule 的执行顺序更新为固定 10-step 表达。
+- `meta/templates/integration_check.md`
+  - Wiring 字段新增 `acceptance_test` 与 `user_visible_effect`。
+- `meta/tasks/TEMPLATE.md`
+  - 新增 `Analysis / Find` 与 `Integration Check` 必填段。
+  - Plan 强制包含 local check/contrast/fix loop、triplet commands、completion criteria。
+  - Notes 强化 issue memory decision + skill decision。
+- `scripts/workflow_checks.py`
+  - 变更检测扩展到 untracked files（避免新增文件绕过 gate）。
+  - 任意变更要求同时更新 `meta/tasks/CURRENT.md` 与 `meta/reports/LAST.md`。
+  - 增加 10-step 关键证据检查：Analysis/Find、Integration Check、Plan、fix loop、completion criteria、issue memory decision、skill decision。
+  - 增加 Integration Check 字段检查：`upstream/current_module/downstream/source_of_truth/fallback/acceptance_test/forbidden_bypass/user_visible_effect`。
+  - 增加 LAST 证据检查：Readlist/Plan/Verify/Demo、first failure point、minimal fix strategy、triplet command evidence。
+- `scripts/verify_repo.ps1`
+  - 新增 `triplet integration guard` gate，执行 3 条 contract tests 并记入 `ExecutedGates`。
+- `scripts/verify_repo.sh`
+  - 同步新增 triplet integration guard gate。
+- `docs/03_quality_gates.md`
+  - gate sequence 同步脚本现实：在 contract/doc-index 之后、lite replay 之前增加 triplet gate。
+- `meta/tasks/CURRENT.md`
+  - 新增本轮 10-step 流程固化任务记录（含 Analysis/Find、Integration Check、Plan、Issue/Skill decision）。
+- `meta/reports/LAST.md`
+  - 新增本轮审计记录。
+
+### Verify
+- `python scripts/workflow_checks.py` => exit `0`
+- `$env:PYTHONPATH='.'; python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` => exit `0` (5 passed)
+- `$env:PYTHONPATH='.'; python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` => exit `0` (3 passed)
+- `$env:PYTHONPATH='.'; python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` => exit `0` (3 passed)
+- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => exit `1`
+  - observed: triplet integration guard step executed successfully inside verify flow
+  - first failure gate: `lite scenario replay`
+  - replay summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260309-193411/summary.json`
+  - failed scenarios:
+    - `S15_lite_fail_produces_bundle`: `step 8: include assertion failed: missing expected text: failure_bundle.zip`
+    - `S16_lite_fixer_loop_pass`: `step 6: expect_exit mismatch, rc=1, expect=0`
+- Minimal repair strategy (first-failure focused)
+  - S15: 对齐 S15 场景 include 断言与当前 failure bundle/outbox 提示文本。
+  - S16: 对齐 `tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch` 与当前 README 基线。
+
+### Questions
+- None.
+
+### Demo
+- Report: `meta/reports/LAST.md`
+- Task: `meta/tasks/CURRENT.md`
+- Workflow gate script: `scripts/workflow_checks.py`
+- Canonical verify gates: `scripts/verify_repo.ps1`, `scripts/verify_repo.sh`
+- Updated contracts/templates:
+  - `AGENTS.md`
+  - `docs/00_CORE.md`
+  - `ai_context/00_AI_CONTRACT.md`
+  - `ai_context/CTCP_FAST_RULES.md`
+  - `meta/templates/integration_check.md`
+  - `meta/tasks/TEMPLATE.md`
+  - `docs/03_quality_gates.md`
+- Verify replay summary:
+  - `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260309-193411/summary.json`
+
+## Update 2026-03-09 - Single-Purpose / Single-Flow / Single-Responsibility Refactor
+
+### Readlist
+- `docs/00_CORE.md`
+- `docs/01_north_star.md`
+- `docs/02_workflow.md`
+- `docs/03_quality_gates.md`
+- `docs/04_execution_flow.md`
+- `docs/05_agent_mode_matrix.md`
+- `docs/10_workflow.md`
+- `docs/10_team_mode.md`
+- `docs/adlc_pipeline.md`
+- `docs/22_teamnet_adlc.md`
+- `docs/25_project_plan.md`
+- `AGENTS.md`
+- `README.md`
+- `ai_context/00_AI_CONTRACT.md`
+- `meta/tasks/TEMPLATE.md`
+- `meta/templates/integration_check.md`
+- `scripts/workflow_checks.py`
+- `scripts/sync_doc_links.py`
+- `scripts/verify_repo.ps1`
+- `scripts/verify_repo.sh`
+
+### Plan
+1) 新建单一 repo purpose 文档、单一 canonical flow 文档、mode/responsibility 矩阵文档。
+2) 收敛已有 overview/workflow/team 文档为 lane/scope 文档，避免重复定义仓库目的和主流程。
+3) 强化 `AGENTS.md`：行动前三重识别 + 冲突停机；流程语义改为引用 canonical flow 源。
+4) 强化 `meta/tasks/TEMPLATE.md` 与 `scripts/workflow_checks.py`，将 current-task truth 字段变成硬门禁。
+5) 执行 check/contrast/fix loop，再跑 canonical verify 并记录首个失败点。
+
+### Changes
+- New single-purpose/single-flow docs:
+  - `docs/01_north_star.md`
+  - `docs/04_execution_flow.md`
+  - `docs/05_agent_mode_matrix.md`
+- Source-map and scope-boundary refactor:
+  - `docs/00_CORE.md`（runtime truth boundary + source map）
+  - `docs/02_workflow.md`（reclassify as runtime execution-lane doc, non-canonical for repo workflow）
+  - `docs/00_overview.md`, `docs/10_workflow.md`, `docs/10_team_mode.md`（明确 lane/scope 边界）
+  - `docs/adlc_pipeline.md`, `docs/22_teamnet_adlc.md`（补充 scope boundary，避免与 canonical flow 竞争）
+  - `docs/25_project_plan.md`（明确 CURRENT 为 current-task truth source）
+  - `README.md`（authoritative source map）
+- Agent/task control hardening:
+  - `AGENTS.md`（preflight triple-source identification + stop-on-conflict + canonical flow reference）
+  - `meta/tasks/TEMPLATE.md`（新增 task truth 字段）
+  - `scripts/workflow_checks.py`（新增 task truth 字段门禁）
+  - `meta/backlog/execution_queue.json`（新增 ADHOC queue item）
+  - `meta/tasks/CURRENT.md`（新增本轮 task truth/analysis/integration/plan 记录）
+- Index sync:
+  - `scripts/sync_doc_links.py`（curated docs 增补 new canonical docs）
+  - `README.md` doc index 自动同步
+
+### Verify
+- `python scripts/workflow_checks.py` => exit `0`
+- `python scripts/sync_doc_links.py --check` => exit `0`
+- `$env:PYTHONPATH='.'; python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` => exit `0` (5 passed)
+- `$env:PYTHONPATH='.'; python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` => exit `0` (3 passed)
+- `$env:PYTHONPATH='.'; python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` => exit `0` (3 passed)
+- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => exit `1`
+  - first failure gate: `lite scenario replay`
+  - replay summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260309-201914/summary.json`
+  - failed scenarios:
+    - `S15_lite_fail_produces_bundle`: include assertion failed (`missing expected text: failure_bundle.zip`)
+    - `S16_lite_fixer_loop_pass`: `expect_exit mismatch, rc=1, expect=0`
+- Minimal repair strategy (first-failure focused)
+  - 对齐 S15 include 断言与当前 failure bundle 提示文案。
+  - 对齐 S16 fixture patch 与当前 README 基线。
+
+### Questions
+- None.
+
+### Demo
+- Report: `meta/reports/LAST.md`
+- Task: `meta/tasks/CURRENT.md`
+- Queue: `meta/backlog/execution_queue.json`
+- Canonical purpose/flow docs:
+  - `docs/01_north_star.md`
+  - `docs/04_execution_flow.md`
+- Runtime truth contract:
+  - `docs/00_CORE.md`
+- Verify replay summary:
+  - `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260309-201914/summary.json`
+
+## Update 2026-03-09 - Scaffold/Pointcloud Dual Source Mode (doc-first kickoff)
+
+### Readlist
+- `README.md`
+- `docs/00_CORE.md`
+- `docs/40_reference_project.md`
+- `ai_context/00_AI_CONTRACT.md`
+- `tests/test_scaffold_pointcloud_project.py`
+- `tests/test_scaffold_reference_project.py`
+- `scripts/ctcp_orchestrate.py`
+- `tools/scaffold.py`
+- `AGENTS.md`
+- `docs/01_north_star.md`
+- `docs/04_execution_flow.md`
+- `docs/03_quality_gates.md`
+- `ai_context/CTCP_FAST_RULES.md`
+- `BUILD.md`
+- `PATCH_README.md`
+- `TREE.md`
+- `ai_context/problem_registry.md`
+- `ai_context/decision_log.md`
+- `meta/tasks/CURRENT.md`
+- `meta/backlog/execution_queue.json`
+- `.agents/skills/ctcp-workflow/SKILL.md`
+- `.agents/skills/ctcp-gate-precheck/SKILL.md`
+
+### Purpose/Flow/Task Triple-Check
+- Repo purpose source: `docs/01_north_star.md`（contract-first、auditable execution）
+- Current lane/subsystem purpose source: `docs/00_overview.md` + `docs/10_team_mode.md`（lane 文档，不重定义 repo purpose）
+- Current task purpose source: `meta/tasks/CURRENT.md`（本轮已绑定 `ADHOC-20260309-scaffold-live-reference-mode`）
+- Conflict check: no blocking conflict found; proceed with implementation scope in CURRENT.
+
+### Plan
+1) Docs/spec/meta first:
+   - 新增受控导出清单 `meta/reference_export_manifest.yaml`
+   - 在 `README.md` / `docs/40_reference_project.md` / `docs/30_artifact_contracts.md` 明确双模式、边界、安全、元数据与后续流程接续
+2) Code:
+   - 新增 `tools/reference_export.py` 实现 live-reference 白名单导出
+   - 修改 `scripts/ctcp_orchestrate.py` 接入 `--source-mode`、source commit、reference_source、manifest/report 扩展
+   - 收紧 pointcloud/scaffold force 清理为 manifest-governed
+3) Tests:
+   - 保持 template 回归
+   - 新增 live-reference 最小路径、白名单、token replacement、路径安全、source commit fallback
+4) Verify:
+   - `python -m unittest discover -s tests -p "test_scaffold_reference_project.py" -v`
+   - `python -m unittest discover -s tests -p "test_scaffold_pointcloud_project.py" -v`
+   - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
+   - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
+   - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
+   - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
+
+### Integration Proof (planned)
+- upstream: `scripts/ctcp_orchestrate.py` subcommands `scaffold` and `scaffold-pointcloud`
+- current_module: `tools/reference_export.py` + scaffold command branches
+- downstream: generated project contracts (`manifest` + `meta/reference_source.json`) and run_dir reports (`scaffold_report.json` / `scaffold_pointcloud_report.json`)
+- source_of_truth: `meta/reference_export_manifest.yaml`
+- fallback: git unavailable -> `source_commit=unknown`; invalid export path/config -> fail-fast with report error
+- acceptance_test: scaffold tests + triplet guard + verify_repo
+- forbidden_bypass: full-repo mirror copy, traversal paths, force-delete unknown files
+- user_visible_effect: user can select source mode while keeping template default and get auditable provenance in generated projects
+
+### Questions
+- None.
+
+## Update 2026-03-09 - Scaffold live-reference dual-mode implementation
+
+### Changes
+- `meta/reference_export_manifest.yaml` (new)
+  - 新增 live-reference 导出白名单真源，按 `scaffold` / `scaffold-pointcloud` + profile 分层定义：
+    - `inherit_copy`
+    - `inherit_transform`
+    - `generate`
+    - `exclude`
+    - `required_outputs`
+- `meta/templates/reference_tokens.md` (new)
+  - 稳定 token replacement 输入模板（`PROJECT_NAME/PROJECT_SLUG/UTC_ISO/SOURCE_COMMIT/SOURCE_MODE`）。
+- `tools/reference_export.py` (new)
+  - 实现受控导出 helper：manifest 读取、路径归一化/边界校验、目录/文件白名单展开、copy/transform 执行、required 输出校验、source commit fallback、manifest-governed force 清理。
+- `scripts/ctcp_orchestrate.py`
+  - `scaffold` / `scaffold-pointcloud` 新增 `--source-mode template|live-reference`（默认 template）与 `--reference-manifest`（repo-relative，可选）。
+  - live-reference 分支接入 `meta/reference_export_manifest.yaml` + `tools/reference_export.py`。
+  - 生成 `meta/reference_source.json`，包含 source_mode/source_commit/export_manifest/profile/inherited/generated。
+  - 扩展 scaffold / pointcloud manifest 字段：`generated`、`inherited_copy`、`inherited_transform`、`excluded`、`source_commit`、`source_mode`。
+  - 扩展 run_dir 证据：plan/report 增加 `source_mode`、`source_commit`、`export_manifest_path`、inherit counts。
+  - 强化输出安全：`--force` 改为只清理 manifest 管辖文件，未知文件阻塞。
+- `tools/scaffold.py`
+  - 收紧 `prepare_output_dir`：无既有 generated manifest 时拒绝 `--force` 清理未知输出。
+  - 扩展 `write_output_manifest`，支持 live-reference 元数据字段。
+- `README.md`
+  - 新增双模式说明与 `scaffold-pointcloud --source-mode live-reference` 示例。
+- `docs/40_reference_project.md`
+  - 重写为双模式规范：template/live-reference 区别、安全边界、导出清单真源、新元数据、run evidence 扩展、后续流程接续。
+- `docs/30_artifact_contracts.md`
+  - 新增 scaffold live-reference 元数据契约段。
+- `tests/test_scaffold_reference_project.py`
+  - 保留 template 回归。
+  - 新增 scaffold live-reference 成功路径与 metadata 断言。
+  - 新增 source commit fallback (`CTCP_DISABLE_GIT_SOURCE=1`) 断言。
+  - 新增 `--force` unmanaged output 防护断言。
+- `tests/test_scaffold_pointcloud_project.py`
+  - 保留 template 回归。
+  - 新增 pointcloud live-reference 成功路径、whitelist 限制、token replacement、report/source metadata 断言。
+  - 新增 source commit fallback、repo 内 out 拒绝、unmanaged force 拒绝、traversal manifest 拒绝。
+- `tests/fixtures/reference_export/bad_traversal_source_manifest.yaml` (new)
+  - 用于路径穿越防护回归。
+- `meta/backlog/execution_queue.json`
+  - 追加队列项 `ADHOC-20260309-scaffold-live-reference-mode`。
+- `meta/tasks/CURRENT.md`
+  - 追加本轮 Queue Binding / Task Truth / Analysis / Integration Check / Plan。
+
+### Verify
+- `python -m py_compile scripts/ctcp_orchestrate.py tools/scaffold.py tools/reference_export.py tests/test_scaffold_reference_project.py tests/test_scaffold_pointcloud_project.py` => `0`
+- `python -m unittest discover -s tests -p "test_scaffold_reference_project.py" -v` => `0` (4 passed)
+- `python -m unittest discover -s tests -p "test_scaffold_pointcloud_project.py" -v` => `0` (7 passed)
+- `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` => `0` (5 passed)
+- `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` => `0` (3 passed)
+- `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` => `0` (3 passed)
+- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => `1`
+  - first failure gate: `lite scenario replay`
+  - summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260309-220323/summary.json`
+  - failed scenario: `S16_lite_fixer_loop_pass` (`step 6: expect_exit mismatch, rc=1, expect=0`)
+  - scenario trace: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260309-220323/S16_lite_fixer_loop_pass/TRACE.md`
+  - minimal fix strategy:
+    - 修复 S16 依赖的 sandbox verify 通过条件（当前 failure 来自既有 support bot 回归断言不匹配），使 `tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch` 的修复后路径可在当前基线上重新收敛。
+
+### Demo
+- 运行报告：`meta/reports/LAST.md`
+- 任务卡：`meta/tasks/CURRENT.md`
+- live-reference 示例（pointcloud）:
+  - run_dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_live_ref_demo_ef941d87549b496a950885442a40ff3c/ctcp_runs/scaffold_pointcloud/20260309-220809-948941-scaffold-pointcloud-demo_v2p`
+  - out_dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_live_ref_demo_ef941d87549b496a950885442a40ff3c/demo_v2p`
+- template 兼容示例（pointcloud）:
+  - run_dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_template_demo_a4f5ad7e79534c73ab5b5ac0b46182da/ctcp_runs/scaffold_pointcloud/20260309-220820-163078-scaffold-pointcloud-demo_v2p`
+  - out_dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_template_demo_a4f5ad7e79534c73ab5b5ac0b46182da/demo_v2p`
+- live-reference 示例（scaffold）:
+  - run_dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_scaffold_live_demo_57cc6feb89084235bf762f9f629e6d03/ctcp_runs/ctcp/20260309-220829-067043-scaffold-my_new_proj`
+  - out_dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_scaffold_live_demo_57cc6feb89084235bf762f9f629e6d03/my_new_proj`
+
+### Questions
+- None.

@@ -1,5 +1,10 @@
 # Team Mode (Autonomous Coding Team)
 
+Scope boundary:
+- This is a team-mode lane document, not the repository purpose definition.
+- Repo purpose source: `docs/01_north_star.md`.
+- Canonical repository execution flow source: `docs/04_execution_flow.md`.
+
 目标：让你只输入一次 Goal，系统像项目团队一样持续推进，并给你演示。
 
 ## 核心目录

@@ -391,16 +391,16 @@ def git_apply_check(repo_root: Path | str, diff_text: str) -> tuple[int, str, st
             stage="env",
             message=f"repo_root does not exist: {root}",
         )
+    patch_bytes = diff_text.encode("utf-8")
     proc = subprocess.run(
         ["git", "apply", "--check", "--whitespace=nowarn", "-"],
         cwd=str(root),
-        input=diff_text,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
+        input=patch_bytes,
         capture_output=True,
     )
-    return proc.returncode, proc.stdout, proc.stderr
+    stdout = proc.stdout.decode("utf-8", errors="replace")
+    stderr = proc.stderr.decode("utf-8", errors="replace")
+    return proc.returncode, stdout, stderr
 
 
 def apply_patch(repo_root: Path | str, diff_text: str) -> tuple[int, str, str]:
@@ -411,16 +411,16 @@ def apply_patch(repo_root: Path | str, diff_text: str) -> tuple[int, str, str]:
             stage="env",
             message=f"repo_root does not exist: {root}",
         )
+    patch_bytes = diff_text.encode("utf-8")
     proc = subprocess.run(
         ["git", "apply", "--whitespace=nowarn", "-"],
         cwd=str(root),
-        input=diff_text,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
+        input=patch_bytes,
         capture_output=True,
     )
-    return proc.returncode, proc.stdout, proc.stderr
+    stdout = proc.stdout.decode("utf-8", errors="replace")
+    stderr = proc.stderr.decode("utf-8", errors="replace")
+    return proc.returncode, stdout, stderr
 
 
 def apply_patch_safely(
@@ -524,4 +524,3 @@ def apply_patch_safely(
         stderr=err_apply,
         details={"policy": summary.get("policy", {})},
     )
-

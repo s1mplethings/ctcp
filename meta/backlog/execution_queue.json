@@ -342,6 +342,161 @@
       },
       "status": "doing",
       "notes": "User requested MD-driven execution to shift from generic assistant-style chatting to professional task-oriented support dialogue."
+    },
+    {
+      "id": "ADHOC-20260309-fixed-10-step-workflow",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Fixed 10-step workflow hardening with triplet pre-verify guard",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "L0-PLAN-001"
+      ],
+      "dod": [
+        "execution order is fixed to 10-step with mandatory analysis/find before plan and plan before implementation",
+        "local check/contrast/fix loop is explicit and requires triplet guard contract tests before final verify",
+        "completion requires evidence for connected plus accumulated plus consumed"
+      ],
+      "artifacts": {
+        "produces": [
+          "AGENTS.md",
+          "docs/00_CORE.md",
+          "ai_context/00_AI_CONTRACT.md",
+          "meta/templates/integration_check.md",
+          "meta/tasks/TEMPLATE.md",
+          "scripts/workflow_checks.py",
+          "scripts/verify_repo.ps1",
+          "scripts/verify_repo.sh",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python scripts/workflow_checks.py",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "doing",
+      "notes": "Hardens workflow contracts and executable gates to prevent docs-only or prompt-only completion for integration defects."
+    },
+    {
+      "id": "ADHOC-20260309-single-purpose-single-flow-model",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Single-purpose, single-flow, single-responsibility operating model refactor",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260309-fixed-10-step-workflow"
+      ],
+      "dod": [
+        "repo purpose truth source is singular and explicit",
+        "canonical execution flow truth source is singular and explicit",
+        "current task truth fields are mandatory and gate-enforced"
+      ],
+      "artifacts": {
+        "produces": [
+          "docs/01_north_star.md",
+          "docs/04_execution_flow.md",
+          "docs/05_agent_mode_matrix.md",
+          "AGENTS.md",
+          "meta/tasks/TEMPLATE.md",
+          "scripts/workflow_checks.py",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python scripts/workflow_checks.py",
+          "python scripts/sync_doc_links.py --check",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "doing",
+      "notes": "Consolidates purpose/flow/task/runtime truth ownership and narrows subsystem docs to non-competing roles."
+    },
+    {
+      "id": "ADHOC-20260309-scaffold-live-reference-mode",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Scaffold dual-source mode with controlled live-reference export",
+      "owner_role": "Local Orchestrator",
+      "deps": [
+        "L0-PLAN-001",
+        "ADHOC-20260309-fixed-10-step-workflow"
+      ],
+      "dod": [
+        "scaffold and scaffold-pointcloud support source-mode template or live-reference with template as default",
+        "live-reference export is manifest-whitelisted, path-safe, auditable, and records source commit plus source mode metadata",
+        "generated projects keep CTCP contract chain compatibility and verify through scripts/verify_repo entrypoint"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/reference_export_manifest.yaml",
+          "tools/reference_export.py",
+          "scripts/ctcp_orchestrate.py",
+          "README.md",
+          "docs/40_reference_project.md",
+          "docs/30_artifact_contracts.md",
+          "tests/test_scaffold_reference_project.py",
+          "tests/test_scaffold_pointcloud_project.py",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_scaffold_reference_project.py\" -v",
+          "python -m unittest discover -s tests -p \"test_scaffold_pointcloud_project.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "doing",
+      "notes": "Adds a controlled live-reference exporter without breaking existing template scaffolding behavior."
+    },
+    {
+      "id": "ADHOC-20260309-frontend-control-plane-single-bridge",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Text-first frontend control plane with single CTCP execution bridge",
+      "owner_role": "Support Lead",
+      "deps": [
+        "L1-DISP-001",
+        "ADHOC-20260309-fixed-10-step-workflow"
+      ],
+      "dod": [
+        "frontend text control plane routes greeting and smalltalk away from project planning while preserving PM-style project handling",
+        "frontend execution mutations and run-state queries go through scripts/ctcp_front_bridge.py bridge capabilities only",
+        "tests cover greeting isolation, detailed requirement understanding, duplicate-question prevention, leakage guard, single-bridge invocation path, and non-contradictory visible state"
+      ],
+      "artifacts": {
+        "produces": [
+          "frontend/conversation_mode_router.py",
+          "frontend/project_manager_mode.py",
+          "frontend/response_composer.py",
+          "frontend/message_sanitizer.py",
+          "tools/telegram_cs_bot.py",
+          "scripts/ctcp_front_bridge.py",
+          "scripts/ctcp_front_api.py",
+          "tests/test_frontend_rendering_boundary.py",
+          "tests/test_runtime_wiring_contract.py",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_frontend_rendering_boundary.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_telegram_cs_bot_employee_style.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "doing",
+      "notes": "Implements phase 1-2 frontend behavior and wiring while preserving future realtime extension boundaries."
     }
   ]
 }

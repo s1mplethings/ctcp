@@ -6,8 +6,8 @@ import hashlib
 import os
 import re
 import sqlite3
-import subprocess
 import sys
+import tempfile
 import time
 import urllib.parse
 import urllib.request
@@ -64,6 +64,26 @@ except Exception:
     frontend_build_project_manager_context = None  # type: ignore[assignment]
     frontend_is_generic_intake_question = None  # type: ignore[assignment]
     frontend_render_frontend_output = None  # type: ignore[assignment]
+try:
+    from ctcp_front_bridge import (
+        BridgeError as FrontBridgeError,
+        ctcp_advance as bridge_ctcp_advance,
+        ctcp_get_last_report as bridge_ctcp_get_last_report,
+        ctcp_get_status as bridge_ctcp_get_status,
+        ctcp_list_decisions_needed as bridge_ctcp_list_decisions_needed,
+        ctcp_new_run as bridge_ctcp_new_run,
+        ctcp_submit_decision as bridge_ctcp_submit_decision,
+        ctcp_upload_artifact as bridge_ctcp_upload_artifact,
+    )
+except Exception:
+    FrontBridgeError = RuntimeError  # type: ignore[assignment]
+    bridge_ctcp_advance = None  # type: ignore[assignment]
+    bridge_ctcp_get_last_report = None  # type: ignore[assignment]
+    bridge_ctcp_get_status = None  # type: ignore[assignment]
+    bridge_ctcp_list_decisions_needed = None  # type: ignore[assignment]
+    bridge_ctcp_new_run = None  # type: ignore[assignment]
+    bridge_ctcp_submit_decision = None  # type: ignore[assignment]
+    bridge_ctcp_upload_artifact = None  # type: ignore[assignment]
 
 DEFAULT_LANG = "zh"
 MAX_MESSAGE_CHARS = 3800
@@ -2350,9 +2370,114 @@ class Bot:
     def allowed(self, chat_id: int) -> bool:
         return self.cfg.allowlist is None or chat_id in self.cfg.allowlist
 
+    def _bridge_ready(self) -> bool:
+        return all(
+            callable(fn)
+            for fn in (
+                bridge_ctcp_new_run,
+                bridge_ctcp_get_status,
+                bridge_ctcp_advance,
+                bridge_ctcp_get_last_report,
+                bridge_ctcp_list_decisions_needed,
+                bridge_ctcp_submit_decision,
+                bridge_ctcp_upload_artifact,
+            )
+        )
+
+    def _bridge_run_id(self, run_dir: Path | str) -> str:
+        return Path(str(run_dir)).resolve().name
+
+    def _status_to_orchestrate_lines(self, status_doc: dict[str, Any]) -> str:
+        run_status = str(status_doc.get("run_status", "")).strip().lower()
+        gate = status_doc.get("gate", {})
+        if not isinstance(gate, dict):
+            gate = {}
+        gate_state = str(gate.get("state", "")).strip().lower()
+        needs_decision = bool(status_doc.get("needs_user_decision", False))
+        next_step = "blocked" if (gate_state in {"blocked", "waiting", "decision"} or needs_decision) else gate_state
+        if not next_step:
+            next_step = "running" if run_status in {"running", "in_progress", "working"} else "unknown"
+        owner = str(gate.get("owner", "")).strip()
+        path = str(gate.get("path", "")).strip()
+        reason = str(gate.get("reason", "")).strip()
+        iterations = status_doc.get("iterations", {})
+        if not isinstance(iterations, dict):
+            iterations = {}
+        itr = str(iterations.get("current", "")).strip()
+        lines = [
+            f"[ctcp_orchestrate] run_status={run_status}",
+            f"[ctcp_orchestrate] next={next_step}",
+        ]
+        if owner:
+            lines.append(f"[ctcp_orchestrate] owner={owner}")
+        if path:
+            lines.append(f"[ctcp_orchestrate] path={path}")
+        if reason:
+            lines.append(f"[ctcp_orchestrate] reason={reason}")
+        if itr:
+            lines.append(f"[ctcp_orchestrate] iterations={itr}")
+        return "\n".join(lines)
+
+    def _resolve_run_id_from_args(self, args: list[str]) -> str:
+        if "--run-id" in args:
+            idx = args.index("--run-id")
+            if idx + 1 < len(args):
+                return str(args[idx + 1]).strip()
+        if "--run-dir" in args:
+            idx = args.index("--run-dir")
+            if idx + 1 < len(args):
+                return self._bridge_run_id(args[idx + 1])
+        return ""
+
     def _run_orchestrate(self, args: list[str]) -> tuple[int, str, str]:
-        p = subprocess.run([sys.executable, str(self.cfg.repo_root / "scripts" / "ctcp_orchestrate.py"), *args], cwd=str(self.cfg.repo_root), capture_output=True, text=True, encoding="utf-8", errors="replace")
-        return p.returncode, p.stdout, p.stderr
+        if not self._bridge_ready():
+            return 1, "", "frontend bridge unavailable"
+        if not args:
+            return 1, "", "missing command"
+        cmd = str(args[0]).strip().lower()
+        try:
+            if cmd == "new-run":
+                if "--goal" not in args:
+                    return 1, "", "new-run requires --goal"
+                gidx = args.index("--goal")
+                if gidx + 1 >= len(args):
+                    return 1, "", "new-run requires non-empty --goal value"
+                goal = str(args[gidx + 1]).strip()
+                result = bridge_ctcp_new_run(goal=goal, constraints={}, attachments=[])  # type: ignore[misc]
+                status_doc = result.get("status", {}) if isinstance(result, dict) else {}
+                if not isinstance(status_doc, dict):
+                    status_doc = {}
+                lines = [
+                    f"[ctcp_orchestrate] run_id={str(result.get('run_id', '')).strip()}",
+                    f"[ctcp_orchestrate] run_dir={str(result.get('run_dir', '')).strip()}",
+                ]
+                status_lines = self._status_to_orchestrate_lines(status_doc)
+                if status_lines:
+                    lines.append(status_lines)
+                return 0, "\n".join(lines), ""
+            if cmd == "advance":
+                run_id = self._resolve_run_id_from_args(args)
+                steps = 1
+                if "--max-steps" in args:
+                    sidx = args.index("--max-steps")
+                    if sidx + 1 < len(args):
+                        steps = parse_int(args[sidx + 1], 1)
+                result = bridge_ctcp_advance(run_id, max_steps=max(1, steps))  # type: ignore[misc]
+                status_doc = result.get("status", {}) if isinstance(result, dict) else {}
+                if not isinstance(status_doc, dict):
+                    status_doc = {}
+                return 0, self._status_to_orchestrate_lines(status_doc), ""
+            if cmd == "status":
+                run_id = self._resolve_run_id_from_args(args)
+                status_doc = bridge_ctcp_get_status(run_id)  # type: ignore[misc]
+                if not isinstance(status_doc, dict):
+                    status_doc = {}
+                return 0, self._status_to_orchestrate_lines(status_doc), ""
+            return 1, "", f"unsupported bridge command: {cmd}"
+        except FrontBridgeError as exc:
+            return 1, "", str(exc)
+        except Exception as exc:
+            return 1, "", f"bridge command failed: {exc}"
 
     def _read_last_run(self) -> str:
         ptr = self.cfg.repo_root / "meta" / "run_pointers" / "LAST_RUN.txt"
@@ -3593,6 +3718,16 @@ class Bot:
         return payload
 
     def _run_status(self, run_dir: Path) -> str:
+        run_id = self._bridge_run_id(run_dir)
+        if callable(bridge_ctcp_get_status):
+            try:
+                status_doc = bridge_ctcp_get_status(run_id)  # type: ignore[misc]
+                if isinstance(status_doc, dict):
+                    bridge_status = str(status_doc.get("run_status", "")).strip().lower()
+                    if bridge_status:
+                        return bridge_status
+            except Exception:
+                pass
         p = run_dir / "RUN.json"
         if not p.exists():
             return ""
@@ -3804,6 +3939,38 @@ class Bot:
         self._append_support_inbox(resolved, "assistant", str(payload.get("reply_text", "")), lang)
 
     def _collect_prompts(self, run_dir: Path) -> list[tuple[Path, PromptItem]]:
+        run_id = self._bridge_run_id(run_dir)
+        if callable(bridge_ctcp_list_decisions_needed):
+            try:
+                decisions_doc = bridge_ctcp_list_decisions_needed(run_id)  # type: ignore[misc]
+            except Exception:
+                decisions_doc = {}
+            decisions = decisions_doc.get("decisions", []) if isinstance(decisions_doc, dict) else []
+            if isinstance(decisions, list):
+                bridge_rows: list[tuple[Path, PromptItem]] = []
+                for row in decisions:
+                    if not isinstance(row, dict):
+                        continue
+                    if str(row.get("kind", "")).strip() != "outbox_prompt":
+                        continue
+                    prompt_rel = str(row.get("prompt_path", "")).strip()
+                    if not prompt_rel:
+                        continue
+                    try:
+                        prompt_abs = ensure_within_run_dir(run_dir, prompt_rel)
+                    except Exception:
+                        continue
+                    if (not prompt_abs.exists()) or (not prompt_abs.is_file()):
+                        continue
+                    item = parse_outbox_prompt(run_dir, prompt_abs)
+                    if not item:
+                        continue
+                    if _is_internal_support_prompt_item(item):
+                        continue
+                    if prompt_pending(run_dir, item, prompt_abs):
+                        bridge_rows.append((prompt_abs, item))
+                if bridge_rows:
+                    return bridge_rows
         outbox = run_dir / "outbox"
         if not outbox.exists():
             return []
@@ -4005,6 +4172,16 @@ class Bot:
 
     def _send_verify(self, chat_id: int, run_dir: Path) -> None:
         p = run_dir / "artifacts" / "verify_report.json"
+        run_id = self._bridge_run_id(run_dir)
+        if callable(bridge_ctcp_get_last_report):
+            try:
+                report_doc = bridge_ctcp_get_last_report(run_id)  # type: ignore[misc]
+            except Exception:
+                report_doc = {}
+            if isinstance(report_doc, dict):
+                maybe_path = str(report_doc.get("verify_report_path", "")).strip()
+                if maybe_path:
+                    p = Path(maybe_path).expanduser()
         if p.exists():
             self.tg.send_doc(chat_id=chat_id, path=p, caption="verify_report.json")
         else:
@@ -4040,27 +4217,56 @@ class Bot:
 
     def _write_reply(self, *, chat_id: int, lang: str, mapping: dict[str, Any], text: str | None, file_id: str | None) -> None:
         run_dir = Path(str(mapping.get("run_dir", ""))).expanduser().resolve()
+        run_id = self._bridge_run_id(run_dir)
         rel = str(mapping.get("target_path", "")).strip()
+        prompt_path = str(mapping.get("prompt_path", "")).strip()
         try:
-            target = ensure_within_run_dir(run_dir, rel)
+            _target = ensure_within_run_dir(run_dir, rel)
         except Exception as exc:
             self.tg.send(chat_id=chat_id, text=f"{i18n(lang, 'write_fail')}: {exc}")
             return
+        if not self._bridge_ready():
+            self.tg.send(chat_id=chat_id, text=f"{i18n(lang, 'write_fail')}: frontend bridge unavailable")
+            return
         try:
             if file_id:
-                atomic_write_bytes(target, self.tg.download(file_id))
+                payload_bytes = self.tg.download(file_id)
+                tmp_path = ""
+                try:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".telegram-upload") as tmp:
+                        tmp.write(payload_bytes)
+                        tmp_path = tmp.name
+                    bridge_ctcp_upload_artifact(  # type: ignore[misc]
+                        run_id,
+                        {
+                            "source_path": tmp_path,
+                            "dest_rel": rel,
+                        },
+                    )
+                finally:
+                    if tmp_path:
+                        try:
+                            os.remove(tmp_path)
+                        except Exception:
+                            pass
             else:
                 payload = str(text or "")
                 if not payload.endswith("\n"):
                     payload += "\n"
-                atomic_write_text(target, payload)
+                bridge_ctcp_submit_decision(  # type: ignore[misc]
+                    run_id,
+                    {
+                        "prompt_path": prompt_path,
+                        "target_path": rel,
+                        "content": payload,
+                    },
+                )
         except Exception as exc:
             self.tg.send(chat_id=chat_id, text=f"{i18n(lang, 'write_fail')}: {exc}")
             return
         self.db.del_map(chat_id, int(mapping["prompt_msg_id"]))
-        p = str(mapping.get("prompt_path", "")).strip()
-        if p:
-            self.db.del_pending(str(run_dir), p)
+        if prompt_path:
+            self.db.del_pending(str(run_dir), prompt_path)
         self._clear_blocked_hold(run_dir)
         self._send_customer_reply(
             chat_id=chat_id,
@@ -4073,7 +4279,7 @@ class Bot:
                 else "收到了，已记录。这条信息我会直接带入下一步执行。"
             ),
             next_question=_default_next_question(lang),
-            ops_status={"target_path": rel, "prompt_path": p},
+            ops_status={"target_path": rel, "prompt_path": prompt_path},
         )
 
     def _advance_once(self, chat_id: int, run_dir: Path, steps: int) -> None:

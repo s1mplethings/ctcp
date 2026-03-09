@@ -1,5 +1,11 @@
+# SDDAI GUI Lane Overview (Non-Repo-Purpose Doc)
 
-# SDDAI GUI (QtWebEngine + Cytoscape) 总览
+Scope boundary:
+
+- This document describes the optional GUI lane only.
+- It is not the repository purpose source.
+- Repo purpose source: `docs/01_north_star.md`.
+- Canonical repository workflow source: `docs/04_execution_flow.md`.
 
 ## 目标
 做一个 C++ 桌面 GUI：打开一个工程目录后，自动识别 SDDAI 文档/规范结构，生成一张“流程 + 协议 + 进度”的交互式图。

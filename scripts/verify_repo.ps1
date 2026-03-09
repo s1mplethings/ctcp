@@ -252,6 +252,19 @@ Invoke-Step -Name "doc index check (sync doc links --check)" -Block {
 }
 Add-ExecutedGate "doc_index_check"
 
+Invoke-Step -Name "triplet integration guard" -Block {
+  Invoke-ExternalChecked -Label "triplet runtime wiring contract" -Command {
+    python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v
+  }
+  Invoke-ExternalChecked -Label "triplet issue memory accumulation contract" -Command {
+    python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v
+  }
+  Invoke-ExternalChecked -Label "triplet skill consumption contract" -Command {
+    python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v
+  }
+}
+Add-ExecutedGate "triplet_guard"
+
 if ($SkipLiteReplay) {
   Write-Host "[verify_repo] lite scenario replay skipped (CTCP_SKIP_LITE_REPLAY=1)"
   Add-ExecutedGate "lite_replay"

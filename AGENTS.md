@@ -34,7 +34,11 @@
 交付：只输出 ONE unified diff patch。
 ```
 
-冲突处理优先级：`docs/00_CORE.md` > `AGENTS.md` > `ai_context/00_AI_CONTRACT.md`。
+来源冲突处理（按 concern 分流）：
+- repo purpose: `docs/01_north_star.md`
+- canonical flow: `docs/04_execution_flow.md`
+- current task purpose/scope: `meta/tasks/CURRENT.md`
+- runtime truth: `docs/00_CORE.md`
 
 ---
 
@@ -52,7 +56,19 @@
 3. **允许提问的唯一条件**
    - 仅限：密钥/账号/权限；互斥方案拍板；缺少关键约束导致无法继续。
 4. **执行顺序**
-   - Docs/Spec → Gate → Verify → Report（详见第 2 节）
+   - Follow canonical flow in `docs/04_execution_flow.md`（详见第 2 节）
+
+---
+
+## 0.A) 目的/流程/任务三重识别（行动前强制）
+
+在任何修改前，必须先识别并记录：
+
+1. repo purpose source: `docs/01_north_star.md`
+2. current lane/subsystem purpose source: 对应 lane 文档（例如 `docs/00_overview.md` / `docs/10_team_mode.md`）
+3. current task purpose source: `meta/tasks/CURRENT.md`
+
+若三者冲突，必须停止实现，先走 contract-change style 任务路径（queue + CURRENT 变更）再继续。
 
 ---
 
@@ -72,13 +88,17 @@
 
 必须读取并总结（写入 `meta/reports/LAST.md` 的 Readlist）：
 
+- `docs/00_CORE.md`
+- `docs/01_north_star.md`
+- `docs/04_execution_flow.md`
+- `AGENTS.md`
 - `ai_context/00_AI_CONTRACT.md`
+- `docs/03_quality_gates.md`（如果存在）
 - `ai_context/CTCP_FAST_RULES.md`
 - `README.md`
 - `BUILD.md`
 - `PATCH_README.md`
 - `TREE.md`（如果存在）
-- `docs/03_quality_gates.md`（如果存在）
 - `ai_context/problem_registry.md`
 - `ai_context/decision_log.md`
 
@@ -86,12 +106,23 @@
 
 ## 2) 执行顺序（不可跳过）
 
-1. **创建/更新任务单**：`meta/tasks/CURRENT.md`（模板：`meta/tasks/TEMPLATE.md`）
-2. **Research-first（如需要）**：记录到 `meta/externals/<date>-*.md`
-3. **Spec-first**：先更新 docs/spec/meta（让流程可被审计）
-4. **代码改动（受门禁）**：只有当 `meta/tasks/CURRENT.md` 勾选了 `Code changes allowed` 才允许改 `src/ web/ scripts/ tools/ include/` 等代码目录
-5. **验收闭环（必须）**：运行 `scripts/verify_repo.*` 并记录输出
-6. **演示报告（必须）**：更新 `meta/reports/LAST.md`
+Canonical 10-step flow is defined only in `docs/04_execution_flow.md`.
+AGENTS.md does not redefine step semantics.
+
+Agent operating obligations:
+
+1. bind queue item + update `meta/tasks/CURRENT.md`
+2. record readlist/plan/verify/demo in `meta/reports/LAST.md`
+3. fill integration check fields before implementation
+4. run local check/fix loop including triplet guard commands
+5. run canonical verify gate (`scripts/verify_repo.ps1` / `scripts/verify_repo.sh`)
+6. finalize with evidence for `connected + accumulated + consumed`
+
+### Current Task Truth (No Silent Scope Expansion)
+
+- `meta/tasks/CURRENT.md` is the only current-task purpose/scope authority.
+- Required fields: `task_purpose`、`allowed_behavior_change`、`forbidden_goal_shift`、`in_scope_modules`、`out_of_scope_modules`、`completion_evidence`。
+- If implementation intent exceeds `CURRENT.md` scope, stop and open a contract-change style queue/task update before coding.
 
 ---
 
@@ -109,6 +140,7 @@
 - workflow gate（`scripts/workflow_checks.py`）
 - plan/patch/behavior gate（`plan_check.py`、`patch_check.py`、`behavior_catalog_check.py`）
 - contract + doc index gate（`contract_checks.py`、`sync_doc_links.py --check`）
+- triplet guard gate（`test_runtime_wiring_contract.py`、`test_issue_memory_accumulation_contract.py`、`test_skill_consumption_contract.py`）
 - lite replay + python unit tests（可按环境变量跳过 lite replay）
 - plan declared-gates/evidence 复检（`plan_check.py --executed-gates ... --check-evidence`）
 - full gate（`CTCP_FULL_GATE=1` 或 `--full` 时附加执行）
@@ -139,6 +171,69 @@
 - 一个 patch 只做一件事（一个主题）
 - 新依赖必须记录到 `third_party/THIRD_PARTY.md`（若目录存在）
 - 任何绕过 gate 的行为必须写入 `ai_context/decision_log.md`
+
+---
+
+## Integration Proof Requirement
+
+When modifying or adding any feature, the implementing agent MUST provide an explicit integration proof.
+
+The proof MUST include:
+
+1. **Entry trigger**
+   - Which real entrypoint reaches this feature?
+2. **Call path**
+   - What exact runtime path connects the entrypoint to the feature and from the feature to the next stage?
+3. **Truth source**
+   - What state/artifact is authoritative for this feature?
+4. **Failure behavior**
+   - What happens on failure?
+   - Does the system retry, degrade, block, or ask the user?
+5. **Verification**
+   - Which automated test or end-to-end scenario proves the feature is actually connected?
+
+Required output format for each changed feature:
+- upstream:
+- current_module:
+- downstream:
+- source_of_truth:
+- fallback:
+- acceptance_test:
+- forbidden_bypass:
+- user_visible_effect:
+
+Without this integration proof, the change is incomplete.
+
+## No Prompt-Only Completion for Wiring Problems
+
+If the task is about:
+- routing
+- integration
+- bridge connection
+- state propagation
+- memory accumulation
+- skill activation
+- user-visible error leakage
+
+then prompt-only edits are insufficient.
+
+The agent MUST modify executable code and tests.
+If the task is an integration defect, changing prompt text alone does not count as completion.
+
+## Frontend Boundary Rule
+
+Frontend/customer-facing agents MAY:
+- classify conversation mode
+- extract requirement summaries
+- render project-manager-style replies
+- ask high-leverage clarification questions
+- present execution progress to the user
+
+Frontend/customer-facing agents MUST NOT:
+- directly mutate project execution state outside the bridge
+- directly invent engineering status from chat memory
+- directly expose backend raw errors to the user
+- open parallel execution paths that bypass CTCP runtime contracts
 
 ---
 

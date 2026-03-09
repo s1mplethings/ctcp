@@ -230,6 +230,12 @@ echo "[verify_repo] doc index check (sync doc links --check)"
 python3 "${ROOT}/scripts/sync_doc_links.py" --check
 add_executed_gate "doc_index_check"
 
+echo "[verify_repo] triplet integration guard"
+python3 -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v
+python3 -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v
+python3 -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v
+add_executed_gate "triplet_guard"
+
 if [[ "${SKIP_LITE_REPLAY}" == "1" ]]; then
   echo "[verify_repo] lite scenario replay skipped (CTCP_SKIP_LITE_REPLAY=1)"
   add_executed_gate "lite_replay"

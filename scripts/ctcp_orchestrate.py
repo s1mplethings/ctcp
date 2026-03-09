@@ -24,6 +24,7 @@ TASK_TEMPLATE = TASKS_DIR / "TEMPLATE.md"
 TASK_CURRENT = TASKS_DIR / "CURRENT.md"
 REPORT_LAST = REPORTS_DIR / "LAST.md"
 DEFAULT_MAX_ITERATIONS = 3
+DEFAULT_REFERENCE_EXPORT_MANIFEST = "meta/reference_export_manifest.yaml"
 
 try:
     from tools.run_paths import get_repo_slug, get_runs_root, make_run_dir
@@ -48,6 +49,12 @@ try:
 except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
     from tools import scaffold as scaffold_tools
+
+try:
+    from tools import reference_export
+except ModuleNotFoundError:
+    sys.path.insert(0, str(ROOT))
+    from tools import reference_export
 
 try:
     from tools import testkit_runner
@@ -200,6 +207,70 @@ def resolve_scaffold_out_dir(raw: str) -> Path:
             f"[ctcp_orchestrate] scaffold --out must be outside repo root: {out_dir}"
         )
     return out_dir
+
+
+def resolve_reference_manifest_rel(raw: str) -> str:
+    text = str(raw or "").strip()
+    if not text:
+        return DEFAULT_REFERENCE_EXPORT_MANIFEST
+    return reference_export.norm_relpath(text)
+
+
+def _scaffold_tokens(
+    *,
+    project_name: str,
+    profile: str,
+    generated_at_utc: str,
+    source_mode: str,
+    source_commit: str,
+) -> dict[str, str]:
+    return {
+        "PROJECT_NAME": project_name,
+        "PROJECT_SLUG": goal_slug(project_name),
+        "UTC_ISO": generated_at_utc,
+        "PROFILE": profile,
+        "SOURCE_MODE": source_mode,
+        "SOURCE_COMMIT": source_commit,
+    }
+
+
+def _write_reference_source_metadata(
+    *,
+    out_dir: Path,
+    source_mode: str,
+    source_commit: str,
+    export_manifest: str,
+    profile: str,
+    command_summary: str,
+    inherited_copy: list[str],
+    inherited_transform: list[str],
+    generated_files: list[str],
+    source_repo: str = "",
+) -> str:
+    rel = "meta/reference_source.json"
+    target = (out_dir / Path("meta") / "reference_source.json").resolve()
+    if not is_within(target, out_dir):
+        raise RuntimeError(f"reference metadata path escapes output directory: {target}")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    doc: dict[str, Any] = {
+        "schema_version": "ctcp-reference-source-v1",
+        "source_mode": source_mode,
+        "source_commit": source_commit,
+        "export_manifest": export_manifest,
+        "generated_at": now_utc_iso(),
+        "profile": profile,
+        "inherited_copy": sorted(set(inherited_copy)),
+        "inherited_transform": sorted(set(inherited_transform)),
+        "generated_files": sorted(set(generated_files)),
+    }
+    if source_repo:
+        doc["source_repo"] = source_repo
+    else:
+        doc["source_root_hint"] = str(ROOT.resolve())
+    if command_summary:
+        doc["command_summary"] = command_summary
+    write_json(target, doc)
+    return rel
 
 
 def default_scaffold_run_id(project_name: str) -> str:
@@ -938,7 +1009,17 @@ def verify_run_env() -> dict[str, str]:
     return env
 
 
-def render_scaffold_plan_markdown(*, profile: str, out_dir: Path, project_name: str, force: bool, files: list[str]) -> str:
+def render_scaffold_plan_markdown(
+    *,
+    profile: str,
+    out_dir: Path,
+    project_name: str,
+    force: bool,
+    source_mode: str,
+    source_commit: str,
+    export_manifest_path: str,
+    files: list[str],
+) -> str:
     lines = [
         "# Scaffold Plan",
         "",
@@ -946,6 +1027,9 @@ def render_scaffold_plan_markdown(*, profile: str, out_dir: Path, project_name: 
         f"- Project-Name: {project_name}",
         f"- Out-Dir: {out_dir.resolve()}",
         f"- Force: {'true' if force else 'false'}",
+        f"- Source-Mode: {source_mode}",
+        f"- Source-Commit: {source_commit}",
+        f"- Export-Manifest: {export_manifest_path or '(n/a)'}",
         f"- Planned-Files: {len(files)}",
         "",
         "## Files",
@@ -1065,6 +1149,13 @@ def _write_pointcloud_manifest(
     project_name: str,
     generated_at_utc: str,
     files: list[str],
+    generated: list[str] | None = None,
+    inherited_copy: list[str] | None = None,
+    inherited_transform: list[str] | None = None,
+    excluded: list[str] | None = None,
+    source_mode: str = "template",
+    source_commit: str = "",
+    export_manifest: str = "",
 ) -> str:
     rel = "meta/manifest.json"
     manifest_path = out_dir / Path("meta") / "manifest.json"
@@ -1075,7 +1166,7 @@ def _write_pointcloud_manifest(
             + [rel]
         )
     )
-    doc = {
+    doc: dict[str, Any] = {
         "schema_version": "ctcp-pointcloud-manifest-v1",
         "generated_by": "ctcp_orchestrate scaffold-pointcloud",
         "profile": profile,
@@ -1083,7 +1174,19 @@ def _write_pointcloud_manifest(
         "generated_at_utc": generated_at_utc,
         "files": all_files,
         "file_count": len(all_files),
+        "source_mode": source_mode,
+        "source_commit": source_commit,
     }
+    if generated is not None:
+        doc["generated"] = sorted(set(str(x) for x in generated))
+    if inherited_copy is not None:
+        doc["inherited_copy"] = sorted(set(str(x) for x in inherited_copy))
+    if inherited_transform is not None:
+        doc["inherited_transform"] = sorted(set(str(x) for x in inherited_transform))
+    if excluded is not None:
+        doc["excluded"] = sorted(set(str(x) for x in excluded))
+    if export_manifest:
+        doc["export_manifest"] = export_manifest
     manifest_path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return rel
 
@@ -1123,6 +1226,9 @@ def render_scaffold_pointcloud_plan_markdown(
     project_name: str,
     force: bool,
     dialogue_mode: str,
+    source_mode: str,
+    source_commit: str,
+    export_manifest_path: str,
     files: list[str],
 ) -> str:
     lines = [
@@ -1134,6 +1240,9 @@ def render_scaffold_pointcloud_plan_markdown(
         f"- Out-Dir: {out_dir.resolve()}",
         f"- Force: {'true' if force else 'false'}",
         f"- Dialogue-Mode: {dialogue_mode}",
+        f"- Source-Mode: {source_mode}",
+        f"- Source-Commit: {source_commit}",
+        f"- Export-Manifest: {export_manifest_path or '(n/a)'}",
         f"- Planned-Files: {len(files)}",
         "",
         "## Files",
@@ -1377,6 +1486,8 @@ def cmd_scaffold_pointcloud(
     name: str,
     profile: str,
     force: bool,
+    source_mode: str,
+    reference_manifest: str,
     runs_root: str,
     dialogue_script: str,
     agent_cmd: str,
@@ -1388,10 +1499,26 @@ def cmd_scaffold_pointcloud(
     if profile_name not in {"minimal", "standard"}:
         print(f"[ctcp_orchestrate] unsupported --profile for scaffold-pointcloud: {profile_name}")
         return 1
+    source_mode_name = str(source_mode or "template").strip().lower()
+    if source_mode_name not in {"template", "live-reference"}:
+        print(f"[ctcp_orchestrate] unsupported --source-mode for scaffold-pointcloud: {source_mode_name}")
+        return 1
     project_name = str(name or "").strip() or out_dir.name
     if not project_name:
         print("[ctcp_orchestrate] scaffold-pointcloud requires --name or a resolvable --out folder name")
         return 1
+    manifest_rel = ""
+    if source_mode_name == "live-reference":
+        try:
+            manifest_rel = resolve_reference_manifest_rel(reference_manifest)
+        except Exception as exc:
+            print(f"[ctcp_orchestrate] invalid --reference-manifest: {exc}")
+            return 1
+    source_commit = (
+        reference_export.current_source_commit(ROOT)
+        if source_mode_name == "live-reference"
+        else "template"
+    )
 
     run_id = default_scaffold_pointcloud_run_id(project_name)
     runs_root_path = resolve_scaffold_runs_root(runs_root)
@@ -1410,6 +1537,9 @@ def cmd_scaffold_pointcloud(
                 f"- Out: {out_dir.resolve()}",
                 f"- Project: {project_name}",
                 f"- Profile: {profile_name}",
+                f"- Source-Mode: {source_mode_name}",
+                f"- Source-Commit: {source_commit}",
+                f"- Export-Manifest: {manifest_rel or '(n/a)'}",
                 "",
                 "## Events",
                 "",
@@ -1478,58 +1608,129 @@ def cmd_scaffold_pointcloud(
     if project_from_dialogue:
         project_name = project_from_dialogue
 
-    try:
-        template_files = _collect_pointcloud_template_files(profile_name)
-    except SystemExit as exc:
-        append_event(
-            run_dir,
-            "Local Orchestrator",
-            "scaffold_pointcloud_template_error",
-            "artifacts/scaffold_pointcloud_report.json",
-            reason=str(exc),
-        )
-        print(str(exc))
-        print(f"[ctcp_orchestrate] run_dir={run_dir.resolve()}")
-        return 1
+    template_files: dict[str, Path] = {}
+    export_plan: dict[str, Any] = {}
+    export_manifest_path = ""
+    planned_files: list[str] = []
+    if source_mode_name == "template":
+        try:
+            template_files = _collect_pointcloud_template_files(profile_name)
+        except SystemExit as exc:
+            append_event(
+                run_dir,
+                "Local Orchestrator",
+                "scaffold_pointcloud_template_error",
+                "artifacts/scaffold_pointcloud_report.json",
+                reason=str(exc),
+            )
+            print(str(exc))
+            print(f"[ctcp_orchestrate] run_dir={run_dir.resolve()}")
+            return 1
+        planned_files = sorted(set(list(template_files.keys()) + ["meta/manifest.json"]))
+    else:
+        try:
+            manifest_doc = reference_export.load_export_manifest(ROOT, manifest_rel)
+            export_plan = reference_export.resolve_export_plan(
+                repo_root=ROOT,
+                manifest_doc=manifest_doc,
+                target="scaffold-pointcloud",
+                profile=profile_name,
+            )
+            planned_files = sorted(set(str(x) for x in export_plan.get("planned_files", [])))
+            export_manifest_path = str(export_plan.get("manifest_path", ""))
+        except Exception as exc:
+            append_event(
+                run_dir,
+                "Local Orchestrator",
+                "scaffold_pointcloud_template_error",
+                "artifacts/scaffold_pointcloud_report.json",
+                reason=str(exc),
+            )
+            print(f"[ctcp_orchestrate] scaffold-pointcloud live-reference setup failed: {exc}")
+            print(f"[ctcp_orchestrate] run_dir={run_dir.resolve()}")
+            return 1
 
-    planned_files = sorted(set(list(template_files.keys()) + ["meta/manifest.json"]))
     plan_md = render_scaffold_pointcloud_plan_markdown(
         profile=profile_name,
         out_dir=out_dir,
         project_name=project_name,
         force=bool(force),
         dialogue_mode=dialogue_mode,
+        source_mode=source_mode_name,
+        source_commit=source_commit,
+        export_manifest_path=export_manifest_path,
         files=planned_files,
     )
     write_text(run_dir / "artifacts" / "SCAFFOLD_PLAN.md", plan_md + "\n")
     append_event(run_dir, "Local Orchestrator", "scaffold_pointcloud_plan_written", "artifacts/SCAFFOLD_PLAN.md")
 
     generated_at_utc = now_utc_iso()
-    tokens = {
-        "PROJECT_NAME": project_name,
-        "UTC_ISO": generated_at_utc,
-    }
+    tokens = _scaffold_tokens(
+        project_name=project_name,
+        profile=profile_name,
+        generated_at_utc=generated_at_utc,
+        source_mode=source_mode_name,
+        source_commit=source_commit,
+    )
 
     removed_entries: list[str] = []
     written_files: list[str] = []
+    inherited_copy: list[str] = []
+    inherited_transform: list[str] = []
+    generated_files: list[str] = []
+    excluded_files: list[str] = []
+    reference_source_rel = ""
     scaffold_error = ""
     try:
-        if out_dir.exists():
-            if not out_dir.is_dir():
-                raise RuntimeError(f"--out exists but is not a directory: {out_dir}")
-            if not force:
-                raise RuntimeError(f"--out already exists (use --force to overwrite): {out_dir}")
-            if _is_path_root(out_dir):
-                raise RuntimeError(f"--force refuses drive/filesystem root --out: {out_dir}")
-            removed_entries = _safe_clear_directory_contents(out_dir)
-        else:
-            out_dir.mkdir(parents=True, exist_ok=True)
+        prepared = reference_export.prepare_output_dir_manifest_guarded(
+            out_dir=out_dir,
+            force=bool(force),
+            planned_files=planned_files,
+            manifest_candidates=["meta/manifest.json"],
+        )
+        removed_entries = list(prepared.get("removed_files", []))
 
-        for rel in sorted(template_files.keys()):
-            src = template_files[rel]
-            dst = out_dir / Path(*rel.split("/"))
-            _render_template_to_path(src, dst, tokens)
-            written_files.append(rel)
+        if source_mode_name == "template":
+            for rel in sorted(template_files.keys()):
+                src = template_files[rel]
+                dst = out_dir / Path(*rel.split("/"))
+                _render_template_to_path(src, dst, tokens)
+                written_files.append(rel)
+                inherited_transform.append(rel)
+            required_outputs = _required_pointcloud_paths(profile_name)
+        else:
+            export_result = reference_export.apply_export_plan(
+                repo_root=ROOT,
+                out_dir=out_dir,
+                plan=export_plan,
+                tokens=tokens,
+            )
+            written_files.extend(list(export_result.get("written_files", [])))
+            inherited_copy = list(export_result.get("inherited_copy", []))
+            inherited_transform = list(export_result.get("inherited_transform", []))
+            excluded_files = list(export_result.get("excluded", []))
+            required_outputs = list(export_result.get("required_outputs", []))
+            command_summary = (
+                "scaffold-pointcloud "
+                f"--profile {profile_name} --source-mode {source_mode_name}"
+            )
+            reference_source_rel = _write_reference_source_metadata(
+                out_dir=out_dir,
+                source_mode=source_mode_name,
+                source_commit=source_commit,
+                export_manifest=str(export_plan.get("manifest_rel", "")),
+                profile=profile_name,
+                command_summary=command_summary,
+                inherited_copy=inherited_copy,
+                inherited_transform=inherited_transform,
+                generated_files=[
+                    "meta/manifest.json",
+                    "meta/reference_source.json",
+                ],
+                source_repo=str(ROOT.resolve()),
+            )
+            written_files.append(reference_source_rel)
+            generated_files.append(reference_source_rel)
 
         manifest_rel = _write_pointcloud_manifest(
             out_dir=out_dir,
@@ -1537,15 +1738,20 @@ def cmd_scaffold_pointcloud(
             project_name=project_name,
             generated_at_utc=generated_at_utc,
             files=written_files,
+            generated=(generated_files + ["meta/manifest.json"]),
+            inherited_copy=inherited_copy,
+            inherited_transform=inherited_transform,
+            excluded=excluded_files,
+            source_mode=source_mode_name,
+            source_commit=source_commit,
+            export_manifest=str(export_plan.get("manifest_rel", "")),
         )
         if manifest_rel not in written_files:
             written_files.append(manifest_rel)
+        if manifest_rel not in generated_files:
+            generated_files.append(manifest_rel)
 
-        missing_required: list[str] = []
-        for rel in _required_pointcloud_paths(profile_name):
-            path = out_dir / Path(*rel.split("/"))
-            if not path.exists():
-                missing_required.append(rel)
+        missing_required = reference_export.validate_required_outputs(out_dir, list(required_outputs))
         if missing_required:
             raise RuntimeError(f"missing required generated files: {', '.join(missing_required)}")
         append_event(run_dir, "Local Orchestrator", "scaffold_pointcloud_written", "meta/manifest.json")
@@ -1567,6 +1773,9 @@ def cmd_scaffold_pointcloud(
         "run_id": run_id,
         "profile": profile_name,
         "project_name": project_name,
+        "source_mode": source_mode_name,
+        "source_commit": source_commit,
+        "export_manifest_path": export_manifest_path,
         "dialogue": {
             "mode": dialogue_mode,
             "turn_count": len(turns),
@@ -1579,14 +1788,21 @@ def cmd_scaffold_pointcloud(
             "dialogue_jsonl": "artifacts/dialogue.jsonl",
             "dialogue_transcript": "artifacts/dialogue_transcript.md",
             "manifest": "meta/manifest.json",
+            "reference_source": reference_source_rel,
             "report": "artifacts/scaffold_pointcloud_report.json",
         },
         "counts": {
             "planned_files": len(planned_files),
             "written_files": len(written_files),
             "removed_entries": len(removed_entries),
+            "inherited_copy_count": len(inherited_copy),
+            "inherited_transform_count": len(inherited_transform),
         },
         "written_files": sorted(written_files),
+        "inherited_copy": sorted(inherited_copy),
+        "inherited_transform": sorted(inherited_transform),
+        "excluded": sorted(excluded_files),
+        "generated_files": sorted(generated_files),
         "removed_entries": sorted(removed_entries),
         "elapsed_ms": elapsed_ms,
         "error": scaffold_error,
@@ -1955,7 +2171,16 @@ def cmd_cos_user_v2p(
     return 1
 
 
-def cmd_scaffold(*, out: str, name: str, profile: str, force: bool, runs_root: str) -> int:
+def cmd_scaffold(
+    *,
+    out: str,
+    name: str,
+    profile: str,
+    force: bool,
+    source_mode: str,
+    reference_manifest: str,
+    runs_root: str,
+) -> int:
     # BEHAVIOR_ID: B037
     t0 = dt.datetime.now()
     out_dir = resolve_scaffold_out_dir(out)
@@ -1965,14 +2190,52 @@ def cmd_scaffold(*, out: str, name: str, profile: str, force: bool, runs_root: s
         return 1
 
     profile_name = str(profile or "minimal").strip().lower()
+    source_mode_name = str(source_mode or "template").strip().lower()
+    if source_mode_name not in {"template", "live-reference"}:
+        print(f"[ctcp_orchestrate] unsupported --source-mode for scaffold: {source_mode_name}")
+        return 1
+    manifest_rel = ""
+    if source_mode_name == "live-reference":
+        try:
+            manifest_rel = resolve_reference_manifest_rel(reference_manifest)
+        except Exception as exc:
+            print(f"[ctcp_orchestrate] invalid --reference-manifest: {exc}")
+            return 1
+    source_commit = (
+        reference_export.current_source_commit(ROOT)
+        if source_mode_name == "live-reference"
+        else "template"
+    )
+
     template_root = ROOT / "templates" / "ctcp_ref"
+    plan: dict[str, Any] = {}
+    profile_doc: dict[str, Any] = {}
+    export_plan: dict[str, Any] = {}
+    export_manifest_path = ""
     try:
-        profile_doc = scaffold_tools.load_profile_manifest(template_root, profile_name)
-        plan = scaffold_tools.build_scaffold_plan(
-            out_dir=out_dir,
-            project_name=project_name,
-            profile_doc=profile_doc,
-        )
+        if source_mode_name == "template":
+            profile_doc = scaffold_tools.load_profile_manifest(template_root, profile_name)
+            plan = scaffold_tools.build_scaffold_plan(
+                out_dir=out_dir,
+                project_name=project_name,
+                profile_doc=profile_doc,
+            )
+            export_manifest_path = str(plan.get("template_manifest", ""))
+        else:
+            manifest_doc = reference_export.load_export_manifest(ROOT, manifest_rel)
+            export_plan = reference_export.resolve_export_plan(
+                repo_root=ROOT,
+                manifest_doc=manifest_doc,
+                target="scaffold",
+                profile=profile_name,
+            )
+            plan = {
+                "profile": profile_name,
+                "out_dir": str(out_dir.resolve()),
+                "project_name": project_name,
+                "files": list(export_plan.get("planned_files", [])),
+            }
+            export_manifest_path = str(export_plan.get("manifest_path", ""))
     except Exception as exc:
         print(f"[ctcp_orchestrate] scaffold setup failed: {exc}")
         return 1
@@ -1993,6 +2256,9 @@ def cmd_scaffold(*, out: str, name: str, profile: str, force: bool, runs_root: s
                 f"- Out: {out_dir.resolve()}",
                 f"- Project: {project_name}",
                 f"- Profile: {profile_name}",
+                f"- Source-Mode: {source_mode_name}",
+                f"- Source-Commit: {source_commit}",
+                f"- Export-Manifest: {export_manifest_path or '(n/a)'}",
                 "",
                 "## Events",
                 "",
@@ -2007,28 +2273,120 @@ def cmd_scaffold(*, out: str, name: str, profile: str, force: bool, runs_root: s
         out_dir=out_dir,
         project_name=project_name,
         force=bool(force),
+        source_mode=source_mode_name,
+        source_commit=source_commit,
+        export_manifest_path=export_manifest_path,
         files=list(plan.get("files", [])),
     )
     write_text(run_dir / "artifacts" / "scaffold_plan.md", plan_md + "\n")
     append_event(run_dir, "Local Orchestrator", "scaffold_plan_written", "artifacts/scaffold_plan.md")
 
-    tokens = {
-        "PROJECT_NAME": project_name,
-        "UTC_ISO": now_iso(),
-        "PROFILE": profile_name,
-    }
+    generated_at_utc = now_utc_iso()
+    tokens = _scaffold_tokens(
+        project_name=project_name,
+        profile=profile_name,
+        generated_at_utc=generated_at_utc,
+        source_mode=source_mode_name,
+        source_commit=source_commit,
+    )
 
     scaffold_error = ""
     scaffold_result: dict[str, Any] = {}
+    reference_source_rel = ""
     try:
-        scaffold_result = scaffold_tools.scaffold_project(
-            template_root=template_root,
-            out_dir=out_dir,
-            project_name=project_name,
-            profile=profile_name,
-            force=bool(force),
-            tokens=tokens,
-        )
+        if source_mode_name == "template":
+            scaffold_result = scaffold_tools.scaffold_project(
+                template_root=template_root,
+                out_dir=out_dir,
+                project_name=project_name,
+                profile=profile_name,
+                force=bool(force),
+                tokens=tokens,
+            )
+        else:
+            prepared = reference_export.prepare_output_dir_manifest_guarded(
+                out_dir=out_dir,
+                force=bool(force),
+                planned_files=list(export_plan.get("planned_files", [])),
+                manifest_candidates=["manifest.json"],
+            )
+            export_result = reference_export.apply_export_plan(
+                repo_root=ROOT,
+                out_dir=out_dir,
+                plan=export_plan,
+                tokens=tokens,
+            )
+            written_files = list(export_result.get("written_files", []))
+            inherited_copy = list(export_result.get("inherited_copy", []))
+            inherited_transform = list(export_result.get("inherited_transform", []))
+            excluded_files = list(export_result.get("excluded", []))
+
+            tree_rel = scaffold_tools.write_tree_file(out_dir, written_files)
+            if tree_rel not in written_files:
+                written_files.append(tree_rel)
+            generated_files = [tree_rel]
+
+            reference_source_rel = _write_reference_source_metadata(
+                out_dir=out_dir,
+                source_mode=source_mode_name,
+                source_commit=source_commit,
+                export_manifest=str(export_plan.get("manifest_rel", "")),
+                profile=profile_name,
+                command_summary=f"scaffold --profile {profile_name} --source-mode {source_mode_name}",
+                inherited_copy=inherited_copy,
+                inherited_transform=inherited_transform,
+                generated_files=["manifest.json", "TREE.md", "meta/reference_source.json"],
+                source_repo=str(ROOT.resolve()),
+            )
+            if reference_source_rel not in written_files:
+                written_files.append(reference_source_rel)
+            generated_files.append(reference_source_rel)
+
+            manifest_rel = scaffold_tools.write_output_manifest(
+                out_dir,
+                profile=profile_name,
+                project_name=project_name,
+                utc_iso=generated_at_utc,
+                files=written_files + ["manifest.json"],
+                source_manifest=str(export_plan.get("manifest_path", "")),
+                generated=["manifest.json", "TREE.md", "meta/reference_source.json"],
+                inherited_copy=inherited_copy,
+                inherited_transform=inherited_transform,
+                excluded=excluded_files,
+                source_commit=source_commit,
+                source_mode=source_mode_name,
+                export_manifest=str(export_plan.get("manifest_rel", "")),
+            )
+            if manifest_rel not in written_files:
+                written_files.append(manifest_rel)
+            generated_files.append(manifest_rel)
+
+            validation = scaffold_tools.validate_scaffold_output(out_dir)
+            required_outputs = list(export_result.get("required_outputs", []))
+            missing_required = reference_export.validate_required_outputs(out_dir, required_outputs)
+            if missing_required:
+                raise RuntimeError(f"missing required generated files: {', '.join(missing_required)}")
+            if not bool(validation.get("ok", False)):
+                raise RuntimeError(
+                    "scaffold validation failed: "
+                    f"missing_required={validation.get('missing_required', [])}, "
+                    f"manifest_missing={validation.get('manifest_missing', [])}"
+                )
+            scaffold_result = {
+                "plan": dict(plan),
+                "prepared": prepared,
+                "written_files": sorted(set(written_files)),
+                "written_count": len(set(written_files)),
+                "validation": validation,
+                "elapsed_ms": int((dt.datetime.now() - t0).total_seconds() * 1000),
+                "inherited_copy": sorted(set(inherited_copy)),
+                "inherited_transform": sorted(set(inherited_transform)),
+                "excluded": sorted(set(excluded_files)),
+                "generated_files": sorted(set(generated_files)),
+                "source_mode": source_mode_name,
+                "source_commit": source_commit,
+                "export_manifest_path": export_manifest_path,
+            }
         append_event(run_dir, "Local Orchestrator", "scaffold_written", "manifest.json")
     except Exception as exc:
         scaffold_error = str(exc)
@@ -2063,6 +2421,9 @@ def cmd_scaffold(*, out: str, name: str, profile: str, force: bool, runs_root: s
         "result": "PASS" if passed else "FAIL",
         "profile": profile_name,
         "project_name": project_name,
+        "source_mode": source_mode_name,
+        "source_commit": source_commit,
+        "export_manifest_path": export_manifest_path,
         "out_dir": str(out_dir.resolve()),
         "run_dir": str(run_dir.resolve()),
         "elapsed_ms": elapsed_ms,
@@ -2073,6 +2434,10 @@ def cmd_scaffold(*, out: str, name: str, profile: str, force: bool, runs_root: s
             if scaffold_result
             else []
         ),
+        "inherited_copy": list(scaffold_result.get("inherited_copy", []) if scaffold_result else []),
+        "inherited_transform": list(scaffold_result.get("inherited_transform", []) if scaffold_result else []),
+        "excluded": list(scaffold_result.get("excluded", []) if scaffold_result else []),
+        "generated_files": list(scaffold_result.get("generated_files", []) if scaffold_result else []),
         "validation": validation,
         "verify": {
             "attempted": bool(verify_cmdline),
@@ -2086,7 +2451,12 @@ def cmd_scaffold(*, out: str, name: str, profile: str, force: bool, runs_root: s
         "paths": {
             "trace": "TRACE.md",
             "plan": "artifacts/scaffold_plan.md",
+            "reference_source": reference_source_rel,
             "report": "artifacts/scaffold_report.json",
+        },
+        "counts": {
+            "inherited_copy_count": len(list(scaffold_result.get("inherited_copy", []) if scaffold_result else [])),
+            "inherited_transform_count": len(list(scaffold_result.get("inherited_transform", []) if scaffold_result else [])),
         },
     }
     write_json(run_dir / "artifacts" / "scaffold_report.json", report)
@@ -2920,6 +3290,17 @@ def main() -> int:
         choices=["minimal", "standard", "full"],
         help="Scaffold profile",
     )
+    p_scaffold.add_argument(
+        "--source-mode",
+        default="template",
+        choices=["template", "live-reference"],
+        help="Project source mode",
+    )
+    p_scaffold.add_argument(
+        "--reference-manifest",
+        default="",
+        help="Optional reference export manifest path (repo-relative, default: meta/reference_export_manifest.yaml)",
+    )
     p_scaffold.add_argument("--force", action="store_true", help="Regenerate into an existing output directory")
     p_scaffold.add_argument(
         "--runs-root",
@@ -2935,6 +3316,17 @@ def main() -> int:
         default="minimal",
         choices=["minimal", "standard"],
         help="Pointcloud scaffold profile",
+    )
+    p_scaffold_pc.add_argument(
+        "--source-mode",
+        default="template",
+        choices=["template", "live-reference"],
+        help="Project source mode",
+    )
+    p_scaffold_pc.add_argument(
+        "--reference-manifest",
+        default="",
+        help="Optional reference export manifest path (repo-relative, default: meta/reference_export_manifest.yaml)",
     )
     p_scaffold_pc.add_argument("--force", action="store_true", help="Overwrite existing --out directory contents")
     p_scaffold_pc.add_argument(
@@ -2976,6 +3368,8 @@ def main() -> int:
             name=args.name,
             profile=args.profile,
             force=bool(args.force),
+            source_mode=args.source_mode,
+            reference_manifest=args.reference_manifest,
             runs_root=args.runs_root,
         )
     if args.cmd == "scaffold-pointcloud":
@@ -2984,6 +3378,8 @@ def main() -> int:
             name=args.name,
             profile=args.profile,
             force=bool(args.force),
+            source_mode=args.source_mode,
+            reference_manifest=args.reference_manifest,
             runs_root=args.runs_root,
             dialogue_script=args.dialogue_script,
             agent_cmd=args.agent_cmd,

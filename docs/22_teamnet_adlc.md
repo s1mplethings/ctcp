@@ -1,4 +1,11 @@
 TeamNet x ADLC Overview (v0.1)
+
+Scope boundary:
+- This document explains TeamNet role topology only.
+- It is not the repository-purpose source (`docs/01_north_star.md`).
+- It is not the canonical repository flow source (`docs/04_execution_flow.md`).
+- Runtime truth/evidence rules remain in `docs/00_CORE.md`.
+
 1) TeamNet (roles & connections)
                  ┌──────────────┐
                  │ Local Librarian│  (read-only)

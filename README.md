@@ -1,19 +1,13 @@
 # CTCP — ADLC + Multi-Agent Execution Engine
 
-本仓库核心定位：核心 = ADLC 执行引擎（证据链 + failure bundle），把“项目实现”变成可验证、可回放、可审计的执行闭环。
-- 默认路径是 **headless**（不依赖 GUI/Qt）。
-- GUI 仅作为示例/可视化器，可选开启，不影响核心流程。
-- find = workflow resolver（从本地 `workflow_registry/` + 历史成功记录解析最佳 workflow，不依赖联网检索）。
-- 可选开启受控 web find（`resolver_plus_web`，由外部 Researcher 提供 `find_web.json`），默认仍不依赖联网。
+Authoritative source map:
 
-系统目标：
-- 你只需给一个目标（Goal）
-- 系统会自动拆解、执行、验收、记录
-- 只有在 **必须由你决策/提供信息** 时才会提问
-- 最终给你一份可回放的演示报告（trace + 可复现命令）
+- Repo purpose: `docs/01_north_star.md`
+- Canonical execution flow: `docs/04_execution_flow.md`
+- Current task purpose/scope: `meta/tasks/CURRENT.md`
+- Runtime engineering truth: `docs/00_CORE.md`
 
-> 强约束入口：先读 `docs/00_CORE.md`、`AGENTS.md`、`ai_context/00_AI_CONTRACT.md`。  
-> 规则冲突时以 `docs/00_CORE.md` 为准。
+This README is quickstart guidance and does not redefine those sources.
 
 ---
 
@@ -74,6 +68,23 @@ cmake --build build_gui --config Release
 
 ---
 
+## Project Scaffold Modes
+
+`scaffold` 和 `scaffold-pointcloud` 支持双模式：
+
+- `--source-mode template`（默认，保持现有模板行为）
+- `--source-mode live-reference`（从当前 CTCP 仓库按白名单受控导出）
+
+示例（pointcloud）：
+
+```powershell
+python scripts\ctcp_orchestrate.py scaffold-pointcloud --out D:\v2p_projects\demo_v2p --name demo_v2p --profile minimal --source-mode live-reference --runs-root D:\ctcp_runs
+```
+
+更多说明见 `docs/40_reference_project.md`，导出清单真源见 `meta/reference_export_manifest.yaml`。
+
+---
+
 ## Doc Index
 
 <!-- CTCP:DOC_INDEX:BEGIN -->
@@ -89,10 +100,13 @@ cmake --build build_gui --config Release
 - [docs/PATCH_CONTRACT.md](docs/PATCH_CONTRACT.md)
 - [TREE.md](TREE.md)
 - [docs/00_CORE.md](docs/00_CORE.md)
+- [docs/01_north_star.md](docs/01_north_star.md)
 - [docs/00_overview.md](docs/00_overview.md)
 - [docs/01_architecture.md](docs/01_architecture.md)
 - [docs/02_workflow.md](docs/02_workflow.md)
 - [docs/03_quality_gates.md](docs/03_quality_gates.md)
+- [docs/04_execution_flow.md](docs/04_execution_flow.md)
+- [docs/05_agent_mode_matrix.md](docs/05_agent_mode_matrix.md)
 - [docs/25_project_plan.md](docs/25_project_plan.md)
 - [docs/10_team_mode.md](docs/10_team_mode.md)
 - [docs/21_paths_and_locations.md](docs/21_paths_and_locations.md)
