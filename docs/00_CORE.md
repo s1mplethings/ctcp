@@ -8,6 +8,28 @@ Source map (single source per concern):
 - Canonical execution flow source: `docs/04_execution_flow.md`
 - Current task source: `meta/tasks/CURRENT.md`
 - Runtime engineering truth source: `docs/00_CORE.md` (this file)
+- Markdown object state source: `docs/10_REGISTRY.md`
+- Markdown object transition source: `docs/20_STATE_MACHINE.md`
+
+## 0.M Markdown Object Lifecycle Contract
+
+The repository's process/strategy/interface/rule/implementation documents are managed as stateful objects.
+
+Rules:
+- Object state authority is `docs/10_REGISTRY.md`.
+- Allowed state transitions are defined only in `docs/20_STATE_MACHINE.md`.
+- Operational defaults:
+  - `active`: only state allowed for default/runtime normative behavior.
+  - `deprecated`: compatibility only; no new references.
+  - `disabled`: off by default; explicit opt-in only.
+  - `removed`: no repo/config/runtime references allowed.
+  - `archived`: history only, non-runtime.
+- Destructive jump is forbidden:
+  - `active -> removed`
+  - `active -> archived`
+  - `deprecated -> archived`
+- Removal path is mandatory:
+  `active -> deprecated -> disabled -> removed -> archived`
 
 ## 0) Runtime Truth Boundary
 
@@ -235,6 +257,49 @@ Current required gate classes are:
    - `scripts/plan_check.py --executed-gates ... --check-evidence`
 
 Full suite (`CTCP_FULL_GATE=1` or `--full`) is optional extension.
+
+### 9.1 Verification Profiles
+
+`verify_repo.*` supports three risk-tiered profiles to reduce unnecessary
+burden on low-risk changes while preserving full strictness for code paths.
+
+Profile selection order: `--Profile` / `--profile` flag > `CTCP_VERIFY_PROFILE`
+env var > auto-detect via `scripts/classify_change_profile.py`.
+
+Default profile when detection is unavailable: `code` (strictest).
+
+| Profile | Use Case | Gates Run |
+|---------|----------|-----------|
+| `doc-only` | Markdown, docs, meta, reports, archive, cleanup — no code paths affected | anti-pollution, workflow, plan, patch, contract (advisory), doc-index, plan-evidence |
+| `contract` | Authoritative governance/workflow/runtime contract sources | anti-pollution, workflow, plan, patch, behavior-catalog, contract, doc-index, plan-evidence |
+| `code` | Any code/integration/script/runtime/test/build change | All gates (current full behavior) |
+
+Rules:
+- `doc-only` skips: headless build, triplet guard, lite replay, python unit tests, behavior catalog.
+- `contract` skips: headless build, triplet guard, lite replay, python unit tests.
+- `code` skips nothing; preserves current strict behavior.
+- Profile-skipped gates are recorded as executed (profile-skip) for plan evidence purposes.
+- `CURRENT.md` and `LAST.md` workflow evidence remain mandatory across all profiles.
+- Contract checks run in advisory (non-blocking) mode for `doc-only` profile.
+
+### 9.2 Failure Attribution
+
+Verification output MUST classify failures:
+
+- **task-owned**: failure in a gate required by the current profile, caused by current changes.
+- **preexisting (advisory)**: failure in a gate run in advisory mode; recorded but non-blocking.
+- **skipped**: gate not applicable to current profile; noted in output for audit trail.
+
+Preexisting advisory failures do not block a tightly scoped `doc-only` task.
+All failures are recorded in the verification summary for audit purposes.
+
+### 9.3 Cleanup Policy
+
+Repository cleanup follows `docs/cleanup_policy.md`:
+- Archive-first for knowledge assets (docs, meta, decision logs).
+- Hard delete only for generated artifacts, caches, temp outputs.
+- Evidence required for any cleanup action.
+- Protected paths may not be hard-deleted.
 
 ## 10) Stop Conditions (MUST)
 

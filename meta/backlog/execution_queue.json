@@ -497,6 +497,44 @@
       },
       "status": "doing",
       "notes": "Implements phase 1-2 frontend behavior and wiring while preserving future realtime extension boundaries."
+    },
+    {
+      "id": "ADHOC-20260310-md-object-state-machine",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "Markdown object state machine baseline for process governance",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "L0-PLAN-001",
+        "ADHOC-20260309-single-purpose-single-flow-model"
+      ],
+      "dod": [
+        "introduce markdown object registry and state machine docs as single truth sources",
+        "land minimal active object set for process plus strategy plus rule with explicit IDs and states",
+        "forbid direct delete path and require inheritance check policy before object promotion or replacement"
+      ],
+      "artifacts": {
+        "produces": [
+          "docs/00_CORE.md",
+          "docs/10_REGISTRY.md",
+          "docs/20_STATE_MACHINE.md",
+          "docs/processes/PROC-main-workflow.md",
+          "docs/strategies/STRAT-inheritance-check.md",
+          "docs/rules/RULE-no-direct-delete.md",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python scripts/workflow_checks.py",
+          "python scripts/sync_doc_links.py --check",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "doing",
+      "notes": "Adds stateful markdown governance baseline to prevent silent deletion and hidden legacy behavior drift."
     }
   ]
 }

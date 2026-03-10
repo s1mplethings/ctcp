@@ -68,9 +68,18 @@ _FORBIDDEN_PUBLIC_TOKENS = (
     "provider log",
     "tool logs",
     "artifact dump",
+    "analysis.md",
+    "plan_draft.md",
+    "blocked_needs_input",
+    "waiting for",
+    "outbox",
+    "run_dir",
+    "artifact",
+    "patch",
 )
 _FORBIDDEN_PUBLIC_LABEL_RE = re.compile(r"\b(CONTEXT|CONSTRAINTS|EXTERNALS|PLAN|PATCH)\b")
 _RC_FIELD_RE = re.compile(r"\b(?:rc|exit[_ ]?code|return[_ ]?code)\s*[:=]?\s*\d+\b", re.IGNORECASE)
+_WAITING_INTERNAL_REQUEST_RE = re.compile(r"\bwaiting\s+for\s+[^\s]+\.(?:md|json|patch)\b", re.IGNORECASE)
 
 
 def _question_block(questions: list[str], *, lang: str) -> str:
@@ -239,6 +248,27 @@ def _is_generic_opening_question(question: str, lang: str) -> bool:
         "最高优先级",
     )
     return any(tok in q for tok in generic_tokens_zh)
+
+
+def _is_internal_question_leak(question: str) -> bool:
+    q = re.sub(r"\s+", " ", str(question or "").strip())
+    if not q:
+        return False
+    low = q.lower()
+    leak_tokens = (
+        "analysis.md",
+        "plan_draft.md",
+        "outbox",
+        "run_dir",
+        "artifact",
+        "patch",
+        "blocked_needs_input",
+        "internal prompt",
+        "raw prompt",
+    )
+    if any(tok in low for tok in leak_tokens):
+        return True
+    return bool(_WAITING_INTERNAL_REQUEST_RE.search(low))
 
 
 def _entry_hint_bank(lang: str, rag_hints: Mapping[str, Any] | None = None) -> dict[str, list[str]]:
@@ -599,6 +629,9 @@ def _strip_forbidden_public_lines(text: str) -> tuple[str, int]:
         if _RC_FIELD_RE.search(line):
             redactions += 1
             continue
+        if _WAITING_INTERNAL_REQUEST_RE.search(low):
+            redactions += 1
+            continue
         kept.append(line)
     while kept and kept[0] == "":
         kept.pop(0)
@@ -703,26 +736,17 @@ def run_internal_reply_pipeline(
         explicit_question = sanitize_internal_text(raw_next_question).text.strip()
         if mode == "PROJECT_INTAKE" and explicit_question and not is_generic_intake_question(explicit_question, lang):
             allow_tradeoff = has_valid_task_summary({"task_summary": state.task_summary, "conversation_mode": mode})
-            if (not is_generic_opening_question(explicit_question, lang)) and (
+            if (not _is_generic_opening_question(explicit_question, lang)) and (
                 (not is_generic_tradeoff_question(explicit_question)) or allow_tradeoff
             ):
-                state.candidate_questions = _dedupe_items([explicit_question], limit=1)
-        blocked_without_task = bool(raw_backend_state.get("blocked_needs_input", False)) and not has_active_task
-        if blocked_without_task and mode != "GREETING":
-            state.draft_reply = _pick_hint(
-                _entry_hint_bank(
-                    lang,
-                    note.get("entry_hint_bank") if isinstance(note.get("entry_hint_bank"), Mapping) else None,
-                ).get("blocked_no_task", []),
-                f"{mode}|{lang}|{latest_user_message}|blocked",
-                (
-                    "I got your request. Please share the concrete goal for this round and I will continue immediately."
-                    if lang == "en"
-                    else "我已收到。你先补充这轮要达成的具体目标，我就继续推进。"
-                ),
-            )
+                if not _is_internal_question_leak(explicit_question):
+                    state.candidate_questions = _dedupe_items([explicit_question], limit=1)
         if state.candidate_questions:
-            state.draft_reply = f"{state.draft_reply}\n\n{state.candidate_questions[0]}"
+            if mode == "PROJECT_INTAKE":
+                lead = "Also, " if lang == "en" else "另外，"
+                state.draft_reply = f"{state.draft_reply}\n\n{lead}{state.candidate_questions[0]}"
+            else:
+                state.draft_reply = f"{state.draft_reply}\n\n{state.candidate_questions[0]}"
         state = _stage_consistency_review(state, notes=note, lang=lang)
         state = _stage_safety_sanitization(state, lang=lang)
         state = _stage_final_emission(state)
@@ -802,7 +826,7 @@ def compose_user_reply(
                 return f"{head}\n\nTo keep momentum, I need two quick confirmations: {joined_q}"
             return f"{head}\n\nPlease share one or two key constraints and I will resume."
         if visible_state == "EXECUTING":
-            body = "I have started execution and I am moving on the current plan."
+            body = "Got it. I have started execution and I am moving on the current plan."
             if joined_q:
                 return f"{body}\n\nTo reduce rework, I need one quick confirmation: {joined_q}"
             return body

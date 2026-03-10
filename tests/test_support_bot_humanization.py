@@ -520,12 +520,15 @@ class SupportBotHumanizationTests(unittest.TestCase):
                 self.assertEqual(str(session.get("run_dir", "")).strip(), "")
                 self.assertTrue(fake.messages)
                 reply = fake.messages[-1]
-                self.assertIn("\n\n", reply)
-                self.assertIn("保存", reply)
+                self.assertIn("删除", reply)
+                self.assertNotIn("保存", reply)
+                self.assertNotIn("归档", reply)
                 q_count = reply.count("?") + reply.count("？")
-                self.assertEqual(q_count, 1)
-                actions_log = (run_dir / "artifacts" / "support_actions.jsonl").read_text(encoding="utf-8", errors="replace")
-                self.assertIn("archive_run_and_unbind", actions_log)
+                self.assertEqual(q_count, 0)
+                if (run_dir / "artifacts" / "support_actions.jsonl").exists():
+                    actions_log = (run_dir / "artifacts" / "support_actions.jsonl").read_text(encoding="utf-8", errors="replace")
+                    self.assertNotIn("archive_run_and_unbind", actions_log)
+                    self.assertIn("delete_old_session_and_unbind", actions_log)
                 for phrase in ("收到，了解你想咨询的是", "方便的话再补充一些细节", "为了不耽误进度", "我记得你在推进"):
                     self.assertNotIn(phrase, reply)
             finally:

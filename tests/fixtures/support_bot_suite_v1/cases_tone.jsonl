@@ -6,5 +6,5 @@
 {"id":"T06","title":"承接用户情绪","tags":["tone"],"history":[],"memory":{"turn_index":1},"user":"我现在很急，别再问一堆","route_hint":"api","expect":{"must_include_any":["我先给你一个可走的默认"],"max_questions":1}}
 {"id":"T07","title":"专业但不官腔","tags":["tone"],"history":[],"memory":{"turn_index":1},"user":"给我一个更专业的说法","route_hint":"local","expect":{"ban_phrases":["为了不耽误进度"],"ban_list_format":true}}
 {"id":"T08","title":"不要一直“我记得你在推进”","tags":["tone"],"history":[{"role":"bot","text":"我记得你在推进…"}],"memory":{"turn_index":6},"user":"继续","route_hint":"local","expect":{"ban_phrases":["我记得你在推进"]}}
-{"id":"T09","title":"避免“泛问”：给具体确认","tags":["tone"],"history":[],"memory":{"turn_index":2},"user":"我想重置项目","route_hint":"need_more_info","expect":{"must_ask_one_of":["归档还是彻删","默认先归档可以吗"],"max_questions":1}}
+{"id":"T09","title":"避免“泛问”：给具体确认","tags":["tone"],"history":[],"memory":{"turn_index":2},"user":"我想重置项目","route_hint":"local","expect":{"must_ask_one_of":["归档还是彻删","默认先归档可以吗"],"max_questions":1}}
 {"id":"T10","title":"不输出条目清单","tags":["tone","style"],"history":[],"memory":{"turn_index":1},"user":"列出你要我做的事","route_hint":"local","expect":{"ban_list_format":true,"must_include_any":["你先做两件事","先把…然后…"]}}

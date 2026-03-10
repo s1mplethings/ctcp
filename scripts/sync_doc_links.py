@@ -38,6 +38,7 @@ CURATED_DOCS = [
     "docs/12_modules_index.md",
     "docs/13_contracts_index.md",
     "docs/SELF_CHECK_SYSTEM.md",
+    "docs/cleanup_policy.md",
     "ai_context/00_AI_CONTRACT.md",
     "ai_context/CTCP_FAST_RULES.md",
     "ai_context/problem_registry.md",

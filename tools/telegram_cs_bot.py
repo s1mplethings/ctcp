@@ -41,6 +41,10 @@ except Exception:
     mock_agent = None  # type: ignore[assignment]
     ollama_agent = None  # type: ignore[assignment]
 try:
+    from tools import local_librarian
+except Exception:
+    local_librarian = None  # type: ignore[assignment]
+try:
     from tools.stylebank import choose_variants_from_state
 except Exception:
     choose_variants_from_state = None  # type: ignore[assignment]
@@ -101,6 +105,9 @@ SUPPORT_REPLY_PROVIDER_REL = Path("artifacts") / "support_reply.provider.json"
 SUPPORT_REPLY_PROMPT_REL = Path("artifacts") / "support_reply_prompt_input.md"
 SUPPORT_ROUTER_PROMPT_REL = Path("artifacts") / "support_router_prompt_input.md"
 SUPPORT_HANDOFF_TRACE_REL = Path("artifacts") / "support_handoff_trace.jsonl"
+SUPPORT_WHITEBOARD_REL = Path("artifacts") / "support_whiteboard.json"
+SUPPORT_WHITEBOARD_LOG_REL = Path("artifacts") / "support_whiteboard.md"
+SUPPORT_WHITEBOARD_SCHEMA_VERSION = "ctcp-support-whiteboard-v1"
 SUPPORT_ROUTER_PROMPT_PATH = ROOT / "agents" / "prompts" / "support_lead_router.md"
 SUPPORT_REPLY_PROMPT_PATH = ROOT / "agents" / "prompts" / "support_lead_reply.md"
 SUPPORT_KNOWN_PROVIDERS = {"manual_outbox", "ollama_agent", "api_agent", "codex_agent", "mock_agent"}
@@ -114,9 +121,17 @@ INTERNAL_REPLY_MARKERS = (
     "trace",
     "trace.md",
     "outbox",
+    "analysis.md",
+    "plan_draft.md",
     "artifacts/",
     "logs/",
     "diff --git",
+    "waiting for",
+    "blocked_needs_input",
+    "internal prompt",
+    "raw prompt",
+    "artifact",
+    "patch",
     "run.json",
     "guardrails",
     "guardrails_written",
@@ -128,6 +143,7 @@ INTERNAL_REPLY_MARKERS = (
     "support_handoff",
     "support_session_state",
 )
+INTERNAL_WAITING_PATTERN = re.compile(r"\bwaiting\s+for\s+[^\s]+\.(?:md|json|patch)\b", flags=re.IGNORECASE)
 TRACE_MILESTONES_ZH = {
     "guardrails_written": "已经了解了你的需求范围",
     "run_created": "已经开始为你处理了",
@@ -177,6 +193,23 @@ def parse_bool(raw: str, default: bool) -> bool:
     if x in {"0", "false", "no", "off"}:
         return False
     return default
+
+
+def _dedupe_text_list(items: list[str], *, limit: int) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        text = re.sub(r"\s+", " ", str(item or "").strip())
+        if not text:
+            continue
+        key = text.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(text)
+        if len(out) >= max(1, int(limit)):
+            break
+    return out
 
 
 def _suggest_temporary_project_name(task_text: str, lang: str) -> str:
@@ -537,6 +570,94 @@ def save_support_session_state(run_dir: Path, state: dict[str, Any]) -> None:
     atomic_write_text(run_dir / SUPPORT_SESSION_STATE_REL, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
 
 
+def default_support_whiteboard_state() -> dict[str, Any]:
+    return {
+        "schema_version": SUPPORT_WHITEBOARD_SCHEMA_VERSION,
+        "entries": [],
+    }
+
+
+def _safe_whiteboard_hits(rows: Any, *, max_items: int = 5) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    if not isinstance(rows, list):
+        return out
+    for item in rows:
+        if not isinstance(item, dict):
+            continue
+        path = re.sub(r"\s+", " ", str(item.get("path", "")).strip())[:240]
+        snippet = _brief_text(str(item.get("snippet", "")), max_chars=220)
+        try:
+            start_line = max(1, int(item.get("start_line", 1) or 1))
+        except Exception:
+            start_line = 1
+        if not path:
+            continue
+        out.append(
+            {
+                "path": path,
+                "start_line": start_line,
+                "snippet": snippet,
+            }
+        )
+        if len(out) >= max(1, int(max_items)):
+            break
+    return out
+
+
+def _safe_whiteboard_entries(rows: Any, *, max_items: int = 60) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    if not isinstance(rows, list):
+        return out
+    limit = max(1, int(max_items))
+    for item in rows[-limit:]:
+        if not isinstance(item, dict):
+            continue
+        role = re.sub(r"\s+", " ", str(item.get("role", "")).strip().lower())[:32] or "unknown"
+        kind = re.sub(r"\s+", " ", str(item.get("kind", "")).strip().lower())[:48] or "note"
+        text = _brief_text(str(item.get("text", "")).strip(), max_chars=260)
+        query = _brief_text(str(item.get("query", "")).strip(), max_chars=180)
+        question = _brief_text(str(item.get("question", "")).strip(), max_chars=180)
+        entry = {
+            "ts": re.sub(r"\s+", " ", str(item.get("ts", now_iso())).strip())[:40],
+            "role": role,
+            "kind": kind,
+            "text": text,
+        }
+        if query:
+            entry["query"] = query
+        if question:
+            entry["question"] = question
+        hits = _safe_whiteboard_hits(item.get("hits"), max_items=5)
+        if hits:
+            entry["hits"] = hits
+            entry["hit_count"] = len(hits)
+        out.append(entry)
+    return out
+
+
+def load_support_whiteboard_state(run_dir: Path) -> dict[str, Any]:
+    state = default_support_whiteboard_state()
+    path = run_dir / SUPPORT_WHITEBOARD_REL
+    if not path.exists():
+        return state
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    except Exception:
+        return state
+    if not isinstance(doc, dict):
+        return state
+    state["entries"] = _safe_whiteboard_entries(doc.get("entries", []), max_items=60)
+    return state
+
+
+def save_support_whiteboard_state(run_dir: Path, state: dict[str, Any]) -> None:
+    payload = {
+        "schema_version": SUPPORT_WHITEBOARD_SCHEMA_VERSION,
+        "entries": _safe_whiteboard_entries((state or {}).get("entries", []), max_items=60),
+    }
+    atomic_write_text(run_dir / SUPPORT_WHITEBOARD_REL, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+
+
 def _fallback_style_choice(chat_id: int, turn_index: int, lang: str) -> dict[str, str]:
     turn = max(1, int(turn_index))
     if str(lang).lower() == "en":
@@ -664,9 +785,17 @@ def looks_like_new_goal(text: str) -> bool:
     explicit = (
         "新建" in raw
         or "重新开始" in raw
+        or "开一个新的项目" in raw
+        or "新的项目" in raw
         or "新任务" in raw
+        or "之前的不要了" in raw
+        or "旧的不要了" in raw
+        or "不要旧的" in raw
         or "new run" in low
         or "new project" in low
+        or "new task" in low
+        or "old one not needed" in low
+        or "drop the old" in low
         or "start over" in low
         or "from scratch" in low
     )
@@ -830,25 +959,13 @@ def _project_kickoff_reply(lang: str) -> tuple[str, str]:
 
 def _cleanup_project_reply(lang: str) -> tuple[str, str, list[dict[str, Any]]]:
     if str(lang).lower() == "en":
-        ask = "Would you like me to just save a copy, or also permanently delete the old records?"
-        reply = "\n\n".join(
-            [
-                "Got it! I'll help you clean up the previous records so they don't get mixed up with anything new.",
-                "I'll save the old records first, then disconnect them so you won't get any more notifications about them.",
-                ask,
-            ]
-        )
+        ask = ""
+        reply = "Got it. The old records were removed, and I'll continue with the new project."
     else:
-        ask = "你希望只做保存，还是保存后也删除旧记录？"
-        reply = "\n\n".join(
-            [
-                "明白了，我来帮你清理之前的记录，确保不会和新的内容混在一起。",
-                "我会先帮你把之前的记录保存好，然后解除关联，这样之后不会再收到旧内容的通知。",
-                ask,
-            ]
-        )
+        ask = ""
+        reply = "收到，旧记录已按你的要求删除，后续按新项目继续。"
     actions: list[dict[str, Any]] = [
-        {"type": "archive_run_and_unbind", "scope": "session", "default": "archive"}
+        {"type": "delete_old_session_and_unbind", "scope": "session", "mode": "delete"}
     ]
     return reply, ask, actions
 
@@ -1219,11 +1336,19 @@ def _normalize_next_question(text: str, lang: str) -> str:
         "verify_repo",
         "run_dir",
         "outbox",
+        "analysis.md",
+        "plan_draft.md",
+        "waiting for",
+        "blocked_needs_input",
+        "internal prompt",
+        "raw prompt",
+        "artifact",
+        "patch",
         "trace",
         "diff --git",
         "artifacts/",
     )
-    if any(token in low for token in engineering_tokens):
+    if any(token in low for token in engineering_tokens) or INTERNAL_WAITING_PATTERN.search(low):
         raw = _default_next_question(lang)
     head = re.split(r"[?？]", raw, maxsplit=1)[0].strip()
     if head:
@@ -1265,6 +1390,8 @@ def _line_has_internal_marker(line: str) -> bool:
         return False
     low = text.lower()
     if any(marker in low for marker in INTERNAL_REPLY_MARKERS):
+        return True
+    if INTERNAL_WAITING_PATTERN.search(low):
         return True
     # Only filter backtick-wrapped file references (internal artifact paths),
     # not bare file extensions the customer might mention (e.g. "我要导出 .json").
@@ -1714,6 +1841,39 @@ def _brief_text(raw: str, max_chars: int = 140) -> str:
     return text
 
 
+def _is_whiteboard_or_librarian_request(text: str) -> bool:
+    raw = re.sub(r"\s+", " ", str(text or "").strip())
+    low = raw.lower()
+    if not raw:
+        return False
+    keywords = ("白板", "librarian", "whiteboard", "资料检索", "查资料", "找信息", "knowledge")
+    return any(k in raw for k in keywords) or any(k in low for k in keywords)
+
+
+def _whiteboard_area_label(*, path: str, snippet: str, lang: str) -> str:
+    low = (str(path or "") + " " + str(snippet or "")).lower()
+    if "telegram_cs_bot" in low or "support" in low:
+        return "customer support flow" if str(lang).lower() == "en" else "客服流程"
+    if "response_composer" in low or "conversation_mode_router" in low or "frontend" in low:
+        return "intake and reply flow" if str(lang).lower() == "en" else "intake与回复流程"
+    if "ctcp_front_bridge" in low or "ctcp_front_api" in low or "bridge" in low:
+        return "execution bridge flow" if str(lang).lower() == "en" else "执行桥接流程"
+    if "librarian" in low or "context_pack" in low:
+        return "librarian retrieval flow" if str(lang).lower() == "en" else "librarian检索流程"
+    return "related implementation" if str(lang).lower() == "en" else "相关实现"
+
+
+def _looks_like_support_project_linking_request(text: str) -> bool:
+    raw = re.sub(r"\s+", " ", str(text or "").strip())
+    low = raw.lower()
+    has_support = ("客服" in raw) or any(k in low for k in ("support", "customer service"))
+    has_project = ("项目" in raw) or any(k in low for k in ("project", "design", "intake"))
+    has_link = any(k in raw for k in ("连在一起", "打通", "串起来", "协同")) or any(
+        k in low for k in ("connect", "link", "integrate", "bridge")
+    )
+    return (has_support and has_project) or (has_link and (has_support or has_project))
+
+
 def _humanize_trace_event_line(line: str, lang: str) -> str:
     s = str(line or "").strip()
     if not s.startswith("- "):
@@ -2101,6 +2261,15 @@ class StateDB:
         self._update("sessions", "chat_id", chat_id, {"run_dir": "", "updated_at": now})
         self._update("cursors", "chat_id", chat_id, {"seen_outbox": "[]", "seen_questions": "[]", "trace_offset": 0, "last_bundle_mtime": 0.0, "cooldown_ts": 0.0, "updated_at": now})
 
+    def clear_maps_for_chat(self, chat_id: int) -> None:
+        self._ensure_chat(chat_id)
+        self.conn.execute("DELETE FROM outbox_map WHERE chat_id=?", (chat_id,))
+        self.conn.commit()
+
+    def clear_pending_for_run(self, run_dir: str) -> None:
+        self.conn.execute("DELETE FROM agent_pending WHERE run_dir=?", (str(run_dir),))
+        self.conn.commit()
+
     def set_lang(self, chat_id: int, lang: str) -> None:
         self._ensure_chat(chat_id)
         self._update("sessions", "chat_id", chat_id, {"lang": lang, "updated_at": now_iso()})
@@ -2293,9 +2462,15 @@ def _is_internal_support_prompt_item(item: PromptItem) -> bool:
     if _is_internal_support_target_path(item.target_path):
         return True
     rel_prompt = _normalize_rel_for_match(item.rel_prompt_path)
+    rel_name = Path(rel_prompt).name
+    if rel_name.startswith("agent_prompt_"):
+        # Internal orchestration prompt; never customer-facing.
+        return True
     if any(token in rel_prompt for token in ("support_lead_router", "support_lead_reply", "support_lead_handoff")):
         return True
     text = f"{item.prompt_text}\n{item.raw_text}".lower()
+    if "# api agent prompt" in text and "target-path:" in text and "hard rules:" in text:
+        return True
     if "target-path: artifacts/support_router.provider.json" in text:
         return True
     if "target-path: artifacts/support_reply.provider.json" in text:
@@ -2529,6 +2704,176 @@ class Bot:
         }
         append_text(run_dir / SUPPORT_INBOX_REL, json.dumps(row, ensure_ascii=False) + "\n")
 
+    def _support_whiteboard_snapshot(self, run_dir: Path, lang: str, *, max_entries: int = 4) -> dict[str, Any]:
+        board = load_support_whiteboard_state(run_dir)
+        entries = board.get("entries", [])
+        if not isinstance(entries, list):
+            entries = []
+        latest: list[dict[str, Any]] = []
+        for item in entries[-max(1, int(max_entries)) :]:
+            if not isinstance(item, dict):
+                continue
+            row: dict[str, Any] = {
+                "ts": str(item.get("ts", "")),
+                "role": str(item.get("role", "")),
+                "kind": str(item.get("kind", "")),
+                "text": _brief_text(str(item.get("text", "")), max_chars=180),
+            }
+            query = _brief_text(str(item.get("query", "")), max_chars=140)
+            if query:
+                row["query"] = query
+            question = _brief_text(str(item.get("question", "")), max_chars=160)
+            if question:
+                row["question"] = question
+            hit_count = int(item.get("hit_count", 0) or 0)
+            if hit_count > 0:
+                row["hit_count"] = hit_count
+            hits = _safe_whiteboard_hits(item.get("hits"), max_items=3)
+            if hits:
+                row["areas"] = _dedupe_text_list(
+                    [
+                        _whiteboard_area_label(
+                            path=str(h.get("path", "")),
+                            snippet=str(h.get("snippet", "")),
+                            lang=lang,
+                        )
+                        for h in hits
+                    ],
+                    limit=3,
+                )
+            latest.append(row)
+        return {
+            "schema_version": SUPPORT_WHITEBOARD_SCHEMA_VERSION,
+            "entry_count": len(entries),
+            "latest": latest,
+        }
+
+    def _support_librarian_whiteboard_exchange(
+        self,
+        *,
+        run_dir: Path,
+        lang: str,
+        user_text: str,
+        route_doc: dict[str, Any],
+    ) -> dict[str, Any]:
+        raw = re.sub(r"\s+", " ", str(user_text or "").strip())
+        if not raw:
+            return {}
+        route_intent = str(route_doc.get("intent", "")).strip().lower()
+        asked_whiteboard = _is_whiteboard_or_librarian_request(raw)
+        actionable = _has_actionable_goal_details(raw) or is_project_creation_request(raw)
+        if (not asked_whiteboard) and (not actionable):
+            return {}
+        if route_intent in {"cleanup_project", "smalltalk", "cancel_run"} and (not asked_whiteboard):
+            return {}
+
+        board = load_support_whiteboard_state(run_dir)
+        entries = list(board.get("entries", [])) if isinstance(board.get("entries", []), list) else []
+        query = _brief_text(raw, max_chars=180)
+        entries.append(
+            {
+                "ts": now_iso(),
+                "role": "user",
+                "kind": "question",
+                "text": query,
+            }
+        )
+
+        last_librarian_query = ""
+        for item in reversed(entries[:-1]):
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("role", "")).strip().lower() != "librarian":
+                continue
+            q = _brief_text(str(item.get("query", "")).strip(), max_chars=180)
+            if q:
+                last_librarian_query = q
+                break
+        should_lookup = bool(query) and (asked_whiteboard or (query.lower() != last_librarian_query.lower()))
+        hits: list[dict[str, Any]] = []
+        lookup_error = ""
+        if should_lookup:
+            if local_librarian is not None:
+                try:
+                    rows = local_librarian.search(repo_root=self.cfg.repo_root, query=query, k=4)
+                    hits = _safe_whiteboard_hits(rows, max_items=4)
+                except Exception as exc:
+                    lookup_error = str(exc)
+            else:
+                lookup_error = "local_librarian unavailable"
+
+        areas = _dedupe_text_list(
+            [
+                _whiteboard_area_label(path=str(h.get("path", "")), snippet=str(h.get("snippet", "")), lang=lang)
+                for h in hits
+            ],
+            limit=3,
+        )
+        question = ""
+        if _looks_like_support_project_linking_request(raw):
+            if str(lang).lower() == "en":
+                question = "To connect this quickly, should I prioritize support intake wiring first, or librarian whiteboard Q&A first?"
+            else:
+                question = "为了先打通主链路，你希望我先做“客服 intake 接线”，还是先做“librarian 白板问答回路”？"
+        elif asked_whiteboard and (not hits):
+            question = (
+                "Which topic should I search first on the whiteboard?"
+                if str(lang).lower() == "en"
+                else "你希望我先在白板上检索哪个主题？"
+            )
+
+        note_text = ""
+        if should_lookup:
+            if str(lang).lower() == "en":
+                if hits:
+                    scope = ", ".join(areas) if areas else "related implementation"
+                    note_text = f"I have synced your request to the whiteboard and librarian found {len(hits)} clues around {scope}."
+                elif asked_whiteboard:
+                    note_text = "I synced your request to the whiteboard and queued librarian lookup."
+            else:
+                if hits:
+                    scope = "、".join(areas) if areas else "相关实现"
+                    note_text = f"我已把你的需求同步到白板，librarian 找到了 {len(hits)} 条与{scope}有关的线索。"
+                elif asked_whiteboard:
+                    note_text = "我已把你的问题写到白板，并安排 librarian 继续检索相关线索。"
+            entry: dict[str, Any] = {
+                "ts": now_iso(),
+                "role": "librarian",
+                "kind": "lookup",
+                "text": note_text or (
+                    "librarian lookup completed" if str(lang).lower() == "en" else "librarian 检索完成"
+                ),
+                "query": query,
+                "hits": hits,
+                "hit_count": len(hits),
+            }
+            if question:
+                entry["question"] = question
+            if lookup_error:
+                entry["lookup_error"] = _brief_text(lookup_error, max_chars=180)
+            entries.append(entry)
+            append_text(run_dir / SUPPORT_WHITEBOARD_LOG_REL, f"- {now_iso()} | user: {query}\n")
+            append_text(
+                run_dir / SUPPORT_WHITEBOARD_LOG_REL,
+                f"- {now_iso()} | librarian: query={query} | hits={len(hits)}"
+                + (f" | question={question}" if question else "")
+                + "\n",
+            )
+        board["entries"] = entries[-60:]
+        save_support_whiteboard_state(run_dir, board)
+
+        return {
+            "public_note": note_text,
+            "question": question,
+            "ops": {
+                "query": query,
+                "hit_count": len(hits),
+                "areas": areas,
+                "lookup_error": lookup_error,
+                "whiteboard_path": SUPPORT_WHITEBOARD_REL.as_posix(),
+            },
+        }
+
     def _default_support_dispatch_config(self) -> dict[str, Any]:
         return {
             "schema_version": "ctcp-dispatch-config-v1",
@@ -2712,16 +3057,12 @@ class Bot:
             and any(k in session_goal for k in ("项目", "run", "任务", "会话", "project"))
         ):
             intent = "cleanup_project"
-            if str(lang).lower() == "en":
-                followup_question = "I can archive by default; do you want archive or permanent delete?"
-            else:
-                followup_question = "我可以先帮你保存记录，你希望只保存还是保存后永久删除？"
             return {
-                "route": "need_more_info",
+                "route": "local",
                 "intent": intent,
-                "reason": "cleanup request requires one explicit retention choice",
-                "followup_question": followup_question,
-                "style_seed": "cleanup-default-archive",
+                "reason": "cleanup request requires direct delete path",
+                "followup_question": "",
+                "style_seed": "cleanup-direct-delete",
                 "handoff_brief": "",
                 "risk_flags": ["destructive_request"],
                 "confidence": 0.84,
@@ -2977,6 +3318,7 @@ class Bot:
                 "next_action": str(state.get("execution_next_action", "")).strip() or _next_action_from_goal(user_text, lang),
             },
             "session_summary_fallback": _summarize_history_for_session(run_dir, lang),
+            "whiteboard_snapshot": self._support_whiteboard_snapshot(run_dir, lang),
             "style_hint": {
                 k: str(style_hint.get(k, ""))
                 for k in ("opener", "transition", "closer", "question_style", "seed", "intent", "style_seed")
@@ -3122,7 +3464,7 @@ class Bot:
                 },
                 {
                     "provider": "none",
-                    "provider_status": "skipped_cleanup_policy_local",
+                    "provider_status": "skipped_cleanup_policy_direct_delete",
                     "provider_reason": "",
                     "provider_error": "",
                     "role": "support_lead_reply",
@@ -3262,6 +3604,67 @@ class Bot:
             "debug_notes": str(provider_doc.get("debug_notes", "")),
         }, ops_meta
 
+    def _purge_old_session_records(self, run_dir: Path) -> None:
+        rel_targets = (
+            SUPPORT_SESSION_STATE_REL,
+            SUPPORT_INBOX_REL,
+            SUPPORT_ROUTER_TRACE_REL,
+            SUPPORT_ROUTER_LATEST_REL,
+            SUPPORT_ROUTER_PROVIDER_REL,
+            SUPPORT_REPLY_PROVIDER_REL,
+            SUPPORT_REPLY_PROMPT_REL,
+            SUPPORT_ROUTER_PROMPT_REL,
+            SUPPORT_HANDOFF_TRACE_REL,
+            SUPPORT_WHITEBOARD_REL,
+            SUPPORT_WHITEBOARD_LOG_REL,
+            Path("artifacts") / "support_actions.jsonl",
+            Path("artifacts") / "USER_NOTES.md",
+            Path("artifacts") / "API_BOT_SUMMARY.md",
+            Path("logs") / "telegram_cs_bot.support_provider.jsonl",
+            Path("logs") / "telegram_cs_bot.ops.jsonl",
+        )
+        for rel in rel_targets:
+            path = run_dir / rel
+            try:
+                if path.exists() and path.is_file():
+                    path.unlink()
+            except Exception:
+                continue
+
+    def _hard_reset_old_support_state(
+        self,
+        *,
+        chat_id: int,
+        run_dir: Path,
+        reason: str,
+        purge_records: bool,
+    ) -> None:
+        if run_dir.exists():
+            try:
+                self._clear_blocked_hold(run_dir)
+            except Exception:
+                pass
+            if purge_records:
+                self._purge_old_session_records(run_dir)
+            else:
+                try:
+                    save_support_session_state(run_dir, default_support_session_state())
+                except Exception:
+                    pass
+                try:
+                    self._append_note(run_dir, f"support/hard_reset {reason}")
+                except Exception:
+                    pass
+        try:
+            self.db.clear_pending_for_run(str(run_dir))
+        except Exception:
+            pass
+        try:
+            self.db.clear_maps_for_chat(chat_id)
+        except Exception:
+            pass
+        self.db.clear_run(chat_id)
+
     def _apply_support_actions(
         self,
         *,
@@ -3273,26 +3676,34 @@ class Bot:
         if not isinstance(actions, list) or not actions:
             return {}
         applied: list[dict[str, Any]] = []
+        hard_reset_after_reply = False
+        hard_reset_reason = ""
         for item in actions:
             if not isinstance(item, dict):
                 continue
             kind = str(item.get("type", "")).strip()
-            if kind == "archive_run_and_unbind":
+            if kind in {"delete_old_session_and_unbind", "direct_delete_old_session", "clear_old_session_state"}:
                 marker = {
                     "ts": now_iso(),
                     "type": kind,
                     "scope": str(item.get("scope", "")),
-                    "default": str(item.get("default", "")),
+                    "mode": str(item.get("mode", "delete")),
                     "lang": lang,
                 }
                 append_text(run_dir / "artifacts" / "support_actions.jsonl", json.dumps(marker, ensure_ascii=False) + "\n")
-                self._append_note(run_dir, "support/action archive_run_and_unbind")
-                self._clear_blocked_hold(run_dir)
-                self.db.clear_run(chat_id)
+                self._append_note(run_dir, f"support/action {kind}")
+                hard_reset_after_reply = True
+                hard_reset_reason = kind
                 applied.append({"type": kind, "status": "applied"})
             else:
                 applied.append({"type": kind or "unknown", "status": "ignored"})
-        return {"applied_actions": applied} if applied else {}
+        if not applied:
+            return {}
+        out: dict[str, Any] = {"applied_actions": applied}
+        if hard_reset_after_reply:
+            out["hard_reset_after_reply"] = True
+            out["hard_reset_reason"] = hard_reset_reason or "delete_old_session_and_unbind"
+        return out
 
     def _handle_support_turn(self, chat_id: int, lang: str, run_dir: Path, text: str) -> bool:
         try:
@@ -3358,18 +3769,37 @@ class Bot:
                     str(route_doc.get("followup_question", "")).strip()
                     or ("Could you confirm the top priority first?" if str(lang).lower() == "en" else "你先确认最高优先级目标可以吗？")
                 )
+            whiteboard_meta = self._support_librarian_whiteboard_exchange(
+                run_dir=run_dir,
+                lang=lang,
+                user_text=text,
+                route_doc=route_doc,
+            )
+            whiteboard_note = _brief_text(str(whiteboard_meta.get("public_note", "")).strip(), max_chars=260)
+            if whiteboard_note:
+                base_reply = str(reply_doc.get("reply_text", "")).strip()
+                if whiteboard_note.lower() not in base_reply.lower():
+                    reply_doc["reply_text"] = f"{base_reply}\n\n{whiteboard_note}" if base_reply else whiteboard_note
+            if not str(reply_doc.get("next_question", "")).strip():
+                wb_q = str(whiteboard_meta.get("question", "")).strip()
+                if wb_q:
+                    reply_doc["next_question"] = wb_q
             note_path = self._append_note(run_dir, f"telegram/note {text}")
             ops_payload: dict[str, Any] = {
                 "source_text": text,
                 "route_doc": route_doc,
                 "reply_meta": provider_meta,
             }
+            if isinstance(whiteboard_meta.get("ops"), dict):
+                ops_payload["whiteboard"] = dict(whiteboard_meta.get("ops", {}))
             action_meta = self._apply_support_actions(
                 chat_id=chat_id,
                 run_dir=run_dir,
                 actions=reply_doc.get("actions", []),
                 lang=lang,
             )
+            hard_reset_after_reply = bool(action_meta.get("hard_reset_after_reply", False)) if action_meta else False
+            hard_reset_reason = str(action_meta.get("hard_reset_reason", "")).strip() if action_meta else ""
             if action_meta:
                 ops_payload.update(action_meta)
             if self.cfg.note_ack_path:
@@ -3384,7 +3814,15 @@ class Bot:
                 style_hint=style_hint,
                 ops_status=ops_payload,
             )
-            self._append_support_inbox(run_dir, "assistant", str(payload.get("reply_text", "")), lang)
+            if hard_reset_after_reply:
+                self._hard_reset_old_support_state(
+                    chat_id=chat_id,
+                    run_dir=run_dir,
+                    reason=hard_reset_reason or "cleanup_project_post_reply",
+                    purge_records=True,
+                )
+            else:
+                self._append_support_inbox(run_dir, "assistant", str(payload.get("reply_text", "")), lang)
             return True
         except Exception as exc:
             state = load_support_session_state(run_dir)
@@ -3627,7 +4065,7 @@ class Bot:
         }
         if stage_key in {"api_note_reply", "note_reply", "api_follow_up", "smalltalk_fast_path"}:
             notes["prefer_explicit_next_question"] = True
-        if stage_key in {"smalltalk_reply", "smalltalk_fast_path", "api_note_reply", "note_reply", "api_note_saved_ack", "note_saved_ack"}:
+        if stage_key in {"smalltalk_reply", "smalltalk_fast_path", "api_note_reply", "note_reply", "api_note_saved_ack", "note_saved_ack", "status_reply"}:
             notes["prefer_raw_reply_text"] = True
         if manager_known_facts:
             notes["known_facts"] = manager_known_facts
@@ -3658,7 +4096,15 @@ class Bot:
             notes["project_name"] = project_name
 
         # Always run user-facing output through the frontend reply pipeline.
-        if frontend_render_frontend_output is not None:
+        force_raw_reply = bool(ops.get("force_raw_reply", False))
+        skip_frontend_stages = {"status_reply", "decision_reply", "api_decision", "fallback_decision", "api_no_pending_input"}
+        if frontend_render_frontend_output is not None and not (
+            force_raw_reply
+            or stage_key in skip_frontend_stages
+            or stage_key.startswith("command_")
+            or stage_key.startswith("fallback_")
+            or route_intent == "cleanup_project"
+        ):
             try:
                 rendered = frontend_render_frontend_output(
                     raw_backend_state=raw_backend_state,
@@ -4282,6 +4728,56 @@ class Bot:
             ops_status={"target_path": rel, "prompt_path": prompt_path},
         )
 
+    def _detect_api_auth_failure_source(self, run_dir: Path) -> str:
+        scan_files = (
+            "logs/plan_agent.stderr",
+            "logs/patch_agent.stderr",
+            "logs/agent.stderr",
+            "logs/plan_agent.stdout",
+            "logs/patch_agent.stdout",
+            "logs/agent.stdout",
+        )
+        auth_tokens = (
+            "token is invalid",
+            "http 401",
+            "status code: 401",
+            "unauthorized",
+            "invalid api key",
+            "incorrect api key",
+            "authentication failed",
+            "error code: 401",
+        )
+        for rel in scan_files:
+            path = run_dir / rel
+            if not path.exists() or not path.is_file():
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except Exception:
+                continue
+            low = text.lower()
+            if any(token in low for token in auth_tokens):
+                return rel
+        return ""
+
+    def _blocked_issue_override(self, run_dir: Path, *, reason: str, path: str, lang: str) -> tuple[str, str]:
+        reason_low = str(reason or "").strip().lower()
+        path_low = str(path or "").strip().replace("\\", "/").lower()
+        if ("analysis.md" not in path_low) and ("plan_draft.md" not in path_low) and ("waiting for analysis.md" not in reason_low):
+            return "", ""
+        source = self._detect_api_auth_failure_source(run_dir)
+        if not source:
+            return "", ""
+        if str(lang).lower() == "en":
+            return (
+                'API authentication failed (401/token invalid). Please update OPENAI_API_KEY (or CTCP_OPENAI_API_KEY), then reply "continue" and I will retry right away.',
+                source,
+            )
+        return (
+            '检测到 API 鉴权失败（401 / token invalid）。请更新 OPENAI_API_KEY（或 CTCP_OPENAI_API_KEY），然后回复“继续”，我会立即重试。',
+            source,
+        )
+
     def _advance_once(self, chat_id: int, run_dir: Path, steps: int) -> None:
         rc, out, err = self._run_orchestrate(["advance", "--max-steps", str(max(1, steps)), "--run-dir", str(run_dir)])
         lang = str(self.db.get_session(chat_id).get("lang", DEFAULT_LANG) or DEFAULT_LANG)
@@ -4298,6 +4794,9 @@ class Bot:
             item_name = describe_artifact_for_customer(path, lang)
             owner_name = _role_label(owner, lang) if owner else ("N/A" if str(lang).lower() == "en" else "未给出")
             issue_text = describe_reason_for_customer(reason, path, lang)
+            issue_override, auth_hint_source = self._blocked_issue_override(run_dir, reason=reason, path=path, lang=lang)
+            if issue_override:
+                issue_text = issue_override
             blocked_sig = self._blocked_signature(owner=owner, path=path, reason=reason or issue_text)
             if blocked_sig and self._is_blocked_hold_active(run_dir, blocked_sig):
                 self._append_ops_status(
@@ -4334,13 +4833,15 @@ class Bot:
                 run_dir=run_dir,
                 stage="advance_blocked",
                 reply_text=msg,
-                next_question=_default_next_question(lang),
+                next_question="",
                 ops_status={
                     "rc": rc,
                     "owner": owner_name,
                     "next_step": next_step,
                     "reason": reason,
                     "path": path,
+                    "force_raw_reply": bool(issue_override),
+                    **({"auth_hint_source": auth_hint_source} if auth_hint_source else {}),
                 },
             )
             return
@@ -5233,20 +5734,21 @@ class Bot:
             self.tg.send(chat_id=chat_id, text="请先回复我上一条待确认消息，再上传文件。")
             return
         if text:
+            if looks_like_new_goal(text) and not is_explicit_continuation_request(text):
+                self._hard_reset_old_support_state(
+                    chat_id=chat_id,
+                    run_dir=run_dir,
+                    reason="new_goal_intake_reset",
+                    purge_records=True,
+                )
+                self._create_run(chat_id, lang, text)
+                return
             direct_intent, _ = detect_intent(text)
-            run_status = self._run_status(run_dir)
-            terminal_statuses = {"pass", "blocked", "failed", "error", "done", "stopped", "cancelled"}
             if direct_intent == "cancel_run":
                 if self._handle_support_turn(chat_id, lang, run_dir, text):
                     return
                 return
             if direct_intent == "note":
-                if looks_like_new_goal(text) and run_status in terminal_statuses:
-                    self._create_run(chat_id, lang, text)
-                    return
-                if ("新建" in text or "重新开始" in text or "new run" in text.lower()) and len(text.strip()) >= 6:
-                    self._create_run(chat_id, lang, text)
-                    return
                 if is_smalltalk_only_message(text):
                     state = load_support_session_state(run_dir)
                     chat_reply = smalltalk_reply(text, lang, state)

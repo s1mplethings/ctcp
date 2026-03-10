@@ -63,6 +63,24 @@ Canonical flow:
 - Output: canonical gate execution result from `scripts/verify_repo.ps1` or `scripts/verify_repo.sh`.
 - Stop condition: gate passes, or first failure point and minimal fix strategy are recorded.
 
+### Verification Profiles
+
+`verify_repo.*` supports risk-tiered profiles to match verification effort to change scope.
+
+Usage:
+- Windows: `scripts/verify_repo.ps1 -Profile doc-only`
+- Unix: `scripts/verify_repo.sh --profile doc-only`
+- Env: `CTCP_VERIFY_PROFILE=doc-only`
+- Auto: when no profile is specified, `scripts/classify_change_profile.py` infers it from changed files.
+
+Profiles:
+- `doc-only`: for markdown/docs/index/meta/report/archive/cleanup changes that do not affect code paths. Skips heavyweight gates (build, triplet guard, lite replay, unit tests). Runs workflow evidence, plan/patch checks, doc index, and contract checks (advisory).
+- `contract`: for authoritative governance/workflow/runtime contract sources. Stricter than `doc-only`; includes behavior catalog checks. Still skips code-only gates.
+- `code`: for any code/integration/script/runtime/test/build change. Full current behavior; no gates skipped.
+
+The canonical 10-step flow remains mandatory regardless of profile.
+`meta/tasks/CURRENT.md` and `meta/reports/LAST.md` remain required across all profiles.
+
 ## Step 10: Finalize
 
 - Input: verify outcome and artifacts.

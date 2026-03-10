@@ -28,10 +28,68 @@ def _write_required_files(repo: Path, *, code_allowed: bool) -> None:
     (repo / "ai_context" / "00_AI_CONTRACT.md").write_text("contract\n", encoding="utf-8")
     flag = "[x]" if code_allowed else "[ ]"
     (repo / "meta" / "tasks" / "CURRENT.md").write_text(
-        f"# Task\n\n## Acceptance\n- {flag} Code changes allowed\n",
+        "\n".join(
+            [
+                "# Task",
+                "",
+                "## Analysis / Find",
+                "- baseline checks complete",
+                "",
+                "## Integration Check",
+                "upstream: test entry",
+                "current_module: scripts/workflow_checks.py",
+                "downstream: verify gate",
+                "source_of_truth: meta/tasks/CURRENT.md",
+                "fallback: stop with explicit error",
+                "acceptance_test: tests/test_workflow_checks.py",
+                "forbidden_bypass: skip CURRENT.md update",
+                "user_visible_effect: verify gate blocks invalid workflow changes",
+                "",
+                "## Plan",
+                "- check / contrast / fix loop",
+                "- connected + accumulated + consumed",
+                "- issue memory decision: keep explicit records",
+                "- skillized: yes",
+                "",
+                "## Acceptance",
+                f"- {flag} Code changes allowed",
+                "",
+                "task_purpose: validate workflow checks gate behavior",
+                "allowed_behavior_change: tests and fixture expectations only",
+                "forbidden_goal_shift: no runtime logic change",
+                "in_scope_modules: scripts/workflow_checks.py, tests/test_workflow_checks.py",
+                "out_of_scope_modules: tools/, frontend/",
+                "completion_evidence: unit tests pass for workflow checks gate",
+                "",
+            ]
+        ),
         encoding="utf-8",
     )
-    (repo / "meta" / "reports" / "LAST.md").write_text("# report\n", encoding="utf-8")
+    (repo / "meta" / "reports" / "LAST.md").write_text(
+        "\n".join(
+            [
+                "# report",
+                "",
+                "### Readlist",
+                "- scripts/workflow_checks.py",
+                "",
+                "### Plan",
+                "- verify first failure and apply minimal fix strategy",
+                "",
+                "### Verify",
+                "- first failure point captured",
+                "- minimal fix strategy captured",
+                "- python -m unittest tests/test_runtime_wiring_contract.py",
+                "- python -m unittest tests/test_issue_memory_accumulation_contract.py",
+                "- python -m unittest tests/test_skill_consumption_contract.py",
+                "",
+                "### Demo",
+                "- workflow evidence recorded",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
 
 
 def _configure_module(module, repo: Path) -> None:
@@ -61,7 +119,7 @@ def _run_main(module) -> tuple[int, str]:
 
 
 class WorkflowChecksTests(unittest.TestCase):
-    def test_code_changes_require_doc_spec_first_change(self) -> None:
+    def test_code_changes_require_current_update(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td)
             _write_required_files(repo, code_allowed=True)
@@ -78,7 +136,7 @@ class WorkflowChecksTests(unittest.TestCase):
 
             rc, out = _run_main(module)
             self.assertNotEqual(rc, 0)
-            self.assertIn("docs/spec-first update", out)
+            self.assertIn("meta/tasks/CURRENT.md was not updated", out)
 
     def test_code_changes_pass_with_doc_spec_first_change(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -92,6 +150,7 @@ class WorkflowChecksTests(unittest.TestCase):
                 [
                     "src/main.cpp",
                     "docs/00_overview.md",
+                    "meta/tasks/CURRENT.md",
                     "meta/reports/LAST.md",
                 ],
             )

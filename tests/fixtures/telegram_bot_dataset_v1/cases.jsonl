@@ -34,8 +34,8 @@
 {"id":"B04","title":"english decision request with run stays bound","prebind_run":true,"session_lang":"en","text":"need me to decide anything","expect_run_bound":true,"expect_reply_contains_any":["no decision is needed from you right now"]}
 {"id":"B05","title":"outbox with run and no pending prompts","prebind_run":true,"text":"待办还有吗","expect_run_bound":true,"expect_reply_contains_any":["目前没有待确认的事项"]}
 {"id":"B06","title":"english outbox with run and no pending prompts","prebind_run":true,"session_lang":"en","text":"outbox","expect_run_bound":true,"expect_reply_contains_any":["nothing pending right now"]}
-{"id":"B07","title":"cleanup with run should unbind","prebind_run":true,"text":"先清理一下","expect_run_bound":false,"expect_reply_contains_any":["清理之前的记录","删除旧记录"]}
-{"id":"B08","title":"english cleanup with run should unbind","prebind_run":true,"session_lang":"en","text":"clear previous run please","expect_run_bound":false,"expect_reply_contains_any":["clean up the previous records","permanently delete"]}
+{"id":"B07","title":"cleanup with run should unbind","prebind_run":true,"text":"先清理一下","expect_run_bound":false,"expect_reply_contains_any":["旧记录已按你的要求删除","后续按新项目继续"]}
+{"id":"B08","title":"english cleanup with run should unbind","prebind_run":true,"session_lang":"en","text":"clear previous run please","expect_run_bound":false,"expect_reply_contains_any":["old records were removed","continue with the new project"]}
 {"id":"B09","title":"report request with run","prebind_run":true,"text":"给我验证报告","expect_run_bound":true,"expect_reply_contains_any":["verify_report.json not found"]}
 {"id":"B10","title":"report keyword with run en","prebind_run":true,"session_lang":"en","text":"report","expect_run_bound":true,"expect_reply_contains_any":["verify_report.json not found"]}
 {"id":"B11","title":"bundle request with run zh","prebind_run":true,"text":"故障包","expect_run_bound":true,"expect_reply_contains_any":["当前没有失败包"]}

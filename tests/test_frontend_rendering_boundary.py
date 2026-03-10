@@ -6,6 +6,51 @@ from frontend.response_composer import render_frontend_output
 
 
 class FrontendRenderingBoundaryTests(unittest.TestCase):
+    def test_project_intake_generic_opening_question_no_name_error(self) -> None:
+        result = render_frontend_output(
+            raw_backend_state={
+                "stage": "advance_blocked",
+                "blocked_needs_input": True,
+            },
+            task_summary="我想要做一个新的项目",
+            raw_reply_text="我这边需要你补充一些信息才能继续帮你处理。",
+            raw_next_question="还有什么我可以帮到你的吗？",
+            notes={
+                "lang": "zh",
+                "recent_user_messages": ["我想要做一个新的项目"],
+            },
+        )
+        self.assertIsInstance(result.reply_text, str)
+        self.assertTrue(result.reply_text.strip())
+        state = dict(result.pipeline_state or {})
+        self.assertEqual(str(state.get("conversation_mode", "")), "PROJECT_INTAKE")
+
+    def test_project_intake_is_not_overridden_by_blocked_without_task_or_waiting_text(self) -> None:
+        result = render_frontend_output(
+            raw_backend_state={
+                "stage": "advance_blocked",
+                "blocked_needs_input": True,
+                "needs_input": True,
+                "reason": "waiting for analysis.md",
+            },
+            task_summary="我想要做一个新的项目",
+            raw_reply_text="关于：待处理的事项 需要的信息：waiting for analysis.md",
+            raw_next_question="关于：待处理的事项 需要的信息：waiting for analysis.md",
+            notes={
+                "lang": "zh",
+                "recent_user_messages": ["我想要做一个新的项目"],
+            },
+        )
+        text = result.reply_text
+        self.assertIn("你用一句话告诉我这轮项目的目标", text)
+        self.assertNotIn("待处理的事项", text)
+        self.assertNotIn("waiting for", text.lower())
+        self.assertNotIn("analysis.md", text.lower())
+        self.assertNotIn("outbox", text.lower())
+        self.assertLessEqual(len(result.followup_questions), 1)
+        state = dict(result.pipeline_state or {})
+        self.assertEqual(str(state.get("conversation_mode", "")), "PROJECT_INTAKE")
+
     def test_greeting_does_not_enter_project_pipeline(self) -> None:
         result = render_frontend_output(
             raw_backend_state={
