@@ -1487,3 +1487,598 @@
   - `python -m py_compile tools/telegram_cs_bot.py tests/test_telegram_cs_bot_employee_style.py` => `0`
 
 - Queue status update suggestion (`todo/doing/done/blocked`): `done` (targeted wiring + regression coverage complete).
+
+## Update 2026-03-10 - 客服+生产Agent共享白板与Librarian协同
+
+### Queue Binding
+- Queue Item: `ADHOC-20260310-support-production-librarian-whiteboard`
+- Layer/Priority: `L2 / P0`
+- Source Queue File: `meta/backlog/execution_queue.json`
+
+### Context
+- Goal: 让客服与所有生产执行 agent 在同一 whiteboard 上共享 librarian 检索线索，形成“支持侧提问 -> 生产侧执行 -> 结果回写”的闭环协作。
+- Scope:
+  - 在 dispatch 链路增加白板读写与 librarian 线索注入。
+  - 把白板快照注入生产 provider prompt（manual_outbox + api_agent）。
+  - 与现有 `support_whiteboard` 工件复用，避免 support/production 上下文分裂。
+  - 增加最小回归测试覆盖 dispatch 白板接线和 prompt 注入。
+- Out of scope:
+  - orchestrator 状态机语义变更。
+  - frontend bridge 能力扩展。
+  - 新外部依赖引入。
+
+### Task Truth Source (single source for current task)
+
+- task_purpose: 把生产 agent（chair/librarian/guardian/cost_controller/researcher/patchmaker/fixer）的派发执行接线到共享 whiteboard + librarian 协同上下文，并与客服通道共用同一白板真源。
+- allowed_behavior_change:
+  - `scripts/ctcp_dispatch.py` 增加 shared whiteboard state 读写、librarian 查询和 request 注入。
+  - `tools/providers/manual_outbox.py` 与 `tools/providers/api_agent.py` prompt 注入 whiteboard snapshot 与 librarian hits。
+  - 使用 `artifacts/support_whiteboard.json` 作为 shared whiteboard truth source（生产侧与客服侧共用）。
+  - 增补 `tests/test_provider_selection.py`、`tests/test_api_agent_templates.py` 回归用例。
+- forbidden_goal_shift:
+  - 不得绕过 dispatch/provider 主链路新增并行执行路径。
+  - 不得改变 verify 入口或 gate 语义。
+  - 不得向用户回复泄露内部路径/日志细节。
+- in_scope_modules:
+  - `scripts/ctcp_dispatch.py`
+  - `tools/providers/manual_outbox.py`
+  - `tools/providers/api_agent.py`
+  - `tests/test_provider_selection.py`
+  - `tests/test_api_agent_templates.py`
+  - `meta/backlog/execution_queue.json`
+  - `meta/tasks/CURRENT.md`
+  - `meta/reports/LAST.md`
+- out_of_scope_modules:
+  - `scripts/ctcp_orchestrate.py`
+  - `frontend/*`
+  - `src/` / `include/`
+  - `tools/telegram_cs_bot.py`（本轮仅复用其 whiteboard 工件）
+- completion_evidence:
+  - dispatch 执行后在 run_dir 写入共享 whiteboard 条目（agent request + librarian hit + execution result）。
+  - manual_outbox/api_agent prompt 含 whiteboard snapshot。
+  - targeted tests + triplet guard 通过，canonical verify 执行并记录结果。
+
+### Analysis / Find (before plan)
+
+- Entrypoint analysis:
+  - 生产链路入口是 `scripts/ctcp_dispatch.py::dispatch_once`，由 orchestrator blocked/fail gate 触发。
+- Downstream consumer analysis:
+  - `manual_outbox` / `api_agent` 读取 request 并生成目标 artifact；后续由 orchestrator 消费产物推进状态机。
+- Source of truth:
+  - 共享白板真源为 `${run_dir}/artifacts/support_whiteboard.json`。
+  - librarian 检索来自 repo-local `tools.local_librarian.search`。
+- Current break point / missing wiring:
+  - 现有白板+librarian 只在客服 support turn，生产 dispatch 没有接线，导致支持侧与执行侧上下文断开。
+- Repo-local search sufficient: `yes`
+- If no, external research artifact: `N/A`
+
+### Integration Check (before implementation)
+
+- upstream: orchestrator dispatch trigger -> `ctcp_dispatch.dispatch_once`.
+- current_module: shared whiteboard helpers in `ctcp_dispatch` + provider prompt rendering in `manual_outbox`/`api_agent`.
+- downstream: provider prompt consumption -> target artifact generation -> orchestrator gate advance.
+- source_of_truth: `${run_dir}/artifacts/support_whiteboard.json`.
+- fallback: `local_librarian` 不可用或检索异常时仅记录 agent whiteboard note，不阻断 dispatch 执行。
+- acceptance_test:
+  - `python -m unittest discover -s tests -p "test_provider_selection.py" -v`
+  - `python -m unittest discover -s tests -p "test_api_agent_templates.py" -v`
+  - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
+  - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
+  - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
+- forbidden_bypass:
+  - 在 prompt 文本宣称已协同但不写 whiteboard artifact。
+  - 仅客服侧白板，生产链路不消费。
+  - provider 执行不读取 whiteboard snapshot。
+- user_visible_effect:
+  - 客服与生产 agent 共享同一 librarian/whiteboard 语境，减少重复追问与上下文断裂。
+  - 生产 prompt 可直接看到 support 与 librarian 的最新协作记录。
+
+### DoD Mapping (from request)
+
+- [x] DoD-1: dispatch 写入生产 agent request/result 到共享 whiteboard，并挂接 librarian 线索。
+- [x] DoD-2: manual_outbox 与 api_agent prompt 注入 whiteboard snapshot/librarian hits。
+- [x] DoD-3: 共享白板与客服通道复用同一路径，不再 support/production 分裂。
+- [x] DoD-4: targeted regression + triplet guard 通过。
+
+### Acceptance (this update)
+
+- [x] DoD written (this update section complete)
+- [x] Code changes allowed
+- [x] Doc/spec-first task update included
+- [x] Targeted tests pass
+- [x] `scripts/verify_repo.*` passes（或记录首个失败点）
+- [x] `meta/reports/LAST.md` updated in same patch
+
+### Plan
+
+1) 在 `ctcp_dispatch` 增加 whiteboard state helper，dispatch 前后写入 agent/librarian 交互条目，并把 snapshot 注入 request。
+2) 更新 `manual_outbox` prompt 渲染，追加 whiteboard 上下文段。
+3) 更新 `api_agent` prompt 渲染，追加 whiteboard 上下文段。
+4) 补充 provider/dispatch 相关回归测试。
+5) 执行 targeted tests + triplet guard + canonical verify，并回填结果到 CURRENT/LAST。
+
+### Notes / Decisions
+
+- Default choices made: 复用 `artifacts/support_whiteboard.json` 作为共享白板真源，不新建并行白板文件。
+- Alternatives considered: 新建 `artifacts/agent_whiteboard.json`；拒绝（会造成客服与生产上下文分叉）。
+- Any contract exception reference (must also log in `ai_context/decision_log.md`): None.
+- Issue memory decision: 若出现 whiteboard 注入缺失/用户可见泄漏回归，将在本轮结果中补 issue memory 记录；当前先按无新增故障处理。
+- Skill decision (`skillized: yes` or `skillized: no, because ...`): skillized: no, because this is repository-local runtime wiring refinement and not yet a stable reusable multi-repo skill asset.
+
+### Results (2026-03-10 - support+production shared whiteboard/librarian wiring)
+
+- Files changed:
+  - `meta/backlog/execution_queue.json`
+  - `meta/tasks/CURRENT.md`
+  - `scripts/ctcp_dispatch.py`
+  - `tools/providers/manual_outbox.py`
+  - `tools/providers/api_agent.py`
+  - `tests/test_provider_selection.py`
+  - `tests/test_api_agent_templates.py`
+  - `meta/reports/LAST.md`
+
+- Verification summary:
+  - `python -m py_compile scripts/ctcp_dispatch.py tools/providers/manual_outbox.py tools/providers/api_agent.py tests/test_provider_selection.py tests/test_api_agent_templates.py` => `0`
+  - `python -m unittest discover -s tests -p "test_provider_selection.py" -v` => `0` (8 passed)
+  - `python -m unittest discover -s tests -p "test_api_agent_templates.py" -v` => `0` (8 passed)
+  - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` => `0` (8 passed)
+  - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` => `0` (3 passed)
+  - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` => `0` (3 passed)
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => `0`
+    - summary: profile=`code`, executed gates=`lite,workflow_gate,plan_check,patch_check,behavior_catalog_check,contract_checks,doc_index_check,triplet_guard,lite_replay,python_unit_tests`
+    - lite replay summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260310-182611` (`passed=14 failed=0`)
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`（final recheck after CURRENT/LAST sync）=> `0`
+    - lite replay summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260310-183059` (`passed=14 failed=0`)
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`（ultimate recheck after final report sync）=> `0`
+    - lite replay summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260310-183547` (`passed=14 failed=0`)
+
+- Queue status update suggestion (`todo/doing/done/blocked`): `done` (shared whiteboard+librarian wiring for support+production completed and verified).
+
+## Update 2026-03-10 - 客服用户可见通知去机械化统一闸门
+
+### Queue Binding
+- Queue Item: `ADHOC-20260310-support-customer-visible-de-mechanicalization`
+- Layer/Priority: `L2 / P0`
+- Source Queue File: `meta/backlog/execution_queue.json`
+
+### Context
+- Goal: 让用户看到的客服回复始终保持自然客服口径，不再暴露内部 agent、artifact 文件名、raw 异常或模板化 PM 兜底话术。
+- Scope:
+  - 收敛 Telegram 客服里 report / bundle / dispatch / result / write-fail 等用户可见通知到同一自然客服出口。
+  - 保持无 active run 的寒暄/致谢/能力询问为本地客服回复，不为这类消息创建 run。
+  - 收敛 `ctcp_support_bot.py` 的 provider/model fallback，避免退回机械模板。
+  - 补充针对泄漏分支、fallback 以及数据集期望的回归测试。
+- Out of scope:
+  - dispatch/orchestrator 主执行语义变更。
+  - frontend bridge 新能力扩展。
+  - 新 provider/模型接入。
+
+### Task Truth Source (single source for current task)
+
+- task_purpose: 把客服所有用户可见通知统一收敛到自然客服 reply gate，消除内部术语泄漏和机械模板兜底，并确保纯寒暄不会误触发 run 创建。
+- allowed_behavior_change:
+  - `tools/telegram_cs_bot.py` 可以新增/复用统一 customer notice helper，替换 direct `tg.send(...)` 的系统化通知分支。
+  - `scripts/ctcp_support_bot.py` 可以调整 fallback / smalltalk / normalize reply 文案与本地 provider 选择策略，但不得改变其 run_dir 证据链结构。
+  - `tests/test_telegram_cs_bot_employee_style.py`、`tests/test_support_bot_humanization.py`、`tests/fixtures/telegram_bot_dataset_v1/cases.jsonl` 可以更新为新的自然客服期望。
+  - `ai_context/problem_registry.md`、`meta/reports/LAST.md`、`meta/tasks/CURRENT.md` 可记录本轮问题记忆和验证证据。
+- forbidden_goal_shift:
+  - 不得新增绕过 CTCP bridge/runtime contract 的并行执行路径。
+  - 不得仅靠 prompt 改字面而保留 direct raw internal notice 出口。
+  - 不得把内部文件名、日志路径、异常堆栈直接回显给用户。
+- in_scope_modules:
+  - `tools/telegram_cs_bot.py`
+  - `scripts/ctcp_support_bot.py`
+  - `tests/test_telegram_cs_bot_employee_style.py`
+  - `tests/test_support_bot_humanization.py`
+  - `tests/fixtures/telegram_bot_dataset_v1/cases.jsonl`
+  - `ai_context/problem_registry.md`
+  - `meta/backlog/execution_queue.json`
+  - `meta/tasks/CURRENT.md`
+  - `meta/reports/LAST.md`
+- out_of_scope_modules:
+  - `scripts/ctcp_dispatch.py`
+  - `scripts/ctcp_orchestrate.py`
+  - `frontend/*`
+  - `src/` / `include/`
+- completion_evidence:
+  - report / bundle / dispatch / result / write-fail 等用户可见通知不再泄漏 `verify_report.json`、`failure_bundle.zip`、`internal agent`、raw exception。
+  - 无 active run 的寒暄/能力询问保持本地客服回复，不创建 run。
+  - targeted tests + triplet guard 通过，canonical verify 执行并记录结果。
+
+### Analysis / Find (before plan)
+
+- Entrypoint analysis:
+  - Telegram 客服入口是 `tools/telegram_cs_bot.py::Bot._handle_message`，support bot 入口是 `scripts/ctcp_support_bot.py::process_message`。
+- Downstream consumer analysis:
+  - 用户可见回复统一经 `_send_customer_reply` / `support_reply.json.reply_text` 输出；执行桥接状态仍由 run_dir artifacts / events / logs 驱动。
+- Source of truth:
+  - 用户可见文本真源是 Telegram customer reply payload 与 `artifacts/support_reply.json`。
+  - 当前会话真源是 `artifacts/support_session_state.json` 与 session binding DB。
+- Current break point / missing wiring:
+  - 一批 direct `tg.send(...)` 分支绕过统一闸门，直接暴露内部话术；support bot fallback 仍会退回固定模板。
+- Repo-local search sufficient: `yes`
+- If no, external research artifact: `N/A`
+
+### Integration Check (before implementation)
+
+- upstream: Telegram text turn / support-bot stdin|telegram entry.
+- current_module: customer notice helper paths in `tools/telegram_cs_bot.py` + fallback normalization in `scripts/ctcp_support_bot.py`.
+- downstream: `_send_customer_reply` / `support_reply.json.reply_text` -> user-visible customer wording; run_dir state/logs remain internal.
+- source_of_truth: customer reply payloads, `artifacts/support_reply.json`, `artifacts/support_session_state.json`, bound run mapping.
+- fallback: provider/router/model 失败时降级为自然客服回复，不暴露 raw internal labels；无 run 的小聊 stays local。
+- acceptance_test:
+  - `python -m py_compile tools/telegram_cs_bot.py scripts/ctcp_support_bot.py tests/test_telegram_cs_bot_employee_style.py tests/test_support_bot_humanization.py`
+  - `python -m unittest discover -s tests -p "test_telegram_cs_bot_employee_style.py" -v`
+  - `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v`
+  - `python -m unittest discover -s tests -p "test_telegram_cs_bot_dataset_v1.py" -v`
+  - `python -m unittest discover -s tests -p "test_frontend_rendering_boundary.py" -v`
+  - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
+  - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
+  - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
+- forbidden_bypass:
+  - 新增 direct `tg.send(...)` 用户通知绕过 `_send_customer_reply`。
+  - report/bundle/fallback 分支直接输出 artifact 文件名或内部 agent 标签。
+  - 用 prompt 文字掩盖，但保留 run 创建/状态变更误触发路径。
+- user_visible_effect:
+  - 用户只会看到自然客服口径，即使在失败、报告缺失、agent 回退、写入失败等异常路径也不会被内部系统话术打断。
+  - 纯寒暄/致谢/能力询问会得到本地自然回复，不再被误当成新项目立项。
+
+### DoD Mapping (from request)
+
+- [x] DoD-1: Telegram 客服的 report / bundle / dispatch / result / write-fail 通知统一走自然客服出口。
+- [x] DoD-2: 无 active run 的 smalltalk/capability/thanks 保持本地回复，不创建 run。
+- [x] DoD-3: support bot fallback 不再回退到机械模板。
+- [x] DoD-4: targeted regression + dataset + triplet guard + canonical verify 记录到案。
+
+### Acceptance (this update)
+
+- [x] DoD written (this update section complete)
+- [x] Code changes allowed
+- [x] Doc/spec-first task update included
+- [x] Targeted tests pass
+- [x] `scripts/verify_repo.*` passes（或记录首个失败点）
+- [x] `meta/reports/LAST.md` updated in same patch
+
+### Plan
+
+1) 收敛 Telegram 客服 direct notice 分支，改走统一 customer reply gate。
+2) 收敛 support bot fallback / smalltalk / normalize reply 文案，保证 provider 失败时仍是客户口径。
+3) 更新数据集与人性化回归测试，覆盖 report/bundle/dispatch/result/fallback 与 unbound smalltalk。
+4) 执行 targeted tests + triplet guard + canonical verify，并把首个失败点/最终结果回填到 CURRENT/LAST。
+
+### Notes / Decisions
+
+- Default choices made: 优先改 executable code routing，不接受仅改 prompt 文本的“表面人性化”。
+- Alternatives considered: 仅更新模板文案；拒绝，因为 direct `tg.send(...)` 泄漏路径仍会存在。
+- Any contract exception reference (must also log in `ai_context/decision_log.md`): None.
+- Issue memory decision: 记录“用户可见内部系统话术泄漏”到 `ai_context/problem_registry.md`，作为后续客服分支审查模板。
+- Skill decision (`skillized: yes` or `skillized: no, because ...`): skillized: no, because this is a repo-specific runtime hardening pass rather than a reusable standalone skill.
+
+### Results (2026-03-10 - 客服用户可见通知去机械化统一闸门)
+
+- Files changed:
+  - `meta/backlog/execution_queue.json`
+  - `meta/tasks/CURRENT.md`
+  - `meta/reports/LAST.md`
+  - `ai_context/problem_registry.md`
+  - `tools/telegram_cs_bot.py`
+  - `scripts/ctcp_support_bot.py`
+  - `tests/test_telegram_cs_bot_employee_style.py`
+  - `tests/test_support_bot_humanization.py`
+  - `tests/fixtures/telegram_bot_dataset_v1/cases.jsonl`
+
+- Verification summary:
+  - `python -m py_compile tools/telegram_cs_bot.py scripts/ctcp_support_bot.py tests/test_telegram_cs_bot_employee_style.py tests/test_support_bot_humanization.py` => `0`
+  - `python -m unittest discover -s tests -p "test_telegram_cs_bot_employee_style.py" -v` => `0` (32 passed)
+  - `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v` => `0` (21 passed)
+  - `python -m unittest discover -s tests -p "test_telegram_cs_bot_dataset_v1.py" -v` => `0` (1 passed)
+  - `python -m unittest discover -s tests -p "test_frontend_rendering_boundary.py" -v` => `0` (18 passed)
+  - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` => `0` (8 passed)
+  - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` => `0` (3 passed)
+  - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` => `0` (3 passed)
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => `1`
+    - first failure gate: `python unit tests`
+    - first failure detail: `tests/test_support_bot_suite_v1.py` cases `C02/T03/T08` flagged bare `继续` reply text as exact user-text echo because continuation wording still used the same token.
+    - minimal fix strategy: change local continuation Chinese phrasing to `接着往下` style and add a direct regression for `build_employee_note_reply("继续", "zh")`.
+  - `python -m py_compile tools/telegram_cs_bot.py tests/test_telegram_cs_bot_employee_style.py` => `0`
+  - `python -m unittest discover -s tests -p "test_telegram_cs_bot_employee_style.py" -v` => `0` (33 passed)
+  - `python -m unittest discover -s tests -p "test_support_bot_suite_v1.py" -v` => `0` (2 passed)
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => `0`
+    - summary: profile=`code`, executed gates=`lite,workflow_gate,plan_check,patch_check,behavior_catalog_check,contract_checks,doc_index_check,triplet_guard,lite_replay,python_unit_tests`
+    - lite replay summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260311-001313` (`passed=14 failed=0`)
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`（final recheck after CURRENT/LAST/queue sync）=> `0`
+    - lite replay summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260311-001825` (`passed=14 failed=0`)
+
+- Queue status update suggestion (`todo/doing/done/blocked`): `done`
+
+## Update 2026-03-11 - 设计目标改为机械层定边界、agent 定表述
+
+### Queue Binding
+
+- Queue item: `ADHOC-20260311-boundary-first-support-expression`
+- Scope lane: support reply design contract / support-bot fallback
+- Why now:
+  - 用户要求把当前客服设计目标从“固定结构输出”明确改成“让机械层只决定边界，让 agent 决定表述”。
+  - 现有文档与 support-bot 默认 prompt 仍残留“三段式强制表达”的旧口径，需要同步到新的设计真源。
+
+### Scope / Non-goals
+
+- In scope:
+  - 把 `docs/10_team_mode.md` 的客服目标改为边界驱动而非固定三段式。
+  - 把 `agents/prompts/support_lead_reply.md` 与 `scripts/ctcp_support_bot.py` 默认 prompt/fallback 契约改成“机械层定边界、agent 自然表述”。
+  - 补支持这条设计目标的最小回归。
+- Out of scope:
+  - 重写 Telegram 全部 status / advance 口径生成器。
+  - 改动 runtime bridge、dispatcher、provider 选择逻辑。
+  - 重写历史报告中的旧任务描述。
+
+### Task Truth Source (single source for current task)
+
+- task_purpose: 把客服设计目标从固定句式约束切换为边界约束，让机械层只负责泄漏防护、问题数量和动作推进，具体表述交给 agent 自然生成。
+- allowed_behavior_change:
+  - `docs/10_team_mode.md` 可更新 Telegram / support-bot 的设计目标与双通道说明。
+  - `agents/prompts/support_lead_reply.md` 与 `scripts/ctcp_support_bot.py` 可收紧为边界契约而非固定模板契约。
+  - `tests/test_support_bot_humanization.py` 可新增与默认 prompt / fallback 相关的回归。
+  - `meta/backlog/execution_queue.json`、`meta/tasks/CURRENT.md`、`meta/reports/LAST.md` 可记录本轮任务 truth 与证据。
+- forbidden_goal_shift:
+  - 不得把本轮扩展成 Telegram 全量客服回复重写。
+  - 不得引入新的固定格式替代“三段式”。
+  - 不得放松内部信息泄漏、最多一个关键问题、每轮推进一个动作这些边界。
+- in_scope_modules:
+  - `docs/10_team_mode.md`
+  - `agents/prompts/support_lead_reply.md`
+  - `scripts/ctcp_support_bot.py`
+  - `tests/test_support_bot_humanization.py`
+  - `meta/backlog/execution_queue.json`
+  - `meta/tasks/CURRENT.md`
+  - `meta/reports/LAST.md`
+- out_of_scope_modules:
+  - `tools/telegram_cs_bot.py`
+  - `frontend/*`
+  - `scripts/ctcp_dispatch.py`
+  - `tools/providers/*`
+- completion_evidence:
+  - `docs/10_team_mode.md` 明确写出“让机械层只决定边界，让 agent 决定表述”。
+  - support-lead prompt/default prompt 都把边界与表述职责拆开。
+  - fallback normalize 不再拼固定三段壳，相关回归与 canonical verify 通过。
+
+### Analysis / Find (before plan)
+
+- Entrypoint analysis:
+  - 客服回复设计真源主要落在 `docs/10_team_mode.md`、`agents/prompts/support_lead_reply.md`、`scripts/ctcp_support_bot.py`。
+- Downstream consumer analysis:
+  - `scripts/ctcp_support_bot.py::build_support_prompt` 读取 prompt 模板，provider 与 fallback 文案都受这层契约影响。
+- Source of truth:
+  - 设计真源：`docs/10_team_mode.md`
+  - 生成约束真源：`agents/prompts/support_lead_reply.md` 与 `scripts/ctcp_support_bot.py::default_prompt_template`
+- Current break point / missing wiring:
+  - 文档和默认 prompt 已经自然化了一部分，但仍保留“固定三段式”的设计口径，导致目标与运行契约不完全一致。
+- Repo-local search sufficient: `yes`
+- If no, external research artifact: `N/A`
+
+### Integration Check (before implementation)
+
+- upstream: 客服设计原则 -> `docs/10_team_mode.md` -> support prompt builder / fallback reply normalization。
+- current_module: `agents/prompts/support_lead_reply.md` + `scripts/ctcp_support_bot.py`
+- downstream: `build_support_prompt` 提供给 provider 的 prompt，以及 provider/fallback 无法直接使用时的 `normalize_reply_text` 输出。
+- source_of_truth: `docs/10_team_mode.md`, `agents/prompts/support_lead_reply.md`, `scripts/ctcp_support_bot.py`
+- fallback: provider/fallback 仍必须 customer-facing，但不再用固定三段壳拼装；边界仍由机械层兜底。
+- acceptance_test:
+  - `python -m py_compile scripts/ctcp_support_bot.py tests/test_support_bot_humanization.py`
+  - `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v`
+  - `python -m unittest discover -s tests -p "test_frontend_rendering_boundary.py" -v`
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
+- forbidden_bypass:
+  - 只改 `docs/10_team_mode.md` 口号，不改 prompt/default fallback 契约。
+  - 用新的固定结构替换旧的三段式。
+  - 放宽 customer-facing 内部泄漏过滤来换取“更自然”。
+- user_visible_effect:
+  - 设计目标从“机械层决定句式”切到“机械层只定边界”；support-bot 的兜底回复更自然，不再隐含固定三段骨架。
+
+### DoD Mapping (from request)
+
+- [x] DoD-1: 文档设计目标明确改为“让机械层只决定边界，让 agent 决定表述”。
+- [x] DoD-2: support lead prompt/default prompt 改成边界驱动、不强制固定模板。
+- [x] DoD-3: support-bot fallback normalize 改为自然兜底而非固定三段拼接。
+- [x] DoD-4: targeted tests + canonical verify 回填到案。
+
+### Acceptance (this update)
+
+- [x] DoD written (this update section complete)
+- [x] Code/doc changes allowed
+- [x] Doc/spec-first task update included
+- [x] Targeted tests pass
+- [x] `scripts/verify_repo.*` passes（或记录首个失败点）
+- [x] `meta/reports/LAST.md` updated in same patch
+
+### Plan
+
+1) 更新 team-mode 设计目标与双通道说明。
+2) 更新 support lead prompt 与 support-bot 默认 prompt/fallback 契约。
+3) 补最小回归，验证 boundary-first 设计已落到运行层。
+4) 执行 targeted tests + canonical verify，并把结果回填到 CURRENT/LAST。
+
+### Notes / Decisions
+
+- Default choices made: 这轮只改设计真源、prompt 默认值和 fallback normalization，不扩展到 Telegram 全量状态文案重写。
+- Alternatives considered: 直接全量替换 `tools/telegram_cs_bot.py` 里的 `_compose_three_part_reply`；拒绝，因为会超出本轮“设计目标切换”的范围。
+- Any contract exception reference (must also log in `ai_context/decision_log.md`): None.
+- Issue memory decision: None.
+- Skill decision (`skillized: yes` or `skillized: no, because ...`): skillized: yes (`ctcp-workflow` -> `ctcp-verify`)。
+
+### Results (2026-03-11 - 设计目标改为机械层定边界、agent 定表述)
+
+- Files changed:
+  - `docs/10_team_mode.md`
+  - `agents/prompts/support_lead_reply.md`
+  - `scripts/ctcp_support_bot.py`
+  - `tests/test_support_bot_humanization.py`
+  - `meta/backlog/execution_queue.json`
+  - `meta/tasks/CURRENT.md`
+  - `meta/reports/LAST.md`
+
+- Verification summary:
+  - `python -m py_compile scripts/ctcp_support_bot.py tests/test_support_bot_humanization.py` => `0`
+  - `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v` => `0` (22 passed)
+  - `python -m unittest discover -s tests -p "test_frontend_rendering_boundary.py" -v` => `0` (18 passed)
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => `0`
+    - summary: profile=`code`, executed gates=`lite,workflow_gate,plan_check,patch_check,behavior_catalog_check,contract_checks,doc_index_check,triplet_guard,lite_replay,python_unit_tests`
+    - lite replay summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260311-093225` (`passed=14 failed=0`)
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`（final recheck after CURRENT/LAST sync）=> `0`
+    - lite replay summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260311-093730` (`passed=14 failed=0`)
+
+- Queue status update suggestion (`todo/doing/done/blocked`): `done`
+
+## Update 2026-03-11 - Telegram 新建 run 的执行 provider 对齐
+
+### Queue Binding
+- Queue Item: `ADHOC-20260311-telegram-run-provider-alignment`
+- Layer/Priority: `L2 / P0`
+- Source Queue File: `meta/backlog/execution_queue.json`
+
+### Context
+- Goal: 修正 Telegram bot 的项目入口流程，避免无 run 的寒暄走本地回复、但真正建项目时又因为错误的 `api_agent` 默认而立刻 401。
+- Scope:
+  - 在 Telegram 新建 run 后校准该 run 的工程 dispatch provider。
+  - 识别 `OPENAI_API_KEY=ollama` 且无 `OPENAI_BASE_URL` 的误配置，不再把它当成外部 API 可用。
+  - 补充 run 创建/provider readiness 回归。
+- Out of scope:
+  - 全局 workflow recipe 默认 provider 重设计。
+  - 扩展 CTCP dispatcher 的角色 provider 支持矩阵。
+  - 新模型/provider 接入。
+
+### Task Truth Source (single source for current task)
+
+- task_purpose: 让 Telegram-created run 的工程执行链与真实可用的运行时对齐，消除“寒暄可答但项目一启动就 API 401”的错位流程。
+- allowed_behavior_change:
+  - `tools/telegram_cs_bot.py` 可在 `_create_run` 后补 run 级别的 dispatch_config 对齐逻辑。
+  - `tools/providers/api_agent.py` 可收紧 API readiness 判定，拦截 ollama placeholder key 无 base_url 的误配置。
+  - `tests/test_api_agent_templates.py` 与 `tests/test_telegram_cs_bot_employee_style.py` 可新增相关回归。
+  - `docs/10_team_mode.md`、`ai_context/problem_registry.md`、`meta/tasks/CURRENT.md`、`meta/reports/LAST.md` 可记录新的运行约束与证据。
+- forbidden_goal_shift:
+  - 不得把这轮修改扩展成全局 dispatch 架构重写。
+  - 不得破坏纯寒暄本地回复路径。
+  - 不得继续让 Telegram-created run 在明显误配置的 API 环境下默认走 `api_agent`。
+- in_scope_modules:
+  - `tools/telegram_cs_bot.py`
+  - `tools/providers/api_agent.py`
+  - `docs/10_team_mode.md`
+  - `ai_context/problem_registry.md`
+  - `tests/test_api_agent_templates.py`
+  - `tests/test_telegram_cs_bot_employee_style.py`
+  - `meta/backlog/execution_queue.json`
+  - `meta/tasks/CURRENT.md`
+  - `meta/reports/LAST.md`
+- out_of_scope_modules:
+  - `scripts/ctcp_dispatch.py`
+  - `scripts/ctcp_orchestrate.py`
+  - `scripts/ctcp_support_bot.py`
+  - `frontend/*`
+- completion_evidence:
+  - Telegram-created run 在 `OPENAI_API_KEY=ollama` 且无 `OPENAI_BASE_URL` 时不再保留 `api_agent` 为执行默认。
+  - `api_agent` readiness 明确拒绝上述误配置。
+  - targeted tests + canonical verify 通过并记录结果。
+
+### Analysis / Find (before plan)
+
+- Entrypoint analysis:
+  - 用户寒暄入口走 `Bot._handle_message` 的 local smalltalk 分支；项目立项入口走 `Bot._create_run` -> `ctcp_orchestrate new-run`。
+- Downstream consumer analysis:
+  - run 创建后真正执行链读取 `artifacts/dispatch_config.json` 并由 `ctcp_dispatch` 解析 provider。
+- Source of truth:
+  - run 级 provider 真源是 `${run_dir}/artifacts/dispatch_config.json`。
+  - API readiness 真源是 `OPENAI_API_KEY` / `CTCP_OPENAI_API_KEY` + `OPENAI_BASE_URL` / `CTCP_OPENAI_BASE_URL`。
+- Current break point / missing wiring:
+  - smalltalk 本地回复与工程执行 provider 选择没有对齐；`api_agent` 对 placeholder key 的 readiness 判断过宽。
+- Repo-local search sufficient: `yes`
+- If no, external research artifact: `N/A`
+
+### Integration Check (before implementation)
+
+- upstream: Telegram message -> `_handle_message` -> `_create_run`.
+- current_module: run-level dispatch alignment in `tools/telegram_cs_bot.py` + provider readiness guard in `tools/providers/api_agent.py`.
+- downstream: run_dir `dispatch_config.json` -> `ctcp_dispatch.load_dispatch_config` / `api_agent._resolve_templates`.
+- source_of_truth: `${run_dir}/artifacts/dispatch_config.json`, process env for OpenAI/API settings.
+- fallback: external API env not ready -> Telegram-created run downgrades to `manual_outbox` instead of broken `api_agent`; greeting/smalltalk stays local as before.
+- acceptance_test:
+  - `python -m py_compile tools/providers/api_agent.py tools/telegram_cs_bot.py tests/test_api_agent_templates.py tests/test_telegram_cs_bot_employee_style.py`
+  - `python -m unittest discover -s tests -p "test_api_agent_templates.py" -v`
+  - `python -m unittest discover -s tests -p "test_telegram_cs_bot_employee_style.py" -v`
+  - `python -m unittest discover -s tests -p "test_provider_selection.py" -v`
+  - `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v`
+  - `python -m unittest discover -s tests -p "test_frontend_rendering_boundary.py" -v`
+  - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
+  - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
+  - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
+- forbidden_bypass:
+  - 仅靠用户提示解释 API 不可用，但不修 provider 选择。
+  - 继续把 `OPENAI_API_KEY=ollama` 无 base_url 当成可用外部 API。
+  - 为 greeting/smalltalk 人为创造 run 来掩盖 provider 错位。
+- user_visible_effect:
+  - 用户仍可在第一句寒暄得到本地回复。
+  - 真正建项目时不会再因为错误 API 默认而立刻遇到 401 阻塞。
+
+### DoD Mapping (from request)
+
+- [x] DoD-1: 查清为什么第一句能回答但下一句显示不能调用。
+- [x] DoD-2: Telegram-created run 在外部 API 误配置时不再默认走 broken `api_agent`。
+- [x] DoD-3: `api_agent` 明确拦截 ollama placeholder key 无 base_url 的误配置。
+- [ ] DoD-4: targeted tests + canonical verify 回填到案。
+
+### Acceptance (this update)
+
+- [x] DoD written (this update section complete)
+- [x] Code changes allowed
+- [x] Doc/spec-first task update included
+- [x] Targeted tests pass
+- [x] `scripts/verify_repo.*` passes（或记录首个失败点）
+- [x] `meta/reports/LAST.md` updated in same patch
+
+### Plan
+
+1) 在 `api_agent` 增加误配置守卫，识别 `OPENAI_API_KEY=ollama` 且缺 base_url 的情况。
+2) 在 Telegram `_create_run` 后对 run 级 dispatch_config 做 provider 对齐。
+3) 补 run 创建/provider readiness 回归。
+4) 执行 targeted tests + canonical verify，并把首个失败点/最终结果回填到 CURRENT/LAST。
+
+### Notes / Decisions
+
+- Default choices made: 不改全局 recipe 默认，只修 Telegram-created run 的 provider 对齐。
+- Alternatives considered: 直接扩展 dispatcher 让所有角色都支持 `ollama_agent`；拒绝，因为会越过当前 docs/contract 的 provider 矩阵边界。
+- Any contract exception reference (must also log in `ai_context/decision_log.md`): None.
+- Issue memory decision: 记录“ollama placeholder key 被误判为外部 API ready”到 `ai_context/problem_registry.md`。
+- Skill decision (`skillized: yes` or `skillized: no, because ...`): skillized: no, because this is a repository-local runtime correction tied to current Telegram execution wiring.
+
+### Results (2026-03-11 - Telegram 新建 run 的执行 provider 对齐)
+
+- Files changed:
+  - `tools/telegram_cs_bot.py`
+  - `tools/providers/api_agent.py`
+  - `tests/test_api_agent_templates.py`
+  - `tests/test_telegram_cs_bot_employee_style.py`
+  - `docs/10_team_mode.md`
+  - `ai_context/problem_registry.md`
+  - `meta/backlog/execution_queue.json`
+  - `meta/tasks/CURRENT.md`
+  - `meta/reports/LAST.md`
+
+- Verification summary:
+  - `python -m py_compile tools/providers/api_agent.py tools/telegram_cs_bot.py tests/test_api_agent_templates.py tests/test_telegram_cs_bot_employee_style.py` => `0`
+  - `python -m unittest discover -s tests -p "test_api_agent_templates.py" -v` => `0` (9 passed)
+  - `python -m unittest discover -s tests -p "test_telegram_cs_bot_employee_style.py" -v` => `0` (34 passed)
+  - `python -m unittest discover -s tests -p "test_provider_selection.py" -v` => `0` (8 passed)
+  - `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v` => `0` (21 passed)
+  - `python -m unittest discover -s tests -p "test_frontend_rendering_boundary.py" -v` => `0` (18 passed)
+  - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` => `0` (8 passed)
+  - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` => `0` (3 passed)
+  - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` => `0` (3 passed)
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => `0`
+    - summary: profile=`code`, executed gates=`lite,workflow_gate,plan_check,patch_check,behavior_catalog_check,contract_checks,doc_index_check,triplet_guard,lite_replay,python_unit_tests`
+    - lite replay summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260311-005125` (`passed=14 failed=0`)
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`（final recheck after CURRENT/LAST/queue sync）=> `0`
+    - lite replay summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260311-005619` (`passed=14 failed=0`)
+
+- Queue status update suggestion (`todo/doing/done/blocked`): `done`

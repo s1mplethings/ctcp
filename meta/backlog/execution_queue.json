@@ -535,6 +535,160 @@
       },
       "status": "doing",
       "notes": "Adds stateful markdown governance baseline to prevent silent deletion and hidden legacy behavior drift."
+    },
+    {
+      "id": "ADHOC-20260310-support-production-librarian-whiteboard",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Support and production-agent shared librarian+whiteboard collaboration loop",
+      "owner_role": "Local Orchestrator",
+      "deps": [
+        "L1-DISP-001",
+        "ADHOC-20260309-frontend-control-plane-single-bridge"
+      ],
+      "dod": [
+        "dispatcher writes production agent requests and outcomes into shared whiteboard state and links librarian retrieval hints",
+        "all production provider prompts include whiteboard snapshot and librarian clues so roles can consume same context",
+        "support whiteboard and production dispatch reuse one artifact path to avoid context split between customer support and execution agents"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_dispatch.py",
+          "tools/providers/manual_outbox.py",
+          "tools/providers/api_agent.py",
+          "tests/test_provider_selection.py",
+          "tests/test_api_agent_templates.py",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_provider_selection.py\" -v",
+          "python -m unittest discover -s tests -p \"test_api_agent_templates.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "doing",
+      "notes": "Extends existing support-side whiteboard+librarian loop to production dispatch path so all execution agents share one collaboration board."
+    },
+    {
+      "id": "ADHOC-20260310-support-customer-visible-de-mechanicalization",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Unify customer-visible support replies behind a humanized notice gate",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260309-frontend-control-plane-single-bridge",
+        "ADHOC-20260310-support-production-librarian-whiteboard"
+      ],
+      "dod": [
+        "all customer-visible report, bundle, dispatch, fallback, and write-fail notices go through the same natural support reply gate and do not leak internal labels or raw exceptions",
+        "smalltalk, capability, and thanks turns without an active run stay local and do not create or mutate project execution state",
+        "support-bot fallbacks remain customer-facing even when model/provider execution fails, with regression coverage for direct-leak paths and dataset expectations"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/telegram_cs_bot.py",
+          "scripts/ctcp_support_bot.py",
+          "tests/test_telegram_cs_bot_employee_style.py",
+          "tests/test_support_bot_humanization.py",
+          "tests/fixtures/telegram_bot_dataset_v1/cases.jsonl",
+          "ai_context/problem_registry.md",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m py_compile tools/telegram_cs_bot.py scripts/ctcp_support_bot.py tests/test_telegram_cs_bot_employee_style.py tests/test_support_bot_humanization.py",
+          "python -m unittest discover -s tests -p \"test_telegram_cs_bot_employee_style.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_telegram_cs_bot_dataset_v1.py\" -v",
+          "python -m unittest discover -s tests -p \"test_frontend_rendering_boundary.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Removes remaining mechanical/internal customer-facing wording by routing all visible notices and local smalltalk paths through the same natural reply contract."
+    },
+    {
+      "id": "ADHOC-20260311-telegram-run-provider-alignment",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Align Telegram-created runs with actually available execution provider",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260310-support-customer-visible-de-mechanicalization"
+      ],
+      "dod": [
+        "Telegram greeting-only turns remain local, but project-intake run creation no longer defaults into a broken external API path when external API env is not truly ready",
+        "api_agent readiness rejects ollama-style placeholder key without OPENAI_BASE_URL instead of waiting for runtime 401",
+        "regression coverage proves Telegram-created runs downgrade execution dispatch away from api_agent under placeholder-key env and still preserve provider-selection contracts"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/telegram_cs_bot.py",
+          "tools/providers/api_agent.py",
+          "docs/10_team_mode.md",
+          "ai_context/problem_registry.md",
+          "tests/test_api_agent_templates.py",
+          "tests/test_telegram_cs_bot_employee_style.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m py_compile tools/providers/api_agent.py tools/telegram_cs_bot.py tests/test_api_agent_templates.py tests/test_telegram_cs_bot_employee_style.py",
+          "python -m unittest discover -s tests -p \"test_api_agent_templates.py\" -v",
+          "python -m unittest discover -s tests -p \"test_telegram_cs_bot_employee_style.py\" -v",
+          "python -m unittest discover -s tests -p \"test_provider_selection.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_frontend_rendering_boundary.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Prevents Telegram-created runs from inheriting a broken api_agent path when the environment only contains an ollama placeholder key."
+    },
+    {
+      "id": "ADHOC-20260311-boundary-first-support-expression",
+      "layer": "L2",
+      "priority": "P1",
+      "title": "Shift support reply design goal to boundary-driven expression",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260310-support-customer-visible-de-mechanicalization"
+      ],
+      "dod": [
+        "team-mode docs state the design goal as letting the mechanical layer decide boundaries while the agent decides phrasing",
+        "support-lead prompt and support-bot defaults constrain leakage, actionability, and question count without forcing a fixed customer reply structure",
+        "regression coverage proves the support fallback and default prompt stay customer-facing and boundary-driven"
+      ],
+      "artifacts": {
+        "produces": [
+          "docs/10_team_mode.md",
+          "agents/prompts/support_lead_reply.md",
+          "scripts/ctcp_support_bot.py",
+          "tests/test_support_bot_humanization.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py tests/test_support_bot_humanization.py",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_frontend_rendering_boundary.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Replaces the fixed three-part support-reply design goal with a boundary-first contract that leaves phrasing to the agent."
     }
   ]
 }

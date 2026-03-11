@@ -13,11 +13,16 @@ ROOT = Path(__file__).resolve().parents[1]
 DISPATCH_CONFIG_PATH = Path("artifacts") / "dispatch_config.json"
 FIND_RESULT_PATH = Path("artifacts") / "find_result.json"
 WORKFLOW_INDEX_PATH = ROOT / "workflow_registry" / "index.json"
+SUPPORT_WHITEBOARD_REL = Path("artifacts") / "support_whiteboard.json"
+SUPPORT_WHITEBOARD_LOG_REL = Path("artifacts") / "support_whiteboard.md"
+SUPPORT_WHITEBOARD_SCHEMA_VERSION = "ctcp-support-whiteboard-v1"
 
 try:
+    from tools import local_librarian
     from tools.providers import api_agent, codex_agent, local_exec, manual_outbox, mock_agent, ollama_agent
 except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
+    from tools import local_librarian
     from tools.providers import api_agent, codex_agent, local_exec, manual_outbox, mock_agent, ollama_agent
 
 KNOWN_PROVIDERS = {"manual_outbox", "ollama_agent", "api_agent", "codex_agent", "mock_agent", "local_exec"}
@@ -122,6 +127,255 @@ def _append_trace(run_dir: Path, text: str) -> None:
     trace.parent.mkdir(parents=True, exist_ok=True)
     with trace.open("a", encoding="utf-8") as fh:
         fh.write(f"- {_now_iso()} | {text}\n")
+
+
+def _brief_text(value: str, *, max_chars: int = 260) -> str:
+    text = re.sub(r"\s+", " ", str(value or "").strip())
+    limit = max(8, int(max_chars))
+    if len(text) <= limit:
+        return text
+    return text[: limit - 3].rstrip() + "..."
+
+
+def _safe_whiteboard_hits(rows: Any, *, max_items: int = 5) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    if not isinstance(rows, list):
+        return out
+    for item in rows:
+        if not isinstance(item, dict):
+            continue
+        path = _brief_text(str(item.get("path", "")), max_chars=240)
+        if not path:
+            continue
+        try:
+            start_line = max(1, int(item.get("start_line", 1) or 1))
+        except Exception:
+            start_line = 1
+        out.append(
+            {
+                "path": path,
+                "start_line": start_line,
+                "snippet": _brief_text(str(item.get("snippet", "")), max_chars=220),
+            }
+        )
+        if len(out) >= max(1, int(max_items)):
+            break
+    return out
+
+
+def _safe_whiteboard_entries(rows: Any, *, max_items: int = 120) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    if not isinstance(rows, list):
+        return out
+    limit = max(1, int(max_items))
+    for item in rows[-limit:]:
+        if not isinstance(item, dict):
+            continue
+        role = _brief_text(str(item.get("role", "")).lower(), max_chars=32) or "unknown"
+        kind = _brief_text(str(item.get("kind", "")).lower(), max_chars=48) or "note"
+        entry: dict[str, Any] = {
+            "ts": _brief_text(str(item.get("ts", _now_iso())), max_chars=40),
+            "role": role,
+            "kind": kind,
+            "text": _brief_text(str(item.get("text", "")), max_chars=260),
+        }
+        query = _brief_text(str(item.get("query", "")), max_chars=220)
+        question = _brief_text(str(item.get("question", "")), max_chars=220)
+        if query:
+            entry["query"] = query
+        if question:
+            entry["question"] = question
+        hits = _safe_whiteboard_hits(item.get("hits"), max_items=5)
+        if hits:
+            entry["hits"] = hits
+            entry["hit_count"] = len(hits)
+        out.append(entry)
+    return out
+
+
+def _load_support_whiteboard(run_dir: Path) -> dict[str, Any]:
+    path = run_dir / SUPPORT_WHITEBOARD_REL
+    state: dict[str, Any] = {
+        "schema_version": SUPPORT_WHITEBOARD_SCHEMA_VERSION,
+        "entries": [],
+    }
+    if not path.exists():
+        return state
+    try:
+        doc = _read_json(path)
+    except Exception:
+        return state
+    if not isinstance(doc, dict):
+        return state
+    state["entries"] = _safe_whiteboard_entries(doc.get("entries", []), max_items=120)
+    return state
+
+
+def _save_support_whiteboard(run_dir: Path, state: dict[str, Any]) -> None:
+    payload = {
+        "schema_version": SUPPORT_WHITEBOARD_SCHEMA_VERSION,
+        "entries": _safe_whiteboard_entries((state or {}).get("entries", []), max_items=120),
+    }
+    _write_json(run_dir / SUPPORT_WHITEBOARD_REL, payload)
+
+
+def _append_support_whiteboard_log(run_dir: Path, line: str) -> None:
+    path = run_dir / SUPPORT_WHITEBOARD_LOG_REL
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(f"- {_now_iso()} | {_brief_text(line, max_chars=420)}\n")
+
+
+def _compact_whiteboard_snapshot(state: dict[str, Any], *, max_entries: int = 5) -> dict[str, Any]:
+    entries = _safe_whiteboard_entries(state.get("entries", []), max_items=120)
+    tail = entries[-max(1, int(max_entries)) :]
+    summary_entries: list[dict[str, Any]] = []
+    for item in tail:
+        row: dict[str, Any] = {
+            "ts": str(item.get("ts", "")),
+            "role": str(item.get("role", "")),
+            "kind": str(item.get("kind", "")),
+            "text": _brief_text(str(item.get("text", "")), max_chars=220),
+        }
+        query = _brief_text(str(item.get("query", "")), max_chars=180)
+        if query:
+            row["query"] = query
+        hits = _safe_whiteboard_hits(item.get("hits"), max_items=2)
+        if hits:
+            row["hits"] = [{"path": str(h.get("path", "")), "start_line": int(h.get("start_line", 1) or 1)} for h in hits]
+            row["hit_count"] = int(item.get("hit_count", len(hits)) or len(hits))
+        summary_entries.append(row)
+    return {
+        "schema_version": SUPPORT_WHITEBOARD_SCHEMA_VERSION,
+        "path": SUPPORT_WHITEBOARD_REL.as_posix(),
+        "entry_count": len(entries),
+        "entries": summary_entries,
+    }
+
+
+def _dispatch_whiteboard_query(request: dict[str, Any]) -> str:
+    goal = _brief_text(str(request.get("goal", "")), max_chars=220)
+    reason = _brief_text(str(request.get("reason", "")), max_chars=220)
+    role = _brief_text(str(request.get("role", "")), max_chars=32)
+    action = _brief_text(str(request.get("action", "")), max_chars=48)
+    if goal:
+        return goal
+    if reason:
+        return reason
+    return _brief_text(f"{role} {action}".strip(), max_chars=120)
+
+
+def _last_librarian_query(entries: list[dict[str, Any]]) -> str:
+    for item in reversed(entries):
+        if str(item.get("role", "")).strip().lower() != "librarian":
+            continue
+        query = str(item.get("query", "")).strip()
+        if query:
+            return query
+    return ""
+
+
+def _prepare_dispatch_whiteboard_context(
+    *,
+    run_dir: Path,
+    repo_root: Path,
+    request: dict[str, Any],
+) -> dict[str, Any]:
+    board = _load_support_whiteboard(run_dir)
+    entries = _safe_whiteboard_entries(board.get("entries", []), max_items=120)
+    role = _brief_text(str(request.get("role", "")).lower(), max_chars=32) or "agent"
+    action = _brief_text(str(request.get("action", "")), max_chars=48)
+    target_path = _brief_text(str(request.get("target_path", "")), max_chars=140)
+    reason = _brief_text(str(request.get("reason", "")), max_chars=220)
+    query = _dispatch_whiteboard_query(request)
+    last_query = _last_librarian_query(entries)
+    should_lookup = bool(query) and query.lower() != last_query.lower()
+
+    hits: list[dict[str, Any]] = []
+    lookup_error = ""
+    if should_lookup:
+        try:
+            rows = local_librarian.search(repo_root=repo_root, query=query, k=4)
+            hits = _safe_whiteboard_hits(rows, max_items=4)
+        except Exception as exc:
+            lookup_error = _brief_text(str(exc), max_chars=180) or "lookup failed"
+
+    dispatch_text = _brief_text(
+        f"{role}/{action} -> {target_path}; {reason or 'dispatch requested'}",
+        max_chars=260,
+    )
+    entries.append(
+        {
+            "ts": _now_iso(),
+            "role": role,
+            "kind": "dispatch_request",
+            "text": dispatch_text,
+            "query": query,
+        }
+    )
+
+    if should_lookup:
+        librarian_entry: dict[str, Any] = {
+            "ts": _now_iso(),
+            "role": "librarian",
+            "kind": "dispatch_lookup",
+            "text": (
+                f"lookup error: {lookup_error}"
+                if lookup_error
+                else f"lookup completed with {len(hits)} hits"
+            ),
+            "query": query,
+        }
+        if hits:
+            librarian_entry["hits"] = hits
+            librarian_entry["hit_count"] = len(hits)
+        entries.append(librarian_entry)
+        _append_support_whiteboard_log(
+            run_dir,
+            f"dispatch lookup role={role} action={action} query={query} hits={len(hits)} err={lookup_error or 'none'}",
+        )
+
+    board["entries"] = entries
+    _save_support_whiteboard(run_dir, board)
+    snapshot = _compact_whiteboard_snapshot(board, max_entries=5)
+    return {
+        "path": SUPPORT_WHITEBOARD_REL.as_posix(),
+        "query": query,
+        "hits": hits,
+        "lookup_error": lookup_error,
+        "snapshot": snapshot,
+    }
+
+
+def _append_dispatch_result_whiteboard(
+    *,
+    run_dir: Path,
+    request: dict[str, Any],
+    result: dict[str, Any],
+) -> dict[str, Any]:
+    board = _load_support_whiteboard(run_dir)
+    entries = _safe_whiteboard_entries(board.get("entries", []), max_items=120)
+    role = _brief_text(str(request.get("role", "")).lower(), max_chars=32) or "agent"
+    action = _brief_text(str(request.get("action", "")), max_chars=48)
+    provider = _brief_text(str(result.get("provider", "")), max_chars=40) or "unknown"
+    status = _brief_text(str(result.get("status", "")), max_chars=40) or "unknown"
+    reason = _brief_text(str(result.get("reason", "")), max_chars=180)
+    target_path = _brief_text(str(request.get("target_path", "")), max_chars=140)
+    text = f"{role}/{action} via {provider} => {status} ({target_path})"
+    if reason:
+        text += f"; {reason}"
+    entries.append(
+        {
+            "ts": _now_iso(),
+            "role": role,
+            "kind": "dispatch_result",
+            "text": _brief_text(text, max_chars=260),
+        }
+    )
+    board["entries"] = entries
+    _save_support_whiteboard(run_dir, board)
+    _append_support_whiteboard_log(run_dir, text)
+    return _compact_whiteboard_snapshot(board, max_entries=5)
 
 
 def _live_provider_violation(
@@ -551,9 +805,22 @@ def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], 
     if config is None:
         return {"status": "disabled", "reason": cfg_msg}
 
-    request = derive_request(gate, run_doc)
-    if request is None:
+    request_raw = derive_request(gate, run_doc)
+    if request_raw is None:
         return {"status": "no_request"}
+    request = dict(request_raw)
+    whiteboard_context = _prepare_dispatch_whiteboard_context(
+        run_dir=run_dir,
+        repo_root=repo_root,
+        request=request,
+    )
+    request["whiteboard"] = {
+        "path": str(whiteboard_context.get("path", "")),
+        "query": str(whiteboard_context.get("query", "")),
+        "hits": list(whiteboard_context.get("hits", [])),
+        "lookup_error": str(whiteboard_context.get("lookup_error", "")),
+        "snapshot": dict(whiteboard_context.get("snapshot", {})),
+    }
 
     provider, note = _resolve_provider(config, str(request["role"]), str(request["action"]))
     violation = _live_provider_violation(
@@ -564,6 +831,18 @@ def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], 
         note=note,
     )
     if violation is not None:
+        violation_snapshot = _append_dispatch_result_whiteboard(
+            run_dir=run_dir,
+            request=request,
+            result=violation,
+        )
+        violation["whiteboard"] = {
+            "path": str(whiteboard_context.get("path", "")),
+            "query": str(whiteboard_context.get("query", "")),
+            "hit_count": len(list(whiteboard_context.get("hits", []))),
+            "lookup_error": str(whiteboard_context.get("lookup_error", "")),
+            "snapshot": violation_snapshot,
+        }
         _append_step_meta(
             run_dir=run_dir,
             gate=gate,
@@ -626,6 +905,18 @@ def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], 
     result["role"] = request["role"]
     result["action"] = request["action"]
     result["target_path"] = request["target_path"]
+    result_snapshot = _append_dispatch_result_whiteboard(
+        run_dir=run_dir,
+        request=request,
+        result=result,
+    )
+    result["whiteboard"] = {
+        "path": str(whiteboard_context.get("path", "")),
+        "query": str(whiteboard_context.get("query", "")),
+        "hit_count": len(list(whiteboard_context.get("hits", []))),
+        "lookup_error": str(whiteboard_context.get("lookup_error", "")),
+        "snapshot": result_snapshot,
+    }
     if note:
         result["note"] = note
     _append_step_meta(

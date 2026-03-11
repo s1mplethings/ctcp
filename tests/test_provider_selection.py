@@ -228,6 +228,102 @@ class ProviderSelectionTests(unittest.TestCase):
             self.assertEqual(last.get("role"), "chair")
             self.assertEqual(last.get("action"), "plan_draft")
 
+    def test_dispatch_once_injects_shared_whiteboard_context_for_api_provider(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            base = Path(td)
+            run_dir = base / "run"
+            repo_root = base / "repo"
+            (repo_root / "docs").mkdir(parents=True, exist_ok=True)
+            (repo_root / "docs" / "sample.md").write_text("support production whiteboard\n", encoding="utf-8")
+            (run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+            (run_dir / "artifacts" / "dispatch_config.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "ctcp-dispatch-config-v1",
+                        "mode": "api_agent",
+                        "role_providers": {"patchmaker": "api_agent"},
+                        "budgets": {"max_outbox_prompts": 8},
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            run_doc = {"goal": "support production whiteboard sync"}
+            gate = {
+                "state": "blocked",
+                "owner": "PatchMaker",
+                "path": "artifacts/diff.patch",
+                "reason": "waiting for diff.patch",
+            }
+            captured: dict[str, object] = {}
+
+            def _fake_execute(*, repo_root: Path, run_dir: Path, request: dict[str, object], config: dict[str, object], guardrails_budgets: dict[str, str]) -> dict[str, object]:
+                captured["request"] = request
+                return {"status": "executed", "target_path": "artifacts/diff.patch"}
+
+            with mock.patch.object(ctcp_dispatch.api_agent, "execute", side_effect=_fake_execute):
+                result = ctcp_dispatch.dispatch_once(run_dir, run_doc, gate, repo_root)
+
+            self.assertEqual(result.get("status"), "executed", msg=str(result))
+            request = captured.get("request")
+            self.assertIsInstance(request, dict)
+            whiteboard = dict(request.get("whiteboard", {}))  # type: ignore[arg-type]
+            self.assertEqual(str(whiteboard.get("path", "")), "artifacts/support_whiteboard.json")
+            self.assertTrue(str(whiteboard.get("query", "")).strip())
+            self.assertIsInstance(whiteboard.get("snapshot"), dict)
+
+            wb_path = run_dir / "artifacts" / "support_whiteboard.json"
+            self.assertTrue(wb_path.exists(), msg="whiteboard file should exist after dispatch")
+            wb_doc = json.loads(wb_path.read_text(encoding="utf-8"))
+            entries = wb_doc.get("entries", [])
+            self.assertTrue(any(str(e.get("role", "")) == "patchmaker" and str(e.get("kind", "")) == "dispatch_request" for e in entries))
+            self.assertTrue(any(str(e.get("role", "")) == "patchmaker" and str(e.get("kind", "")) == "dispatch_result" for e in entries))
+            self.assertTrue(any(str(e.get("role", "")) == "librarian" for e in entries))
+
+    def test_manual_outbox_prompt_contains_shared_whiteboard_context(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            base = Path(td)
+            run_dir = base / "run"
+            repo_root = base / "repo"
+            (repo_root / "docs").mkdir(parents=True, exist_ok=True)
+            (repo_root / "docs" / "sample.md").write_text("manual outbox whiteboard context\n", encoding="utf-8")
+            (run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+            (run_dir / "artifacts" / "dispatch_config.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "ctcp-dispatch-config-v1",
+                        "mode": "manual_outbox",
+                        "role_providers": {"patchmaker": "manual_outbox", "librarian": "manual_outbox"},
+                        "budgets": {"max_outbox_prompts": 8},
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            run_doc = {"goal": "manual outbox shared whiteboard"}
+            gate = {
+                "state": "blocked",
+                "owner": "PatchMaker",
+                "path": "artifacts/diff.patch",
+                "reason": "waiting for diff.patch",
+            }
+            result = ctcp_dispatch.dispatch_once(run_dir, run_doc, gate, repo_root)
+            self.assertEqual(result.get("status"), "outbox_created", msg=str(result))
+            rel_path = str(result.get("path", "")).strip()
+            self.assertTrue(rel_path.startswith("outbox/"), msg=str(result))
+            prompt_path = run_dir / rel_path
+            self.assertTrue(prompt_path.exists(), msg=str(prompt_path))
+            prompt_text = prompt_path.read_text(encoding="utf-8", errors="replace")
+            self.assertIn("Shared-Whiteboard:", prompt_text)
+            self.assertIn("artifacts/support_whiteboard.json", prompt_text)
+            self.assertIn("librarian_query", prompt_text)
+
 
 if __name__ == "__main__":
     unittest.main()

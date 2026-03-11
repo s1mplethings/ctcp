@@ -17,6 +17,30 @@ from tools.providers import api_agent
 
 
 class ApiAgentTemplateTests(unittest.TestCase):
+    def test_ollama_placeholder_key_requires_base_url_for_api_mode(self) -> None:
+        request = {
+            "role": "chair",
+            "action": "plan_draft",
+            "target_path": "artifacts/PLAN_draft.md",
+        }
+        with mock.patch.dict(
+            os.environ,
+            {
+                "SDDAI_PLAN_CMD": "",
+                "SDDAI_AGENT_CMD": "",
+                "SDDAI_PATCH_CMD": "",
+                "OPENAI_API_KEY": "ollama",
+                "CTCP_OPENAI_API_KEY": "",
+                "OPENAI_BASE_URL": "",
+                "CTCP_OPENAI_BASE_URL": "",
+            },
+            clear=False,
+        ), mock.patch.object(api_agent, "_load_local_notes_defaults", return_value={}):
+            templates, reason = api_agent._resolve_templates(ROOT, request)
+
+        self.assertEqual(templates, {})
+        self.assertIn("OPENAI_BASE_URL", reason)
+
     def test_resolve_templates_plan_only_includes_agent_key(self) -> None:
         request = {
             "role": "chair",
@@ -348,6 +372,59 @@ class ApiAgentTemplateTests(unittest.TestCase):
             self.assertEqual(result.get("status"), "executed", msg=str(result))
             text = (run_dir / "artifacts" / "PLAN.md").read_text(encoding="utf-8")
             self.assertIn("Status: SIGNED", text)
+
+    def test_render_prompt_includes_whiteboard_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            run_dir = Path(td) / "run"
+            repo_root = Path(td) / "repo"
+            run_dir.mkdir(parents=True, exist_ok=True)
+            repo_root.mkdir(parents=True, exist_ok=True)
+
+            evidence: dict[str, Path] = {}
+            for key in ("context", "constraints", "fix_brief", "externals"):
+                p = run_dir / f"{key.upper()}.md"
+                p.write_text(f"# {key}\n- sample\n", encoding="utf-8")
+                evidence[key] = p
+
+            request = {
+                "role": "patchmaker",
+                "action": "make_patch",
+                "goal": "support and production shared whiteboard",
+                "reason": "waiting for diff.patch",
+                "target_path": "artifacts/diff.patch",
+                "whiteboard": {
+                    "path": "artifacts/support_whiteboard.json",
+                    "query": "support and production shared whiteboard",
+                    "hits": [
+                        {
+                            "path": "docs/10_team_mode.md",
+                            "start_line": 42,
+                            "snippet": "support and production collaboration lane",
+                        }
+                    ],
+                    "snapshot": {
+                        "entries": [
+                            {
+                                "role": "support_lead",
+                                "kind": "dispatch_request",
+                                "text": "sync requirement to production lane",
+                            }
+                        ]
+                    },
+                },
+            }
+
+            prompt = api_agent._render_prompt(
+                run_dir=run_dir,
+                repo_root=repo_root,
+                request=request,
+                evidence=evidence,
+            )
+            self.assertIn("# WHITEBOARD", prompt)
+            self.assertIn("artifacts/support_whiteboard.json", prompt)
+            self.assertIn("librarian_query", prompt)
+            self.assertIn("docs/10_team_mode.md", prompt)
+            self.assertIn("[support_lead/dispatch_request]", prompt)
 
 
 if __name__ == "__main__":

@@ -75,13 +75,17 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
     - 仅在用户显式表示“继续上次项目”时引用历史项目上下文。
   - 每次对话可产出 `artifacts/API_BOT_SUMMARY.md`，并生成 `inbox/apibot/requests/REQ_*.json`。
   - 派发 `Type: agent_request` 时会自动附带 `USER_NOTES` 与 `API_BOT_SUMMARY` 尾部，帮助其他 agent 快速执行。
+  - 设计目标：让机械层只决定边界，让 agent 决定表述。
   - 员工感增强：默认输出 2-4 段自然对话，避免条目列表；每轮都包含“我现在就推进的下一步”。
-  - 进度口径增强：`status/advance/TRACE` 主动推送默认使用“现在打算做什么 / 刚做完什么 / 关键问题”三段式，面向客户可直接理解。
+  - 进度口径增强：`status/advance/TRACE` 主动推送会整理成客户可直接理解的自然进展，不强制固定标题或固定三段句式。
   - 对话降噪：自然聊天写入 `USER_NOTES` 时默认不再回显文件路径；如需保留路径回显可设置 `CTCP_TG_NOTE_ACK_PATH=1`。
-  - 双通道契约：用户通道只发“结论 -> 方案 -> 下一步”三段式；内部事件/key/path 仅写入 run_dir 日志。
+  - 双通道契约：机械层只负责内部词泄漏防护、最多一个关键问题、每轮至少推进一个具体动作；具体措辞由 agent 自然生成，内部事件/key/path 仅写入 run_dir 日志。
+  - 所有用户可见通知（包括 report / bundle / agent dispatch / agent result / write-fail）都必须走同一自然客服出口，不得直出 `verify_report.json`、`failure_bundle.zip`、`internal agent`、raw exception 等内部词。
   - 显式进度开关：用户发送“查看进度”或 `debug`（或 `/debug`）时才推送里程碑摘要；默认只输出可客户理解的里程碑摘要，不回显内部 key/path/trace。
   - blocked 去重与冷却：同一阻塞原因短时间内只提醒一次；默认不再循环追问“是否继续自动推进”。
   - 用户补充信息后会自动清除 blocked 冷却并继续推进，不需要额外发“继续”。
+  - 无 active run 的纯寒暄/致谢/能力询问保持本地客服回复，不为这类消息自动创建 run。
+  - Telegram 新建 run 时会先校准工程 dispatch provider：若外部 API 环境未真正就绪，则自动降级为 `manual_outbox`，避免 `OPENAI_API_KEY=ollama` 但无 `OPENAI_BASE_URL` 这类误配置直接打出 401。
   - 运维日志位置：run_dir 下 `logs/telegram_cs_bot.ops.jsonl`（仅内部使用，不回显给用户）。
 - 启动示例：
 ```powershell
@@ -103,7 +107,7 @@ python tools\telegram_cs_bot.py
 
 ## CTCP Support Bot（CEO 口径，双通道）
 - 新入口：`scripts/ctcp_support_bot.py`
-- 目标：用户通道只发自然客服结论；运维通道把 provider 执行细节落到 run_dir 日志。
+- 目标：让机械层只决定边界，让 agent 决定表述；用户通道只看自然客服回复，运维通道把 provider 执行细节落到 run_dir 日志。
 - 会话 run_dir：
   - `${CTCP_RUNS_ROOT}/<repo_slug>/support_sessions/<chat_id>/`
   - 每条消息都会写入：
@@ -113,8 +117,9 @@ python tools\telegram_cs_bot.py
   - provider 调试日志统一写入 `logs/support_bot.*.log`，并追加 `TRACE.md`。
 - 双通道约束：
   - 用户可见只输出 `support_reply.json.reply_text`。
-  - `reply_text` 强制为“结论 -> 方案 -> 下一步（一个问题）”。
+  - 机械层只约束 `reply_text` 的边界：禁止内部泄漏、最多一个关键问题、必须推动一个具体下一步，不强制固定段落结构或标签句式。
   - 禁止在用户回复中出现 `TRACE/logs/outbox/diff --git` 等内部信息。
+  - fallback / smalltalk / capability 兜底也必须保持自然客服口吻，不得退回“项目经理方式推进”“API 和本地模型都不可用”这类机械系统句。
 - provider 路由：
   - 读取 `${run_dir}/artifacts/dispatch_config.json`。
   - 建议样例：`docs/dispatch_config.support_bot.sample.json`

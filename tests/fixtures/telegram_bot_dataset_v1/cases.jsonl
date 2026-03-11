@@ -18,16 +18,16 @@
 {"id":"U18","title":"delete previous session without run","prebind_run":false,"session_lang":"en","text":"delete previous session","expect_run_bound":false,"expect_reply_contains_all":["there is no active run to clean up","start from scratch"]}
 {"id":"U19","title":"help command without run zh","prebind_run":false,"text":"/help","expect_run_bound":false,"expect_reply_contains_any":["高级命令"]}
 {"id":"U20","title":"help command without run en","prebind_run":false,"session_lang":"en","text":"/help","expect_run_bound":false,"expect_reply_contains_any":["advanced: /status"]}
-{"id":"U21","title":"status command without run zh","prebind_run":false,"text":"/status","expect_run_bound":false,"expect_reply_contains_any":["当前未绑定 run"]}
-{"id":"U22","title":"status command without run en","prebind_run":false,"session_lang":"en","text":"/status","expect_run_bound":false,"expect_reply_contains_any":["no bound run"]}
+{"id":"U21","title":"status command without run zh","prebind_run":false,"text":"/status","expect_run_bound":false,"expect_reply_contains_any":["当前还没有进行中的项目","把目标发我"]}
+{"id":"U22","title":"status command without run en","prebind_run":false,"session_lang":"en","text":"/status","expect_run_bound":false,"expect_reply_contains_any":["there is no active project yet","start right away"]}
 {"id":"U23","title":"reset command without run","prebind_run":false,"text":"/reset","expect_run_bound":false,"expect_reply_contains_any":["session reset"]}
-{"id":"U24","title":"new command without goal","prebind_run":false,"text":"/new","expect_run_bound":false,"expect_reply_contains_any":["please send a non-empty goal"]}
-{"id":"U25","title":"unknown command without run","prebind_run":false,"text":"/foo","expect_run_bound":false,"expect_reply_contains_any":["当前未绑定 run"]}
+{"id":"U24","title":"new command without goal","prebind_run":false,"text":"/new","expect_run_bound":false,"expect_reply_contains_any":["这轮想达成的目标","立刻开始"]}
+{"id":"U25","title":"unknown command without run","prebind_run":false,"text":"/foo","expect_run_bound":false,"expect_reply_contains_any":["当前还没有进行中的项目","把目标发我"]}
 {"id":"U26","title":"english goal statement without run creates run","prebind_run":false,"session_lang":"en","text":"I need help building a customer support bot project","expect_run_bound":true,"expect_reply_contains_any":["got it","i understand"]}
-{"id":"U27","title":"english greeting without run","prebind_run":false,"session_lang":"en","text":"hello","expect_run_bound":false,"expect_reply_contains_any":["how can i help you today"]}
+{"id":"U27","title":"english greeting without run","prebind_run":false,"session_lang":"en","text":"hello","expect_run_bound":false,"expect_reply_contains_any":["i'm here","sort out first"]}
 {"id":"U28","title":"thanks without run zh","prebind_run":false,"text":"谢谢","expect_run_bound":false,"expect_reply_contains_any":["不客气"]}
-{"id":"U29","title":"who can you help without run zh","prebind_run":false,"text":"你能做什么","expect_run_bound":false,"expect_reply_contains_any":["我是你的客服助手"]}
-{"id":"U30","title":"what can you do without run en","prebind_run":false,"session_lang":"en","text":"what can you do","expect_run_bound":false,"expect_reply_contains_any":["i'm your customer service assistant"]}
+{"id":"U29","title":"who can you help without run zh","prebind_run":false,"text":"你能做什么","expect_run_bound":false,"expect_reply_contains_any":["想达成的结果","下一步怎么往下走"]}
+{"id":"U30","title":"what can you do without run en","prebind_run":false,"session_lang":"en","text":"what can you do","expect_run_bound":false,"expect_reply_contains_any":["help you sort things out","what do you want me to start with"]}
 {"id":"B01","title":"progress request with run stays bound","prebind_run":true,"text":"查看进度","expect_run_bound":true,"expect_reply_contains_any":["目前的处理状态是","我正在处理"]}
 {"id":"B02","title":"english status request with run stays bound","prebind_run":true,"session_lang":"en","text":"status","expect_run_bound":true,"expect_reply_contains_any":["here's where things stand","currently working on"]}
 {"id":"B03","title":"decision request with run stays bound","prebind_run":true,"text":"需要我决定什么","expect_run_bound":true,"expect_reply_contains_any":["目前没有需要你拍板的事项"]}
@@ -36,17 +36,17 @@
 {"id":"B06","title":"english outbox with run and no pending prompts","prebind_run":true,"session_lang":"en","text":"outbox","expect_run_bound":true,"expect_reply_contains_any":["nothing pending right now"]}
 {"id":"B07","title":"cleanup with run should unbind","prebind_run":true,"text":"先清理一下","expect_run_bound":false,"expect_reply_contains_any":["旧记录已按你的要求删除","后续按新项目继续"]}
 {"id":"B08","title":"english cleanup with run should unbind","prebind_run":true,"session_lang":"en","text":"clear previous run please","expect_run_bound":false,"expect_reply_contains_any":["old records were removed","continue with the new project"]}
-{"id":"B09","title":"report request with run","prebind_run":true,"text":"给我验证报告","expect_run_bound":true,"expect_reply_contains_any":["verify_report.json not found"]}
-{"id":"B10","title":"report keyword with run en","prebind_run":true,"session_lang":"en","text":"report","expect_run_bound":true,"expect_reply_contains_any":["verify_report.json not found"]}
-{"id":"B11","title":"bundle request with run zh","prebind_run":true,"text":"故障包","expect_run_bound":true,"expect_reply_contains_any":["当前没有失败包"]}
-{"id":"B12","title":"bundle keyword with run en","prebind_run":true,"session_lang":"en","text":"bundle","expect_run_bound":true,"expect_reply_contains_any":["当前没有失败包"]}
+{"id":"B09","title":"report request with run","prebind_run":true,"text":"给我验证报告","expect_run_bound":true,"expect_reply_contains_any":["验收结果我这边还没拿到","核对一次当前产物"]}
+{"id":"B10","title":"report keyword with run en","prebind_run":true,"session_lang":"en","text":"report","expect_run_bound":true,"expect_reply_contains_any":["verification result","check the latest artifacts"]}
+{"id":"B11","title":"bundle request with run zh","prebind_run":true,"text":"故障包","expect_run_bound":true,"expect_reply_contains_any":["诊断材料","继续盯着执行进展"]}
+{"id":"B12","title":"bundle keyword with run en","prebind_run":true,"session_lang":"en","text":"bundle","expect_run_bound":true,"expect_reply_contains_any":["diagnostic package","watching this run"]}
 {"id":"B13","title":"lang command switch to en","prebind_run":true,"text":"/lang en","expect_run_bound":true,"expect_reply_contains_any":["language=en"]}
 {"id":"B14","title":"lang command switch to zh","prebind_run":true,"session_lang":"en","text":"/lang zh","expect_run_bound":true,"expect_reply_contains_any":["language=zh"]}
 {"id":"B15","title":"outbox command with run zh","prebind_run":true,"text":"/outbox","expect_run_bound":true,"expect_reply_contains_any":["当前没有新的待确认事项"]}
 {"id":"B16","title":"get missing file with run zh","prebind_run":true,"text":"/get artifacts/missing.txt","expect_run_bound":true,"expect_reply_contains_any":["文件不存在"]}
 {"id":"B17","title":"get missing file with run en","prebind_run":true,"session_lang":"en","text":"/get artifacts/missing.txt","expect_run_bound":true,"expect_reply_contains_any":["file not found"]}
 {"id":"B18","title":"note command with run zh","prebind_run":true,"text":"/note 补充退款流程","expect_run_bound":true,"expect_reply_contains_any":["我已记录这条备注"]}
-{"id":"B19","title":"bundle command with run zh","prebind_run":true,"text":"/bundle","expect_run_bound":true,"expect_reply_contains_any":["当前没有失败包"]}
+{"id":"B19","title":"bundle command with run zh","prebind_run":true,"text":"/bundle","expect_run_bound":true,"expect_reply_contains_any":["诊断材料","继续盯着执行进展"]}
 {"id":"B20","title":"status command with run zh","prebind_run":true,"text":"/status","expect_run_bound":true,"expect_reply_contains_any":["目前的处理状态是"]}
 {"id":"B21","title":"reset command with run clears binding","prebind_run":true,"text":"/reset","expect_run_bound":false,"expect_reply_contains_any":["session reset"]}
 {"id":"B22","title":"unknown command with run returns help","prebind_run":true,"text":"/foo","expect_run_bound":true,"expect_reply_contains_any":["高级命令"]}

@@ -5,7 +5,9 @@ import time
 import unittest
 from unittest import mock
 from pathlib import Path
+from typing import Any
 
+from scripts.ctcp_support_bot import default_prompt_template, normalize_reply_text
 from tools.telegram_cs_bot import (
     Bot,
     Config,
@@ -56,6 +58,19 @@ class SupportBotHumanizationTests(unittest.TestCase):
         self.assertNotIn("run.json", low)
         self.assertNotIn("logs/", low)
         self.assertTrue(removed)
+
+    def test_support_bot_fallback_text_stays_customer_facing(self) -> None:
+        text = normalize_reply_text("stack trace: command failed rc=7", "")
+        self.assertIn("我先接住这件事", text)
+        self.assertNotIn("项目经理方式推进", text)
+        self.assertNotIn("command failed", text.lower())
+        self.assertNotIn("按这个顺序继续帮你往下处理", text)
+        self.assertNotIn("\n\n\n", text)
+
+    def test_support_bot_default_prompt_states_boundary_first_goal(self) -> None:
+        text = default_prompt_template()
+        self.assertIn("mechanical safeguards decide the boundary", text)
+        self.assertIn("do not require a fixed reply template", text)
 
     def test_payload_is_paragraph_style_and_not_list_style(self) -> None:
         raw = "\n".join(
@@ -169,21 +184,12 @@ class SupportBotHumanizationTests(unittest.TestCase):
             finally:
                 bot.close()
 
-    def test_smalltalk_fast_path_prefers_human_reply_and_uses_memory(self) -> None:
+    def test_smalltalk_in_bound_run_routes_to_support_turn_model_path(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_smalltalk_") as td:
             base = Path(td)
             run_dir = base / "run_demo"
             run_dir.mkdir(parents=True, exist_ok=True)
             (run_dir / "RUN.json").write_text(json.dumps({"status": "running"}), encoding="utf-8")
-            state = default_support_session_state()
-            state["memory_slots"] = {
-                "customer_name": "",
-                "preferred_style": "",
-                "current_topic": "客服bot真人化",
-                "last_request": "",
-            }
-            state["user_goal"] = "客服bot真人化"
-            save_support_session_state(run_dir, state)
             cfg = Config(
                 token="fake",
                 allowlist=None,
@@ -205,13 +211,18 @@ class SupportBotHumanizationTests(unittest.TestCase):
                 chat_id = 302
                 bot.db.bind_run(chat_id, run_dir)
                 bot.db.set_lang(chat_id, "zh")
+                called: dict[str, str] = {}
+
+                def fake_support_turn(_chat_id: int, _lang: str, _run_dir: Path, text: str) -> bool:
+                    called["text"] = text
+                    called["run_dir"] = str(_run_dir)
+                    return True
+
+                bot._handle_support_turn = fake_support_turn  # type: ignore[method-assign]
                 bot.process_update({"message": {"chat": {"id": chat_id}, "text": "你好"}})
-                self.assertEqual(len(fake.messages), 1)
-                reply = fake.messages[0]
-                self.assertNotIn("客服bot真人化", reply)
-                self.assertIn("请问有什么可以帮到你", reply)
-                self.assertNotIn("patch", reply.lower())
-                self.assertNotIn("路径推进", reply)
+                self.assertEqual(str(called.get("text", "")), "你好")
+                self.assertEqual(str(called.get("run_dir", "")), str(run_dir))
+                self.assertEqual(len(fake.messages), 0)
             finally:
                 bot.close()
 
@@ -360,13 +371,13 @@ class SupportBotHumanizationTests(unittest.TestCase):
         state["user_goal"] = "你好"
         reply = smalltalk_reply("你好", "zh", state)
         self.assertNotIn("推进“你好”", reply)
-        self.assertIn("请问有什么可以帮到你", reply)
+        self.assertIn("你直接说这轮想先处理什么", reply)
 
     def test_smalltalk_reply_does_not_echo_raw_goal_sentence(self) -> None:
         state = default_support_session_state()
         state["user_goal"] = "我想要你帮我做一个项目可以吗"
         reply = smalltalk_reply("你好", "zh", state)
-        self.assertIn("请问有什么可以帮到你", reply)
+        self.assertIn("你直接说这轮想先处理什么", reply)
         self.assertNotIn("我想要你帮我做一个项目可以吗", reply)
         self.assertNotIn("我们可以接着聊", reply)
 
@@ -423,7 +434,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             finally:
                 bot.close()
 
-    def test_unbound_smalltalk_does_not_create_run(self) -> None:
+    def test_unbound_smalltalk_stays_local_and_does_not_create_run(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_unbound_smalltalk_") as td:
             base = Path(td)
             cfg = Config(
@@ -445,15 +456,37 @@ class SupportBotHumanizationTests(unittest.TestCase):
             bot.tg = fake
             try:
                 chat_id = 399
+                run_dir = base / "run_for_smalltalk"
+                created: dict[str, Any] = {}
+                handled: dict[str, Any] = {}
+
+                def fake_create_run(_chat_id: int, _lang: str, goal: str, *, send_local_ack: bool = True) -> None:
+                    created["goal"] = goal
+                    created["send_local_ack"] = send_local_ack
+                    run_dir.mkdir(parents=True, exist_ok=True)
+                    (run_dir / "RUN.json").write_text(json.dumps({"status": "running"}), encoding="utf-8")
+                    bot.db.bind_run(_chat_id, run_dir)
+                    bot.db.set_lang(_chat_id, _lang)
+
+                def fake_support_turn(_chat_id: int, _lang: str, _run_dir: Path, text: str) -> bool:
+                    handled["text"] = text
+                    handled["run_dir"] = str(_run_dir)
+                    return True
+
+                bot._create_run = fake_create_run  # type: ignore[method-assign]
+                bot._handle_support_turn = fake_support_turn  # type: ignore[method-assign]
                 bot.process_update({"message": {"chat": {"id": chat_id}, "text": "你好"}})
                 session = bot.db.get_session(chat_id)
-                self.assertEqual(str(session.get("run_dir", "")).strip(), "")
-                self.assertTrue(fake.messages)
-                self.assertIn("请问有什么可以帮到你", fake.messages[-1])
+                self.assertEqual(str(created.get("goal", "")), "")
+                self.assertEqual(str(session.get("run_dir", "")), "")
+                self.assertEqual(str(handled.get("text", "")), "")
+                self.assertEqual(len(fake.messages), 1)
+                self.assertIn("你好", fake.messages[0])
+                self.assertIn("这轮想先处理什么", fake.messages[0])
             finally:
                 bot.close()
 
-    def test_smalltalk_in_bound_run_pauses_auto_advance_temporarily(self) -> None:
+    def test_smalltalk_in_bound_run_uses_support_turn_instead_of_local_pause_path(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_smalltalk_pause_") as td:
             base = Path(td)
             run_dir = base / "run_demo"
@@ -480,11 +513,20 @@ class SupportBotHumanizationTests(unittest.TestCase):
                 chat_id = 398
                 bot.db.bind_run(chat_id, run_dir)
                 bot.db.set_lang(chat_id, "zh")
+                called: dict[str, Any] = {}
+
+                def fake_support_turn(_chat_id: int, _lang: str, _run_dir: Path, text: str) -> bool:
+                    called["text"] = text
+                    called["run_dir"] = str(_run_dir)
+                    return True
+
+                bot._handle_support_turn = fake_support_turn  # type: ignore[method-assign]
                 bot.process_update({"message": {"chat": {"id": chat_id}, "text": "你好"}})
                 state = load_support_session_state(run_dir)
                 pause_until = float(state.get("auto_advance_pause_until_ts", 0.0) or 0.0)
-                self.assertGreater(pause_until, time.time())
-                self.assertFalse(bot._allow_auto_advance(run_dir))
+                self.assertEqual(str(called.get("text", "")), "你好")
+                self.assertEqual(str(called.get("run_dir", "")), str(run_dir))
+                self.assertLessEqual(pause_until, time.time())
             finally:
                 bot.close()
 
@@ -660,11 +702,10 @@ class SupportBotHumanizationTests(unittest.TestCase):
 
                 self.assertGreaterEqual(len(fake.messages), 2)
                 project_reply = fake.messages[-1]
-                self.assertIn("帮你", project_reply)
-                self.assertIn("项目", project_reply)
-                self.assertNotIn("最小版本", project_reply)
-                self.assertNotIn("Web 项目", project_reply)
+                self.assertIn("项目目标", project_reply)
+                self.assertIn("期望结果", project_reply)
                 self.assertNotIn("我已经推进到下一里程碑", project_reply)
+                self.assertNotIn("�", project_reply)
             finally:
                 bot.close()
 

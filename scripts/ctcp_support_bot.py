@@ -23,6 +23,7 @@ SUPPORT_REPLY_REL_PATH = Path("artifacts") / "support_reply.json"
 DISPATCH_CONFIG_REL_PATH = Path("artifacts") / "dispatch_config.json"
 
 KNOWN_PROVIDERS = {"manual_outbox", "ollama_agent", "api_agent", "codex_agent", "mock_agent", "local_exec"}
+SUPPORT_REPLY_MODEL_PROVIDERS = ("ollama_agent", "api_agent", "codex_agent")
 FORBIDDEN_REPLY_PATTERNS = (
     "trace.md",
     "trace:",
@@ -172,7 +173,7 @@ def ensure_layout(run_dir: Path) -> None:
 def default_support_dispatch_config() -> dict[str, Any]:
     return {
         "schema_version": "ctcp-dispatch-config-v1",
-        "mode": "manual_outbox",
+        "mode": "ollama_agent",
         "role_providers": {
             "support_lead": "ollama_agent",
             "patchmaker": "codex_agent",
@@ -225,12 +226,40 @@ def resolve_support_provider(config: dict[str, Any], override: str = "") -> str:
     role_map = config.get("role_providers", {})
     if not isinstance(role_map, dict):
         role_map = {}
-    provider = str(role_map.get("support_lead", config.get("mode", "manual_outbox"))).strip().lower()
+    provider = str(role_map.get("support_lead", config.get("mode", "ollama_agent"))).strip().lower()
     if provider not in KNOWN_PROVIDERS:
-        return "manual_outbox"
+        return "ollama_agent"
     if provider == "local_exec":
-        return "manual_outbox"
+        return "ollama_agent"
     return provider
+
+
+def support_provider_candidates(config: dict[str, Any], override: str = "") -> list[str]:
+    preferred = resolve_support_provider(config, override=override)
+    ordered: list[str] = []
+
+    def _add(raw: str) -> None:
+        text = str(raw or "").strip().lower()
+        if text in SUPPORT_REPLY_MODEL_PROVIDERS and text not in ordered:
+            ordered.append(text)
+
+    _add(preferred)
+    role_map = config.get("role_providers", {})
+    if isinstance(role_map, dict):
+        _add(str(role_map.get("support_lead", "")))
+    for item in ("ollama_agent", "api_agent", "codex_agent"):
+        _add(item)
+    return ordered or ["ollama_agent"]
+
+
+def model_unavailable_reply_doc(result: dict[str, Any]) -> dict[str, Any]:
+    reason = sanitize_inline_text(str(result.get("reason", "")), max_chars=180)
+    return {
+        "reply_text": "我这边暂时还没连上稳定的回复能力，不过你的需求我已经接住了。",
+        "next_question": "你准备好后可以直接让我重试，或者先告诉我这轮最想继续盯住的一个点。",
+        "actions": [{"type": "request_file", "hint": "如有错误日志，可直接上传帮助定位"}],
+        "debug_notes": reason or "model_unavailable",
+    }
 
 
 def load_inbox_history(run_dir: Path, limit: int = 8) -> list[dict[str, str]]:
@@ -262,8 +291,10 @@ def default_prompt_template() -> str:
     return (
         "You are CTCP Support Lead. Return JSON only.\n"
         "Keys: reply_text,next_question,actions,debug_notes.\n"
+        "Design goal: mechanical safeguards decide the boundary; the agent decides the phrasing.\n"
         "reply_text must be customer-facing only and never include logs, file paths, or stack traces.\n"
         "reply_text must be natural conversational prose (no rigid section labels).\n"
+        "The safeguards define leakage, actionability, and question-count boundaries only; they do not require a fixed reply template.\n"
         "Ask at most one high-leverage follow-up question when route-changing details are missing.\n"
     )
 
@@ -471,8 +502,8 @@ def is_smalltalk_only_message(text: str) -> bool:
 
 def smalltalk_reply_text(text: str, lang: str) -> str:
     if str(lang).lower() == "en":
-        return "Hi there. I'm here to help. What would you like me to prioritize first?"
-    return "你好，我在。你现在最希望我先帮你处理哪一件事？"
+        return "Hi, I'm here. Tell me what you want me to sort out first, and I'll pick it up from there."
+    return "你好，我在。你直接说这轮想先处理什么，我马上接上。"
 
 
 def normalize_actions(raw: Any) -> list[dict[str, Any]]:
@@ -506,27 +537,20 @@ def normalize_reply_text(raw_reply: str, next_question: str) -> str:
 
     conclusion = sanitize_inline_text(raw, max_chars=120)
     if (not conclusion) or contains_forbidden_reply(conclusion):
-        conclusion = "我已理解你的诉求，并会按项目经理方式推进。"
-    plan = "我会先确认当前优先级并补齐默认项，再给你可执行方案并持续推进。"
+        conclusion = "我先接住这件事。"
+    plan = "我会先把眼前最关键的点理顺，然后继续替你往下推进。"
 
-    reply = f"{conclusion}\n\n{plan}\n\n{next_question}"
+    question = normalize_question(next_question) if str(next_question or "").strip() else ""
+    reply = f"{conclusion} {plan}".strip()
+    if question:
+        reply = f"{reply}\n\n{question}"
     if contains_forbidden_reply(reply):
-        reply = "我已接手你的需求。你可以先告诉我这轮最想达成的目标，我马上推进。"
+        reply = "我已经接手这件事。你先告诉我这轮最想先解决的一个点，我马上继续。"
     return reply
 
 
 def fallback_reply_doc(result: dict[str, Any]) -> dict[str, Any]:
-    reason = sanitize_inline_text(str(result.get("reason", "")), max_chars=180)
-    return {
-        "reply_text": (
-            "我已经接手你的需求，并会按项目经理方式继续推进。"
-            "我会先补齐默认项并给你可执行路径，只在关键分歧点向你确认问题。"
-            "你先告诉我这轮最想达成的目标，我就继续推进。"
-        ),
-        "next_question": "你现在最希望我先解决的一个具体问题是什么？",
-        "actions": [{"type": "request_file", "hint": "如有失败包或截图，请直接上传"}],
-        "debug_notes": reason,
-    }
+    return model_unavailable_reply_doc(result)
 
 
 def build_final_reply_doc(
@@ -673,53 +697,58 @@ def process_message(
     )
     append_event(run_dir, "SUPPORT_MESSAGE_RECEIVED", SUPPORT_INBOX_REL_PATH.as_posix(), source=source)
 
-    # Smalltalk fast-path: do not route through provider failures for greeting-only turns.
-    if is_smalltalk_only_message(user_text):
-        lang = detect_lang_hint(user_text)
-        final_doc = build_final_reply_doc(
-            run_dir=run_dir,
-            provider="local_smalltalk",
-            provider_result={"status": "executed", "reason": "smalltalk_fast_path"},
-            provider_doc={
-                "reply_text": smalltalk_reply_text(user_text, lang),
-                "next_question": "",
-                "actions": [],
-                "debug_notes": "smalltalk_fast_path",
-            },
-        )
-        write_json(run_dir / SUPPORT_REPLY_REL_PATH, final_doc)
-        append_event(run_dir, "SUPPORT_REPLY_WRITTEN", SUPPORT_REPLY_REL_PATH.as_posix(), provider="local_smalltalk")
-        return final_doc, run_dir
-
     prompt_text = build_support_prompt(run_dir, chat_id, user_text)
     config, cfg_msg = load_dispatch_config(run_dir)
     append_log(run_dir / "logs" / "support_bot.dispatch.log", f"[{now_iso()}] load_dispatch_config: {cfg_msg}\n")
 
-    provider = resolve_support_provider(config, override=provider_override)
+    candidates = support_provider_candidates(config, override=provider_override)
     request = make_support_request(chat_id, user_text, prompt_text)
+    provider_output = run_dir / SUPPORT_REPLY_PROVIDER_REL_PATH
+    provider = candidates[0]
+    result: dict[str, Any] = {"status": "exec_failed", "reason": "model providers not executed"}
+    provider_doc: dict[str, Any] | None = None
+    attempt_errors: list[str] = []
+    for idx, candidate in enumerate(candidates, start=1):
+        provider = candidate
+        append_event(run_dir, "SUPPORT_PROVIDER_SELECTED", "", provider=provider, attempt=idx)
+        if provider_output.exists():
+            try:
+                provider_output.unlink()
+            except Exception:
+                pass
+        current = execute_provider(provider=provider, run_dir=run_dir, request=request, config=config)
+        result = current
+        log_provider_result(run_dir, provider, current, f"attempt_{idx}")
 
-    append_event(run_dir, "SUPPORT_PROVIDER_SELECTED", "", provider=provider)
-    result = execute_provider(provider=provider, run_dir=run_dir, request=request, config=config)
-    log_provider_result(run_dir, provider, result, "primary")
+        status = str(current.get("status", "")).strip()
+        if status != "executed":
+            reason = str(current.get("reason", "")).strip() or f"{provider} execution failed"
+            attempt_errors.append(reason)
+            continue
 
-    if str(result.get("status", "")) != "executed" and provider != "manual_outbox":
-        fallback = manual_outbox.execute(
-            repo_root=ROOT,
-            run_dir=run_dir,
-            request=request,
-            config=config,
-            guardrails_budgets={},
-        )
-        log_provider_result(run_dir, "manual_outbox", fallback, "fallback")
-        append_event(run_dir, "SUPPORT_PROVIDER_FALLBACK", "", provider="manual_outbox")
-        if str(fallback.get("status", "")) in {"outbox_created", "outbox_exists"}:
-            result = {
-                "status": str(fallback.get("status", "")),
-                "reason": str(fallback.get("reason", "provider fallback to manual_outbox")),
-                "path": str(fallback.get("path", "")),
-            }
+        doc = read_json_doc(provider_output)
+        if not isinstance(doc, dict):
+            attempt_errors.append(f"{provider} output missing/invalid json")
+            continue
 
-    provider_doc = read_json_doc(run_dir / SUPPORT_REPLY_PROVIDER_REL_PATH)
+        reply = str(doc.get("reply_text", "")).strip()
+        if _replacement_char_count(reply) >= 2:
+            attempt_errors.append(f"{provider} reply_text contains mojibake")
+            continue
+        if not reply:
+            attempt_errors.append(f"{provider} empty reply_text")
+            continue
+        provider_doc = doc
+        break
+
+    if not isinstance(provider_doc, dict):
+        joined = " | ".join(attempt_errors[-3:])
+        result = {
+            "status": "exec_failed",
+            "reason": joined or str(result.get("reason", "")).strip() or "model providers unavailable",
+        }
+        provider_doc = model_unavailable_reply_doc(result)
+
     final_doc = build_final_reply_doc(
         run_dir=run_dir,
         provider=provider,
@@ -856,7 +885,7 @@ def run_selftest() -> int:
         chat_id=chat_id,
         user_text=message,
         source="selftest",
-        provider_override="manual_outbox",
+        provider_override="ollama_agent",
     )
 
     reply_path = run_dir / SUPPORT_REPLY_REL_PATH
@@ -887,7 +916,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="CTCP Support Bot (dual-channel customer output + run_dir logs)")
     ap.add_argument("--stdin", action="store_true", help="Read one user message from stdin and print reply_text to stdout")
     ap.add_argument("--chat-id", default="stdin", help="Session id used with --stdin mode")
-    ap.add_argument("--selftest", action="store_true", help="Run offline selftest using manual_outbox fallback")
+    ap.add_argument("--selftest", action="store_true", help="Run selftest using model-only support reply path")
     ap.add_argument("--provider", default="", help="Optional provider override for support_lead")
 
     sub = ap.add_subparsers(dest="mode")

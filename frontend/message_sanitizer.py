@@ -30,6 +30,11 @@ _FORBIDDEN_TOKENS = (
     "provider:",
     "agent_request",
     "ctcp_orchestrate",
+    # Chinese internal terms
+    "\u5f85\u5904\u7406\u7684\u4e8b\u9879",  # 待处理的事项
+    "\u9700\u8981\u7684\u4fe1\u606f",  # 需要的信息
+    "\u7b49\u5f85\u5fc5\u8981\u8f93\u5165",  # 等待必要输入
+    "\u5f53\u524d\u963b\u585e\u9879",  # 当前阻塞项
 )
 
 _RAW_PROMPT_PATTERNS = (

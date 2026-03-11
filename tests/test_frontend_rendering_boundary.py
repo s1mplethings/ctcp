@@ -99,6 +99,27 @@ class FrontendRenderingBoundaryTests(unittest.TestCase):
         state = dict(result.pipeline_state or {})
         self.assertEqual(str(state.get("conversation_mode", "")), "GREETING")
 
+    def test_greeting_can_preserve_raw_model_reply_when_requested(self) -> None:
+        result = render_frontend_output(
+            raw_backend_state={
+                "stage": "support_turn_local",
+                "has_actionable_goal": True,
+                "first_pass_understood": True,
+            },
+            task_summary="你好",
+            raw_reply_text="你好，先说你这轮最想推进的一件事，我马上接着做。",
+            raw_next_question="",
+            notes={
+                "lang": "zh",
+                "recent_user_messages": ["你好"],
+                "prefer_raw_reply_text": True,
+            },
+        )
+        self.assertIn("先说你这轮最想推进的一件事", result.reply_text)
+        self.assertNotIn("请问有什么可以帮到你", result.reply_text)
+        state = dict(result.pipeline_state or {})
+        self.assertEqual(str(state.get("conversation_mode", "")), "GREETING")
+
     def test_summary_selection_prefers_detailed_recent_message(self) -> None:
         ctx = build_project_manager_context(
             [

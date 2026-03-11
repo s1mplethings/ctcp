@@ -60,7 +60,9 @@ class TelegramCsBotEmployeeStyleTests(unittest.TestCase):
 
     def test_zh_reply_keeps_lane_question_for_ambiguous_request(self) -> None:
         out = build_employee_note_reply("帮我处理一下", "zh")
-        self.assertIn("现有项目延续 / 新需求 / 报错排查", out)
+        self.assertIn("沿着之前那条项目线往下做", out)
+        self.assertIn("新需求", out)
+        self.assertIn("具体报错", out)
 
     def test_team_manager_mode_reply_is_manager_style(self) -> None:
         out = build_employee_note_reply(
@@ -98,9 +100,14 @@ class TelegramCsBotEmployeeStyleTests(unittest.TestCase):
     def test_continuation_note_reply_is_not_generic_chitchat(self) -> None:
         text = "你现在手头还有我的项目吗"
         out = build_employee_note_reply(text, "zh")
-        self.assertIn("继续", out)
+        self.assertIn("接着往下", out)
         self.assertNotIn("方便的话再补充一些细节", out)
         self.assertNotIn("接着聊", out)
+
+    def test_bare_continue_reply_avoids_echoing_user_word(self) -> None:
+        out = build_employee_note_reply("继续", "zh")
+        self.assertIn("接着往下", out)
+        self.assertNotIn("继续", out)
 
     def test_trace_delta_customer_summary_zh(self) -> None:
         delta = "\n".join(
@@ -215,6 +222,72 @@ class TelegramCsBotEmployeeStyleTests(unittest.TestCase):
         reply = str(payload.get("reply_text", ""))
         self.assertNotIn("我先按默认方案继续推进", reply)
         self.assertNotIn("我先把这一步做下去", reply)
+
+    def test_create_run_aligns_dispatch_config_away_from_api_when_env_is_ollama_placeholder(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_tg_run_dispatch_align_") as td:
+            base = Path(td)
+            run_dir = base / "run_demo"
+            (run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+            (run_dir / "RUN.json").write_text(json.dumps({"status": "running"}), encoding="utf-8")
+            (run_dir / "artifacts" / "dispatch_config.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "ctcp-dispatch-config-v1",
+                        "mode": "api_agent",
+                        "role_providers": {
+                            "librarian": "local_exec",
+                            "contract_guardian": "local_exec",
+                            "patchmaker": "api_agent",
+                            "fixer": "api_agent",
+                        },
+                        "budgets": {"max_outbox_prompts": 20},
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            cfg = Config(
+                token="fake",
+                allowlist=None,
+                repo_root=Path("d:/.c_projects/adc/ctcp").resolve(),
+                state_db=base / "state.sqlite3",
+                poll_seconds=1,
+                tick_seconds=1,
+                auto_advance=False,
+                api_enabled=True,
+                api_model="gpt-4.1-mini",
+                api_timeout_sec=10,
+                note_ack_path=False,
+                progress_push_enabled=False,
+            )
+            bot = Bot(cfg)
+            fake = _FakeTg()
+            bot.tg = fake
+            try:
+                bot._run_orchestrate = lambda _args: (0, f"run_dir={run_dir}\n", "")  # type: ignore[method-assign]
+                with mock.patch.dict(
+                    os.environ,
+                    {
+                        "OPENAI_API_KEY": "ollama",
+                        "CTCP_OPENAI_API_KEY": "",
+                        "OPENAI_BASE_URL": "",
+                        "CTCP_OPENAI_BASE_URL": "",
+                        "CTCP_FORCE_PROVIDER": "",
+                    },
+                    clear=False,
+                ):
+                    bot._create_run(chat_id=301, lang="zh", goal="我想创建一个新项目")
+                dispatch_doc = json.loads((run_dir / "artifacts" / "dispatch_config.json").read_text(encoding="utf-8"))
+                self.assertEqual(dispatch_doc.get("mode"), "manual_outbox")
+                role_providers = dispatch_doc.get("role_providers", {})
+                self.assertEqual(role_providers.get("patchmaker"), "manual_outbox")
+                self.assertEqual(role_providers.get("fixer"), "manual_outbox")
+                self.assertEqual(role_providers.get("librarian"), "local_exec")
+                self.assertEqual(role_providers.get("contract_guardian"), "local_exec")
+            finally:
+                bot.close()
 
     def test_api_note_reply_and_followup_are_merged_into_single_message(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_tg_api_merge_") as td:
@@ -339,6 +412,114 @@ class TelegramCsBotEmployeeStyleTests(unittest.TestCase):
                 state = load_support_session_state(run_dir)
                 open_q = state.get("open_questions", [])
                 self.assertLessEqual(len(open_q if isinstance(open_q, list) else []), 1)
+            finally:
+                bot.close()
+
+    def test_report_missing_notice_is_customer_friendly(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_tg_report_missing_") as td:
+            base = Path(td)
+            run_dir = base / "run_demo"
+            run_dir.mkdir(parents=True, exist_ok=True)
+            (run_dir / "RUN.json").write_text(json.dumps({"status": "running"}), encoding="utf-8")
+            cfg = Config(
+                token="fake",
+                allowlist=None,
+                repo_root=Path("d:/.c_projects/adc/ctcp").resolve(),
+                state_db=base / "state.sqlite3",
+                poll_seconds=1,
+                tick_seconds=1,
+                auto_advance=False,
+                api_enabled=False,
+                api_model="gpt-4.1-mini",
+                api_timeout_sec=10,
+                note_ack_path=False,
+                progress_push_enabled=False,
+            )
+            bot = Bot(cfg)
+            fake = _FakeTg()
+            bot.tg = fake
+            try:
+                chat_id = 220
+                bot.db.bind_run(chat_id, run_dir)
+                bot.db.set_lang(chat_id, "zh")
+                bot._send_verify(chat_id, run_dir)
+                self.assertEqual(len(fake.messages), 1)
+                reply = fake.messages[0]
+                self.assertIn("验收结果", reply)
+                self.assertNotIn("verify_report.json", reply.lower())
+                self.assertNotIn("not found", reply.lower())
+            finally:
+                bot.close()
+
+    def test_bundle_missing_notice_is_customer_friendly(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_tg_bundle_missing_") as td:
+            base = Path(td)
+            run_dir = base / "run_demo"
+            run_dir.mkdir(parents=True, exist_ok=True)
+            (run_dir / "RUN.json").write_text(json.dumps({"status": "running"}), encoding="utf-8")
+            cfg = Config(
+                token="fake",
+                allowlist=None,
+                repo_root=Path("d:/.c_projects/adc/ctcp").resolve(),
+                state_db=base / "state.sqlite3",
+                poll_seconds=1,
+                tick_seconds=1,
+                auto_advance=False,
+                api_enabled=False,
+                api_model="gpt-4.1-mini",
+                api_timeout_sec=10,
+                note_ack_path=False,
+                progress_push_enabled=False,
+            )
+            bot = Bot(cfg)
+            fake = _FakeTg()
+            bot.tg = fake
+            try:
+                chat_id = 221
+                bot.db.bind_run(chat_id, run_dir)
+                bot.db.set_lang(chat_id, "zh")
+                bot._send_bundle(chat_id, run_dir, with_actions=True)
+                self.assertEqual(len(fake.messages), 1)
+                reply = fake.messages[0]
+                self.assertIn("诊断材料", reply)
+                self.assertNotIn("失败包", reply)
+                self.assertNotIn("verify_report.json", reply.lower())
+            finally:
+                bot.close()
+
+    def test_agent_fallback_notice_hides_internal_labels(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_tg_agent_fallback_") as td:
+            base = Path(td)
+            run_dir = base / "run_demo"
+            run_dir.mkdir(parents=True, exist_ok=True)
+            (run_dir / "RUN.json").write_text(json.dumps({"status": "running"}), encoding="utf-8")
+            cfg = Config(
+                token="fake",
+                allowlist=None,
+                repo_root=Path("d:/.c_projects/adc/ctcp").resolve(),
+                state_db=base / "state.sqlite3",
+                poll_seconds=1,
+                tick_seconds=1,
+                auto_advance=False,
+                api_enabled=False,
+                api_model="gpt-4.1-mini",
+                api_timeout_sec=10,
+                note_ack_path=False,
+                progress_push_enabled=False,
+            )
+            bot = Bot(cfg)
+            fake = _FakeTg()
+            bot.tg = fake
+            try:
+                chat_id = 222
+                bot.db.bind_run(chat_id, run_dir)
+                bot.db.set_lang(chat_id, "zh")
+                bot._fallback_agent(chat_id, run_dir, {"prompt_path": ""}, "target_path mismatch")
+                self.assertEqual(len(fake.messages), 1)
+                reply = fake.messages[0]
+                self.assertIn("人工补位继续跟进", reply)
+                self.assertNotIn("代理返回异常", reply)
+                self.assertNotIn("target_path mismatch", reply)
             finally:
                 bot.close()
 
@@ -885,6 +1066,7 @@ class TelegramCsBotEmployeeStyleTests(unittest.TestCase):
                 self.assertEqual(len(fake.messages), 1)
                 self.assertIn("OPENAI_API_KEY", fake.messages[0])
                 self.assertIn("鉴权失败", fake.messages[0])
+                self.assertNotIn("我这边需要你补充一些信息才能继续帮你处理", fake.messages[0])
             finally:
                 bot.close()
 

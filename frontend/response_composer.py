@@ -76,6 +76,12 @@ _FORBIDDEN_PUBLIC_TOKENS = (
     "run_dir",
     "artifact",
     "patch",
+    # Chinese internal terms that must never reach the user
+    "\u5f85\u5904\u7406\u7684\u4e8b\u9879",  # 待处理的事项
+    "\u9700\u8981\u7684\u4fe1\u606f",  # 需要的信息
+    "\u7b49\u5f85\u5fc5\u8981\u8f93\u5165",  # 等待必要输入
+    "\u5f53\u524d\u963b\u585e\u9879",  # 当前阻塞项
+    "\u9700\u8981\u8865\u5145",  # 需要补充 (when used with colon as label)
 )
 _FORBIDDEN_PUBLIC_LABEL_RE = re.compile(r"\b(CONTEXT|CONSTRAINTS|EXTERNALS|PLAN|PATCH)\b")
 _RC_FIELD_RE = re.compile(r"\b(?:rc|exit[_ ]?code|return[_ ]?code)\s*[:=]?\s*\d+\b", re.IGNORECASE)
@@ -317,12 +323,12 @@ def _entry_hint_bank(lang: str, rag_hints: Mapping[str, Any] | None = None) -> d
             "greet_open": [
                 "你好，我在。",
                 "你好，我在线。",
-                "你好，我这边在。",
+                "你好，收到你的消息。",
             ],
             "greet_next": [
-                "请问有什么可以帮到你？",
-                "你可以直接告诉我现在最想推进的目标。",
-                "你也可以直接说项目目标，我会帮你收拢成可执行方案。",
+                "你直接说这轮目标，我马上接着处理。",
+                "把你现在最优先的一件事告诉我，我立刻推进。",
+                "你可以直接给目标和预期结果，我会整理成可执行方案。",
             ],
             "status_idle": [
                 "当前还没有进行中的任务。",
@@ -343,9 +349,9 @@ def _entry_hint_bank(lang: str, rag_hints: Mapping[str, Any] | None = None) -> d
                 "把这轮项目目标、输入和期望结果发我一句话版本，我先帮你立项整理。",
             ],
             "smalltalk": [
-                "我在。你可以直接说你现在想先处理哪件事。",
-                "我在这边，告诉我你现在最想推进什么。",
-                "我在，随时可以接着帮你处理。",
+                "我在。你现在最优先要推进哪一件事？",
+                "收到，我在线。你说目标，我马上开始。",
+                "我在，直接发这轮目标就行。",
             ],
             "blocked_no_task": [
                 "我已收到。你先补充这轮要达成的具体目标，我就继续推进。",
@@ -396,9 +402,7 @@ def _compose_entry_reply(
         return _pick_hint(hints.get("smalltalk", []), seed + "|s", "I'm here and ready to help.")
     if mode == "GREETING":
         open_line = _pick_hint(hints.get("greet_open", []), seed + "|o", "你好，我在。")
-        next_line = _pick_hint(hints.get("greet_next", []), seed + "|n", "你可以直接告诉我现在最想推进的目标。")
-        if "请问有什么可以帮到你" not in next_line:
-            next_line = f"请问有什么可以帮到你？{next_line}"
+        next_line = _pick_hint(hints.get("greet_next", []), seed + "|n", "你直接说这轮目标，我马上接着处理。")
         return f"{open_line}{next_line}"
     if mode == "STATUS_QUERY":
         if has_active_task:
@@ -722,17 +726,22 @@ def run_internal_reply_pipeline(
 
     non_project_modes = {"GREETING", "SMALLTALK", "STATUS_QUERY", "PROJECT_INTAKE"}
     if mode in non_project_modes:
+        prefer_raw_reply_text = bool(note.get("prefer_raw_reply_text", False))
         if mode == "STATUS_QUERY" and has_active_task:
             state.visible_state = "EXECUTING"
         else:
             state.visible_state = "UNDERSTOOD"
-        state.draft_reply = _compose_entry_reply(
-            mode=mode,
-            lang=lang,
-            has_active_task=has_active_task,
-            latest_user_message=latest_user_message,
-            rag_hints=note.get("entry_hint_bank") if isinstance(note.get("entry_hint_bank"), Mapping) else None,
-        )
+        raw_sanitized = sanitize_internal_text(raw_reply_text)
+        if prefer_raw_reply_text and raw_sanitized.text.strip():
+            state.draft_reply = raw_sanitized.text.strip()
+        else:
+            state.draft_reply = _compose_entry_reply(
+                mode=mode,
+                lang=lang,
+                has_active_task=has_active_task,
+                latest_user_message=latest_user_message,
+                rag_hints=note.get("entry_hint_bank") if isinstance(note.get("entry_hint_bank"), Mapping) else None,
+            )
         explicit_question = sanitize_internal_text(raw_next_question).text.strip()
         if mode == "PROJECT_INTAKE" and explicit_question and not is_generic_intake_question(explicit_question, lang):
             allow_tradeoff = has_valid_task_summary({"task_summary": state.task_summary, "conversation_mode": mode})
@@ -866,7 +875,7 @@ def compose_user_reply(
             return f"{head}\n\n为了继续推进，我还需要确认两项信息：{joined_q}"
         return f"{head}\n\n你先补充一到两个关键参数，我马上恢复推进。"
     if visible_state == "EXECUTING":
-        body = "目标我已经收到并在执行中，当前会按已确认方向继续推进。"
+        body = "收到，我已经开始处理，会按当前确认的信息继续推进。"
         if joined_q:
             return f"{body}\n\n为了减少返工，我还想确认一点：{joined_q}"
         return body

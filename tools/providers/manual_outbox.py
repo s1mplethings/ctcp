@@ -123,6 +123,59 @@ def _next_prompt_path(outbox_dir: Path, role: str, action: str) -> tuple[Path, s
     return outbox_dir / name, rel.as_posix()
 
 
+def _render_whiteboard_block(request: dict[str, Any]) -> str:
+    wb = request.get("whiteboard")
+    if not isinstance(wb, dict):
+        return "- (none)"
+
+    lines: list[str] = []
+    path = str(wb.get("path", "")).strip()
+    query = str(wb.get("query", "")).strip()
+    lookup_error = str(wb.get("lookup_error", "")).strip()
+    hits = wb.get("hits")
+    snapshot = wb.get("snapshot")
+
+    if path:
+        lines.append(f"- path: {path}")
+    if query:
+        lines.append(f"- librarian_query: {query}")
+    if lookup_error:
+        lines.append(f"- librarian_error: {lookup_error}")
+
+    if isinstance(hits, list) and hits:
+        lines.append("- librarian_hits:")
+        for item in hits[:3]:
+            if not isinstance(item, dict):
+                continue
+            hp = str(item.get("path", "")).strip()
+            if not hp:
+                continue
+            try:
+                start = int(item.get("start_line", 1) or 1)
+            except Exception:
+                start = 1
+            snippet = re.sub(r"\s+", " ", str(item.get("snippet", "")).strip())
+            if len(snippet) > 140:
+                snippet = snippet[:137].rstrip() + "..."
+            lines.append(f"  - {hp}:{start} | {snippet}")
+
+    if isinstance(snapshot, dict):
+        entries = snapshot.get("entries")
+        if isinstance(entries, list) and entries:
+            lines.append("- snapshot_tail:")
+            for item in entries[-3:]:
+                if not isinstance(item, dict):
+                    continue
+                role = str(item.get("role", "")).strip() or "unknown"
+                kind = str(item.get("kind", "")).strip() or "note"
+                text = re.sub(r"\s+", " ", str(item.get("text", "")).strip())
+                if len(text) > 160:
+                    text = text[:157].rstrip() + "..."
+                lines.append(f"  - [{role}/{kind}] {text}")
+
+    return "\n".join(lines) if lines else "- (none)"
+
+
 def _render_prompt(
     *,
     repo_root: Path,
@@ -148,6 +201,7 @@ def _render_prompt(
         )
 
     missing_lines = "\n".join(f"- {p}" for p in missing_paths) if missing_paths else "- (none)"
+    whiteboard_lines = _render_whiteboard_block(request)
     budget_lines = "\n".join(
         [
             f"- max_outbox_prompts: {max_outbox_prompts}",
@@ -171,6 +225,8 @@ def _render_prompt(
         f"Reason: {reason}\n\n"
         "Missing-Artifact-Paths:\n"
         f"{missing_lines}\n\n"
+        "Shared-Whiteboard:\n"
+        f"{whiteboard_lines}\n\n"
         "Budgets:\n"
         f"{budget_lines}\n\n"
         "Hard Rules:\n"

@@ -550,6 +550,65 @@ def _render_fix_brief_seed(goal: str, reason: str) -> str:
     )
 
 
+def _render_whiteboard_md(request: dict[str, Any]) -> str:
+    wb = request.get("whiteboard")
+    lines = ["# WHITEBOARD", ""]
+    if not isinstance(wb, dict):
+        lines += ["- none", ""]
+        return "\n".join(lines)
+
+    path = str(wb.get("path", "")).strip()
+    query = str(wb.get("query", "")).strip()
+    lookup_error = str(wb.get("lookup_error", "")).strip()
+    hits = wb.get("hits")
+    snapshot = wb.get("snapshot")
+
+    if path:
+        lines.append(f"- path: `{path}`")
+    if query:
+        lines.append(f"- librarian_query: `{query}`")
+    if lookup_error:
+        lines.append(f"- librarian_error: `{lookup_error}`")
+    lines.append("")
+
+    if isinstance(hits, list) and hits:
+        lines.append("## Librarian Hits")
+        for idx, item in enumerate(hits[:4], start=1):
+            if not isinstance(item, dict):
+                continue
+            hp = str(item.get("path", "")).strip()
+            if not hp:
+                continue
+            try:
+                start = int(item.get("start_line", 1) or 1)
+            except Exception:
+                start = 1
+            snippet = re.sub(r"\s+", " ", str(item.get("snippet", "")).strip())
+            if len(snippet) > 180:
+                snippet = snippet[:177].rstrip() + "..."
+            lines.append(f"- {idx}. `{hp}:{start}` {snippet}")
+        lines.append("")
+
+    if isinstance(snapshot, dict):
+        entries = snapshot.get("entries")
+        if isinstance(entries, list) and entries:
+            lines.append("## Snapshot Tail")
+            for item in entries[-4:]:
+                if not isinstance(item, dict):
+                    continue
+                role = str(item.get("role", "")).strip() or "unknown"
+                kind = str(item.get("kind", "")).strip() or "note"
+                text = re.sub(r"\s+", " ", str(item.get("text", "")).strip())
+                if len(text) > 180:
+                    text = text[:177].rstrip() + "..."
+                lines.append(f"- [{role}/{kind}] {text}")
+            lines.append("")
+
+    if len(lines) <= 2:
+        lines += ["- none", ""]
+    return "\n".join(lines)
+
+
 def _write_fix_brief(*, repo_root: Path, run_dir: Path, goal: str, reason: str, out_path: Path) -> None:
     report_path = run_dir / "artifacts" / "verify_report.json"
     if not report_path.exists():
@@ -684,6 +743,7 @@ def _render_prompt(
     for key in ("context", "constraints", "fix_brief", "externals"):
         p = evidence[key]
         lines += [f"## {p.name}", _read_text(p, limit=18000), ""]
+    lines += [_render_whiteboard_md(request), ""]
     return "\n".join(lines)
 
 
@@ -753,7 +813,14 @@ def _is_api_env_ready() -> tuple[bool, str]:
         or str(os.environ.get("CTCP_OPENAI_API_KEY", "")).strip()
         or str(defaults.get("api_key", "")).strip()
     )
+    base_url = (
+        str(os.environ.get("OPENAI_BASE_URL", "")).strip()
+        or str(os.environ.get("CTCP_OPENAI_BASE_URL", "")).strip()
+        or str(defaults.get("base_url", "")).strip()
+    )
     if key:
+        if key.lower() == "ollama" and not base_url:
+            return False, "missing env: OPENAI_BASE_URL for ollama-style key"
         return True, ""
     return False, "missing env: OPENAI_API_KEY"
 
