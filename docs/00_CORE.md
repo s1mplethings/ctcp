@@ -2,6 +2,28 @@
 
 This file is the authoritative runtime-truth contract source.
 
+<!-- TOC (agent: jump to the section you need) -->
+
+| # | Section | Anchor |
+|---|---------|--------|
+| 0.M | Markdown Object Lifecycle | [→](#0m-markdown-object-lifecycle-contract) |
+| 0 | Runtime Truth Boundary | [→](#0-runtime-truth-boundary) |
+| 0.W | 10-Step Flow Principle | [→](#0w-fixed-10-step-execution-flow-principle) |
+| 0.X | Runtime Wiring Contract | [→](#0x-runtime-wiring-contract) |
+| 0.Y | Frontend Bridge Rule | [→](#0y-frontend-to-execution-bridge-rule) |
+| 0.Z | Conversation Mode Gate | [→](#0z-conversation-mode-gate) |
+| 1 | Core Positioning | [→](#1-core-positioning-headless-first) |
+| 2 | Canonical Entrypoints | [→](#2-canonical-entrypoints-must) |
+| 3–5 | Definitions / Locations / Roles | [→](#3-definitions) |
+| 6 | Artifact Minimum Set | [→](#6-artifact-minimum-set) |
+| 7 | Find Contract | [→](#7-find-contract-resolver-first) |
+| 8 | Plan and Review Gate | [→](#8-plan-and-review-gate) |
+| 9 | DoD Gate Contract | [→](#9-dod-gate-contract-verify_repo) |
+| 9.1 | Verification Profiles | [→](#91-verification-profiles) |
+| 10 | Stop Conditions | [→](#10-stop-conditions-must) |
+
+<!-- /TOC -->
+
 Source map (single source per concern):
 
 - Repo purpose source: `docs/01_north_star.md`

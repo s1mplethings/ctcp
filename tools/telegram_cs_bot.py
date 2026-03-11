@@ -946,19 +946,19 @@ def is_cleanup_project_request(text: str) -> bool:
 
 def _project_kickoff_reply(lang: str) -> tuple[str, str]:
     if str(lang).lower() == "en":
-        ask = "Could you tell me more about what kind of project you have in mind?"
+        ask = "Send me one short sentence with the project goal, the input you have, and the expected result."
         reply = "\n\n".join(
             [
-                "Sure, I'd be happy to help you with a project!",
-                f"To get started, I just need a bit more information. {ask}",
+                "Yes. I can help you get this project moving.",
+                f"To start cleanly, I need three points first: project goal, input, and expected result. {ask}",
             ]
         )
         return reply, ask
-    ask = "方便告诉我你想做什么类型的项目吗？"
+    ask = "你用一句话告诉我这轮项目目标、输入和期望结果，我先帮你立项整理。"
     reply = "\n\n".join(
         [
-            "当然可以，我很乐意帮你！",
-            f"我先了解一下你的需求，这样能更好地帮到你。{ask}",
+            "可以，我先帮你把这个项目立起来。",
+            f"为了马上开始，我先确认三个点：项目目标、输入和期望结果。{ask}",
         ]
     )
     return reply, ask
@@ -1168,9 +1168,9 @@ def _default_plan_rows(lang: str, context_text: str) -> list[str]:
 
 
 def _default_next_question(lang: str) -> str:
-    if str(lang).lower() == "en":
-        return "Is there anything else I can help you with?"
-    return "还有什么我可以帮到你的吗？"
+    # Auto-continue: never ask the user whether to continue.
+    # Return empty so the bot just keeps going.
+    return ""
 
 
 def _default_task_entry_question(lang: str, continuation_hint: bool = False) -> str:
@@ -1329,11 +1329,34 @@ def _replacement_char_count(text: str) -> int:
 def _normalize_next_question(text: str, lang: str) -> str:
     raw = re.sub(r"\s+", " ", str(text or "").strip()).replace("\ufffd", "").strip()
     if not raw:
-        raw = _default_next_question(lang)
-    # If question text already contains decoding replacement chars, fall back to
-    # a safe default question rather than exposing mojibake to customers.
+        return ""
+    # If question text already contains decoding replacement chars, drop it.
     if _replacement_char_count(str(text or "").strip()) > 0:
-        raw = _default_next_question(lang)
+        return ""
+    # Suppress generic "shall I continue / need anything else" questions;
+    # the bot should auto-continue instead of asking.
+    _auto_continue_patterns = (
+        "还有什么我可以帮",
+        "还有其他需要",
+        "还有别的需要",
+        "需要我继续",
+        "要我继续",
+        "我继续帮你",
+        "还有其他需要补充",
+        "还有什么需要",
+        "is there anything else",
+        "anything else i can",
+        "shall i continue",
+        "should i continue",
+        "want me to continue",
+        "would you like me to keep",
+        "keep going",
+        "keep trying",
+        "should i keep",
+        "need me to continue",
+    )
+    if any(tok in raw.lower() for tok in _auto_continue_patterns):
+        return ""
     low = raw.lower()
     engineering_tokens = (
         "patch 路径",
@@ -1356,7 +1379,7 @@ def _normalize_next_question(text: str, lang: str) -> str:
         "artifacts/",
     )
     if any(token in low for token in engineering_tokens) or INTERNAL_WAITING_PATTERN.search(low):
-        raw = _default_next_question(lang)
+        return ""
     head = re.split(r"[?？]", raw, maxsplit=1)[0].strip()
     if head:
         raw = head
@@ -1774,6 +1797,9 @@ def build_employee_note_reply(text: str, lang: str, collab_role: str = "support_
             "你希望我沿着之前那条项目线接着往下做，还是先切到这次的新问题？",
         ]
         return "\n\n".join(parts)
+    if is_project_creation_request(raw):
+        reply, _ = _project_kickoff_reply(lang)
+        return reply
     if _has_actionable_goal_details(raw):
         parts = [f"收到，目标很清晰：{brief_clean}。"]
         parts.append("我会直接进入处理，并先给你一版可执行的首轮方案。")
@@ -4769,7 +4795,7 @@ class Bot:
                     f"Currently working on: {plan_text}",
                     f"Latest progress: {done_text}; Note: {issue_text}",
                 ],
-                next_question="Would you like me to keep going, or pause for your input first?",
+                next_question="",
             )
         return _compose_three_part_reply(
             lang=lang,
@@ -4778,7 +4804,7 @@ class Bot:
                 f"我正在处理：{plan_text}",
                 f"最新进展：{done_text}；备注：{issue_text}",
             ],
-            next_question="我继续帮你处理，还是先等你确认一下？",
+            next_question="",
         )
 
     def _decision_text(self, run_dir: Path, lang: str) -> str:
@@ -5362,14 +5388,14 @@ class Bot:
                 lang=lang,
                 conclusion="Sorry, I ran into an issue while processing your request.",
                 plans=["I'm looking into what went wrong and will try to fix it."],
-                next_question="Would you like me to keep trying?",
+                next_question="",
             )
         else:
             msg = _compose_three_part_reply(
                 lang=lang,
                 conclusion="抱歉，处理过程中遇到了一点问题。",
                 plans=["我正在排查原因，会尽快帮你解决。"],
-                next_question="需要我继续尝试吗？",
+                next_question="",
             )
         self._send_customer_reply(
             chat_id=chat_id,
@@ -5792,7 +5818,7 @@ class Bot:
                     lang="zh",
                     conclusion="语言已切换为中文。",
                     plans=["后续我会继续用中文和你沟通。"],
-                    next_question="还有其他需要我帮忙的吗？",
+                    next_question="",
                 ),
                 next_question=_default_next_question("zh"),
                 ops_status={"intent": d.intent},
@@ -5810,7 +5836,7 @@ class Bot:
                     lang="en",
                     conclusion="Language switched to English.",
                     plans=["I will continue updates and execution in English."],
-                    next_question="Should I keep auto-advancing this run?",
+                    next_question="",
                 ),
                 next_question=_default_next_question("en"),
                 ops_status={"intent": d.intent},
@@ -5864,7 +5890,7 @@ class Bot:
                         lang=lang,
                         conclusion="当前没有待确认事项。",
                         plans=["我会继续帮你处理下一步。"],
-                        next_question="还有其他需要我帮忙的吗？",
+                        next_question="",
                     ),
                     next_question=_default_next_question(lang),
                     ops_status={"intent": d.intent},
@@ -5975,7 +6001,7 @@ class Bot:
                     lang=nxt,
                     conclusion=("Language switched." if nxt == "en" else "语言已切换。"),
                     plans=[("I will continue in this language." if nxt == "en" else "后续我会继续用这个语言和你沟通。")],
-                    next_question=("Is there anything else I can help with?" if nxt == "en" else "还有其他需要我帮忙的吗？"),
+                    next_question="",
                 ),
                 next_question=_default_next_question(nxt),
                 ops_status={"intent": intent, "lang": nxt},
@@ -6166,7 +6192,7 @@ class Bot:
                         lang=lang,
                         conclusion="当前没有新的待确认事项。",
                         plans=["我会继续帮你处理。"],
-                        next_question="还有其他需要我帮忙的吗？",
+                        next_question="",
                     ),
                     next_question=_default_next_question(lang),
                     ops_status={"command": "/outbox"},
@@ -6201,7 +6227,7 @@ class Bot:
                         lang=lang,
                         conclusion="我已记录这条备注。",
                         plans=["已记录，我会继续帮你处理。"],
-                        next_question="还有其他需要补充的吗？",
+                        next_question="",
                     ),
                     next_question=_default_next_question(lang),
                     ops_status={"command": "/note", "notes_path": p.relative_to(run_dir).as_posix()},

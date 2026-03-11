@@ -65,7 +65,7 @@
   - `api_agent`: external command-template provider for API roles.
   - `manual_outbox`: writes standardized outbox prompts for external/manual agents.
 - For missing `artifacts/context_pack.json`, dispatcher must default to local deterministic librarian execution (`local_exec`).
-- `manual_outbox` for librarian is allowed only under explicit `mode: manual_outbox` configuration.
+- `librarian/context_pack` and `contract_guardian/review_contract` remain hard-local even when `mode`, `role_providers`, or `CTCP_FORCE_PROVIDER` request another provider.
 - `manual_outbox` prompts must constrain write scope to run_dir target artifacts only.
 - `manual_outbox` prompts must not instruct any direct repo edits.
 - When `max_outbox_prompts` budget is exceeded, dispatcher must stop creating prompts (`budget_exceeded`).

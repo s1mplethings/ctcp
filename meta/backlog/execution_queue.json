@@ -689,6 +689,123 @@
       },
       "status": "done",
       "notes": "Replaces the fixed three-part support-reply design goal with a boundary-first contract that leaves phrasing to the agent."
+    },
+    {
+      "id": "ADHOC-20260311-frontend-md-scope-validation",
+      "layer": "L2",
+      "priority": "P1",
+      "title": "Validate CTCP markdown-scoped frontend edits with a local capability reply change",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260309-frontend-control-plane-single-bridge",
+        "ADHOC-20260311-boundary-first-support-expression"
+      ],
+      "dod": [
+        "CURRENT.md explicitly scopes a frontend change instead of treating markdown contracts as a blanket block on frontend edits",
+        "frontend capability questions stay local and can explicitly mention frontend-safe change scope without entering project planning or bridge mutation",
+        "regression coverage plus canonical verify prove the scoped frontend path still passes CTCP gates"
+      ],
+      "artifacts": {
+        "produces": [
+          "docs/10_team_mode.md",
+          "frontend/response_composer.py",
+          "tests/test_frontend_rendering_boundary.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m py_compile frontend/response_composer.py tests/test_frontend_rendering_boundary.py",
+          "python -m unittest discover -s tests -p \"test_frontend_rendering_boundary.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Uses a small frontend reply change to prove markdown contracts only constrain scope and process; they do not forbid frontend code edits when CURRENT.md binds the lane explicitly."
+    },
+    {
+      "id": "ADHOC-20260311-backend-role-boundary-local-librarian",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Enforce backend hard-local role boundaries while keeping shared whiteboard available",
+      "owner_role": "Local Orchestrator",
+      "deps": [
+        "L1-DISP-001",
+        "ADHOC-20260310-support-production-librarian-whiteboard"
+      ],
+      "dod": [
+        "dispatch provider resolution no longer remaps librarian/context_pack or contract_guardian/review_contract away from local_exec via mode, role_providers, or CTCP_FORCE_PROVIDER",
+        "shared whiteboard context remains available to execution roles while local librarian stays usable for deterministic repo-scoped lookup/context_pack generation",
+        "regression coverage proves hard-local role enforcement and whiteboard-assisted provider prompts stay connected"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_dispatch.py",
+          "docs/02_workflow.md",
+          "docs/22_agent_teamnet.md",
+          "docs/30_artifact_contracts.md",
+          "tests/test_provider_selection.py",
+          "tests/test_live_api_only_pipeline.py",
+          "tests/README_live_api_only.md",
+          "tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_dispatch.py tests/test_provider_selection.py tests/test_live_api_only_pipeline.py",
+          "python -m unittest discover -s tests -p \"test_provider_selection.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Backend hard-local role change and S16 fixture alignment are complete; final canonical verify closure was finished by the follow-on support-bot humanization blocker task."
+    },
+    {
+      "id": "ADHOC-20260311-support-bot-humanization-verify-blocker",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Clear the remaining support-bot humanization verify blocker without widening backend scope",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260311-boundary-first-support-expression",
+        "ADHOC-20260311-frontend-md-scope-validation",
+        "ADHOC-20260311-telegram-run-provider-alignment"
+      ],
+      "dod": [
+        "bare project creation / new-run kickoff replies ask for project goal, input, and expected result instead of echoing a generic project-creation request",
+        "project-detail reply shaping rewrites low-signal or internal-marker raw replies into frontend-reviewed project-manager replies that prefer the current detailed requirement source",
+        "targeted support-bot/frontend regressions and canonical verify clear the remaining python unit-test blocker"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/telegram_cs_bot.py",
+          "frontend/response_composer.py",
+          "tests/test_support_bot_humanization.py",
+          "tests/test_frontend_rendering_boundary.py",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m py_compile tools/telegram_cs_bot.py frontend/response_composer.py tests/test_support_bot_humanization.py tests/test_frontend_rendering_boundary.py",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_frontend_rendering_boundary.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Cleared the remaining support-bot humanization regressions by tightening bare project kickoff fallback and falling back from low-signal/internal-marker raw project replies to frontend-reviewed PM replies."
     }
   ]
 }

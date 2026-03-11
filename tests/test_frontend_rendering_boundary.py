@@ -120,6 +120,30 @@ class FrontendRenderingBoundaryTests(unittest.TestCase):
         state = dict(result.pipeline_state or {})
         self.assertEqual(str(state.get("conversation_mode", "")), "GREETING")
 
+    def test_capability_query_about_frontend_stays_local_and_mentions_frontend_scope(self) -> None:
+        result = render_frontend_output(
+            raw_backend_state={
+                "stage": "support_provider_failed",
+                "blocked_needs_input": True,
+                "needs_input": True,
+            },
+            task_summary="你能不能按 CTCP 的方式改前端这块",
+            raw_reply_text="plan agent command failed rc=9",
+            raw_next_question="这轮你希望我优先速度、质量，还是成本？",
+            notes={
+                "lang": "zh",
+                "recent_user_messages": ["你能不能按 CTCP 的方式改前端这块"],
+            },
+        )
+        low = result.reply_text.lower()
+        self.assertIn("前端", result.reply_text)
+        self.assertIn("回归测试", result.reply_text)
+        self.assertNotIn("command failed", low)
+        self.assertNotIn("速度、质量", result.reply_text)
+        self.assertEqual(result.followup_questions, ())
+        state = dict(result.pipeline_state or {})
+        self.assertEqual(str(state.get("conversation_mode", "")), "SMALLTALK")
+
     def test_summary_selection_prefers_detailed_recent_message(self) -> None:
         ctx = build_project_manager_context(
             [
@@ -215,7 +239,7 @@ class FrontendRenderingBoundaryTests(unittest.TestCase):
                 "missing_fields": ["runtime_target"],
             },
             task_summary="从无人机视频生成点云，优先速度",
-            raw_reply_text="目标可以推进，但 missing runtime_target",
+            raw_reply_text="收到你的需求，我来帮你整理方案。不过运行目标还需要你确认一下。",
             raw_next_question="",
             notes={
                 "lang": "zh",
@@ -224,9 +248,14 @@ class FrontendRenderingBoundaryTests(unittest.TestCase):
                 "execution_direction": "接下来我会先按“优先速度、先跑通主流程”的方向整理第一版方案。",
             },
         )
-        self.assertEqual(result.visible_state, "UNDERSTOOD")
-        self.assertIn("收到，我先按这个方向立项", result.reply_text)
-        self.assertIn("接近实时输出", result.reply_text)
+        # Model text is preferred over template when it is clean
+        self.assertIn("收到你的需求", result.reply_text)
+        # Follow-up questions are separate from the model reply text
+        self.assertTrue(
+            any("接近实时输出" in q for q in result.followup_questions)
+            or "接近实时输出" in result.reply_text,
+            msg=f"questions={result.followup_questions}, reply={result.reply_text}",
+        )
         self.assertNotIn("无法继续", result.reply_text)
         self.assertNotIn("不能继续", result.reply_text)
         self.assertNotIn("我还不能继续", result.reply_text)
@@ -403,6 +432,140 @@ class FrontendRenderingBoundaryTests(unittest.TestCase):
             },
         )
         self.assertFalse(any("单目无人机视频" in q for q in result.followup_questions), msg=result.followup_questions)
+
+    # --- Agent-first: model text preferred over templates ---
+
+    def test_greeting_uses_model_text_when_available(self) -> None:
+        """When the model produces clean greeting text, use it instead of a template."""
+        result = render_frontend_output(
+            raw_backend_state={"stage": "support_turn_local"},
+            task_summary="你好",
+            raw_reply_text="嗨，你随时可以告诉我你想做什么，我来帮你安排。",
+            raw_next_question="",
+            notes={
+                "lang": "zh",
+                "recent_user_messages": ["你好"],
+            },
+        )
+        # Model text should appear, NOT a hint-bank template
+        self.assertIn("你随时可以告诉我", result.reply_text)
+        self.assertNotIn("你用一句话告诉我这轮项目的目标", result.reply_text)
+
+    def test_intake_uses_model_text_when_available(self) -> None:
+        """For PROJECT_INTAKE, model text replaces the intake template."""
+        result = render_frontend_output(
+            raw_backend_state={"stage": "support_turn_local"},
+            task_summary="我想做个新项目",
+            raw_reply_text="好的，先跟我讲一下你这轮项目想达成什么效果，我来帮你梳理。",
+            raw_next_question="",
+            notes={
+                "lang": "zh",
+                "recent_user_messages": ["我想做个新项目"],
+            },
+        )
+        self.assertIn("先跟我讲一下", result.reply_text)
+        # Template should NOT appear
+        self.assertNotIn("收到。", result.reply_text.split("\n")[0] if result.reply_text else "")
+
+    def test_template_fallback_when_model_text_empty(self) -> None:
+        """When model text is empty, the template fallback is still used."""
+        result = render_frontend_output(
+            raw_backend_state={"stage": "support_turn_local"},
+            task_summary="你好",
+            raw_reply_text="",
+            raw_next_question="",
+            notes={
+                "lang": "zh",
+                "recent_user_messages": ["你好"],
+            },
+        )
+        # Fallback template should produce a non-empty greeting
+        self.assertTrue(result.reply_text.strip())
+        # Should be one of the hint-bank greetings
+        self.assertTrue(
+            any(tok in result.reply_text for tok in ("你好", "我在", "目标")),
+            msg=result.reply_text,
+        )
+
+    def test_template_fallback_when_model_text_fully_redacted(self) -> None:
+        """When model text is all internal junk, it's redacted and template is used."""
+        result = render_frontend_output(
+            raw_backend_state={
+                "stage": "advance_blocked",
+                "blocked_needs_input": True,
+            },
+            task_summary="我想做个新项目",
+            raw_reply_text="关于：待处理的事项 需要的信息：waiting for analysis.md",
+            raw_next_question="关于：待处理的事项 需要的信息：waiting for analysis.md",
+            notes={
+                "lang": "zh",
+                "recent_user_messages": ["我想做个新项目"],
+            },
+        )
+        # Internal tokens must not appear
+        self.assertNotIn("待处理的事项", result.reply_text)
+        self.assertNotIn("waiting for", result.reply_text.lower())
+        # Fallback template should produce something
+        self.assertTrue(result.reply_text.strip())
+
+    def test_project_detail_uses_model_text_over_compose_user_reply(self) -> None:
+        """In PROJECT_DETAIL mode, model text is preferred over compose_user_reply template."""
+        result = render_frontend_output(
+            raw_backend_state={
+                "stage": "analysis",
+                "has_actionable_goal": True,
+                "first_pass_understood": True,
+            },
+            task_summary="从无人机视频生成点云，优先速度",
+            raw_reply_text="我已经开始分析你的需求了，先按速度优先来整理方案。",
+            raw_next_question="",
+            notes={
+                "lang": "zh",
+                "recent_user_messages": ["从无人机视频生成点云，优先速度"],
+            },
+        )
+        # Model text should appear directly
+        self.assertIn("我已经开始分析", result.reply_text)
+        # Template markers should NOT appear
+        self.assertNotIn("收到，我先按这个方向立项", result.reply_text)
+
+    def test_project_detail_low_signal_raw_reply_falls_back_to_pm_reply(self) -> None:
+        result = render_frontend_output(
+            raw_backend_state={
+                "stage": "support_turn_local",
+                "has_actionable_goal": True,
+                "first_pass_understood": True,
+                "missing_fields": ["runtime_target"],
+            },
+            task_summary="我想做从3D视频生成点云文件的工作流，要尽可能快，支持无人机高速建图，语义可插入。",
+            raw_reply_text="收到，继续推进。missing runtime_target",
+            raw_next_question="",
+            notes={
+                "lang": "zh",
+                "recent_user_messages": [
+                    "我想做从3D视频生成点云文件的工作流，要尽可能快，支持无人机高速建图，语义可插入。"
+                ],
+            },
+        )
+        self.assertIn("收到，我先按这个方向立项", result.reply_text)
+        self.assertIn("接近实时输出", result.reply_text)
+        self.assertNotIn("missing runtime_target", result.reply_text.lower())
+
+    def test_en_greeting_uses_model_text_when_available(self) -> None:
+        """English greeting uses model text instead of template."""
+        result = render_frontend_output(
+            raw_backend_state={"stage": "support_turn_local"},
+            task_summary="hello",
+            raw_reply_text="Hey! I'm ready to help. What are you working on?",
+            raw_next_question="",
+            notes={
+                "lang": "en",
+                "recent_user_messages": ["hello"],
+            },
+        )
+        self.assertIn("I'm ready to help", result.reply_text)
+        # Template should not appear
+        self.assertNotIn("I'm here.", result.reply_text)
 
 
 if __name__ == "__main__":

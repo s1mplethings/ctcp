@@ -3,7 +3,30 @@
 > 目标：让 agent 变成“项目团队”：自驱推进、可验证交付、只问必要问题、能演示全过程。
 
 这份文件是 **强约束**：任何 agent/自动化必须遵守。违反即视为失败交付。
+<!-- TOC (agent: 跳到你需要的节，不要通读全文) -->
 
+| # | 节 | 用途 | 锚点 |
+|---|---|------|------|
+| — | Fast Rules | 4 条最高优先级硬规则 | [→](#fast-rules前两屏必须可见) |
+| 0.A | 三重识别 | 行动前必须的 purpose/flow/task 识别 | [→](#0a-目的流程任务三重识别行动前强制) |
+| 0 | 允许提问 | 唯一允许向用户提问的 3 种场景 | [→](#0-允许提问的唯一条件否则不要问) |
+| 1 | 必读文件 | 任务开始前的 readlist | [→](#1-必读文件开始任何动作之前) |
+| 2 | 执行顺序 | 10-step flow 义务 + CURRENT.md 范围锁 | [→](#2-执行顺序不可跳过) |
+| 3 | 验收入口 | verify_repo 门禁覆盖范围 | [→](#3-唯一验收入口dod-gate) |
+| 4 | 强制交付 | 6 项交付内容 + 落盘位置 | [→](#4-强制交付) |
+| 5 | 最小改动 | 单主题 patch 原则 | [→](#5-最小改动原则) |
+| 6 | Patch 输出 | UI 渲染稳定性规则 | [→](#6-patch-输出稳定性避免-ui-渲染复制导致代码框忽有忽无) |
+| — | Integration | 集成证明要求 | [→](#integration-proof-requirement) |
+| — | Frontend | 前端边界规则 | [→](#frontend-boundary-rule) |
+| — | Skills | repo-local Codex Skills 清单 | [→](#codex-skillsrepo-local) |
+
+<!-- /TOC -->
+
+**Concern→权威文件速查：**
+repo purpose → `docs/01_north_star.md` ·
+canonical flow → `docs/04_execution_flow.md` ·
+current task → `meta/tasks/CURRENT.md` ·
+runtime truth → `docs/00_CORE.md`
 ---
 
 ## 6) Patch 输出稳定性（避免 UI 渲染/复制导致“代码框忽有忽无”）

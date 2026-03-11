@@ -1,26 +1,27 @@
 diff --git a/README.md b/README.md
 --- a/README.md
 +++ b/README.md
-@@ -1,6 +1,5 @@
+@@ -1,4 +1,5 @@
  # CTCP — ADLC + Multi-Agent Execution Engine
--[simlab-broken-link](docs/NOPE_SIMLAB.md)
++<!-- simlab-s16-touch-readme -->
  
  Authoritative source map:
  
- - Repo purpose: `docs/01_north_star.md`
 diff --git a/meta/reports/LAST.md b/meta/reports/LAST.md
 --- a/meta/reports/LAST.md
 +++ b/meta/reports/LAST.md
-@@ -1,3 +1,4 @@
+@@ -1,4 +1,5 @@
  # Demo Report - LAST
 +<!-- simlab-s16-touch-report -->
  
- ## Update 2026-03-08 - 客服回复内置多阶段流水线 + 单一公开输出闸门
+ > **用法**：本文件保留最近一次报告指针，同时内嵌 workflow gate 所需的最新报告摘要。
+ > 历史报告正文在 `meta/reports/archive/`。
 diff --git a/meta/tasks/CURRENT.md b/meta/tasks/CURRENT.md
 --- a/meta/tasks/CURRENT.md
 +++ b/meta/tasks/CURRENT.md
-@@ -1,3 +1,4 @@
- # Task - markdown-contract-drift-fix
+@@ -1,4 +1,5 @@
+ # Current Task
 +<!-- simlab-s16-touch-current -->
  
- ## Queue Binding
+ > **用法**：本文件保留当前活跃任务指针，同时内嵌 workflow gate 所需的最新任务摘要。
+ > 历史任务正文在 `meta/tasks/archive/`。

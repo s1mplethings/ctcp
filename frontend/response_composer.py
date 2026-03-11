@@ -234,6 +234,55 @@ def _pick_hint(options: list[str], seed: str, default: str) -> str:
     return rows[idx]
 
 
+def _raw_project_reply_has_internal_marker(text: str) -> bool:
+    low = re.sub(r"\s+", " ", str(text or "").strip()).lower()
+    if not low:
+        return False
+    return bool(re.search(r"\bmissing(?:\s+required)?\s+[a-z0-9_]+\b", low))
+
+
+def _is_low_signal_project_reply(text: str) -> bool:
+    raw = re.sub(r"\s+", " ", str(text or "").strip())
+    if not raw:
+        return True
+    low = raw.lower()
+    generic_zh = (
+        "收到，继续推进",
+        "继续推进。",
+        "我会继续推进",
+        "我先继续处理",
+        "收到，目标很清晰",
+    )
+    generic_en = (
+        "continue moving this forward",
+        "keep moving forward",
+        "goal is clear",
+    )
+    if any(token in raw for token in generic_zh):
+        return True
+    if any(token in low for token in generic_en):
+        return True
+    return requirement_information_score(raw) < 1.6
+
+
+def _should_fallback_from_raw_project_reply(
+    *,
+    raw_reply_text: str,
+    sanitized_reply_text: str,
+    task_summary: str,
+    prefer_raw_reply_text: bool,
+) -> bool:
+    if prefer_raw_reply_text:
+        return False
+    if _raw_project_reply_has_internal_marker(raw_reply_text):
+        return True
+    if not sanitized_reply_text.strip():
+        return True
+    if has_valid_task_summary(task_summary) and _is_low_signal_project_reply(sanitized_reply_text):
+        return True
+    return False
+
+
 def _is_generic_opening_question(question: str, lang: str) -> bool:
     q = re.sub(r"\s+", " ", str(question or "").strip())
     if not q:
@@ -275,6 +324,62 @@ def _is_internal_question_leak(question: str) -> bool:
     if any(tok in low for tok in leak_tokens):
         return True
     return bool(_WAITING_INTERNAL_REQUEST_RE.search(low))
+
+
+def _is_capability_query(text: str) -> bool:
+    raw = re.sub(r"\s+", " ", str(text or "").strip())
+    if not raw:
+        return False
+    low = raw.lower()
+    if any(token in raw for token in ("你能做什么", "你到底能帮我做什么", "能不能改前端", "改前端吗", "前端这块")):
+        return True
+    if ("你能" in raw or "可以" in raw) and any(token in raw for token in ("做什么", "前端", "界面", "网页", "web")):
+        return True
+    if any(
+        token in low
+        for token in (
+            "what can you do",
+            "what can you help with",
+            "can you change the frontend",
+            "can you work on the frontend",
+            "can you modify the frontend",
+            "can you handle frontend",
+            "can you help with frontend",
+        )
+    ):
+        return True
+    return low.startswith("can you") and any(token in low for token in ("frontend", "front-end", "ui", "web"))
+
+
+def _capability_mentions_frontend(text: str) -> bool:
+    raw = re.sub(r"\s+", " ", str(text or "").strip())
+    low = raw.lower()
+    return any(token in raw for token in ("前端", "界面", "网页")) or any(
+        token in low for token in ("frontend", "front-end", "ui", "web")
+    )
+
+
+def _compose_capability_reply(*, lang: str, latest_user_message: str) -> str:
+    mentions_frontend = _capability_mentions_frontend(latest_user_message)
+    if str(lang).lower() == "en":
+        if mentions_frontend:
+            return (
+                "Yes. I can work on frontend behavior, bridge-safe execution handoff, and the matching regression tests. "
+                "Tell me which screen or reply path you want changed first, and I will narrow the scope before editing."
+            )
+        return (
+            "I can help clarify the goal, adjust frontend or execution behavior, add regression tests, and carry the change through verification. "
+            "Tell me which part you want to change first, and I will narrow it down."
+        )
+    if mentions_frontend:
+        return (
+            "可以。我能按现有 CTCP 边界处理前端表现、桥接内的执行接入和对应回归测试。"
+            "你直接说想改哪一段界面或哪条回复链路，我先帮你收拢范围再动手。"
+        )
+    return (
+        "可以。我能先帮你收拢目标，再改前端或执行链路、补回归测试，并把验证一起跑完。"
+        "你直接说现在最想先改哪一块，我就按范围开始。"
+    )
 
 
 def _entry_hint_bank(lang: str, rag_hints: Mapping[str, Any] | None = None) -> dict[str, list[str]]:
@@ -399,6 +504,8 @@ def _compose_entry_reply(
                 "Share the project goal, input, and expected output in one sentence.",
             )
             return f"{open_line} {next_line}"
+        if mode == "SMALLTALK" and _is_capability_query(latest):
+            return _compose_capability_reply(lang=low_lang, latest_user_message=latest)
         return _pick_hint(hints.get("smalltalk", []), seed + "|s", "I'm here and ready to help.")
     if mode == "GREETING":
         open_line = _pick_hint(hints.get("greet_open", []), seed + "|o", "你好，我在。")
@@ -418,6 +525,8 @@ def _compose_entry_reply(
             "你用一句话告诉我这轮项目的目标、输入和期望输出，我先帮你整理成可执行方案。",
         )
         return f"{open_line}{next_line}"
+    if mode == "SMALLTALK" and _is_capability_query(latest):
+        return _compose_capability_reply(lang=low_lang, latest_user_message=latest)
     return _pick_hint(hints.get("smalltalk", []), seed + "|s", "我在。你可以直接说你现在想先处理哪件事。")
 
 
@@ -561,8 +670,34 @@ def _stage_project_manager_draft(
     }:
         state.visible_state = "UNDERSTOOD"
     raw_sanitized = sanitize_internal_text(raw_reply_text)
-    if prefer_raw_reply_text and raw_sanitized.text.strip():
-        state.draft_reply = raw_sanitized.text.strip()
+    raw_text = raw_sanitized.text.strip()
+    if raw_text:
+        if not _should_fallback_from_raw_project_reply(
+            raw_reply_text=raw_reply_text,
+            sanitized_reply_text=raw_text,
+            task_summary=state.task_summary,
+            prefer_raw_reply_text=prefer_raw_reply_text,
+        ):
+            # Agent-first when the raw project reply is specific and free of
+            # internal markers. Low-signal placeholders should yield to the
+            # frontend-reviewed PM reply.
+            state.draft_reply = raw_text
+        else:
+            state.draft_reply = compose_user_reply(
+                visible_state=state.visible_state,
+                task_summary=state.task_summary,
+                followup_questions=state.candidate_questions,
+                notes={
+                    **dict(notes),
+                    "lang": lang,
+                    "backend_temporary_failure": bool(
+                        raw_sanitized.redactions > 0
+                        and state.visible_state == "BLOCKED_NEEDS_INPUT"
+                        and has_valid_task_summary(active_task_context)
+                    ),
+                    "allow_internal_error_rewrite": bool(has_valid_task_summary(active_task_context)),
+                },
+            )
     else:
         state.draft_reply = compose_user_reply(
             visible_state=state.visible_state,
@@ -726,14 +861,17 @@ def run_internal_reply_pipeline(
 
     non_project_modes = {"GREETING", "SMALLTALK", "STATUS_QUERY", "PROJECT_INTAKE"}
     if mode in non_project_modes:
-        prefer_raw_reply_text = bool(note.get("prefer_raw_reply_text", False))
         if mode == "STATUS_QUERY" and has_active_task:
             state.visible_state = "EXECUTING"
         else:
             state.visible_state = "UNDERSTOOD"
         raw_sanitized = sanitize_internal_text(raw_reply_text)
-        if prefer_raw_reply_text and raw_sanitized.text.strip():
-            state.draft_reply = raw_sanitized.text.strip()
+        raw_text = raw_sanitized.text.strip()
+        if raw_text:
+            # Agent-first: always prefer the model's own text when it
+            # produces usable (post-sanitisation) content.  Templates
+            # serve only as fallback for empty / fully-redacted output.
+            state.draft_reply = raw_text
         else:
             state.draft_reply = _compose_entry_reply(
                 mode=mode,

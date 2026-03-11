@@ -182,5 +182,57 @@ class TestLooksLikeNewGoalCatchesProjectCreation(unittest.TestCase):
                 self.assertFalse(looks_like_new_goal(text), msg=f"Should NOT be new goal: {text}")
 
 
+class TestAutoContineNeverAsks(unittest.TestCase):
+    """The bot must auto-continue instead of asking 'shall I continue?'."""
+
+    def test_default_next_question_is_empty(self) -> None:
+        from tools.telegram_cs_bot import _default_next_question
+        self.assertEqual(_default_next_question("zh"), "")
+        self.assertEqual(_default_next_question("en"), "")
+
+    def test_normalize_suppresses_continue_questions_zh(self) -> None:
+        from tools.telegram_cs_bot import _normalize_next_question
+        cases = [
+            "还有什么我可以帮到你的吗？",
+            "还有其他需要我帮忙的吗？",
+            "需要我继续尝试吗？",
+            "要我继续吗？",
+            "我继续帮你处理，还是先等你确认一下？",
+            "还有其他需要补充的吗？",
+            "还有什么需要我帮忙的？",
+        ]
+        for text in cases:
+            with self.subTest(text=text):
+                result = _normalize_next_question(text, "zh")
+                self.assertEqual(result, "", msg=f"Should be suppressed: {text!r} → {result!r}")
+
+    def test_normalize_suppresses_continue_questions_en(self) -> None:
+        from tools.telegram_cs_bot import _normalize_next_question
+        cases = [
+            "Is there anything else I can help you with?",
+            "Would you like me to keep going?",
+            "Should I continue?",
+            "Want me to continue?",
+            "Would you like me to keep trying?",
+            "Should I keep auto-advancing this run?",
+        ]
+        for text in cases:
+            with self.subTest(text=text):
+                result = _normalize_next_question(text, "en")
+                self.assertEqual(result, "", msg=f"Should be suppressed: {text!r} → {result!r}")
+
+    def test_normalize_keeps_substantive_questions(self) -> None:
+        from tools.telegram_cs_bot import _normalize_next_question
+        cases = [
+            ("你更偏向接近实时输出，还是允许离线处理？", "zh"),
+            ("What is your top priority: speed, quality, or cost?", "en"),
+            ("你这次用的是单目视频还是多视角素材？", "zh"),
+        ]
+        for text, lang in cases:
+            with self.subTest(text=text):
+                result = _normalize_next_question(text, lang)
+                self.assertTrue(result.strip(), msg=f"Should be kept: {text!r} → {result!r}")
+
+
 if __name__ == "__main__":
     unittest.main()

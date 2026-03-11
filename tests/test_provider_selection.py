@@ -114,6 +114,34 @@ class ProviderSelectionTests(unittest.TestCase):
             self.assertEqual(role_providers.get("librarian"), "local_exec")
             self.assertEqual(role_providers.get("contract_guardian"), "local_exec")
 
+    def test_librarian_manual_outbox_override_is_ignored(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            run_dir = Path(td)
+            artifacts = run_dir / "artifacts"
+            artifacts.mkdir(parents=True, exist_ok=True)
+            (artifacts / "dispatch_config.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "ctcp-dispatch-config-v1",
+                        "mode": "manual_outbox",
+                        "role_providers": {
+                            "librarian": "manual_outbox",
+                            "patchmaker": "manual_outbox",
+                        },
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            cfg, msg = ctcp_dispatch.load_dispatch_config(run_dir)
+            self.assertIsNotNone(cfg, msg)
+            role_providers = cfg.get("role_providers", {})
+            self.assertEqual(role_providers.get("librarian"), "local_exec")
+            self.assertEqual(role_providers.get("patchmaker"), "manual_outbox")
+
     def test_api_agent_preview_disabled_without_env_or_cmd(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             run_dir = Path(td)
@@ -162,10 +190,25 @@ class ProviderSelectionTests(unittest.TestCase):
             self.assertEqual(preview.get("status"), "disabled")
             self.assertIn("missing env", str(preview.get("reason", "")))
 
-    def test_force_provider_env_overrides_defaults(self) -> None:
+    def test_force_provider_env_respects_hard_local_roles(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             run_dir = Path(td)
             (run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+            (run_dir / "artifacts" / "file_request.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "ctcp-file-request-v1",
+                        "goal": "force provider local librarian",
+                        "needs": [{"path": "README.md", "mode": "snippets", "line_ranges": [[1, 20]]}],
+                        "budget": {"max_files": 8, "max_total_bytes": 200000},
+                        "reason": "cover local librarian hard boundary",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
             run_doc = {"goal": "force provider"}
             gate = {
                 "state": "blocked",
@@ -184,9 +227,12 @@ class ProviderSelectionTests(unittest.TestCase):
                 },
                 clear=False,
             ):
-                preview = ctcp_dispatch.dispatch_preview(run_dir, run_doc, gate)
+                result = ctcp_dispatch.dispatch_once(run_dir, run_doc, gate, ROOT)
 
-            self.assertEqual(preview.get("provider"), "api_agent")
+            self.assertEqual(result.get("status"), "executed", msg=str(result))
+            self.assertEqual(result.get("provider"), "local_exec")
+            self.assertIn("ignored CTCP_FORCE_PROVIDER=api_agent", str(result.get("note", "")))
+            self.assertTrue((run_dir / "artifacts" / "context_pack.json").exists())
 
     def test_dispatch_once_writes_step_meta(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -305,6 +351,9 @@ class ProviderSelectionTests(unittest.TestCase):
                 + "\n",
                 encoding="utf-8",
             )
+            cfg, msg = ctcp_dispatch.load_dispatch_config(run_dir)
+            self.assertIsNotNone(cfg, msg)
+            self.assertEqual(cfg.get("role_providers", {}).get("librarian"), "local_exec")
 
             run_doc = {"goal": "manual outbox shared whiteboard"}
             gate = {

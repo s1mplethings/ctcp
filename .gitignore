@@ -225,3 +225,30 @@ tests/fixtures/adlc_forge_full_bundle/runs/**/sandbox/
 
 # Local private notes (never commit)
 .agent_private/
+
+# ── Privacy / Secrets (never commit) ──
+*.key
+*.pem
+*.p12
+*.pfx
+*.secret
+*.credentials
+**/secrets/
+**/private/
+.env.*
+!.env.example
+*.token
+*_token.txt
+api_key*
+ssh_config
+id_rsa*
+known_hosts
+.netrc
+.npmrc
+.pypirc
+
+# OS junk
+Thumbs.db
+Desktop.ini
+.DS_Store
+._*

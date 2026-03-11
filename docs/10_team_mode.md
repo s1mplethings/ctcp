@@ -85,6 +85,7 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
   - blocked 去重与冷却：同一阻塞原因短时间内只提醒一次；默认不再循环追问“是否继续自动推进”。
   - 用户补充信息后会自动清除 blocked 冷却并继续推进，不需要额外发“继续”。
   - 无 active run 的纯寒暄/致谢/能力询问保持本地客服回复，不为这类消息自动创建 run。
+  - 当用户问“你能做什么/能不能改前端”这类能力问题时，本地回复可以明确说明能处理前端表现、桥接边界内的执行接入、回归测试与任务推进，但不能绕过 bridge 直接改运行态。
   - Telegram 新建 run 时会先校准工程 dispatch provider：若外部 API 环境未真正就绪，则自动降级为 `manual_outbox`，避免 `OPENAI_API_KEY=ollama` 但无 `OPENAI_BASE_URL` 这类误配置直接打出 401。
   - 运维日志位置：run_dir 下 `logs/telegram_cs_bot.ops.jsonl`（仅内部使用，不回显给用户）。
 - 启动示例：

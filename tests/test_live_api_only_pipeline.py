@@ -266,12 +266,22 @@ def _validate_smoke_artifacts(run_dir: Path) -> tuple[bool, str]:
     return True, "ok"
 
 
-def _assert_step_meta_all_api(test: unittest.TestCase, run_dir: Path) -> None:
+def _assert_step_meta_matches_expected_routing(
+    test: unittest.TestCase,
+    run_dir: Path,
+    *,
+    force_provider: bool,
+) -> None:
     rows = _read_jsonl(run_dir / "step_meta.jsonl")
     test.assertTrue(rows, msg="step_meta.jsonl is empty")
     for row in rows:
         provider = str(row.get("provider", "")).strip().lower()
-        test.assertEqual(provider, "api_agent", msg=str(row))
+        gate = row.get("gate", {}) if isinstance(row.get("gate"), dict) else {}
+        expected_provider = _expected_provider_for_gate(
+            gate={"path": str(gate.get("path", ""))},
+            force_provider=force_provider,
+        )
+        test.assertEqual(provider, expected_provider, msg=str(row))
         test.assertNotEqual(provider, "n/a", msg=str(row))
 
 
@@ -283,13 +293,11 @@ def _tail_jsonl(path: Path, limit: int = 5) -> list[dict[str, Any]]:
 
 
 def _expected_provider_for_gate(*, gate: dict[str, str], force_provider: bool) -> str:
+    gate_path = str(gate.get("path", "")).strip().lower()
+    if "context_pack.json" in gate_path or "review_contract.md" in gate_path:
+        return "local_exec"
     if force_provider:
         return "api_agent"
-    gate_path = str(gate.get("path", "")).strip().lower()
-    if "context_pack.json" in gate_path:
-        return "local_exec"
-    if "review_contract.md" in gate_path:
-        return "local_exec"
     return "api_agent"
 
 
@@ -325,6 +333,10 @@ class LiveApiOnlyPipelineTests(unittest.TestCase):
 
             step_rows: list[dict[str, Any]] = []
             for gate in FLOW_GATES:
+                expected_provider = _expected_provider_for_gate(
+                    gate=gate,
+                    force_provider=True,
+                )
                 result = _dispatch_once(
                     run_dir=run_dir,
                     run_doc=run_doc,
@@ -333,7 +345,7 @@ class LiveApiOnlyPipelineTests(unittest.TestCase):
                 )
                 step_rows.append(result)
                 self.assertEqual(result.get("status"), "executed", msg=str(result))
-                self.assertEqual(result.get("provider"), "api_agent", msg=str(result))
+                self.assertEqual(result.get("provider"), expected_provider, msg=str(result))
 
             ok, reason = _validate_smoke_artifacts(run_dir)
             self.assertTrue(ok, msg=reason)
@@ -357,7 +369,7 @@ class LiveApiOnlyPipelineTests(unittest.TestCase):
                 msg="missing chair plan_signed API call",
             )
 
-            _assert_step_meta_all_api(self, run_dir)
+            _assert_step_meta_matches_expected_routing(self, run_dir, force_provider=True)
 
     def test_api_routing_matrix(self) -> None:
         cases = [
@@ -528,7 +540,7 @@ class LiveApiOnlyPipelineTests(unittest.TestCase):
                         }
                     )
 
-                _assert_step_meta_all_api(self, run_dir)
+                _assert_step_meta_matches_expected_routing(self, run_dir, force_provider=True)
 
             covered = {str(row.get("fault", "")) for row in outcomes}
             self.assertEqual(covered, {row["name"] for row in faults}, msg=str(outcomes))

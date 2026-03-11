@@ -88,10 +88,7 @@ def _apply_hard_role_providers(role_providers: dict[str, str], *, mode: str) -> 
     mode_norm = str(mode).strip().lower()
     if mode_norm == "mock_agent":
         return out
-    librarian_manual_override = mode_norm == "manual_outbox" and out.get("librarian") == "manual_outbox"
     for role, provider in HARD_ROLE_PROVIDERS.items():
-        if role == "librarian" and librarian_manual_override:
-            continue
         out[role] = provider
     return out
 
@@ -393,6 +390,9 @@ def _live_provider_violation(
         return None
 
     role = str(request.get("role", "")).strip()
+    hard_provider = HARD_ROLE_PROVIDERS.get(role.lower(), "")
+    if hard_provider and provider == hard_provider:
+        return None
     action = str(request.get("action", "")).strip()
     gate_state = str(gate.get("state", "")).strip()
     gate_owner = str(gate.get("owner", "")).strip()
@@ -726,7 +726,15 @@ def derive_request(gate: dict[str, str], run_doc: dict[str, Any]) -> dict[str, A
 def _resolve_provider(config: dict[str, Any], role: str, action: str) -> tuple[str, str]:
     # BEHAVIOR_ID: B027
     forced = _forced_provider()
+    hard_provider = HARD_ROLE_PROVIDERS.get(role, "")
     if forced:
+        if hard_provider:
+            if forced != hard_provider:
+                return (
+                    hard_provider,
+                    f"ignored CTCP_FORCE_PROVIDER={forced} for hard-local role={role}; using {hard_provider}",
+                )
+            return hard_provider, f"forced provider matches hard-local role={role}"
         return forced, f"forced by CTCP_FORCE_PROVIDER={forced}"
 
     role_providers = config.get("role_providers", {})
