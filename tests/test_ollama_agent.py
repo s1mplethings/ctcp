@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import json
 import os
 import tempfile
 import unittest
@@ -87,6 +88,68 @@ class OllamaAgentTests(unittest.TestCase):
             self.assertEqual(out.get("runtime"), "ollama")
             ensure_ready.assert_called_once()
             api_execute.assert_not_called()
+
+    def test_execute_support_reply_uses_native_chat_api(self) -> None:
+        class _Response:
+            def __init__(self, payload: dict[str, object]) -> None:
+                self._payload = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+
+            def read(self) -> bytes:
+                return self._payload
+
+            def __enter__(self) -> "_Response":
+                return self
+
+            def __exit__(self, exc_type, exc, tb) -> None:
+                return None
+
+        request = {
+            "role": "support_lead",
+            "action": "reply",
+            "target_path": "artifacts/support_reply.provider.json",
+            "reason": "Return JSON only.",
+        }
+        payload = {
+            "message": {
+                "content": json.dumps(
+                    {
+                        "reply_text": "收到，我先把这轮目标整理出来。",
+                        "next_question": "",
+                        "actions": [],
+                        "debug_notes": "",
+                    },
+                    ensure_ascii=False,
+                )
+            }
+        }
+
+        with tempfile.TemporaryDirectory() as td:
+            run_dir = Path(td)
+            with mock.patch.object(
+                ollama_agent,
+                "_ensure_ollama_ready",
+                return_value=(True, ""),
+            ) as ensure_ready, mock.patch.object(
+                ollama_agent.api_agent, "execute"
+            ) as api_execute, mock.patch(
+                "tools.providers.ollama_agent.urllib.request.urlopen",
+                return_value=_Response(payload),
+            ) as urlopen:
+                out = ollama_agent.execute(
+                    repo_root=ROOT,
+                    run_dir=run_dir,
+                    request=request,
+                    config={},
+                    guardrails_budgets={},
+                )
+
+            self.assertEqual(out.get("status"), "executed", msg=str(out))
+            self.assertTrue((run_dir / "artifacts" / "support_reply.provider.json").exists())
+            saved = json.loads((run_dir / "artifacts" / "support_reply.provider.json").read_text(encoding="utf-8"))
+            self.assertEqual(str(saved.get("reply_text", "")), "收到，我先把这轮目标整理出来。")
+            ensure_ready.assert_called_once()
+            api_execute.assert_not_called()
+            urlopen.assert_called_once()
 
 
 if __name__ == "__main__":

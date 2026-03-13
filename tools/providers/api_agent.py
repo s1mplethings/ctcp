@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import locale
 import os
 import re
 import subprocess
@@ -44,6 +45,28 @@ def _load_local_notes_defaults() -> dict[str, str]:
     if m_key:
         out["api_key"] = m_key.group(1).strip()
     return out
+
+
+def _resolved_external_api_credentials() -> tuple[str, str]:
+    defaults = _load_local_notes_defaults()
+    env_key = str(os.environ.get("OPENAI_API_KEY", "")).strip()
+    env_base_url = str(os.environ.get("OPENAI_BASE_URL", "")).strip()
+    ctcp_key = str(os.environ.get("CTCP_OPENAI_API_KEY", "")).strip()
+    ctcp_base_url = str(os.environ.get("CTCP_OPENAI_BASE_URL", "")).strip()
+    notes_key = str(defaults.get("api_key", "")).strip()
+    notes_base_url = str(defaults.get("base_url", "")).strip()
+
+    key = env_key
+    if key.lower() == "ollama" and not env_base_url:
+        replacement_key = ctcp_key or notes_key
+        if replacement_key:
+            return replacement_key, env_base_url or ctcp_base_url or notes_base_url
+        return key, env_base_url or ctcp_base_url
+    if not key:
+        key = ctcp_key or notes_key
+
+    base_url = env_base_url or ctcp_base_url or notes_base_url
+    return key, base_url
 
 
 def _slug(text: str) -> str:
@@ -782,6 +805,54 @@ def _format_cmd_template(template: str, values: dict[str, str]) -> tuple[str, st
         return "", f"command template formatting failed: {exc}"
 
 
+def _decode_subprocess_score(text: str) -> tuple[int, int, int, int]:
+    raw = str(text or "")
+    replacement = raw.count("\ufffd")
+    cjk = 0
+    suspicious = 0
+    weird_script = 0
+    for ch in raw:
+        if "\u4e00" <= ch <= "\u9fff":
+            cjk += 1
+            continue
+        if ch.isascii() or ch.isspace():
+            continue
+        if ch in ".,!?;:'\"()[]{}<>/\\-_+=@#$%^&*~`|，。！？；：（）【】《》、":
+            continue
+        suspicious += 1
+        code = ord(ch)
+        if (0x00C0 <= code <= 0x024F) or (0x0370 <= code <= 0x052F) or (0x0600 <= code <= 0x06FF):
+            weird_script += 1
+    return (replacement, 0 if cjk else 1, suspicious + weird_script - (cjk * 2), -cjk)
+
+
+def _decode_subprocess_text(data: bytes) -> str:
+    if not data:
+        return ""
+
+    encodings: list[str] = ["utf-8", "utf-8-sig"]
+    preferred = str(locale.getpreferredencoding(False) or "").strip()
+    for item in (preferred, "gb18030", "gbk", "cp936", "latin-1"):
+        low = item.lower()
+        if item and low not in {enc.lower() for enc in encodings}:
+            encodings.append(item)
+
+    best_text = data.decode("utf-8", errors="replace")
+    best_score = _decode_subprocess_score(best_text)
+    for encoding in encodings[1:]:
+        try:
+            candidate = data.decode(encoding, errors="replace")
+        except Exception:
+            continue
+        score = _decode_subprocess_score(candidate)
+        if score < best_score:
+            best_text = candidate
+            best_score = score
+        if score[0] == 0 and score[1] == 0 and score[2] <= 0:
+            return candidate
+    return best_text
+
+
 def _run_command(
     cmd: str,
     *,
@@ -790,34 +861,30 @@ def _run_command(
     extra_env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
+    env.setdefault("PYTHONIOENCODING", "utf-8")
+    env.setdefault("PYTHONUTF8", "1")
     if extra_env:
         for key, value in extra_env.items():
             env[str(key)] = str(value)
-    return subprocess.run(
+    proc = subprocess.run(
         cmd,
         cwd=str(cwd),
         shell=True,
         env=env,
-        input=stdin_text,
+        input=str(stdin_text or "").encode("utf-8"),
         capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
+        text=False,
+    )
+    return subprocess.CompletedProcess(
+        args=proc.args,
+        returncode=proc.returncode,
+        stdout=_decode_subprocess_text(proc.stdout or b""),
+        stderr=_decode_subprocess_text(proc.stderr or b""),
     )
 
 
 def _is_api_env_ready() -> tuple[bool, str]:
-    defaults = _load_local_notes_defaults()
-    key = (
-        str(os.environ.get("OPENAI_API_KEY", "")).strip()
-        or str(os.environ.get("CTCP_OPENAI_API_KEY", "")).strip()
-        or str(defaults.get("api_key", "")).strip()
-    )
-    base_url = (
-        str(os.environ.get("OPENAI_BASE_URL", "")).strip()
-        or str(os.environ.get("CTCP_OPENAI_BASE_URL", "")).strip()
-        or str(defaults.get("base_url", "")).strip()
-    )
+    key, base_url = _resolved_external_api_credentials()
     if key:
         if key.lower() == "ollama" and not base_url:
             return False, "missing env: OPENAI_BASE_URL for ollama-style key"

@@ -15,6 +15,7 @@ SCRIPTS_DIR = Path(__file__).resolve().parent
 ORCHESTRATE_PATH = SCRIPTS_DIR / "ctcp_orchestrate.py"
 LAST_RUN_POINTER = ROOT / "meta" / "run_pointers" / "LAST_RUN.txt"
 REPORT_LAST = ROOT / "meta" / "reports" / "LAST.md"
+SUPPORT_FRONTEND_TURNS_REL = Path("artifacts") / "support_frontend_turns.jsonl"
 
 STATUS_LINE_RE = re.compile(r"^\[ctcp_orchestrate\]\s*([^=]+)=(.*)$")
 
@@ -24,6 +25,13 @@ except ModuleNotFoundError:
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
     from tools.run_paths import get_repo_runs_root
+
+try:
+    import ctcp_dispatch
+except ModuleNotFoundError:
+    if str(SCRIPTS_DIR) not in sys.path:
+        sys.path.insert(0, str(SCRIPTS_DIR))
+    import ctcp_dispatch
 
 
 class BridgeError(RuntimeError):
@@ -74,6 +82,12 @@ def _write_text(path: Path, text: str) -> None:
 
 def _write_json(path: Path, doc: dict[str, Any]) -> None:
     _write_text(path, json.dumps(doc, ensure_ascii=False, indent=2) + "\n")
+
+
+def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
 def _tail_lines(text: str, max_lines: int = 80) -> str:
@@ -262,6 +276,24 @@ def ctcp_get_status(run_id: str = "") -> dict[str, Any]:
     }
 
 
+def ctcp_get_support_context(run_id: str = "") -> dict[str, Any]:
+    run_dir = _resolve_run_dir(run_id)
+    status = ctcp_get_status(_run_id_from_dir(run_dir))
+    decisions = ctcp_list_decisions_needed(_run_id_from_dir(run_dir))
+    whiteboard = ctcp_dispatch.get_support_whiteboard_context(run_dir)
+    frontend_request = _read_json(run_dir / "artifacts" / "frontend_request.json")
+    run_doc = _read_json(run_dir / "RUN.json")
+    return {
+        "run_id": _run_id_from_dir(run_dir),
+        "run_dir": str(run_dir),
+        "status": status,
+        "decisions": decisions,
+        "whiteboard": whiteboard,
+        "frontend_request": frontend_request,
+        "goal": str(frontend_request.get("goal", "") or run_doc.get("goal", "")).strip(),
+    }
+
+
 def ctcp_advance(run_id: str, max_steps: int = 1) -> dict[str, Any]:
     run_dir = _resolve_run_dir(run_id)
     steps = max(1, min(int(max_steps or 1), 32))
@@ -282,6 +314,51 @@ def ctcp_advance(run_id: str, max_steps: int = 1) -> dict[str, Any]:
         "max_steps": steps,
         "advance": result,
         "status": status,
+    }
+
+
+def ctcp_record_support_turn(
+    run_id: str,
+    *,
+    text: str,
+    source: str = "support_bot",
+    chat_id: str = "",
+    conversation_mode: str = "",
+) -> dict[str, Any]:
+    message = str(text or "").strip()
+    if not message:
+        raise BridgeError("support turn text is required")
+
+    run_dir = _resolve_run_dir(run_id)
+    row = {
+        "schema_version": "ctcp-support-frontend-turn-v1",
+        "ts": _now_utc_iso(),
+        "chat_id": str(chat_id or "").strip(),
+        "source": str(source or "").strip() or "support_bot",
+        "conversation_mode": str(conversation_mode or "").strip(),
+        "text": message,
+    }
+    _append_jsonl(run_dir / SUPPORT_FRONTEND_TURNS_REL, row)
+    _append_event(
+        run_dir,
+        "FRONT_SUPPORT_TURN_WRITTEN",
+        SUPPORT_FRONTEND_TURNS_REL.as_posix(),
+        chat_id=str(chat_id or "").strip(),
+        conversation_mode=str(conversation_mode or "").strip(),
+    )
+    whiteboard = ctcp_dispatch.record_support_turn_whiteboard(
+        run_dir=run_dir,
+        repo_root=ROOT,
+        text=message,
+        source=str(source or "").strip() or "support_bot",
+        conversation_mode=str(conversation_mode or "").strip(),
+        chat_id=str(chat_id or "").strip(),
+    )
+    return {
+        "run_id": _run_id_from_dir(run_dir),
+        "run_dir": str(run_dir),
+        "written_path": SUPPORT_FRONTEND_TURNS_REL.as_posix(),
+        "whiteboard": whiteboard,
     }
 
 
@@ -472,8 +549,10 @@ def ctcp_upload_artifact(run_id: str, file: str | dict[str, Any]) -> dict[str, A
 __all__ = [
     "BridgeError",
     "ctcp_new_run",
+    "ctcp_get_support_context",
     "ctcp_get_status",
     "ctcp_advance",
+    "ctcp_record_support_turn",
     "ctcp_get_last_report",
     "ctcp_list_decisions_needed",
     "ctcp_submit_decision",

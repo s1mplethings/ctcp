@@ -42,7 +42,10 @@ class FrontendRenderingBoundaryTests(unittest.TestCase):
             },
         )
         text = result.reply_text
-        self.assertIn("你用一句话告诉我这轮项目的目标", text)
+        self.assertTrue(
+            any(tok in text for tok in ("目标", "结果", "规划", "方案")),
+            msg=f"intake reply should mention goal/result keywords: {text}",
+        )
         self.assertNotIn("待处理的事项", text)
         self.assertNotIn("waiting for", text.lower())
         self.assertNotIn("analysis.md", text.lower())
@@ -527,7 +530,7 @@ class FrontendRenderingBoundaryTests(unittest.TestCase):
         # Model text should appear directly
         self.assertIn("我已经开始分析", result.reply_text)
         # Template markers should NOT appear
-        self.assertNotIn("收到，我先按这个方向立项", result.reply_text)
+        self.assertNotIn("我理解的是", result.reply_text)
 
     def test_project_detail_low_signal_raw_reply_falls_back_to_pm_reply(self) -> None:
         result = render_frontend_output(
@@ -547,7 +550,7 @@ class FrontendRenderingBoundaryTests(unittest.TestCase):
                 ],
             },
         )
-        self.assertIn("收到，我先按这个方向立项", result.reply_text)
+        self.assertIn("我理解的是", result.reply_text)
         self.assertIn("接近实时输出", result.reply_text)
         self.assertNotIn("missing runtime_target", result.reply_text.lower())
 

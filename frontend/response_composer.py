@@ -12,6 +12,7 @@ from .conversation_mode_router import (
     has_sufficient_task_signal,
     has_valid_task_summary,
     is_generic_tradeoff_question,
+    is_project_execution_followup,
     route_conversation_mode,
 )
 from .message_sanitizer import sanitize_internal_text
@@ -265,6 +266,38 @@ def _is_low_signal_project_reply(text: str) -> bool:
     return requirement_information_score(raw) < 1.6
 
 
+# Tokens indicating the reply discusses a specific project; used to catch
+# model hallucination on greeting/smalltalk turns.
+_PROJECT_CONTENT_LEAK_TOKENS_ZH = (
+    "项目", "开发", "原型", "第一版", "设计", "实现", "功能模块",
+    "需求", "方案", "架构", "部署", "框架", "代码",
+)
+_PROJECT_CONTENT_LEAK_TOKENS_EN = (
+    "project", "prototype", "first version", "development", "implementation",
+    "design", "feature module", "requirement", "architecture", "deployment",
+    "framework", "codebase",
+)
+
+
+def _reply_leaks_project_context(reply_text: str, user_message: str) -> bool:
+    """Return True when the model reply references specific project content
+    that the user did not mention — indicates hallucination from stale context."""
+    reply = re.sub(r"\s+", " ", str(reply_text or "")).strip()
+    user = re.sub(r"\s+", " ", str(user_message or "")).strip()
+    if not reply:
+        return False
+    reply_low = reply.lower()
+    user_low = user.lower()
+    leak_count = 0
+    for token in _PROJECT_CONTENT_LEAK_TOKENS_ZH:
+        if token in reply and token not in user:
+            leak_count += 1
+    for token in _PROJECT_CONTENT_LEAK_TOKENS_EN:
+        if token in reply_low and token not in user_low:
+            leak_count += 1
+    return leak_count >= 2
+
+
 def _should_fallback_from_raw_project_reply(
     *,
     raw_reply_text: str,
@@ -426,41 +459,41 @@ def _entry_hint_bank(lang: str, rag_hints: Mapping[str, Any] | None = None) -> d
     else:
         base = {
             "greet_open": [
-                "你好，我在。",
-                "你好，我在线。",
-                "你好，收到你的消息。",
+                "你好！",
+                "嗨，在的。",
+                "你好，随时可以开始。",
             ],
             "greet_next": [
-                "你直接说这轮目标，我马上接着处理。",
-                "把你现在最优先的一件事告诉我，我立刻推进。",
-                "你可以直接给目标和预期结果，我会整理成可执行方案。",
+                "有什么需要帮忙的？",
+                "你说说看要做什么？",
+                "想做什么项目？直接告诉我就行。",
             ],
             "status_idle": [
-                "当前还没有进行中的任务。",
-                "我这边还没绑定进行中的项目。",
+                "目前没有在做的任务。",
+                "手头没有进行中的项目。",
             ],
             "status_active": [
-                "我在跟进当前任务。",
-                "你这边的任务我还在持续推进。",
+                "你的任务我还在跟着。",
+                "在做呢，还在推进中。",
             ],
             "intake_open": [
                 "收到。",
                 "明白。",
-                "已收到。",
+                "OK。",
             ],
             "intake_next": [
-                "你用一句话告诉我这轮项目的目标、输入和期望输出，我先帮你整理成可执行方案。",
-                "你直接给我“做什么、输入是什么、输出要什么”，我来先收拢成第一版执行方案。",
-                "把这轮项目目标、输入和期望结果发我一句话版本，我先帮你立项整理。",
+                "简单说一下目标、输入和想要什么结果，我来帮你理。",
+                "你把要做的事情、输入和期望结果告诉我，我帮你整理成方案。",
+                "目标和预期结果说一下，我来帮你规划。",
             ],
             "smalltalk": [
-                "我在。你现在最优先要推进哪一件事？",
-                "收到，我在线。你说目标，我马上开始。",
-                "我在，直接发这轮目标就行。",
+                "在的，有什么需要？",
+                "我在，你说。",
+                "随时可以开始，你说目标就行。",
             ],
             "blocked_no_task": [
-                "我已收到。你先补充这轮要达成的具体目标，我就继续推进。",
-                "我收到你的消息了。你给我这轮明确目标，我马上继续处理。",
+                "收到了。你告诉我这轮想做什么，我马上接着来。",
+                "消息收到。你给我个具体目标，我就能继续。",
             ],
         }
     if isinstance(rag_hints, Mapping):
@@ -508,26 +541,26 @@ def _compose_entry_reply(
             return _compose_capability_reply(lang=low_lang, latest_user_message=latest)
         return _pick_hint(hints.get("smalltalk", []), seed + "|s", "I'm here and ready to help.")
     if mode == "GREETING":
-        open_line = _pick_hint(hints.get("greet_open", []), seed + "|o", "你好，我在。")
-        next_line = _pick_hint(hints.get("greet_next", []), seed + "|n", "你直接说这轮目标，我马上接着处理。")
+        open_line = _pick_hint(hints.get("greet_open", []), seed + "|o", "你好！")
+        next_line = _pick_hint(hints.get("greet_next", []), seed + "|n", "有什么需要帮忙的？")
         return f"{open_line}{next_line}"
     if mode == "STATUS_QUERY":
         if has_active_task:
-            status = _pick_hint(hints.get("status_active", []), seed + "|sa", "我在跟进当前任务。")
-            return f"{status}你告诉我这轮最想先推进的一点，我马上接着做。"
-        status = _pick_hint(hints.get("status_idle", []), seed + "|si", "当前还没有进行中的任务。")
-        return f"{status}你把目标发我，我马上开始。"
+            status = _pick_hint(hints.get("status_active", []), seed + "|sa", "你的任务我还在跟着。")
+            return f"{status}有什么想先调整的吗？"
+        status = _pick_hint(hints.get("status_idle", []), seed + "|si", "目前没有在做的任务。")
+        return f"{status}你说目标，我马上开始。"
     if mode == "PROJECT_INTAKE":
         open_line = _pick_hint(hints.get("intake_open", []), seed + "|io", "收到。")
         next_line = _pick_hint(
             hints.get("intake_next", []),
             seed + "|in",
-            "你用一句话告诉我这轮项目的目标、输入和期望输出，我先帮你整理成可执行方案。",
+            "简单说一下目标、输入和想要什么结果，我来帮你理。",
         )
         return f"{open_line}{next_line}"
     if mode == "SMALLTALK" and _is_capability_query(latest):
         return _compose_capability_reply(lang=low_lang, latest_user_message=latest)
-    return _pick_hint(hints.get("smalltalk", []), seed + "|s", "我在。你可以直接说你现在想先处理哪件事。")
+    return _pick_hint(hints.get("smalltalk", []), seed + "|s", "在的，有什么需要？")
 
 
 def _tradeoff_question_relevant(task_summary: str, known_facts: Mapping[str, Any]) -> bool:
@@ -552,8 +585,9 @@ def _stage_requirement_extraction(
     if selected:
         selected_score = requirement_information_score(selected)
         base_score = requirement_information_score(base_summary)
+        preserve_base_summary = bool(base_summary) and has_valid_task_summary(base_summary) and is_project_execution_followup(selected)
         # Prefer richer recent requirement text to avoid early vague-summary bias.
-        if (not base_summary) or (selected_score + 0.2 >= base_score):
+        if (not preserve_base_summary) and ((not base_summary) or (selected_score + 0.2 >= base_score)):
             state.task_summary = selected
     state.selected_requirement_source = selected
 
@@ -669,9 +703,22 @@ def _stage_project_manager_draft(
         "WAITING_FOR_DECISION",
     }:
         state.visible_state = "UNDERSTOOD"
+    # When run_status is "blocked" but visible_state is EXECUTING (internal
+    # gate block), model text about specific tech/platforms is unreliable
+    # because no real work has started yet.  Use the template reply instead.
+    internal_gate_block = (
+        str(raw_state.get("run_status", "")).lower() == "blocked"
+        and not raw_state.get("blocked_needs_input")
+    )
+    force_state_grounded_reply = (
+        state.visible_state in {"BLOCKED_NEEDS_INPUT", "WAITING_FOR_DECISION"}
+        and bool(
+            raw_state.get("run_status") or raw_state.get("waiting_for_decision") or raw_state.get("blocked_needs_input")
+        )
+    ) or internal_gate_block
     raw_sanitized = sanitize_internal_text(raw_reply_text)
     raw_text = raw_sanitized.text.strip()
-    if raw_text:
+    if raw_text and not force_state_grounded_reply:
         if not _should_fallback_from_raw_project_reply(
             raw_reply_text=raw_reply_text,
             sanitized_reply_text=raw_text,
@@ -790,9 +837,9 @@ def _stage_safety_sanitization(state: InternalReplyPipelineState, *, lang: str) 
         state.sanitized_reply = text
     else:
         state.sanitized_reply = (
-            "I'm on it. I need one key decision from you to continue safely."
+            "I'm on it. I need one decision from you before I continue."
             if lang == "en"
-            else "我已经接手了。为了稳妥继续推进，我需要你确认一个关键选择。"
+            else "收到，有一个地方需要你来定一下。"
         )
     return state
 
@@ -803,9 +850,9 @@ def _stage_final_emission(state: InternalReplyPipelineState) -> InternalReplyPip
         final = str(state.draft_reply or "").strip()
     if not final:
         final = (
-            "I'm on it and will keep this moving."
+            "Got it, working on it."
             if state.conversation_context.get("lang", "zh") == "en"
-            else "我已接手并会继续推进。"
+            else "收到，在处理了。"
         )
     state.final_reply = final
     return state
@@ -862,11 +909,46 @@ def run_internal_reply_pipeline(
     non_project_modes = {"GREETING", "SMALLTALK", "STATUS_QUERY", "PROJECT_INTAKE"}
     if mode in non_project_modes:
         if mode == "STATUS_QUERY" and has_active_task:
-            state.visible_state = "EXECUTING"
+            resolved_visible_state = resolve_visible_state(raw_backend_state)
+            if resolved_visible_state in {"WAITING_FOR_DECISION", "BLOCKED_NEEDS_INPUT", "DONE", "EXECUTING"}:
+                state.visible_state = resolved_visible_state
+            else:
+                state.visible_state = "EXECUTING"
+            # Agent-first: prefer model text for status replies when it is
+            # substantive and free of internal markers.  Fall back to
+            # template only when the model produced nothing usable.
+            raw_sanitized = sanitize_internal_text(raw_reply_text)
+            raw_text = raw_sanitized.text.strip()
+            if raw_text and not _reply_leaks_project_context(raw_text, latest_user_message):
+                state.draft_reply = raw_text
+            else:
+                status_head = compose_user_reply(
+                    visible_state=state.visible_state,
+                    task_summary=state.task_summary,
+                    followup_questions=[],
+                    notes={"lang": lang},
+                )
+                summary_text = re.sub(r"\s+", " ", str(state.task_summary or "")).strip()
+                if summary_text:
+                    if lang == "en":
+                        state.draft_reply = f"{status_head}\n\nProject: {summary_text}"
+                    else:
+                        state.draft_reply = f"{status_head}\n\n项目：{summary_text}"
+                else:
+                    state.draft_reply = status_head
+            state = _stage_consistency_review(state, notes=note, lang=lang)
+            state = _stage_safety_sanitization(state, lang=lang)
+            state = _stage_final_emission(state)
+            return state
         else:
             state.visible_state = "UNDERSTOOD"
         raw_sanitized = sanitize_internal_text(raw_reply_text)
         raw_text = raw_sanitized.text.strip()
+        if raw_text and mode in {"GREETING", "SMALLTALK"} and _reply_leaks_project_context(raw_text, latest_user_message):
+            # Safety guard: model hallucinated project-specific content on a
+            # greeting/smalltalk turn (e.g. stale session context leaking).
+            # Fall back to template entry reply.
+            raw_text = ""
         if raw_text:
             # Agent-first: always prefer the model's own text when it
             # produces usable (post-sanitisation) content.  Templates
@@ -938,6 +1020,93 @@ def _pipeline_state_to_dict(state: InternalReplyPipelineState) -> dict[str, Any]
     }
 
 
+def _user_reply_hint_bank(lang: str) -> dict[str, list[str]]:
+    """Return multiple natural-sounding reply variants per visible state."""
+    if lang == "en":
+        return {
+            "done": [
+                "Done — results are ready for you to review.",
+                "All finished. Want me to walk you through the highlights?",
+                "This round is wrapped up. I can pull out the key points whenever you're ready.",
+            ],
+            "waiting_decision": [
+                "I need your call on something before I keep going.",
+                "There's a fork in the road — which way do you want to go?",
+                "One decision point left. Once you pick, I'll keep moving.",
+            ],
+            "blocked_input": [
+                "I still need a bit more info to keep going.",
+                "Almost there — just missing one or two details.",
+                "I need you to fill in a gap before I can continue.",
+            ],
+            "blocked_internal": [
+                "Working on it — I'll update you as soon as there's progress.",
+                "Still setting things up on my end. Hang tight.",
+                "Preparing your plan now. I'll share it once it's solid.",
+            ],
+            "blocked_temp_fail": [
+                "Hit a small hiccup while preparing the plan. Let me try again rather than send something unreliable.",
+                "Ran into a temporary issue on my side. Regrouping now.",
+            ],
+            "executing": [
+                "On it.",
+                "Got it, working on it now.",
+                "Understood — already on it.",
+            ],
+            "understood": [
+                "Got it. Let me set this up and get it moving.",
+                "Understood — I'll get this started for you.",
+                "OK, I'll take it from here.",
+            ],
+            "needs_details": [
+                "I get the idea. Just need a couple specifics before I dive in.",
+                "Direction is clear. A few details will help me nail the first version.",
+                "Almost ready to start — one or two things to confirm first.",
+            ],
+        }
+    return {
+        "done": [
+            "做好了，你可以看一下结果。",
+            "这轮完成了，需要我帮你划重点吗？",
+            "结果出来了，随时可以看。",
+        ],
+        "waiting_decision": [
+            "有个地方需要你来定一下。",
+            "到一个选择的节点了，你来拍板。",
+            "需要你做个决定，定了我马上继续。",
+        ],
+        "blocked_input": [
+            "还差一点信息才能继续。",
+            "差不多了，再补一两个细节就行。",
+            "需要你补充一下，我才好往下走。",
+        ],
+        "blocked_internal": [
+            "正在帮你准备方案，好了会告诉你。",
+            "还在整理中，稍等一下。",
+            "正在处理，有进展马上同步给你。",
+        ],
+        "blocked_temp_fail": [
+            "刚才处理时碰到一个小问题，我重新来过，不会把不靠谱的结果发给你。",
+            "遇到一个临时状况，正在重新整理。",
+        ],
+        "executing": [
+            "好的，正在做。",
+            "收到，已经在处理了。",
+            "OK，这就开始。",
+        ],
+        "understood": [
+            "好的，我来帮你搞定。",
+            "了解，这就开始安排。",
+            "OK，交给我。",
+        ],
+        "needs_details": [
+            "大方向清楚了，再确认一两个细节就能开始。",
+            "整体明白了，补充一两个参数就可以动手。",
+            "方向没问题，还差一点具体信息。",
+        ],
+    }
+
+
 def compose_user_reply(
     visible_state: VisibleState,
     task_summary: str,
@@ -955,83 +1124,59 @@ def compose_user_reply(
     execution_direction = _execution_direction_text(note, lang)
     allow_internal_error_rewrite = bool(note.get("allow_internal_error_rewrite", True))
 
-    if lang == "en":
-        if visible_state == "DONE":
-            return "This round is complete and the latest result is ready. I can give you a concise summary and next-step options."
-        if visible_state == "WAITING_FOR_DECISION":
-            head = "We have reached a decision checkpoint."
-            if joined_q:
-                return f"{head}\n\n{joined_q}"
-            return f"{head}\n\nPlease confirm the next choice and I will continue immediately."
-        if visible_state == "BLOCKED_NEEDS_INPUT":
-            if not allow_internal_error_rewrite:
-                if joined_q:
-                    return f"I got your request. To continue safely, I need one quick confirmation: {joined_q}"
-                return "I got your request. Share the concrete goal for this round and I will continue immediately."
-            head = "I hit a temporary internal processing issue while preparing the first plan, so I will not send invalid internal output."
-            if joined_q:
-                return f"{head}\n\nTo keep momentum, I need two quick confirmations: {joined_q}"
-            return f"{head}\n\nPlease share one or two key constraints and I will resume."
-        if visible_state == "EXECUTING":
-            body = "Got it. I have started execution and I am moving on the current plan."
-            if joined_q:
-                return f"{body}\n\nTo reduce rework, I need one quick confirmation: {joined_q}"
-            return body
-        if visible_state == "UNDERSTOOD":
-            rows = ["Got it. I will set this up in project-manager mode and move it forward now."]
-            if summary:
-                rows.append(f"My current understanding: {summary}")
-            if project_name:
-                rows.append(f"Temporary project name: {project_name}.")
-            rows.append(execution_direction)
-            if questions_block:
-                rows.append(f"Two points can change the technical route, so I need quick confirmation:\n{questions_block}")
-            return "\n\n".join(rows)
-        # NEEDS_ONE_OR_TWO_DETAILS
-        head = "I understand the direction and can proceed, but I need one or two key details to avoid rework."
-        if joined_q:
-            return f"{head}\n\n{joined_q}"
-        return f"{head}\n\nPlease share the top priority and target runtime."
+    bank = _user_reply_hint_bank(lang)
+    seed = f"{visible_state}|{lang}|{summary}"
 
-    # Chinese (default)
     if visible_state == "DONE":
-        return "这一轮已经完成，最新结果也准备好了。我可以马上给你一个精简总结和下一步建议。"
+        return _pick_hint(bank["done"], seed, bank["done"][0])
     if visible_state == "WAITING_FOR_DECISION":
-        head = "我这边已经推进到需要你拍板的节点。"
+        head = _pick_hint(bank["waiting_decision"], seed, bank["waiting_decision"][0])
         if joined_q:
             return f"{head}\n\n{joined_q}"
-        return f"{head}\n\n你确认这个选择后，我会立刻继续推进。"
+        return head
     if visible_state == "BLOCKED_NEEDS_INPUT":
         if not allow_internal_error_rewrite:
+            head = _pick_hint(bank["blocked_input"], seed, bank["blocked_input"][0])
             if joined_q:
-                return f"我已收到你的需求。为了稳妥继续推进，我先确认一点：{joined_q}"
-            return "我已收到你的需求。你告诉我这轮具体目标，我马上继续推进。"
-        head = "我这边在整理首轮方案时遇到一次内部处理异常，我先不把无效结果发给你。"
-        if temporary_failure and joined_q:
-            return f"{head}\n\n为了继续推进，我需要确认两个关键参数：{joined_q}"
+                return f"{head}\n\n{joined_q}"
+            return head
+        if temporary_failure:
+            head = _pick_hint(bank["blocked_temp_fail"], seed, bank["blocked_temp_fail"][0])
+        else:
+            head = _pick_hint(bank["blocked_internal"], seed, bank["blocked_internal"][0])
         if joined_q:
-            return f"{head}\n\n为了继续推进，我还需要确认两项信息：{joined_q}"
-        return f"{head}\n\n你先补充一到两个关键参数，我马上恢复推进。"
+            return f"{head}\n\n{joined_q}"
+        return head
     if visible_state == "EXECUTING":
-        body = "收到，我已经开始处理，会按当前确认的信息继续推进。"
+        body = _pick_hint(bank["executing"], seed, bank["executing"][0])
         if joined_q:
-            return f"{body}\n\n为了减少返工，我还想确认一点：{joined_q}"
+            return f"{body}\n\n{joined_q}"
         return body
     if visible_state == "UNDERSTOOD":
-        rows = ["收到，我先按这个方向立项并帮你推进。"]
+        head = _pick_hint(bank["understood"], seed, bank["understood"][0])
+        rows = [head]
         if summary:
-            rows.append(f"目前我理解的是：{summary}")
+            if lang == "en":
+                rows.append(f"My current understanding: {summary}")
+            else:
+                rows.append(f"我理解的是：{summary}")
         if project_name:
-            rows.append(f"我先给你一个临时项目名：{project_name}。")
+            if lang == "en":
+                rows.append(f"Temporary project name: {project_name}.")
+            else:
+                rows.append(f"临时项目名：{project_name}。")
         rows.append(execution_direction)
         if questions_block:
-            rows.append(f"不过有两个点会直接影响方案路线，我先确认一下：\n{questions_block}")
+            if lang == "en":
+                rows.append(f"A couple things that affect the approach:\n{questions_block}")
+            else:
+                rows.append(f"有两个点会影响方案方向，先确认一下：\n{questions_block}")
         return "\n\n".join(rows)
     # NEEDS_ONE_OR_TWO_DETAILS
-    head = "我已经理解大方向了，接下来只差一到两个关键参数就能更稳地继续推进。"
+    head = _pick_hint(bank["needs_details"], seed, bank["needs_details"][0])
     if joined_q:
         return f"{head}\n\n{joined_q}"
-    return f"{head}\n\n你先告诉我输入形态和运行目标，我马上开工。"
+    return head
 
 
 def render_frontend_output(

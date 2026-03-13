@@ -1,13 +1,11 @@
-# Demo Report - LAST
+# Demo Report - Archive
 
-> **用法**：本文件保留最近一次报告指针，同时内嵌 workflow gate 所需的最新报告摘要。
-> 历史报告正文在 `meta/reports/archive/`。
+## Topic
 
-## Latest Report
-
-- File: [`meta/reports/archive/20260313-support-ctcp-scaffold-package.md`](archive/20260313-support-ctcp-scaffold-package.md)
+- Queue Item: `ADHOC-20260313-support-ctcp-scaffold-package`
 - Date: 2026-03-13
 - Topic: support 项目包升级为 CTCP 风格 scaffold 交付，而不是单文件占位目录
+- Status: `blocked`
 
 ### Readlist
 - `AGENTS.md`
@@ -38,26 +36,25 @@
 - `tests/test_runtime_wiring_contract.py`
 
 ### Plan
-1) 绑定 `support-ctcp-scaffold-package` task，并把交付目标改成“薄壳项目目录 -> 外部 CTCP scaffold 包”。
-2) 修改 `scripts/ctcp_support_bot.py` 的 package discovery/materialization，让 placeholder 目录不再直接 zip，而是走现有 `scaffold --source-mode live-reference`。
-3) 把真实 package shape 注入 support prompt/context，并同步 docs/prompt 契约。
-4) 补 targeted regressions，覆盖 scaffold package detection、Telegram document delivery 和 truth-bound package description。
-5) 跑 local checks、triplet guards、workflow gate、canonical verify，并记录首个失败点。
+1. 把 support package 的 truth 改成“placeholder -> external CTCP scaffold -> zip”。
+2. 修改 `scripts/ctcp_support_bot.py`，识别薄壳项目目录并 materialize scaffold project。
+3. 把真实 package shape 注入 prompt/context，并同步 docs/prompt 契约。
+4. 跑 support/runtime/scaffold 回归与 canonical verify。
 
 ### Changes
 - `scripts/ctcp_support_bot.py`
   - added package-shape detection for CTCP project dirs vs. thin placeholder dirs
-  - added support-side scaffold materialization artifact/logs under `support_scaffold_materialization.json` and `logs/support_scaffold.*.log`
-  - rewired zip delivery so placeholder dirs now materialize an external `scaffold --source-mode live-reference --profile standard` project before zipping
+  - added support-side scaffold materialization artifact/logs
+  - rewired zip delivery so thin placeholder dirs now materialize an external scaffold project before zipping
   - exposed `package_delivery_mode`, `project_name_hint`, and `package_structure_hint` to the support prompt/runtime context
 - `agents/prompts/support_lead_reply.md`, `docs/10_team_mode.md`
-  - locked the support contract so scaffold packages must be described honestly as scaffold, not as feature-complete business logic
+  - locked the contract so scaffold packages must be described honestly as scaffold
 - `tests/test_support_bot_humanization.py`, `tests/test_runtime_wiring_contract.py`
-  - added regressions for scaffold-shaped package context and Telegram document delivery from placeholder-project sessions
+  - added regressions for scaffold package context and Telegram document delivery from placeholder-project sessions
 - `ai_context/problem_registry.md`
-  - recorded the new user-visible overpromise class for placeholder project packages
+  - recorded the placeholder-package overpromise defect
 - `meta/backlog/execution_queue.json`, `meta/tasks/CURRENT.md`, `meta/tasks/archive/20260313-support-ctcp-scaffold-package.md`, `meta/reports/LAST.md`, `meta/reports/archive/20260313-support-ctcp-scaffold-package.md`
-  - bound the new task and recorded evidence
+  - bound and reported the task
 
 ### Verify
 - `python -m py_compile scripts/ctcp_support_bot.py tests/test_support_bot_humanization.py tests/test_runtime_wiring_contract.py` => `0`
@@ -76,21 +73,20 @@
 - None.
 
 ### Demo
-- Task card: `meta/tasks/CURRENT.md`
-- Task archive: `meta/tasks/archive/20260313-support-ctcp-scaffold-package.md`
-- Report archive: `meta/reports/archive/20260313-support-ctcp-scaffold-package.md`
-- Real session demo:
-  - support session: `6092527664`
-  - resolved delivery mode: `materialize_ctcp_scaffold`
-  - generated package: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\support_sessions\6092527664\artifacts\support_exports\vn_story_organizer_ctcp_project.zip`
-  - zip head includes `README.md`, `docs/00_CORE.md`, `meta/tasks/CURRENT.md`, `scripts/verify_repo.ps1`, `workflow_registry/README.md`, `simlab/scenarios/S00_smoke.yaml`
+- `meta/tasks/CURRENT.md`
+- `meta/reports/LAST.md`
+- `meta/tasks/archive/20260313-support-ctcp-scaffold-package.md`
+- `meta/reports/archive/20260313-support-ctcp-scaffold-package.md`
+- real support session `6092527664` resolves `package_delivery_mode=materialize_ctcp_scaffold`
+- generated package: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\support_sessions\6092527664\artifacts\support_exports\vn_story_organizer_ctcp_project.zip`
+- zip head contains `README.md`, `docs/00_CORE.md`, `meta/tasks/CURRENT.md`, `scripts/verify_repo.ps1`, `workflow_registry/README.md`, `simlab/scenarios/S00_smoke.yaml`
 
 ### Integration Proof
 - upstream: `scripts/ctcp_support_bot.py::process_message` and `scripts/ctcp_support_bot.py::run_telegram_mode`
 - current_module: `scripts/ctcp_support_bot.py` plus support-lane contract docs/tests
 - downstream: `build_support_prompt()` / `build_final_reply_doc()` -> `support_reply.json` -> `emit_public_delivery()` -> Telegram `sendDocument`
 - source_of_truth: support session `support_session_state.json`, bound run `artifacts/patch_apply.json` / `artifacts/PLAN.md`, support session `support_scaffold_materialization.json`, support session `support_public_delivery.json`
-- fallback: existing complete CTCP-like project dir still zips directly; placeholder dir first materializes an external scaffold; if scaffold materialization fails, runtime records the failure artifact and must not pretend a complete project package exists
+- fallback: existing complete CTCP-like project dirs still zip directly; placeholder dirs first materialize an external scaffold; scaffold failure records an artifact and must not be described as a complete project package
 - acceptance_test:
   - `python -m py_compile scripts/ctcp_support_bot.py tests/test_support_bot_humanization.py tests/test_runtime_wiring_contract.py`
   - `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v`
@@ -106,20 +102,3 @@
   - continuing to zip placeholder dirs while describing them as complete projects
 - user_visible_effect:
   - 用户现在收到的 VN 项目 zip 是 CTCP 风格多文档脚手架，而不是单 `main.py` 占位目录；客服也会按 scaffold 如实描述这个包的结构。
-
-## Archive Index (recent 10)
-
-| Date | Topic | File |
-|------|-------|------|
-| 2026-03-13 | support 项目包升级为 CTCP 风格 scaffold 交付，而不是单文件占位目录 | [→](archive/20260313-support-ctcp-scaffold-package.md) |
-| 2026-03-13 | support 回复锁到 api_agent，并把项目 zip/截图直发链路接到 Telegram | [→](archive/20260313-support-api-first-local-degrade.md) |
-| 2026-03-12 | support 到 production run 的渐进式链路测试 | [→](archive/20260312-support-to-production-path-tests.md) |
-| 2026-03-12 | support bot 项目记忆隔离、执行指令路由与 blocked 状态落地修复 | [→](archive/20260312-support-project-state-grounding-hardening.md) |
-| 2026-03-12 | support bot API 中文回复编码修复 | [→](archive/20260312-support-api-encoding-hardening.md) |
-| 2026-03-12 | support bot 全部用户可见回复走模型 | [→](archive/20260312-support-all-turns-model-routing.md) |
-| 2026-03-12 | support bot 记忆隔离与显式 API 路由锁定 | [→](archive/20260312-support-memory-isolation-and-api-route-lock.md) |
-| 2026-03-12 | support bot 接入 front bridge / shared whiteboard / librarian 后台流 | [→](archive/20260312-support-bot-backend-bridge-wiring.md) |
-| 2026-03-12 | 修复 support bot provider 连通性与兜底链路 | [→](archive/20260312-support-provider-connectivity-repair.md) |
-| 2026-03-11 | 收口 support-bot humanization verify blocker | [→](archive/20260311-support-bot-humanization-verify-blocker.md) |
-
-Full archive: `meta/reports/archive/`

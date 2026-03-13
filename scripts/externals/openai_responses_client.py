@@ -124,6 +124,32 @@ def _load_local_notes_defaults() -> dict[str, str]:
     return out
 
 
+def _resolve_api_credentials(*, api_key: str | None = None, base_url: str | None = None) -> tuple[str, str]:
+    defaults = _load_local_notes_defaults()
+    explicit_key = str(api_key or "").strip()
+    explicit_base_url = str(base_url or "").strip()
+    env_key = str(os.environ.get("OPENAI_API_KEY", "")).strip()
+    env_base_url = str(os.environ.get("OPENAI_BASE_URL", "")).strip()
+    ctcp_key = str(os.environ.get("CTCP_OPENAI_API_KEY", "")).strip()
+    ctcp_base_url = str(os.environ.get("CTCP_OPENAI_BASE_URL", "")).strip()
+    notes_key = str(defaults.get("api_key", "")).strip()
+    notes_base_url = str(defaults.get("base_url", "")).strip()
+
+    root = explicit_base_url or env_base_url or ctcp_base_url or notes_base_url or "https://api.openai.com/v1"
+    if explicit_key:
+        return explicit_key, root
+
+    key = env_key
+    if key.lower() == "ollama" and not env_base_url:
+        replacement_key = ctcp_key or notes_key
+        if replacement_key:
+            return replacement_key, root
+        return key, explicit_base_url or env_base_url or ctcp_base_url or "https://api.openai.com/v1"
+    if not key:
+        key = ctcp_key or notes_key
+    return key, root
+
+
 def _safe_int_env(name: str, default: int, *, minimum: int, maximum: int) -> int:
     raw = str(os.environ.get(name, "")).strip()
     if not raw:
@@ -242,24 +268,20 @@ def call_openai_responses(
     api_key: str | None = None,
     base_url: str | None = None,
 ) -> tuple[str, str]:
-    defaults = _load_local_notes_defaults()
-    token = (
-        api_key
-        or os.environ.get("OPENAI_API_KEY", "")
-        or os.environ.get("CTCP_OPENAI_API_KEY", "")
-        or defaults.get("api_key", "")
-    ).strip()
+    token, root = _resolve_api_credentials(api_key=api_key, base_url=base_url)
     if not token:
         reason = "OPENAI_API_KEY is required for OpenAI API mode"
         _append_api_call(model=model, status="ERR", error=reason)
         return "", reason
+    if token.lower() == "ollama" and not (
+        str(base_url or "").strip()
+        or str(os.environ.get("OPENAI_BASE_URL", "")).strip()
+        or str(os.environ.get("CTCP_OPENAI_BASE_URL", "")).strip()
+    ):
+        reason = "OPENAI_BASE_URL is required for ollama-style key"
+        _append_api_call(model=model, status="ERR", error=reason)
+        return "", reason
 
-    root = (
-        base_url
-        or os.environ.get("OPENAI_BASE_URL", "")
-        or defaults.get("base_url", "")
-        or "https://api.openai.com/v1"
-    ).strip()
     endpoint_mode = str(os.environ.get("SDDAI_OPENAI_ENDPOINT_MODE", "auto")).strip().lower() or "auto"
     max_attempts = _safe_int_env("SDDAI_OPENAI_MAX_ATTEMPTS", 3, minimum=1, maximum=6)
     base_delay_sec = _safe_float_env("SDDAI_OPENAI_RETRY_BASE_DELAY_SEC", 0.75, minimum=0.0, maximum=10.0)

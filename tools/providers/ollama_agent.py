@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -96,6 +97,184 @@ def _provider_cfg(config: dict[str, Any]) -> dict[str, Any]:
         "auto_start": auto_start,
         "start_timeout_sec": start_timeout_sec,
         "start_cmd": start_cmd,
+    }
+
+
+def _native_chat_url(base_url: str) -> str:
+    parsed = urlparse(str(base_url).strip())
+    if parsed.scheme and parsed.netloc:
+        return f"{parsed.scheme}://{parsed.netloc}/api/chat"
+    raw = str(base_url).strip().rstrip("/")
+    if raw.endswith("/v1"):
+        raw = raw[:-3]
+    return raw + "/api/chat"
+
+
+def _is_support_reply_request(request: dict[str, Any]) -> bool:
+    return (
+        str(request.get("role", "")).strip().lower() == "support_lead"
+        and str(request.get("action", "")).strip().lower() == "reply"
+    )
+
+
+def _extract_json_dict(text: str) -> dict[str, Any] | None:
+    raw = str(text or "").strip()
+    if not raw:
+        return None
+    try:
+        doc = json.loads(raw)
+        if isinstance(doc, dict):
+            return doc
+    except Exception:
+        pass
+
+    for marker in ("```json", "```"):
+        if marker not in raw:
+            continue
+        parts = raw.split(marker)
+        for block in parts:
+            snippet = block.replace("```", "").strip()
+            if not snippet:
+                continue
+            try:
+                doc = json.loads(snippet)
+                if isinstance(doc, dict):
+                    return doc
+            except Exception:
+                continue
+
+    start = raw.find("{")
+    end = raw.rfind("}")
+    if start >= 0 and end > start:
+        try:
+            doc = json.loads(raw[start : end + 1])
+            if isinstance(doc, dict):
+                return doc
+        except Exception:
+            return None
+    return None
+
+
+def _write_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def _support_timeout_sec() -> int:
+    return _safe_int(
+        str(os.environ.get("CTCP_OLLAMA_TIMEOUT_SEC", "")).strip()
+        or str(os.environ.get("SDDAI_OPENAI_TIMEOUT_SEC", "")).strip(),
+        default=180,
+        minimum=10,
+        maximum=600,
+    )
+
+
+def _call_ollama_chat(*, cfg: dict[str, Any], prompt: str, timeout_sec: int) -> tuple[dict[str, Any] | None, str]:
+    payload = {
+        "model": str(cfg.get("model", "")).strip(),
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": False,
+    }
+    req = urllib.request.Request(
+        _native_chat_url(str(cfg.get("base_url", "")).strip()),
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        method="POST",
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
+            body = resp.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace").strip()[:2000]
+        return None, f"Ollama API HTTP {exc.code}: {detail}"
+    except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as exc:
+        return None, f"Ollama API request failed: {exc}"
+    except Exception as exc:
+        return None, f"Ollama API request failed: {exc}"
+
+    try:
+        doc = json.loads(body)
+    except Exception as exc:
+        return None, f"Ollama API returned non-JSON response: {exc}"
+    if not isinstance(doc, dict):
+        return None, "Ollama API response is not a JSON object"
+    return doc, ""
+
+
+def _normalize_support_reply_doc(raw_text: str) -> dict[str, Any] | None:
+    doc = _extract_json_dict(raw_text)
+    if isinstance(doc, dict):
+        return {
+            "reply_text": str(doc.get("reply_text", "")).strip(),
+            "next_question": str(doc.get("next_question", "")).strip(),
+            "actions": doc.get("actions") if isinstance(doc.get("actions"), list) else [],
+            "debug_notes": str(doc.get("debug_notes", "")).strip(),
+        }
+    text = str(raw_text or "").strip()
+    if not text:
+        return None
+    return {
+        "reply_text": text,
+        "next_question": "",
+        "actions": [],
+        "debug_notes": "ollama_native_text_fallback",
+    }
+
+
+def _execute_native_support_reply(*, run_dir: Path, request: dict[str, Any], cfg: dict[str, Any]) -> dict[str, Any]:
+    target_rel = str(request.get("target_path", "")).strip()
+    target_path = (run_dir / target_rel).resolve()
+    try:
+        target_path.relative_to(run_dir.resolve())
+    except ValueError:
+        return {"status": "exec_failed", "reason": f"target_path escapes run_dir: {target_rel}"}
+
+    prompt = str(request.get("reason", "")).strip() or str(request.get("input_text", "")).strip()
+    timeout_sec = _support_timeout_sec()
+    stdout_log = run_dir / "logs" / "ollama_support.stdout.log"
+    stderr_log = run_dir / "logs" / "ollama_support.stderr.log"
+
+    doc, err = _call_ollama_chat(cfg=cfg, prompt=prompt, timeout_sec=timeout_sec)
+    if err:
+        _write_text(stderr_log, err + "\n")
+        return {
+            "status": "exec_failed",
+            "reason": err,
+            "stdout_log": stdout_log.relative_to(run_dir).as_posix(),
+            "stderr_log": stderr_log.relative_to(run_dir).as_posix(),
+        }
+
+    response_text = json.dumps(doc, ensure_ascii=False, indent=2) + "\n"
+    _write_text(stdout_log, response_text)
+    _write_text(stderr_log, "")
+    message = doc.get("message") if isinstance(doc, dict) else None
+    content = ""
+    if isinstance(message, dict):
+        content = str(message.get("content", "")).strip()
+    if not content:
+        return {
+            "status": "exec_failed",
+            "reason": "ollama support reply is empty",
+            "stdout_log": stdout_log.relative_to(run_dir).as_posix(),
+            "stderr_log": stderr_log.relative_to(run_dir).as_posix(),
+        }
+
+    reply_doc = _normalize_support_reply_doc(content)
+    if not isinstance(reply_doc, dict):
+        return {
+            "status": "exec_failed",
+            "reason": "ollama support reply could not be normalized",
+            "stdout_log": stdout_log.relative_to(run_dir).as_posix(),
+            "stderr_log": stderr_log.relative_to(run_dir).as_posix(),
+        }
+
+    _write_text(target_path, json.dumps(reply_doc, ensure_ascii=False, indent=2) + "\n")
+    return {
+        "status": "executed",
+        "target_path": target_rel,
+        "stdout_log": stdout_log.relative_to(run_dir).as_posix(),
+        "stderr_log": stderr_log.relative_to(run_dir).as_posix(),
     }
 
 
@@ -203,6 +382,22 @@ def _ensure_ollama_ready(cfg: dict[str, Any], run_dir: Path) -> tuple[bool, str]
 
 def preview(*, run_dir: Path, request: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
     cfg = _provider_cfg(config)
+    if _is_support_reply_request(request):
+        ready, reason = _ensure_ollama_ready(cfg, run_dir)
+        if not ready:
+            return {
+                "status": "disabled",
+                "reason": reason,
+                "runtime": "ollama",
+                "ollama_base_url": cfg["base_url"],
+                "ollama_model": cfg["model"],
+            }
+        return {
+            "status": "can_exec",
+            "runtime": "ollama",
+            "ollama_base_url": cfg["base_url"],
+            "ollama_model": cfg["model"],
+        }
     if _should_bootstrap_ollama():
         ready, reason = _ensure_ollama_ready(cfg, run_dir)
         if not ready:
@@ -231,6 +426,21 @@ def execute(
 ) -> dict[str, Any]:
     # BEHAVIOR_ID: B035
     cfg = _provider_cfg(config)
+    if _is_support_reply_request(request):
+        ready, reason = _ensure_ollama_ready(cfg, run_dir)
+        if not ready:
+            return {
+                "status": "exec_failed",
+                "reason": reason,
+                "runtime": "ollama",
+                "ollama_base_url": cfg["base_url"],
+                "ollama_model": cfg["model"],
+            }
+        out = _execute_native_support_reply(run_dir=run_dir, request=request, cfg=cfg)
+        out["runtime"] = "ollama"
+        out["ollama_base_url"] = cfg["base_url"]
+        out["ollama_model"] = cfg["model"]
+        return out
     if _should_bootstrap_ollama():
         ready, reason = _ensure_ollama_ready(cfg, run_dir)
         if not ready:

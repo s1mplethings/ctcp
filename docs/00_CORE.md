@@ -127,6 +127,7 @@ Minimum supported modes:
 
 Rules:
 - GREETING and SMALLTALK MUST NOT enter planning / missing-info / tradeoff question logic.
+- GREETING and SMALLTALK MAY still be answered by the configured support model; mode-gating forbids planning logic, not model routing.
 - Project-manager mode MAY only activate when sufficient task signal exists.
 - Internal error rewriting and project follow-up questions are forbidden when no valid active task summary exists.
 

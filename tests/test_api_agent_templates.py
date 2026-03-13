@@ -41,6 +41,34 @@ class ApiAgentTemplateTests(unittest.TestCase):
         self.assertEqual(templates, {})
         self.assertIn("OPENAI_BASE_URL", reason)
 
+    def test_ollama_placeholder_key_falls_back_to_local_notes_credentials(self) -> None:
+        request = {
+            "role": "support_lead",
+            "action": "reply",
+            "target_path": "artifacts/support_reply.provider.json",
+        }
+        with mock.patch.dict(
+            os.environ,
+            {
+                "SDDAI_PLAN_CMD": "",
+                "SDDAI_AGENT_CMD": "",
+                "SDDAI_PATCH_CMD": "",
+                "OPENAI_API_KEY": "ollama",
+                "CTCP_OPENAI_API_KEY": "",
+                "OPENAI_BASE_URL": "",
+                "CTCP_OPENAI_BASE_URL": "",
+            },
+            clear=False,
+        ), mock.patch.object(
+            api_agent,
+            "_load_local_notes_defaults",
+            return_value={"api_key": "sk-notes", "base_url": "https://notes.example/v1"},
+        ):
+            templates, reason = api_agent._resolve_templates(ROOT, request)
+
+        self.assertEqual(reason, "")
+        self.assertIn("agent", templates)
+
     def test_resolve_templates_plan_only_includes_agent_key(self) -> None:
         request = {
             "role": "chair",
@@ -277,6 +305,65 @@ class ApiAgentTemplateTests(unittest.TestCase):
             self.assertIn("max_files:", text)
             self.assertIn("max_total_bytes:", text)
             self.assertIn("max_iterations:", text)
+
+    def test_execute_support_reply_recovers_non_utf8_child_stdout(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo_root = Path(td) / "repo"
+            run_dir = repo_root / "runs" / "r1"
+            repo_root.mkdir(parents=True, exist_ok=True)
+            run_dir.mkdir(parents=True, exist_ok=True)
+
+            agent_script = repo_root / "agent_stub_support_gbk.py"
+            agent_script.write_text(
+                "\n".join(
+                    [
+                        "import json, sys",
+                        "payload = {",
+                        "    'reply_text': '你好，我已经接住这轮需求。',",
+                        "    'next_question': '你最想先推进哪一块？',",
+                        "    'actions': [],",
+                        "    'debug_notes': 'gbk-child-test',",
+                        "}",
+                        "sys.stdout.buffer.write(json.dumps(payload, ensure_ascii=False).encode('gbk'))",
+                        "",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            request = {
+                "role": "support_lead",
+                "action": "reply",
+                "target_path": "artifacts/support_reply.provider.json",
+                "reason": "write support reply json",
+                "goal": "support session smoke",
+            }
+            with mock.patch.dict(
+                os.environ,
+                {
+                    "SDDAI_AGENT_CMD": f'"{sys.executable}" "{agent_script}"',
+                    "SDDAI_PLAN_CMD": "",
+                    "SDDAI_PATCH_CMD": "",
+                    "OPENAI_API_KEY": "",
+                    "OPENAI_BASE_URL": "",
+                    "CTCP_OPENAI_API_KEY": "",
+                    "CTCP_LOCAL_NOTES_PATH": str(run_dir / "missing_notes.md"),
+                },
+                clear=False,
+            ):
+                result = api_agent.execute(
+                    repo_root=repo_root,
+                    run_dir=run_dir,
+                    request=request,
+                    config={"budgets": {"max_outbox_prompts": 8}},
+                    guardrails_budgets={},
+                )
+
+            self.assertEqual(result.get("status"), "executed", msg=str(result))
+            target = run_dir / "artifacts" / "support_reply.provider.json"
+            doc = json.loads(target.read_text(encoding="utf-8"))
+            self.assertEqual(doc.get("reply_text"), "你好，我已经接住这轮需求。")
+            self.assertEqual(doc.get("next_question"), "你最想先推进哪一块？")
 
     def test_execute_review_normalizes_verdict_contract(self) -> None:
         with tempfile.TemporaryDirectory() as td:

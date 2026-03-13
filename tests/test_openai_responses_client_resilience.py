@@ -157,6 +157,48 @@ class OpenAiResponsesClientResilienceTests(unittest.TestCase):
         self.assertEqual(text, "notes-ok")
         self.assertEqual(calls, ["https://notes.example/v1/responses"])
 
+    def test_placeholder_ollama_env_key_does_not_override_local_notes_credentials(self) -> None:
+        calls: list[str] = []
+
+        def _urlopen(req, timeout=0):
+            calls.append(str(req.full_url))
+            headers = {k.lower(): v for k, v in req.header_items()}
+            self.assertEqual(headers.get("authorization"), "Bearer sk-notes")
+            return _MockHttpResponse({"id": "resp_notes", "output_text": "notes-ok"})
+
+        with tempfile.TemporaryDirectory() as td:
+            notes = Path(td) / "NOTES.md"
+            notes.write_text(
+                "\n".join(
+                    [
+                        "Use this base URL:",
+                        "- `https://notes.example/v1`",
+                        "",
+                        "Use this API key:",
+                        "- `sk-notes`",
+                        "",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            env = {
+                "OPENAI_API_KEY": "ollama",
+                "CTCP_OPENAI_API_KEY": "",
+                "OPENAI_BASE_URL": "",
+                "CTCP_OPENAI_BASE_URL": "",
+                "CTCP_LOCAL_NOTES_PATH": str(notes),
+                "SDDAI_OPENAI_ENDPOINT_MODE": "responses",
+                "SDDAI_OPENAI_MAX_ATTEMPTS": "1",
+            }
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch("openai_responses_client.urllib.request.urlopen", side_effect=_urlopen):
+                    text, err = client.call_openai_responses(prompt="hello", model="gpt-4.1-mini", timeout_sec=5)
+
+        self.assertEqual(err, "")
+        self.assertEqual(text, "notes-ok")
+        self.assertEqual(calls, ["https://notes.example/v1/responses"])
+
 
 if __name__ == "__main__":
     unittest.main()

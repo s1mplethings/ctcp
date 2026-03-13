@@ -250,6 +250,113 @@ def _compact_whiteboard_snapshot(state: dict[str, Any], *, max_entries: int = 5)
     }
 
 
+def _latest_librarian_context(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    query = ""
+    lookup_error = ""
+    hits: list[dict[str, Any]] = []
+    for item in reversed(entries):
+        if str(item.get("role", "")).strip().lower() != "librarian":
+            continue
+        if not query:
+            query = _brief_text(str(item.get("query", "")), max_chars=220)
+        if not hits:
+            hits = _safe_whiteboard_hits(item.get("hits"), max_items=4)
+        if not lookup_error:
+            text = str(item.get("text", "")).strip()
+            if text.lower().startswith("lookup error:"):
+                lookup_error = _brief_text(text.split(":", 1)[1], max_chars=180)
+        if query or hits or lookup_error:
+            break
+    return {
+        "query": query,
+        "hits": hits,
+        "lookup_error": lookup_error,
+    }
+
+
+def get_support_whiteboard_context(run_dir: Path) -> dict[str, Any]:
+    board = _load_support_whiteboard(run_dir)
+    entries = _safe_whiteboard_entries(board.get("entries", []), max_items=120)
+    latest = _latest_librarian_context(entries)
+    return {
+        "path": SUPPORT_WHITEBOARD_REL.as_posix(),
+        "query": str(latest.get("query", "")),
+        "hits": list(latest.get("hits", [])),
+        "lookup_error": str(latest.get("lookup_error", "")),
+        "snapshot": _compact_whiteboard_snapshot(board, max_entries=5),
+    }
+
+
+def record_support_turn_whiteboard(
+    *,
+    run_dir: Path,
+    repo_root: Path,
+    text: str,
+    source: str,
+    conversation_mode: str,
+    chat_id: str = "",
+) -> dict[str, Any]:
+    board = _load_support_whiteboard(run_dir)
+    entries = _safe_whiteboard_entries(board.get("entries", []), max_items=120)
+    query = _brief_text(str(text or ""), max_chars=220)
+    last_query = _last_librarian_query(entries)
+    should_lookup = bool(query) and query.lower() != last_query.lower()
+
+    hits: list[dict[str, Any]] = []
+    lookup_error = ""
+    if should_lookup:
+        try:
+            rows = local_librarian.search(repo_root=repo_root, query=query, k=4)
+            hits = _safe_whiteboard_hits(rows, max_items=4)
+        except Exception as exc:
+            lookup_error = _brief_text(str(exc), max_chars=180) or "lookup failed"
+
+    note = _brief_text(
+        f"{source or 'support'} {conversation_mode or 'project_turn'}: {text}",
+        max_chars=260,
+    )
+    entry: dict[str, Any] = {
+        "ts": _now_iso(),
+        "role": "support",
+        "kind": "support_turn",
+        "text": note,
+        "query": query,
+    }
+    if chat_id:
+        entry["question"] = _brief_text(f"chat_id={chat_id}", max_chars=220)
+    entries.append(entry)
+
+    if should_lookup:
+        librarian_entry: dict[str, Any] = {
+            "ts": _now_iso(),
+            "role": "librarian",
+            "kind": "support_lookup",
+            "text": (
+                f"lookup error: {lookup_error}"
+                if lookup_error
+                else f"lookup completed with {len(hits)} hits"
+            ),
+            "query": query,
+        }
+        if hits:
+            librarian_entry["hits"] = hits
+            librarian_entry["hit_count"] = len(hits)
+        entries.append(librarian_entry)
+        _append_support_whiteboard_log(
+            run_dir,
+            f"support lookup source={source or 'support'} mode={conversation_mode or 'project_turn'} "
+            f"query={query} hits={len(hits)} err={lookup_error or 'none'}",
+        )
+
+    board["entries"] = entries
+    _save_support_whiteboard(run_dir, board)
+    context = get_support_whiteboard_context(run_dir)
+    context["query"] = query
+    context["hits"] = hits if should_lookup else list(context.get("hits", []))
+    context["lookup_error"] = lookup_error or str(context.get("lookup_error", ""))
+    return context
+
+
 def _dispatch_whiteboard_query(request: dict[str, Any]) -> str:
     goal = _brief_text(str(request.get("goal", "")), max_chars=220)
     reason = _brief_text(str(request.get("reason", "")), max_chars=220)

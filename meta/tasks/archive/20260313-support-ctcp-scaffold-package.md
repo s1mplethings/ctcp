@@ -1,53 +1,44 @@
-# Current Task
-
-> **用法**：本文件保留当前活跃任务指针，同时内嵌 workflow gate 所需的最新任务摘要。
-> 历史任务正文在 `meta/tasks/archive/`。
+# Task Archive
 
 ## Base Task
 
 - Queue Item: `L0-PLAN-001`
 - Topic: `markdown-contract-drift-fix`
-- Status: `done` (base scope completed; subsequent updates archived)
+- Status: `done`
 
-## Active Task (latest)
-
-- File: [`meta/tasks/archive/20260313-support-ctcp-scaffold-package.md`](archive/20260313-support-ctcp-scaffold-package.md)
-- Date: 2026-03-13
-- Topic: support 项目包升级为 CTCP 风格 scaffold 交付，而不是单文件占位目录
-- Status: `blocked` (implementation complete; canonical verify still blocked by preexisting repo-local `generated_projects/` scope violation)
-
-## Queue Binding
+## Active Task
 
 - Queue Item: `ADHOC-20260313-support-ctcp-scaffold-package`
-- Layer/Priority: `L2 / P0`
-- Source Queue File: `meta/backlog/execution_queue.json`
+- Date: 2026-03-13
+- Topic: support 项目包升级为 CTCP 风格 scaffold 交付，而不是单文件占位目录
+- Status: `blocked`
 
 ## Context
 
 - Why this item now?
-  用户明确指出当前 `vn_story_organizer` 交付只是 `main.py + README.md` 的薄壳，不是他要的“像 CTCP 一样有一套 MD 和项目结构”的项目。当前 support package 逻辑只会把现有目录直接打成 zip，所以会把占位目录原样发给 Telegram，导致客服承诺的项目形态与真实内容不一致。
+  用户明确指出当前交付出去的 `vn_story_organizer` 只是 `main.py + README.md` 的薄壳，不是他要的“像 CTCP 一样有一套 MD 和项目结构”的项目。继续把 repo 内 `generated_projects/` 这种占位目录直接打包发给 Telegram，会导致客服对外承诺的项目形态和真实内容不一致。
 - Dependency check:
   - `ADHOC-20260313-support-api-first-local-degrade`: `blocked`
   - `ADHOC-20260309-scaffold-live-reference-mode`: `done`
 - Scope boundary:
   - 只调整 support package 交付链路、用户可见包结构描述、对应 docs/tests/meta evidence。
-  - 复用现有 `scripts/ctcp_orchestrate.py scaffold --source-mode live-reference`，不重写 scaffold 引擎。
-  - 不改 `scripts/ctcp_front_bridge.py`、`scripts/ctcp_dispatch.py`、`scripts/ctcp_orchestrate.py` 的执行状态机，也不去改 repo 内 `generated_projects/` 内容。
+  - 复用现有 `scripts/ctcp_orchestrate.py scaffold --source-mode live-reference` 能力，不重写 scaffold 引擎。
+  - 不修改 repo 内 `generated_projects/` 内容，不把本轮 scope 扩成新的 frontend/bridge/orchestrator 架构重构。
 
-## Task Truth Source (single source for current task)
+## Task Truth Source
 
 - task_purpose:
-  让 `scripts/ctcp_support_bot.py` 在用户要求项目 zip 时，如果当前绑定项目目录只是单文件/薄壳占位实现，就在 support session 外部真实生成一份 CTCP 风格 scaffold 项目再打包发送；同时让客服回复基于真实包结构描述，不再把薄壳项目说成完整实现。
+  让 `scripts/ctcp_support_bot.py` 在用户要求项目 zip 时，如果绑定项目目录只是单文件/薄壳占位实现，就在 support session 外部真实生成一份 CTCP 风格 scaffold 项目再打包发送；同时让客服回复基于真实包结构描述，不再把薄壳项目说成完整实现。
 - allowed_behavior_change:
   - 可更新 `scripts/ctcp_support_bot.py` 的 public delivery discovery、zip materialization、support prompt context、Telegram delivery runtime。
   - 可新增 support lane 的 scaffold package materialization artifact/log。
-  - 可更新 `docs/10_team_mode.md` 与 `agents/prompts/support_lead_reply.md` 同步“项目包可能是 CTCP-style scaffold”这一真实交付契约。
+  - 可更新 `docs/10_team_mode.md` 与 `agents/prompts/support_lead_reply.md`，同步“项目包可能是 CTCP-style scaffold”这一真实交付契约。
   - 可更新 `tests/test_support_bot_humanization.py`、`tests/test_runtime_wiring_contract.py` 覆盖 scaffold package 交付和 truth-bound package 描述。
-  - 可更新 `ai_context/problem_registry.md`、`meta/backlog/execution_queue.json`、`meta/tasks/CURRENT.md`、`meta/reports/LAST.md` 及对应 archive 文件记录本轮证据。
+  - 可更新 `ai_context/problem_registry.md`、`meta/backlog/execution_queue.json`、`meta/tasks/CURRENT.md`、`meta/reports/LAST.md` 及对应 archive 文件记录证据。
 - forbidden_goal_shift:
   - 不得继续把 repo 内 `generated_projects/` 目录作为 canonical customer package 来源。
   - 不得只改 prompt 话术而不改实际 zip 交付逻辑。
-  - 不得编造“已经完成的完整项目功能”；如果当前只有 scaffold，就必须按 scaffold 如实描述。
+  - 不得编造“已经完成的完整项目功能”，如果当前只有 scaffold，就必须按 scaffold 如实描述。
 - in_scope_modules:
   - `scripts/ctcp_support_bot.py`
   - `docs/10_team_mode.md`
@@ -65,33 +56,32 @@
   - `scripts/ctcp_dispatch.py`
   - `scripts/ctcp_orchestrate.py`
   - repo 内 `generated_projects/`
-  - 与本次 support API-first 路由无关的其他未提交工作树改动
+  - 与本次 support scaffold package 交付无关的其他未提交工作树改动
 - completion_evidence:
   - 用户要求项目 zip 且当前项目目录只是薄壳时，Telegram runtime 会生成并发送一份外部 `scaffold --source-mode live-reference` 项目包，而不是继续打 repo 内 placeholder。
   - 客服 prompt context 能拿到真实 package shape，并能按“CTCP-style scaffold”如实描述项目结构。
   - 没有真实 screenshot artifact 时，截图仍如实说没有；项目包逻辑不再依赖 repo 内 `generated_projects/` scope 放行。
   - targeted regressions、triplet guard、workflow gate、canonical verify 留下 `connected + accumulated + consumed` 证据。
 
-## Analysis / Find (before plan)
+## Analysis / Find
 
 - Entrypoint analysis:
   - 用户入口仍是 `scripts/ctcp_support_bot.py::process_message`，Telegram 文件发送落点是 `run_telegram_mode()` -> `emit_public_delivery()`。
 - Downstream consumer analysis:
-  - `process_message()` -> `build_support_prompt()` / `build_final_reply_doc()` -> `artifacts/support_reply.json` -> `run_telegram_mode()` -> `emit_public_delivery()` -> Telegram `sendDocument`
+  - `process_message()` -> `build_support_prompt()` / `build_final_reply_doc()` -> `support_reply.json`
+  - `run_telegram_mode()` -> `emit_public_delivery()` -> `resolve_public_delivery_plan()` -> Telegram `sendDocument`
 - Source of truth:
-  - support session `artifacts/support_prompt_input.md`
-  - support session `artifacts/support_reply.json`
-  - support session `artifacts/support_session_state.json`
+  - support session `support_session_state.json`
   - bound run `artifacts/patch_apply.json` / `artifacts/PLAN.md`
-  - support scaffold materialization artifact/log
+  - support session public delivery artifacts
+  - existing scaffold run/report artifacts generated outside repo
 - Current break point / missing wiring:
   - 当前 zip 交付逻辑只会“有目录就打包目录”，不会判断目录是不是完整 CTCP-style project。
   - prompt context 不知道当前可发包到底是完整 scaffold，还是 `main.py` 这类单文件占位壳子。
   - repo 内 `generated_projects/` 还在 current PLAN 的 `Scope-Deny` 里，继续围绕它交付会卡住 canonical verify。
 - Repo-local search sufficient: `yes`
-- If no, external research artifact: `N/A`
 
-## Integration Check (before implementation)
+## Integration Check
 
 - upstream:
   `scripts/ctcp_support_bot.py::process_message` and `scripts/ctcp_support_bot.py::run_telegram_mode`
@@ -117,31 +107,18 @@
   - editing repo-local `generated_projects/` to fake a richer package
   - describing scaffold as feature-complete business logic implementation
 - user_visible_effect:
-  - 用户收到的项目 zip 会更接近 CTCP 这种多文档、多目录脚手架；如果当前只有 scaffold，客服也会按 scaffold 如实描述，不再说成“完整功能已经做完”。
-
-## DoD Mapping (from execution_queue.json)
-
-- [x] DoD-1: support 默认回复路径切到 `api_agent`
-- [x] DoD-2: API 不可用或 reply 不可用时只降级本地，并显式说明 API 不可用
-- [x] DoD-3: 旧机械 fallback shell 不再出现在 support runtime
-- [x] DoD-4: targeted regressions、triplet guard、workflow gate、canonical verify 已执行并留下首个失败点 / 最小修复策略证据
-
-## Acceptance (must be checkable)
-
-- [x] DoD written (this file complete)
-- [x] Research logged (if needed): `N/A`
-- [x] Code changes allowed
-- [x] Patch applies cleanly (`git diff` generated; no destructive operations used)
-- [x] `scripts/verify_repo.*` passes (or first failure + minimal fix recorded)
-- [x] Demo report updated: `meta/reports/LAST.md`
+  - 用户收到的项目 zip 会更接近 CTCP 这种多文档、多目录脚手架；如果当前只是 scaffold，客服也会按 scaffold 如实描述，不再说成“完整功能已经做完”。
 
 ## Plan
 
-1) 绑定 `support-ctcp-scaffold-package` task，并明确 support package 新 truth 是 CTCP-style scaffold delivery。
-2) 改 `scripts/ctcp_support_bot.py`：识别薄壳项目目录，改为外部 materialize scaffold 后再 zip/send，并把 package shape 注入 prompt context。
-3) 更新 support lane docs/prompt contract，禁止继续把单文件占位目录描述成完整项目。
-4) 补 targeted regressions，覆盖 scaffold package materialization、Telegram delivery 和 truth-bound package 描述。
-5) 跑 local check / contrast / fix loop、triplet guard、workflow gate、canonical verify，并记录首个失败点与最小修复策略。
+1. Docs/Spec:
+   绑定 queue/CURRENT/LAST/archive，并明确 support package 的新 truth 是 CTCP-style scaffold delivery。
+2. Code:
+   在 `scripts/ctcp_support_bot.py` 里识别薄壳项目目录，并改为外部 materialize scaffold 后再 zip/send。
+3. Verify:
+   跑 support bot regressions、runtime wiring、reference scaffold tests、triplet guards、workflow gate、canonical verify。
+4. Report:
+   回填实际交付结果、首个失败点与最小修复策略。
 
 ## Notes / Decisions
 
@@ -149,11 +126,11 @@
   - scaffold package 默认复用现有 `scaffold --source-mode live-reference`，profile 取更接近 CTCP 结构的 `standard`。
 - Alternatives considered:
   - 直接把 repo 内 `generated_projects/` 补成完整项目；拒绝，因为这会继续踩 `Scope-Deny`，而且不是稳定的交付链。
-- Any contract exception reference (must also log in `ai_context/decision_log.md`):
+- Any contract exception reference:
   - None.
 - Issue memory decision:
   - add one new support-lane contradiction entry because this is a user-visible repeated overpromise class.
-- Skill decision (`skillized: yes` or `skillized: no, because ...`):
+- Skill decision:
   - skillized: no, because this is a repository-local support delivery correction over an existing scaffold workflow, not a new reusable workflow asset.
 
 ## Results
@@ -182,23 +159,7 @@
     - first failure point: `patch check (scope from PLAN)`
     - failure detail: `generated_projects/vn_story_organizer/README.md` remains out-of-scope under the repo PLAN `Scope-Allow/Scope-Deny` contract
     - minimal fix strategy: keep customer delivery on external scaffold exports and either remove/relocate the repo-local `generated_projects/` tree or open an explicit scope change before rerunning canonical verify
-- Queue status update suggestion (`todo/doing/done/blocked`):
-  - blocked
-
-## Archive Index (recent 10)
-
-| Date | Topic | File |
-|------|-------|------|
-| 2026-03-13 | support 项目包升级为 CTCP 风格 scaffold 交付，而不是单文件占位目录 | [→](archive/20260313-support-ctcp-scaffold-package.md) |
-| 2026-03-13 | support 回复锁到 api_agent，并把项目 zip/截图直发链路接到 Telegram | [→](archive/20260313-support-api-first-local-degrade.md) |
-| 2026-03-12 | support 到 production run 的渐进式链路测试 | [→](archive/20260312-support-to-production-path-tests.md) |
-| 2026-03-12 | support bot 项目记忆隔离、执行指令路由与 blocked 状态落地修复 | [→](archive/20260312-support-project-state-grounding-hardening.md) |
-| 2026-03-12 | support bot API 中文回复编码修复 | [→](archive/20260312-support-api-encoding-hardening.md) |
-| 2026-03-12 | support bot 全部用户可见回复走模型 | [→](archive/20260312-support-all-turns-model-routing.md) |
-| 2026-03-12 | support bot 记忆隔离与显式 API 路由锁定 | [→](archive/20260312-support-memory-isolation-and-api-route-lock.md) |
-| 2026-03-12 | support bot 接入 front bridge / shared whiteboard / librarian 后台流 | [→](archive/20260312-support-bot-backend-bridge-wiring.md) |
-| 2026-03-12 | 修复 support bot provider 连通性与兜底链路 | [→](archive/20260312-support-provider-connectivity-repair.md) |
-| 2026-03-11 | 收口 support-bot humanization verify blocker | [→](archive/20260311-support-bot-humanization-verify-blocker.md) |
-| 2026-03-11 | 后端角色分工收紧与本地 Librarian 硬边界 | [→](archive/20260311-backend-role-boundary-local-librarian.md) |
-
-Full archive: `meta/tasks/archive/`
+- Real-session demo:
+  - support session `6092527664` now resolves `package_delivery_mode=materialize_ctcp_scaffold`
+  - generated package path: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\support_sessions\6092527664\artifacts\support_exports\vn_story_organizer_ctcp_project.zip`
+  - zip head contains `README.md`, `docs/00_CORE.md`, `meta/tasks/CURRENT.md`, `scripts/verify_repo.ps1`, `workflow_registry/README.md`, `simlab/scenarios/S00_smoke.yaml`

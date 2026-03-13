@@ -806,6 +806,389 @@
       },
       "status": "done",
       "notes": "Cleared the remaining support-bot humanization regressions by tightening bare project kickoff fallback and falling back from low-signal/internal-marker raw project replies to frontend-reviewed PM replies."
+    },
+    {
+      "id": "ADHOC-20260312-support-provider-connectivity-repair",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Repair support-bot provider connectivity and customer-facing fallback closure",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260310-support-customer-visible-de-mechanicalization",
+        "ADHOC-20260311-telegram-run-provider-alignment",
+        "ADHOC-20260311-support-bot-humanization-verify-blocker"
+      ],
+      "dod": [
+        "support reply provider candidates treat manual_outbox as a real fallback and consume deferred provider states instead of dropping to model_unavailable",
+        "ollama_agent serves support replies through native Ollama chat so local support sessions no longer fail on OpenAI-compatible chat 400",
+        "api_agent and openai_responses_client no longer let OPENAI_API_KEY=ollama mask real local-notes credentials for external API mode",
+        "targeted regressions, triplet guards, live smoke, and canonical verify produce auditable evidence"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "tools/providers/ollama_agent.py",
+          "tools/providers/api_agent.py",
+          "scripts/externals/openai_responses_client.py",
+          "tests/test_support_bot_humanization.py",
+          "tests/test_ollama_agent.py",
+          "tests/test_api_agent_templates.py",
+          "tests/test_openai_responses_client_resilience.py",
+          "ai_context/problem_registry.md",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py tools/providers/api_agent.py tools/providers/ollama_agent.py scripts/externals/openai_responses_client.py tests/test_support_bot_humanization.py tests/test_api_agent_templates.py tests/test_openai_responses_client_resilience.py tests/test_ollama_agent.py",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_api_agent_templates.py\" -v",
+          "python -m unittest discover -s tests -p \"test_openai_responses_client_resilience.py\" -v",
+          "python -m unittest discover -s tests -p \"test_ollama_agent.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "python scripts/externals/openai_agent_api.py",
+          "python scripts/ctcp_support_bot.py --stdin --provider ollama_agent",
+          "python scripts/ctcp_support_bot.py --stdin --provider api_agent",
+          "python scripts/ctcp_support_bot.py --stdin --provider codex_agent",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Repairs the real support-reply provider chain observed in production-like Telegram/support sessions by closing deferred fallback handling, local Ollama support chat wiring, placeholder credential precedence, and live restart/verify closure."
+    },
+    {
+      "id": "ADHOC-20260312-support-bot-backend-bridge-wiring",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Wire support bot into front bridge, shared whiteboard, and librarian-backed project flow",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260309-frontend-control-plane-single-bridge",
+        "ADHOC-20260310-support-production-librarian-whiteboard",
+        "ADHOC-20260311-backend-role-boundary-local-librarian",
+        "ADHOC-20260312-support-provider-connectivity-repair"
+      ],
+      "dod": [
+        "support_bot project-like turns create or bind a CTCP run through scripts/ctcp_front_bridge.py instead of staying in a support-only reply loop",
+        "support_bot records project turns into the bound run's shared whiteboard and consumes whiteboard plus librarian context through bridge-safe runtime helpers",
+        "support_bot customer replies are grounded in real run status and bridge-returned decision state without bypassing CTCP runtime contracts",
+        "regression coverage plus canonical verify prove the support entrypoint is connected to backend flow, accumulated in issue memory, and consumed by downstream dispatch/whiteboard paths"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_front_bridge.py",
+          "scripts/ctcp_dispatch.py",
+          "docs/10_team_mode.md",
+          "tests/test_support_bot_humanization.py",
+          "tests/test_runtime_wiring_contract.py",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py scripts/ctcp_front_bridge.py scripts/ctcp_dispatch.py tests/test_support_bot_humanization.py tests/test_runtime_wiring_contract.py",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Turns scripts/ctcp_support_bot.py from a provider-only support shell into a bridge-safe frontend entry that can create/bind runs, consume shared whiteboard context, and reflect librarian-backed backend progress."
+    },
+    {
+      "id": "ADHOC-20260312-support-memory-isolation-and-api-route-lock",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Isolate support memory zones and lock explicit API support routing away from local semantic drift",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260312-support-provider-connectivity-repair",
+        "ADHOC-20260312-support-bot-backend-bridge-wiring"
+      ],
+      "dod": [
+        "support session state separates persistent project brief, per-turn memory, and provider runtime buffer so low-signal follow-ups do not overwrite the active project brief",
+        "conversation mode detection classifies the current turn without letting prior high-signal history force a fresh PROJECT_INTAKE on short follow-ups",
+        "greeting or smalltalk turns stay on a local customer-facing fast path and explicit api_agent override no longer falls through to ollama_agent on reply-shaping issues",
+        "regression coverage plus canonical verify prove the support entrypoint preserves project memory, avoids wrong pause semantics, and keeps fallback behavior customer-facing"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "tests/test_support_bot_humanization.py",
+          "tests/test_runtime_wiring_contract.py",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py tests/test_support_bot_humanization.py tests/test_runtime_wiring_contract.py",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Fixes the live support-session defect where project brief memory, current-turn memory, and provider fallback state bleed together, producing wrong English greeting, project-brief overwrite, and api->ollama semantic drift."
+    },
+    {
+      "id": "ADHOC-20260312-support-all-turns-model-routing",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Route all customer-visible support turns through the support model and align foundational docs",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260312-support-provider-connectivity-repair",
+        "ADHOC-20260312-support-bot-backend-bridge-wiring",
+        "ADHOC-20260312-support-memory-isolation-and-api-route-lock"
+      ],
+      "dod": [
+        "GREETING and SMALLTALK remain classified outside project planning logic, but customer-visible replies for those turns are generated through the configured support model instead of a local fast path",
+        "support-bot runtime no longer emits `local_smalltalk` replies during normal execution; explicit model routing still avoids semantic drift into a different provider on strict override",
+        "authoritative support lane docs and prompt contract describe all customer-visible support turns as model-routed with only failure degradation allowed outside the model path",
+        "targeted regressions plus canonical verify prove greeting turns now consume the provider path while project-memory isolation and backend bridge behavior remain intact"
+      ],
+      "artifacts": {
+        "produces": [
+          "docs/00_CORE.md",
+          "docs/10_team_mode.md",
+          "agents/prompts/support_lead_reply.md",
+          "scripts/ctcp_support_bot.py",
+          "tests/test_support_bot_humanization.py",
+          "tests/test_runtime_wiring_contract.py",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py tests/test_support_bot_humanization.py tests/test_runtime_wiring_contract.py",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "doing",
+      "notes": "Implements the explicit product decision that all user-visible support replies, including greetings and smalltalk, must be model-authored; docs and runtime should no longer claim or use a local greeting fast path."
+    },
+    {
+      "id": "ADHOC-20260312-support-api-encoding-hardening",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Repair support API Chinese reply encoding across subprocess, wrapper, and public reply gates",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260312-support-provider-connectivity-repair",
+        "ADHOC-20260312-support-memory-isolation-and-api-route-lock",
+        "ADHOC-20260312-support-all-turns-model-routing"
+      ],
+      "dod": [
+        "api_agent no longer corrupts Chinese model output when Windows child-process stdout is emitted in a local codepage instead of UTF-8",
+        "default external OpenAI wrapper scripts explicitly use UTF-8 stdio so support reply provider output stays stable under the normal Python-based API path",
+        "support bot public reply shaping suppresses mojibake-style garbage text as a last-resort safety net instead of leaking it to Telegram users",
+        "targeted regressions, triplet guards, live smoke, and canonical verify leave auditable evidence for the fixed support entrypoint"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/providers/api_agent.py",
+          "scripts/externals/openai_agent_api.py",
+          "scripts/externals/openai_plan_api.py",
+          "scripts/externals/openai_patch_api.py",
+          "scripts/ctcp_support_bot.py",
+          "tests/test_api_agent_templates.py",
+          "tests/test_support_bot_humanization.py",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m py_compile tools/providers/api_agent.py scripts/externals/openai_agent_api.py scripts/externals/openai_plan_api.py scripts/externals/openai_patch_api.py scripts/ctcp_support_bot.py tests/test_api_agent_templates.py tests/test_support_bot_humanization.py",
+          "python -m unittest discover -s tests -p \"test_api_agent_templates.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Fixed the live Telegram mojibake by hardening api_agent subprocess decoding, pinning the default OpenAI wrapper scripts to UTF-8 stdio, adding a support-bot mojibake safety net, and closing with live smoke plus canonical verify evidence."
+    },
+    {
+      "id": "ADHOC-20260312-support-project-state-grounding-hardening",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Prevent support turns from overwriting project goals, dropping execution directives, or overpromising blocked execution",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260312-support-bot-backend-bridge-wiring",
+        "ADHOC-20260312-support-memory-isolation-and-api-route-lock",
+        "ADHOC-20260312-support-all-turns-model-routing",
+        "ADHOC-20260312-support-api-encoding-hardening"
+      ],
+      "dod": [
+        "project goal memory no longer gets overwritten by implementation-detail turns such as Windows or Qt6 preference updates, and those details are stored in a separate isolated memory zone",
+        "when a support session is already bound to a run, execution-directive turns such as asking for a first draft stay on the project path and continue to record through the backend bridge instead of falling to SMALLTALK",
+        "customer-visible replies for blocked or decision-needed backend states are grounded in real runtime state and no longer preserve optimistic raw provider promises about already starting the first version",
+        "targeted regressions, triplet guards, workflow gate, issue memory update, and canonical verify leave auditable evidence for connected plus accumulated plus consumed"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "frontend/conversation_mode_router.py",
+          "frontend/response_composer.py",
+          "tests/test_support_bot_humanization.py",
+          "tests/test_runtime_wiring_contract.py",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py frontend/conversation_mode_router.py frontend/response_composer.py tests/test_support_bot_humanization.py tests/test_runtime_wiring_contract.py",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Closed the support state-grounding defect by isolating project goal vs. technical constraints vs. execution directives, keeping bound-run execution follow-ups on the backend path, grounding blocked-state customer replies in real runtime truth, and verifying through regressions plus canonical verify."
+    },
+    {
+      "id": "ADHOC-20260312-support-to-production-path-tests",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Add progressive support-to-production path tests",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260312-support-bot-backend-bridge-wiring",
+        "ADHOC-20260312-support-project-state-grounding-hardening"
+      ],
+      "dod": [
+        "a progressive test suite proves at a simple level that the bridge writes support turns into production artifacts such as support_frontend_turns.jsonl and support_whiteboard.json",
+        "the same suite proves at a medium level that support context is read back from RUN.json, frontend_request.json, and support_whiteboard.json instead of chat memory",
+        "the complex path proves scripts/ctcp_support_bot.py can create or bind a run, record the support turn, advance through the real bridge helpers, and still land a customer-visible support_reply artifact",
+        "targeted regressions, triplet guards, workflow gate, and canonical verify leave auditable evidence for connected plus consumed support-to-production coverage"
+      ],
+      "artifacts": {
+        "produces": [
+          "tests/test_support_to_production_path.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m py_compile tests/test_support_to_production_path.py",
+          "python -m unittest discover -s tests -p \"test_support_to_production_path.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Adds an explicit simple-to-complex proof that the customer-facing support entrypoint really reaches production run artifacts through the bridge without changing runtime semantics, and closes with targeted regressions plus canonical verify evidence."
+    },
+    {
+      "id": "ADHOC-20260313-support-api-first-local-degrade",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Make support replies API-first with local-only degradation and no canned fallback shell",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260312-support-all-turns-model-routing",
+        "ADHOC-20260312-support-api-encoding-hardening",
+        "ADHOC-20260312-support-project-state-grounding-hardening"
+      ],
+      "dod": [
+        "support bot defaults customer-visible replies to api_agent instead of ollama_agent or manual_outbox-style canned fallback",
+        "when api_agent is unreachable or returns unusable reply payload, support bot degrades only to a local provider and explicitly tells the user the API path is unavailable",
+        "customer-visible fallback no longer uses the old fixed '暂时还没连上稳定的回复能力' or '收到，我先帮你整理一下' shell",
+        "targeted regressions, triplet guards, workflow gate, and canonical verify leave auditable evidence for connected plus accumulated plus consumed"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "docs/10_team_mode.md",
+          "docs/dispatch_config.support_bot.sample.json",
+          "agents/prompts/support_lead_reply.md",
+          "tests/test_support_bot_humanization.py",
+          "tests/test_runtime_wiring_contract.py",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py tests/test_support_bot_humanization.py tests/test_runtime_wiring_contract.py",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "blocked",
+      "notes": "Runtime changes and targeted regressions landed, but canonical verify is currently blocked by preexisting out-of-scope untracked files under generated_projects/ triggering patch_check scope failure."
+    },
+    {
+      "id": "ADHOC-20260313-support-ctcp-scaffold-package",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Deliver CTCP-style scaffold packages from support instead of thin placeholder project dirs",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260313-support-api-first-local-degrade",
+        "ADHOC-20260309-scaffold-live-reference-mode"
+      ],
+      "dod": [
+        "when support package delivery is requested and the current project source is only a thin placeholder directory, support bot materializes an external CTCP-style scaffold package instead of zipping the placeholder as-is",
+        "the scaffold package is generated outside the repo via the existing scaffold entrypoint and sent through the Telegram document delivery path",
+        "customer-visible support replies and delivery context describe the package structure truthfully as a CTCP-style scaffold rather than inventing feature-complete project contents",
+        "targeted regressions, triplet guards, workflow gate, and canonical verify leave auditable evidence for connected plus accumulated plus consumed"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "docs/10_team_mode.md",
+          "agents/prompts/support_lead_reply.md",
+          "tests/test_support_bot_humanization.py",
+          "tests/test_runtime_wiring_contract.py",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py tests/test_support_bot_humanization.py tests/test_runtime_wiring_contract.py",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_scaffold_reference_project.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "blocked",
+      "notes": "Support delivery now materializes an external CTCP-style scaffold package for thin placeholder project dirs and the targeted regressions passed, but canonical verify remains blocked by the preexisting out-of-scope repo-local generated_projects tree under the current PLAN scope gate."
     }
   ]
 }

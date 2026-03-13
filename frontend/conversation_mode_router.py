@@ -51,13 +51,51 @@ _SMALLTALK_EN = {
     "what can you do",
     "how to use",
 }
+
+_PROJECT_EXECUTION_FOLLOWUP_ZH = (
+    "先开始做",
+    "先开始吧",
+    "先做",
+    "先做出",
+    "做出第一版",
+    "先出第一版",
+    "先出一版",
+    "开始做项目",
+    "开始做吧",
+    "按这个做",
+    "你先做",
+    "你可以先开始",
+    "后面我再补",
+    "后面有了我再补",
+    "我再调整",
+    "后面再调整",
+    "继续做",
+    "继续推进",
+)
+
+_PROJECT_EXECUTION_FOLLOWUP_EN = (
+    "go ahead and start",
+    "start the project",
+    "make a first draft",
+    "make the first draft",
+    "make a first version",
+    "build the first version",
+    "first version",
+    "first draft",
+    "first pass",
+    "you can start first",
+    "i'll adjust later",
+    "i will adjust later",
+    "keep building",
+)
 _STATUS_PATTERNS = (
     re.compile(r"(进度|状态|还在做吗|进行到哪|卡住|阻塞|当前项目|有没有在进行)"),
-    re.compile(r"\b(status|progress|blocked|stuck|what.?s running|running now)\b", re.IGNORECASE),
+    re.compile(r"(什么情况|做好了吗|完成了吗|好了没|生成了.{0,4}吗|弄好了吗|搞定了吗|做完了吗|出来了吗|结果.{0,4}(怎|如何|出))"),
+    re.compile(r"\b(status|progress|blocked|stuck|what.?s running|running now|is it done|finished|ready)\b", re.IGNORECASE),
 )
 _PROJECT_INTENT_PATTERNS = (
-    re.compile(r"(做一个|做个|新建|创建|搭建|开发|实现).{0,8}(项目|流程|系统|工具|机器人|bot)"),
-    re.compile(r"\b(build|create|start|implement|develop)\b.{0,24}\b(project|workflow|pipeline|system|tool|bot)\b", re.IGNORECASE),
+    re.compile(r"(做一个|做个|新建|创建|搭建|开发|实现).{0,20}(项目|流程|系统|工具|机器人|bot|游戏|应用)"),
+    re.compile(r"\b(build|create|start|implement|develop)\b.{0,24}\b(project|workflow|pipeline|system|tool|bot|game|app)\b", re.IGNORECASE),
 )
 _PROJECT_DOMAIN_TOKENS = (
     "项目",
@@ -70,6 +108,11 @@ _PROJECT_DOMAIN_TOKENS = (
     "语义",
     "建图",
     "视频",
+    "游戏",
+    "剧情",
+    "角色",
+    "故事",
+    "视觉小说",
     "workflow",
     "pipeline",
     "point cloud",
@@ -82,6 +125,10 @@ _PROJECT_DOMAIN_TOKENS = (
     "ply",
     "las",
     "pcd",
+    "game",
+    "visual novel",
+    "storyline",
+    "character",
 )
 _CONSTRAINT_TOKENS = (
     "优先速度",
@@ -191,7 +238,7 @@ def _looks_project_intent(text: str) -> bool:
         return False
     if any(p.search(raw) for p in _PROJECT_INTENT_PATTERNS):
         return True
-    if raw.startswith(("我想做", "我要做", "帮我做", "请帮我做")) and len(raw) >= 6:
+    if raw.startswith(("我想做", "我要做", "我想要做", "帮我做", "请帮我做")) and len(raw) >= 6:
         return True
     low = raw.lower()
     if low.startswith(("i want to build", "i need to build", "build ", "create ", "start ")) and len(low) >= 12:
@@ -278,6 +325,31 @@ def has_valid_task_summary(state: Mapping[str, Any] | str | None) -> bool:
     return _looks_project_intent(summary) or _contains_domain_signal(summary)
 
 
+def has_active_project_binding(state: Mapping[str, Any] | None) -> bool:
+    if not isinstance(state, Mapping):
+        return False
+    candidates = (
+        state.get("run_id", ""),
+        state.get("bound_run_id", ""),
+        state.get("active_run_id", ""),
+    )
+    return any(_norm(str(item or "")) for item in candidates)
+
+
+def is_project_execution_followup(text: str) -> bool:
+    raw = _norm(text)
+    if not raw:
+        return False
+    if is_greeting_only(raw) or _is_smalltalk(raw) or _is_status_query(raw):
+        return False
+    low = raw.lower()
+    if any(token in raw for token in _PROJECT_EXECUTION_FOLLOWUP_ZH):
+        return True
+    if any(token in low for token in _PROJECT_EXECUTION_FOLLOWUP_EN):
+        return True
+    return False
+
+
 def can_emit_project_followup(state: Mapping[str, Any] | None) -> bool:
     if not isinstance(state, Mapping):
         return False
@@ -323,8 +395,12 @@ def route_conversation_mode(
         return "SMALLTALK"
 
     has_active_task = has_valid_task_summary(active_task_state)
-    if _is_decision_reply(latest) and has_active_task:
+    has_active_binding = has_active_project_binding(active_task_state)
+    has_project_context = has_active_task or has_active_binding
+    if _is_decision_reply(latest) and has_project_context:
         return "PROJECT_DECISION_REPLY"
+    if has_project_context and is_project_execution_followup(latest):
+        return "PROJECT_DETAIL"
 
     if has_sufficient_task_signal(rows):
         if _contains_domain_signal(latest) or _contains_constraint_signal(latest):

@@ -12,6 +12,17 @@ if str(SELF_DIR) not in sys.path:
 from openai_responses_client import call_openai_responses
 
 
+def _ensure_utf8_stdio() -> None:
+    for name in ("stdin", "stdout", "stderr"):
+        stream = getattr(sys, name, None)
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                continue
+
+
 def _read(path: str, limit: int = 12000) -> str:
     p = Path(path)
     if not p.exists():
@@ -23,6 +34,7 @@ def _read(path: str, limit: int = 12000) -> str:
 
 
 def main() -> int:
+    _ensure_utf8_stdio()
     if len(sys.argv) < 8:
         print(
             "usage: openai_patch_api.py <PLAN_PATH> <CONTEXT_PATH> <CONSTRAINTS_PATH> <FIX_BRIEF_PATH> <GOAL> <ROUND> <REPO_ROOT>",

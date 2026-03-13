@@ -2,10 +2,11 @@
   "schema_version": "ctcp-dispatch-config-v1",
   "mode": "manual_outbox",
   "role_providers": {
-    "support_lead_router": "ollama_agent",
-    "support_lead_reply": "ollama_agent",
+    "support_lead_router": "api_agent",
+    "support_lead_reply": "api_agent",
     "support_lead_handoff": "api_agent",
-    "support_lead": "ollama_agent",
+    "support_lead": "api_agent",
+    "support_local_fallback": "ollama_agent",
     "patchmaker": "codex_agent",
     "fixer": "codex_agent"
   },
