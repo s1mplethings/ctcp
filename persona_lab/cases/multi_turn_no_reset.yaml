@@ -1,0 +1,34 @@
+schema_version: persona-case-v1
+case_id: multi_turn_no_reset
+purpose: Ensure long dialogue does not reset into greeting or restart wording after context is already established.
+assistant_persona: production_assistant
+user_persona: casual_user
+language_mode: zh-CN
+session_policy: isolated
+initial_task: "我们已经在同一个任务里聊了很多轮，接下来只看你会不会重新变成客服开场。"
+user_script:
+  - turn_id: 1
+    role: user
+    text: "我们已经在同一个任务里聊了很多轮，接下来只看你会不会重新变成客服开场。"
+  - turn_id: 2
+    role: user
+    text: "继续，说当前判断和下一步。"
+  - turn_id: 3
+    role: user
+    text: "不要重新你好呀我在这种开场。"
+turn_limit: 4
+stop_conditions:
+  - assistant_keeps_context_clean
+  - reset_detected
+must_pass_checks:
+  - response_style_lint.no_context_reset
+  - response_style_lint.next_action_present
+  - task_progress_score.context_cleanliness
+fail_conditions:
+  - greeting_reopen
+  - context_restart
+  - missing_progress_signal
+expected_response_traits:
+  - 承接已确认上下文
+  - 不重启会话
+  - 继续推进任务

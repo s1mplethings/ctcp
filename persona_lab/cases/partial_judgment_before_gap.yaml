@@ -1,0 +1,28 @@
+schema_version: persona-case-v1
+case_id: partial_judgment_before_gap
+purpose: Ensure vague user input still receives a partial judgment before any clarification gap is named.
+assistant_persona: production_assistant
+user_persona: confused_user
+language_mode: zh-CN
+session_policy: isolated
+initial_task: "我想做个能帮我理顺东西的项目，但现在说不清楚，先别问一堆。"
+user_script:
+  - turn_id: 1
+    role: user
+    text: "我想做个能帮我理顺东西的项目，但现在说不清楚，先别问一堆。"
+turn_limit: 2
+stop_conditions:
+  - assistant_gives_partial_judgment
+  - interrogation_detected
+must_pass_checks:
+  - response_style_lint.explicit_judgment
+  - response_style_lint.no_unnecessary_question
+  - task_progress_score.question_discipline
+fail_conditions:
+  - asks_multiple_questions
+  - says_cannot_do_anything_without_more_info
+  - no_partial_direction
+expected_response_traits:
+  - 先给部分判断
+  - 再指出最小缺口
+  - 最多一个问题

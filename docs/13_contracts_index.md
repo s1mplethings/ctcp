@@ -17,3 +17,21 @@
 |---|---|---|
 | [frontend_bridge_contract.md](../contracts/frontend_bridge_contract.md) | Markdown contract | Frontend bridge → CTCP orchestrator + run artifacts |
 | [frontend_session_contract.md](../contracts/frontend_session_contract.md) | Markdown contract | Frontend session manager → frontend gateway adapters |
+
+## Runtime Markdown Contracts
+
+| Contract | Authority | Producer / Consumer |
+|---|---|---|
+| [11_task_progress_dialogue.md](11_task_progress_dialogue.md) | Markdown contract | Frontend/support reply renderers → user-visible task replies |
+| [14_persona_test_lab.md](14_persona_test_lab.md) | Markdown contract | Persona-lab runner/judge/spec assets → isolated style regression evidence |
+| [30_artifact_contracts.md](30_artifact_contracts.md) | Markdown contract | Orchestrator/test runners/support delivery → run artifacts and demo evidence |
+| [40_reference_project.md](40_reference_project.md) | Markdown contract | scaffold/live-reference exporters → generated project provenance |
+
+## Persona Lab Static Assets
+
+| Contract / Asset | Authority | Producer / Consumer |
+|---|---|---|
+| [persona_lab/README.md](../persona_lab/README.md) | Repo-local static asset index | Persona-lab maintainers → future runners/judges |
+| [persona_lab/personas/production_assistant.md](../persona_lab/personas/production_assistant.md) | Persona definition | Production assistant contract consumer |
+| [persona_lab/rubrics/response_style_lint.yaml](../persona_lab/rubrics/response_style_lint.yaml) | Lint rubric | Judge layer → transcript scorer |
+| [persona_lab/cases/no_mechanical_greeting.yaml](../persona_lab/cases/no_mechanical_greeting.yaml) | Regression case spec | Persona-lab runner → isolated test session |

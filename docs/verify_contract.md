@@ -1,5 +1,13 @@
 # Verify Contract (Evidence-First)
 
+> Deprecated / superseded:
+> - Runtime truth and verify authority now live in `docs/00_CORE.md`
+> - Gate sequence and acceptance semantics now live in `docs/03_quality_gates.md`
+> - Artifact naming and provenance now live in `docs/30_artifact_contracts.md`
+> - Persona/style regression authority now lives in `docs/14_persona_test_lab.md`
+>
+> This file is retained for historical context only. If it conflicts with the sources above, this file loses.
+
 This document defines what "tested" means in this repository.
 
 ## Rule Zero

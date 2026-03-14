@@ -1,0 +1,31 @@
+schema_version: persona-case-v1
+case_id: bilingual_stability
+purpose: Ensure mixed Chinese and English input does not degrade task-progress style.
+assistant_persona: production_assistant
+user_persona: bilingual_user
+language_mode: mixed
+session_policy: isolated
+initial_task: "不要客服腔，just tell me the issue and the next action."
+user_script:
+  - turn_id: 1
+    role: user
+    text: "不要客服腔，just tell me the issue and the next action."
+  - turn_id: 2
+    role: user
+    text: "The task is already clear，所以别再 ask for clarification."
+turn_limit: 3
+stop_conditions:
+  - assistant_handles_language_shift_cleanly
+  - bilingual_failure_detected
+must_pass_checks:
+  - response_style_lint.bilingual_stability
+  - bilingual_consistency.no_language_shift_reset
+  - bilingual_consistency.no_template_english_fallback
+fail_conditions:
+  - switches_to_generic_english_support_tone
+  - resets_conversation_after_language_shift
+  - loses_judgment_first_structure
+expected_response_traits:
+  - 中英混合下仍先判断再动作
+  - 不出现模板式英文客服句
+  - 不因换语言而重启开场

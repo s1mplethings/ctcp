@@ -1,0 +1,28 @@
+schema_version: persona-case-v1
+case_id: no_empty_clarification
+purpose: Ensure a clear user task does not trigger empty follow-up questions.
+assistant_persona: production_assistant
+user_persona: direct_user
+language_mode: zh-CN
+session_policy: isolated
+initial_task: "把当前项目的文档入口梳理成一个最小修改方案，先列判断，再给改动步骤。"
+user_script:
+  - turn_id: 1
+    role: user
+    text: "把当前项目的文档入口梳理成一个最小修改方案，先列判断，再给改动步骤。"
+turn_limit: 2
+stop_conditions:
+  - assistant_delivers_plan
+  - unnecessary_question_detected
+must_pass_checks:
+  - response_style_lint.no_unnecessary_question
+  - response_style_lint.explicit_judgment
+  - response_style_lint.next_action_present
+fail_conditions:
+  - asks_user_to_restate_goal
+  - asks_non_blocking_question
+  - repeats_request_without_plan
+expected_response_traits:
+  - 直接判断任务已足够明确
+  - 给出最小方案
+  - 不空追问

@@ -1189,6 +1189,105 @@
       },
       "status": "blocked",
       "notes": "Support delivery now materializes an external CTCP-style scaffold package for thin placeholder project dirs and the targeted regressions passed, but canonical verify remains blocked by the preexisting out-of-scope repo-local generated_projects tree under the current PLAN scope gate."
+    },
+    {
+      "id": "ADHOC-20260314-dialogue-showcase-metadata-contracts",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "Contractize task-progress dialogue, test showcase chain, and version metadata truth",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "L0-CONTRACT-001"
+      ],
+      "dod": [
+        "task-progress dialogue rules are authoritative, testable, and bound to execution state rather than style-only guidance",
+        "test capability contract covers test-plan generation, test-case generation, structured results, screenshots or snapshots, and user-visible demo trace artifacts",
+        "VERSION becomes the single repo version truth and scaffold or run provenance rules define fail vs warning on mismatch",
+        "quality-gate docs define response lint, test showcase acceptance, and metadata consistency acceptance for contract verification"
+      ],
+      "artifacts": {
+        "produces": [
+          "docs/00_CORE.md",
+          "docs/01_north_star.md",
+          "docs/03_quality_gates.md",
+          "docs/04_execution_flow.md",
+          "docs/10_team_mode.md",
+          "docs/11_task_progress_dialogue.md",
+          "docs/13_contracts_index.md",
+          "docs/25_project_plan.md",
+          "docs/30_artifact_contracts.md",
+          "docs/40_reference_project.md",
+          "docs/verify_contract.md",
+          "README.md",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python scripts/workflow_checks.py",
+          "python scripts/contract_checks.py",
+          "python scripts/sync_doc_links.py --check",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile contract"
+        ]
+      },
+      "status": "done",
+      "notes": "Landed a docs-first contract refactor for task-progress dialogue, test showcase evidence, and VERSION-based provenance truth; workflow checks, contract checks, triplet guard, and verify_repo contract profile all passed."
+    },
+    {
+      "id": "ADHOC-20260314-persona-test-lab-contracts",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "Land Persona Test Lab contracts, isolated session rules, and regression assets",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260314-dialogue-showcase-metadata-contracts"
+      ],
+      "dod": [
+        "production assistant, test user personas, and judge scoring are contractually separated",
+        "every persona case requires a fresh session and writes standardized run artifacts outside the repo",
+        "repo-local persona definitions, rubrics, and minimum regression cases exist as auditable assets",
+        "quality gates and artifact contracts define persona regression acceptance and anti-pollution boundaries"
+      ],
+      "artifacts": {
+        "produces": [
+          "docs/00_CORE.md",
+          "docs/01_north_star.md",
+          "docs/03_quality_gates.md",
+          "docs/04_execution_flow.md",
+          "docs/10_team_mode.md",
+          "docs/11_task_progress_dialogue.md",
+          "docs/13_contracts_index.md",
+          "docs/14_persona_test_lab.md",
+          "docs/21_paths_and_locations.md",
+          "docs/25_project_plan.md",
+          "docs/30_artifact_contracts.md",
+          "docs/verify_contract.md",
+          "persona_lab/README.md",
+          "persona_lab/personas/production_assistant.md",
+          "persona_lab/rubrics/response_style_lint.yaml",
+          "persona_lab/cases/no_mechanical_greeting.yaml",
+          "README.md",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python scripts/workflow_checks.py",
+          "python scripts/contract_checks.py",
+          "python scripts/sync_doc_links.py --check",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile contract"
+        ]
+      },
+      "status": "done",
+      "notes": "Added Persona Test Lab as an isolated regression layer with repo-local persona/rubric/case assets, external run artifact rules, and contract wiring across core/flow/gate/support docs; workflow checks, contract checks, doc index, triplet guards, and verify_repo contract profile passed."
     }
   ]
 }

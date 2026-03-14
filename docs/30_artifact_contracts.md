@@ -9,6 +9,14 @@ All files live under the external run directory unless stated otherwise.
 - `verify_report.md` is optional human-readable material only.
 - DoD pass/fail entrypoint remains `scripts/verify_repo.ps1` / `scripts/verify_repo.sh`.
 
+## Version and Provenance Policy (Global)
+
+- Root `VERSION` is the only authoritative repo version string.
+- Any artifact that cites a version MUST record `source_version` copied from `VERSION`.
+- Provenance-bearing artifacts MUST pair `source_version` with `source_commit`.
+- `source_commit=unknown` is allowed only when VCS resolution is unavailable and MUST be explicit.
+- Version mismatch between `VERSION`, run reports, human summaries that cite version, and generated project provenance is a metadata consistency failure.
+
 A) artifacts/guardrails.md
 
 Must include (simple key lines, not strict YAML):
@@ -360,6 +368,7 @@ When `--source-mode live-reference` is used:
 Generated project metadata:
 
 - `meta/reference_source.json` MUST include:
+  - `source_version`
   - `source_commit`
   - `source_mode`
   - `export_manifest`
@@ -375,6 +384,7 @@ Generated project metadata:
   - `inherited_copy`
   - `inherited_transform`
   - `excluded`
+  - `source_version`
   - `source_commit`
   - `source_mode`
 
@@ -382,7 +392,181 @@ Run evidence extension:
 
 - Existing scaffold reports (`artifacts/scaffold_report.json`, `artifacts/scaffold_pointcloud_report.json`) MUST include:
   - `source_mode`
+  - `source_version`
   - `source_commit`
   - `export_manifest_path`
   - `inherited_copy_count`
   - `inherited_transform_count`
+
+O) test design + execution + showcase artifacts (conditional)
+
+These artifacts are required whenever the system claims it generated tests, executed a showcase flow, or showed results to the user.
+
+- `artifacts/test_plan.json`
+  MUST include:
+  - `schema_version`
+  - `task_goal`
+  - `source_version`
+  - `source_commit`
+  - `entrypoint`
+  - `truth_sources`
+  - `dimensions` (`normal|boundary|error|regression`)
+  - `generated_at`
+  - `case_count`
+
+- `artifacts/test_cases.json`
+  MUST include:
+  - `schema_version`
+  - `source_version`
+  - `source_commit`
+  - `generated_at`
+  - `cases[]`
+  Each case MUST include:
+  - `case_id`
+  - `category` (`normal|boundary|error|regression`)
+  - `title`
+  - `preconditions`
+  - `steps[]`
+  - `expected`
+  - `status` (`planned|passed|failed|blocked|not_run`)
+  - `actual_summary`
+  - `evidence_paths[]`
+  - optional `snapshot_keys[]`
+
+- `artifacts/test_summary.md`
+  MUST summarize executed scope, pass/fail counts, first failure, user-visible effect, and key evidence paths.
+
+- `artifacts/screenshots/`
+  - when visual or replay steps exist, key screenshots MUST be emitted here
+  - screenshot filenames MUST be traceable to `case_id` + `step_id`, either by name or by mapping in `artifacts/test_cases.json`
+
+- `artifacts/demo_trace.md`
+  MUST narrate `did what / saw what / result was what` in user-facing order and link back to test case ids and screenshots.
+  If screenshots are not available, it MUST record `screenshots_not_available_reason`.
+
+Machine / human authority split:
+- `artifacts/test_cases.json` is the canonical structured execution/result artifact.
+- `artifacts/test_summary.md` and `artifacts/demo_trace.md` are human-readable derivatives and MUST not contradict `artifacts/test_cases.json`.
+
+P) Persona Test Lab static assets and isolated run artifacts (conditional)
+
+These artifacts are required whenever the system claims isolated style regression, persona scoring, or receptionist-tone repair evidence.
+
+Repo-local static assets:
+
+- `persona_lab/README.md`
+  MUST describe repo-local static assets vs external run outputs.
+
+- `persona_lab/personas/*.md`
+  Each persona file MUST include:
+  - `persona_id`
+  - `persona_role` (`production_assistant|test_user`)
+  - `language_profile`
+  - `behavior_traits`
+  - `common_utterances`
+  - `risk_points`
+  - `test_purpose`
+
+- `persona_lab/rubrics/*.yaml`
+  Each rubric MUST include:
+  - `schema_version`
+  - `rubric_id`
+  - `purpose`
+  - `authorities`
+  - `checks` or `dimensions`
+  - `pass_thresholds`
+  - `fail_reason_templates`
+
+- `persona_lab/cases/*.yaml`
+  Each case MUST include:
+  - `schema_version`
+  - `case_id`
+  - `purpose`
+  - `assistant_persona`
+  - `user_persona`
+  - `initial_task` or `user_script`
+  - `turn_limit`
+  - `stop_conditions`
+  - `must_pass_checks`
+  - `fail_conditions`
+  - `expected_response_traits`
+
+External run outputs:
+
+- Runs MUST be outside repo under:
+  - `<CTCP_RUNS_ROOT>/<repo_slug>/persona_lab/<lab_run_id>/`
+
+- `<lab_run_id>/manifest.json`
+  MUST include:
+  - `schema_version`
+  - `lab_run_id`
+  - `source_version`
+  - `source_commit`
+  - `session_policy` (`fresh_session_per_case`)
+  - `production_persona`
+  - `judge_rubrics`
+  - `case_ids`
+  - `started_at`
+  - `completed_at`
+
+- `<lab_run_id>/summary.md`
+  MUST summarize:
+  - executed cases
+  - pass/fail counts
+  - first failing case
+  - score distribution
+  - key fail reasons
+  - evidence paths
+
+- `<lab_run_id>/cases/<case_id>/transcript.md`
+  Human-readable transcript for one isolated case.
+
+- `<lab_run_id>/cases/<case_id>/transcript.json`
+  MUST include:
+  - `schema_version`
+  - `case_id`
+  - `session_id`
+  - `assistant_persona`
+  - `user_persona`
+  - `language_mode`
+  - `turn_limit`
+  - `turns[]` (`turn_index`, `role`, `text`)
+  - `stop_reason`
+  - `source_version`
+  - `source_commit`
+
+- `<lab_run_id>/cases/<case_id>/score.json`
+  MUST include:
+  - `schema_version`
+  - `case_id`
+  - `judge_rubrics`
+  - `check_results[]`
+  - `dimension_scores`
+  - `total_score`
+  - `verdict` (`pass|fail`)
+  - `fail_reason_ids[]`
+  - `source_version`
+  - `source_commit`
+
+- `<lab_run_id>/cases/<case_id>/fail_reasons.md`
+  MUST map each fail reason id to:
+  - violated rule or dimension
+  - offending turn reference
+  - why it blocks task-progress dialogue
+  - minimum repair direction
+
+- `<lab_run_id>/cases/<case_id>/summary.md`
+  MUST summarize:
+  - case purpose
+  - observed behavior
+  - pass/fail verdict
+  - next regression focus
+
+- Optional `<lab_run_id>/cases/<case_id>/snapshots/`
+  - allowed for future screenshot-capable replay or UI-linked tests
+  - snapshot filenames MUST be traceable to `case_id` and step or turn id
+
+Isolation rules:
+- Each case MUST run in a fresh session and MUST NOT reuse the previous case transcript or conversation memory.
+- Production conversation state and project run artifacts MUST NOT be mutated by persona-lab execution.
+- Judge/scoring output is authoritative for persona-lab verdicts; human summaries MUST not contradict `score.json`.

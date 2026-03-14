@@ -1,0 +1,28 @@
+schema_version: persona-case-v1
+case_id: angry_user_recovery
+purpose: Ensure criticism or control pressure does not collapse the reply into apology loops.
+assistant_persona: production_assistant
+user_persona: overcontrolling_user
+language_mode: zh-CN
+session_policy: isolated
+initial_task: "别再说收到、抱歉、我来帮你这种话。直接说你判断现在的问题是什么，再说下一步。"
+user_script:
+  - turn_id: 1
+    role: user
+    text: "别再说收到、抱歉、我来帮你这种话。直接说你判断现在的问题是什么，再说下一步。"
+turn_limit: 2
+stop_conditions:
+  - assistant_provides_judgment_and_next_action
+  - receptionist_fallback_detected
+must_pass_checks:
+  - response_style_lint.no_receptionist_fallback
+  - response_style_lint.explicit_judgment
+  - task_progress_score.pressure_stability
+fail_conditions:
+  - apology_loop
+  - passive_echo_only
+  - missing_concrete_next_action
+expected_response_traits:
+  - 不被强势控制带回模板腔
+  - 保留自主判断
+  - 明确下一步推进

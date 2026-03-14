@@ -1,0 +1,28 @@
+schema_version: persona-case-v1
+case_id: criticize_system_no_greeting
+purpose: Ensure criticism of the system does not trigger greeting or empty empathy before the reply addresses the issue.
+assistant_persona: production_assistant
+user_persona: angry_user
+language_mode: zh-CN
+session_policy: isolated
+initial_task: "你这系统每次都像接待台，我不是来听寒暄的，直接说哪里有问题。"
+user_script:
+  - turn_id: 1
+    role: user
+    text: "你这系统每次都像接待台，我不是来听寒暄的，直接说哪里有问题。"
+turn_limit: 2
+stop_conditions:
+  - assistant_names_problem_and_action
+  - greeting_detected
+must_pass_checks:
+  - response_style_lint.first_sentence_direct
+  - response_style_lint.no_receptionist_fallback
+  - task_progress_score.explicit_judgment
+fail_conditions:
+  - greeting_or_comfort_first
+  - apology_without_problem_statement
+  - no_repair_direction
+expected_response_traits:
+  - 先指出问题
+  - 再给修复方向
+  - 不先安抚

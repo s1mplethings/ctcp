@@ -6,6 +6,13 @@ Canonical flow:
 
 `bind -> read -> analyze/find -> integration check -> plan -> spec -> implement -> check/fix loop -> verify -> finalize`
 
+Supporting chains (mandatory when relevant):
+
+- dialogue chain: bind task state -> choose message purpose -> lint -> emit user-visible reply
+- test showcase chain: generate test plan -> generate test cases -> execute -> capture snapshots -> summarize -> demo trace
+- persona regression chain: select production persona -> select test user persona -> start fresh session -> run fixed turns -> judge -> record transcript/score/fail reasons
+- metadata chain: `VERSION` -> report provenance -> generated output provenance
+
 ## Step 1: Bind
 
 - Input: incoming request and queue context.
@@ -21,7 +28,7 @@ Canonical flow:
 ## Step 3: Analyze/Find
 
 - Input: task request + current code/doc state.
-- Output: entrypoint/downstream/source-of-truth/break-point analysis in `meta/tasks/CURRENT.md`.
+- Output: entrypoint/downstream/source-of-truth/break-point analysis, plus dialogue/showcase/persona-lab/metadata impact notes, in `meta/tasks/CURRENT.md`.
 - Stop condition: analysis is recorded before planning.
 
 ## Step 4: Integration Check
@@ -33,13 +40,13 @@ Canonical flow:
 ## Step 5: Plan
 
 - Input: analysis + integration check.
-- Output: explicit implementation plan with checks and expected fix loop.
+- Output: explicit implementation plan with checks, expected fix loop, and any required response-lint / persona-lab / showcase / metadata-consistency checks.
 - Stop condition: plan is recorded before implementation edits.
 
 ## Step 6: Spec
 
 - Input: approved plan.
-- Output: docs/spec/meta updates that define intended behavior and guardrails.
+- Output: docs/spec/meta updates that define intended behavior, user-visible guardrails, required artifacts, and provenance rules.
 - Stop condition: spec/docs state reflects intended change.
 
 ## Step 7: Implement
@@ -52,7 +59,7 @@ Canonical flow:
 
 - Input: implementation result.
 - Output: iterative `implement -> check -> contrast -> fix -> re-check` evidence.
-- Stop condition: topic checks pass and triplet guard commands pass:
+- Stop condition: topic checks pass, response/persona-lab/showcase/metadata checks pass when applicable, and triplet guard commands pass or are explicitly profile-skipped:
   - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
   - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
   - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
@@ -84,5 +91,5 @@ The canonical 10-step flow remains mandatory regardless of profile.
 ## Step 10: Finalize
 
 - Input: verify outcome and artifacts.
-- Output: updated `meta/reports/LAST.md`, task closure state, issue-memory decision, skill decision.
+- Output: updated `meta/reports/LAST.md`, task closure state, issue-memory decision, skill decision, and any final persona-lab / showcase / provenance closure.
 - Stop condition: completion evidence is explicit for connected + accumulated + consumed.

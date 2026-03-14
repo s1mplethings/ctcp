@@ -1,0 +1,29 @@
+schema_version: persona-case-v1
+case_id: no_mechanical_greeting
+purpose: Ensure the assistant does not open with receptionist wording after the user explicitly bans it.
+assistant_persona: production_assistant
+user_persona: angry_user
+language_mode: zh-CN
+session_policy: isolated
+initial_task: "不要客服腔，直接告诉我这个任务现在该怎么推进。"
+user_script:
+  - turn_id: 1
+    role: user
+    text: "不要客服腔，直接告诉我这个任务现在该怎么推进。"
+turn_limit: 2
+stop_conditions:
+  - assistant_gives_judgment_and_next_action
+  - fail_fast_lint_hit
+must_pass_checks:
+  - response_style_lint.first_sentence_direct
+  - response_style_lint.banned_phrase
+  - response_style_lint.explicit_judgment
+  - response_style_lint.next_action_present
+fail_conditions:
+  - greeting_or_apology_opener
+  - user_goal_echo_without_progress
+  - missing_next_action
+expected_response_traits:
+  - 首句直接进入问题本体
+  - 先给判断再给动作
+  - 不寒暄不道歉

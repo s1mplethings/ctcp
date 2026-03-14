@@ -335,3 +335,89 @@ When to add:
   customer-visible package description必须绑定真实 delivery shape；任何“项目可打包发送”的 support 能力都要区分 placeholder/source-dir/scaffold 三种形态，并对 placeholder->scaffold materialization 加回归。
 - Tags:
   support, delivery, scaffold, overpromise, placeholder, package
+
+## Example 14
+
+- Symptom:
+  用户已经多次要求“不要像接待台话术”，但 task turn 仍会以 `收到 / 我先帮你整理一下 / 为了更好地帮助您` 这类开场开头，并在有当前任务状态时重复追问或重述目标。
+- Repro:
+  1. 绑定一个已有 `CURRENT.md` / run 状态的项目任务。
+  2. 发送进度追问、失败追问或结果交付追问。
+  3. 观察用户可见回复，发现首句没有直接进入任务本体，或者虽然礼貌但没有给出明确下一步。
+- Root cause:
+  仓库长期只有“自然一点 / 不要机械”这类软口径，没有把 task turn 的状态绑定字段、禁用句式、阶段规则和 lint 验收定义成单一权威合同，导致实现更容易优化成安全礼貌壳而不是任务推进。
+- Affected entrypoint:
+  support/frontend user-visible task reply path
+- Affected modules:
+  `docs/10_team_mode.md`, `docs/11_task_progress_dialogue.md`, `frontend/response_composer.py`, `agents/prompts/support_lead_reply.md`
+- Observed fallback behavior:
+  回复听起来礼貌，但任务没有前进；用户需要反复重申目标或催问下一步。
+- Expected correct behavior:
+  首句直接进入任务本体，先给判断再给动作，除非真的阻塞否则不反问，并且每条消息都推进一个具体下一步。
+- Fix:
+  增加单一权威的任务推进型对话合同，要求 reply 在发出前绑定 `task_goal/current_phase/last_confirmed/blocker/message_purpose/question_needed/next_action`，并定义 response lint。
+- Fix attempt status:
+  2026-03-14 contract-first docs refactor bound under `ADHOC-20260314-dialogue-showcase-metadata-contracts`.
+- Regression test status:
+  Pending dedicated response-lint automation; contract acceptance is now defined in `docs/11_task_progress_dialogue.md` and `docs/03_quality_gates.md`.
+- Prevention:
+  任何 user-visible task dialogue 改动都必须同步更新任务推进型合同与对应 lint/回放验证，不能只改 prompt 或报告措辞。
+- Tags:
+  support, frontend, dialogue, wording, task-progress, lint
+
+## Example 15
+
+- Symptom:
+  run 报告、generated/scaffold 项目来源信息和人类可读总结之间的版本号或 provenance 口径不一致，用户难以判断当前交付到底来自哪个仓库版本。
+- Repro:
+  1. 对比 root `VERSION`、run 报告、`meta/reference_source.json`、scaffold report、人工总结。
+  2. 观察其中有的只写 `source_commit`，有的只写自然语言版本描述，有的完全缺少版本字段。
+- Root cause:
+  仓库已有 commit provenance，但没有把 repo version authority、run report version copy、generated project `source_version` 和 mismatch fail/warn 规则收口成单一合同。
+- Affected entrypoint:
+  run report generation, scaffold/live-reference export, user-visible delivery summary
+- Affected modules:
+  `VERSION`, `docs/30_artifact_contracts.md`, `docs/40_reference_project.md`, `meta/reports/LAST.md`
+- Observed fallback behavior:
+  用户看到了交付物和报告，但无法快速确定它们是不是同一版本来源。
+- Expected correct behavior:
+  所有 version claim 都从 root `VERSION` 派生，所有 provenance-bearing artifacts 同时携带 `source_version + source_commit`，且 mismatch 有明确失败/警告语义。
+- Fix:
+  在 artifact/reference/quality-gate 文档中把 `VERSION` 定义为单一真源，并要求 generated/scaffold/run/showcase 文档统一携带 `source_version`。
+- Fix attempt status:
+  2026-03-14 contract-first docs refactor bound under `ADHOC-20260314-dialogue-showcase-metadata-contracts`.
+- Regression test status:
+  Pending dedicated metadata-consistency automation; contract acceptance is now defined in `docs/03_quality_gates.md`, `docs/30_artifact_contracts.md`, and `docs/40_reference_project.md`.
+- Prevention:
+  任何 run/report/scaffold provenance 变更都必须同步更新 version truth contract，并把 mismatch 处理写进 gate acceptance，而不是留给人工解释。
+- Tags:
+  metadata, version, provenance, scaffold, report, consistency
+
+## Example 16
+
+- Symptom:
+  风格问题看起来“修好了”，但一换到新对话、新语言或长上下文后，production assistant 又退回机械式客服腔；同时 style test transcript 和正式 support session 混在一起，导致结果不干净也不可回归。
+- Repro:
+  1. 在同一个 support 会话里反复告诉系统“不要像接待台那样说话”。
+  2. 观察当前会话内回复似乎变自然。
+  3. 重新开一个新对话、切换到中英混合表达、或者拉长上下文后再测，发现系统又开始用 greeting/apology/filler 开场。
+- Root cause:
+  仓库只有 production conversation path，没有独立的 Persona Test Lab；production persona、test user persona、judge/scoring 没有分层，导致测试和正式会话共享上下文，无法做 fresh-session style regression。
+- Affected entrypoint:
+  support/frontend-visible task reply path and future style-regression runner
+- Affected modules:
+  `docs/11_task_progress_dialogue.md`, `docs/14_persona_test_lab.md`, `persona_lab/`, `docs/10_team_mode.md`, `docs/30_artifact_contracts.md`
+- Observed fallback behavior:
+  用户在正式会话里不断纠正风格，但系统只是在该会话暂时学会绕开禁用句式；换个上下文又恢复模板腔，而且没有 transcript/score/fail reasons 可供回归。
+- Expected correct behavior:
+  production assistant、test user persona、judge/scoring 三层分离；每个 case 用 fresh session；结果必须带 transcript、score、fail reasons，并且多语言与长对话漂移都可重放。
+- Fix:
+  增加独立的 Persona Test Lab 合同和静态资产，要求 fresh-session-per-case、固定 persona、评分 rubric、最小回归 cases，以及 repo 外的结果产物结构。
+- Fix attempt status:
+  2026-03-14 docs-first contract landing bound under `ADHOC-20260314-persona-test-lab-contracts`.
+- Regression test status:
+  Pending future runner/judge automation; authoritative contract and repo-local assets now live in `docs/14_persona_test_lab.md` and `persona_lab/`.
+- Prevention:
+  任何“风格已修复”的声明都必须附带 isolated persona-lab evidence，而不是只引用同一正式会话里的主观观感。
+- Tags:
+  support, dialogue, persona-lab, context-isolation, regression, scoring

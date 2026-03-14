@@ -8,10 +8,13 @@ This file is the authoritative runtime-truth contract source.
 |---|---------|--------|
 | 0.M | Markdown Object Lifecycle | [→](#0m-markdown-object-lifecycle-contract) |
 | 0 | Runtime Truth Boundary | [→](#0-runtime-truth-boundary) |
+| 0.V | Version and Metadata Truth | [→](#0v-version-and-metadata-truth-contract) |
 | 0.W | 10-Step Flow Principle | [→](#0w-fixed-10-step-execution-flow-principle) |
 | 0.X | Runtime Wiring Contract | [→](#0x-runtime-wiring-contract) |
 | 0.Y | Frontend Bridge Rule | [→](#0y-frontend-to-execution-bridge-rule) |
 | 0.Z | Conversation Mode Gate | [→](#0z-conversation-mode-gate) |
+| 0.Z1 | Task-Progress Dialogue | [→](#0z1-task-progress-dialogue-contract) |
+| 0.Z2 | Persona Test Lab | [→](#0z2-persona-test-lab-isolation-contract) |
 | 1 | Core Positioning | [→](#1-core-positioning-headless-first) |
 | 2 | Canonical Entrypoints | [→](#2-canonical-entrypoints-must) |
 | 3–5 | Definitions / Locations / Roles | [→](#3-definitions) |
@@ -30,6 +33,9 @@ Source map (single source per concern):
 - Canonical execution flow source: `docs/04_execution_flow.md`
 - Current task source: `meta/tasks/CURRENT.md`
 - Runtime engineering truth source: `docs/00_CORE.md` (this file)
+- Task-progress dialogue source: `docs/11_task_progress_dialogue.md`
+- Persona test lab source: `docs/14_persona_test_lab.md`
+- Repo version source: root `VERSION`
 - Markdown object state source: `docs/10_REGISTRY.md`
 - Markdown object transition source: `docs/20_STATE_MACHINE.md`
 
@@ -58,6 +64,21 @@ Rules:
 All engineering progress is artifact-driven and auditable.
 Runtime engineering truth comes from run artifacts + verify outputs + explicit reports.
 User-visible chat, transient prompts, and vague notes are never runtime truth.
+
+## 0.V Version and Metadata Truth Contract
+
+Version and provenance claims MUST be traceable to one authority set.
+
+Single authorities:
+- repo version string: root `VERSION`
+- run pass/fail: `artifacts/verify_report.json`
+- current task scope: `meta/tasks/CURRENT.md`
+
+Rules:
+- Any run report, test summary, scaffold/reference metadata, or user-visible delivery summary that cites a version MUST copy `source_version` from `VERSION` verbatim.
+- Provenance-bearing artifacts MUST pair `source_version` with `source_commit`; if git is unavailable, `source_commit=unknown` must be explicit.
+- Version mismatch across `VERSION`, run/test reports, or generated project metadata is a contract failure.
+- Missing version in purely local/transient notes is tolerated only when no version claim is made.
 
 ## 0.W Fixed 10-Step Execution Flow Principle
 
@@ -130,6 +151,7 @@ Rules:
 - GREETING and SMALLTALK MAY still be answered by the configured support model; mode-gating forbids planning logic, not model routing.
 - Project-manager mode MAY only activate when sufficient task signal exists.
 - Internal error rewriting and project follow-up questions are forbidden when no valid active task summary exists.
+- Task-like public replies MUST also satisfy the task-progress dialogue contract before emission.
 
 A capability is not considered complete when it merely exists in code or docs.
 It is only complete when:
@@ -137,6 +159,35 @@ It is only complete when:
 - its output is consumed by the intended downstream stage,
 - its regression is recorded if it failed before,
 - and its reusable nature has an explicit skill decision.
+
+## 0.Z1 Task-Progress Dialogue Contract
+
+Any user-visible task reply MUST bind to the current execution state before it is emitted.
+Authoritative rule source: `docs/11_task_progress_dialogue.md`.
+
+Minimum bound fields:
+- current task goal
+- current phase
+- last confirmed items
+- current blocker or `none`
+- message purpose (`explain|progress|decision|failure|delivery`)
+- whether a question is actually required
+- next action
+- proof refs when reporting tests, demos, screenshots, or packages
+
+A reply that sounds natural but does not bind these fields is treated as ungrounded and incomplete.
+
+## 0.Z2 Persona Test Lab Isolation Contract
+
+Persona Test Lab is the authoritative isolated style-regression layer for the production assistant.
+Authoritative rule source: `docs/14_persona_test_lab.md`.
+
+Rules:
+- Production assistant persona, test user personas, and judge/scoring layer MUST remain separate.
+- Persona Test Lab MAY consume production dialogue contracts, but it MUST NOT mutate production conversation state or project run state.
+- Every persona case MUST run in a fresh session with fixed assistant persona, fixed test user persona, fixed task input, and fixed turn limit or stop condition.
+- Persona regression claims are incomplete unless transcripts, scores, and fail reasons are written to external persona-lab run artifacts.
+- Persona lab run artifacts are evidence for style regression only; they do not replace production run truth or `artifacts/verify_report.json`.
 
 ## 1) Core Positioning (Headless First)
 
@@ -229,6 +280,24 @@ All artifacts below are run_dir-relative.
 - `verify_report.md` is optional human-readable summary only; it is non-authoritative.
 - `verify_repo.ps1/.sh` are gate entry scripts; they decide pass/fail by exit code and command outputs.
   They do not themselves define `proof.json` as DoD evidence.
+
+### 6.4 Test Design + Showcase Evidence (Conditional)
+
+When a task claims generated tests, executed showcase flows, screenshots, or user-visible demo evidence, the run truth MUST also include:
+
+- `artifacts/test_plan.json`
+- `artifacts/test_cases.json`
+- `artifacts/test_summary.md`
+- `artifacts/demo_trace.md`
+- `artifacts/screenshots/` or an explicit `screenshots_not_available_reason`
+
+These artifacts do not replace `artifacts/verify_report.json`; they are the required extension for "tested and shown" claims.
+
+### 6.5 Persona Test Lab Evidence (Conditional)
+
+When a task claims isolated style regression coverage, receptionist-tone repair, multilingual stability verification, or persona-based dialogue scoring, the run truth MUST also include the persona-lab artifacts defined in `docs/14_persona_test_lab.md` and `docs/30_artifact_contracts.md`.
+
+These artifacts MUST stay outside the repo under `CTCP_RUNS_ROOT`.
 
 ## 7) Find Contract (Resolver First)
 

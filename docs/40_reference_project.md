@@ -66,7 +66,7 @@ python scripts\ctcp_orchestrate.py scaffold-pointcloud `
 - Reads `meta/reference_export_manifest.yaml` and exports only listed whitelist entries.
 - Export source is the current CTCP repo revision (not static bundle only).
 - Supports profile-specific export sets (`minimal|standard|full`, and pointcloud profiles).
-- Writes generation provenance metadata including source commit.
+- Writes generation provenance metadata including source version and source commit.
 
 ## Live-Reference Safety Boundary
 
@@ -84,6 +84,7 @@ Hard rules:
 
 Live-reference output includes `meta/reference_source.json` with:
 - `source_repo` or `source_root_hint`
+- `source_version` (copied from repo root `VERSION`)
 - `source_commit` (`unknown` when git commit cannot be resolved)
 - `source_mode`
 - `export_manifest`
@@ -100,6 +101,7 @@ Generated manifest is also extended to include source/export inventory fields:
 - `inherited_copy`
 - `inherited_transform`
 - `excluded`
+- `source_version`
 - `source_commit`
 - `source_mode`
 
@@ -113,10 +115,16 @@ Scaffold run artifacts remain:
 
 For live-reference, reports additionally record:
 - `source_mode`
+- `source_version`
 - `source_commit`
 - `export_manifest_path`
 - `inherited_copy_count`
 - `inherited_transform_count`
+
+Version / provenance rule:
+- `source_version` MUST come only from root `VERSION`.
+- `source_version` mismatch between repo, generated project metadata, and scaffold run report is a metadata consistency failure.
+- `source_commit=unknown` is allowed only when commit resolution is not available and must be explicit.
 
 ## Downstream Compatibility
 

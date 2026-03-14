@@ -73,9 +73,38 @@ No evidence, no completion.
 5. Run `scripts/verify_repo.ps1` (Windows) or `scripts/verify_repo.sh` (Unix).
 6. Record Readlist/Plan/Changes/Verify/Demo in `meta/reports/LAST.md`.
 
+## 6.1 Persona-Lab Impact Rule
+
+If a task changes any of the following:
+- task-progress dialogue contract
+- support/customer-facing style contract
+- response lint semantics
+- multilingual style acceptance
+
+then the task MUST also:
+- update `docs/14_persona_test_lab.md` and the affected `persona_lab/` assets, or
+- record `persona_lab_impact: none` with a concrete reason in `meta/tasks/CURRENT.md`.
+
 ## 7) Historical Notes
 
 - `specs/templates/module_spec_template.md` is retained historically.
 - Module analysis authority is `specs/modules/_template.md`.
 - In-repo historical run outputs under `meta/runs/*` are intentionally not restored;
   run outputs must remain external under `CTCP_RUNS_ROOT`.
+
+## 8) Version 3.3.0 Direction
+
+Theme:
+- 从工程执行器升级为可展示、可解释、可证明的执行系统
+
+Direction goals:
+- Keep one fixed task mainline and require task-progress dialogue instead of turn-by-turn receptionist resets.
+- Make test capability cover design, case generation, execution evidence, snapshots, and user-visible demo traces.
+- Add Persona Test Lab as an isolated regression layer: production persona, test user personas, and judge scoring stay separated, and every case starts from a clean session.
+- Close version/provenance drift by routing all version claims through root `VERSION`.
+- Turn response lint, test showcase acceptance, and metadata consistency into gate-owned contract checks.
+
+Non-goals for this direction:
+- Do not introduce a larger role matrix.
+- Do not turn CTCP into a chat-first assistant product.
+- Do not claim full desktop automation before screenshot-capable replay exists.

@@ -51,17 +51,44 @@ No alternative `scripts/verify.*` family is authoritative for DoD in this repo.
 Passing all required steps is a DoD pass.
 First non-zero step is the first failure point for repair.
 
-## 4) Optional Full Gate
+## 4) Contract Lint Requirements
+
+The following rule classes are part of contract acceptance and MUST be owned by the contract/doc/plan-evidence gates, even when they are not yet split into separate scripts:
+
+1. Response/task-progress lint
+   - Authority: `docs/11_task_progress_dialogue.md`
+   - Blocking when a support/frontend-visible task contract violates first-sentence entry, forbidden phrase patterns, redundant goal echo, unnecessary question, or missing next action.
+2. Documentation closure lint
+   - Blocking when style / showcase / metadata truth changes are documented only in prompts, reports, or archive notes without updating the authoritative docs in the same patch.
+3. Test showcase lint
+   - Blocking when a task claims generated tests or user-visible demonstration but lacks `artifacts/test_plan.json`, `artifacts/test_cases.json`, `artifacts/test_summary.md`, `artifacts/demo_trace.md`, and `artifacts/screenshots/` or an explicit no-screenshot reason.
+4. Metadata consistency lint
+   - Authority: root `VERSION` plus provenance rules in `docs/30_artifact_contracts.md` and `docs/40_reference_project.md`
+   - Blocking when run reports, scaffold/generated-project provenance, or human summaries that cite a version disagree with `VERSION`.
+5. Persona regression lint
+   - Authority: `docs/14_persona_test_lab.md` plus repo-local `persona_lab/` assets
+   - Blocking when a patch changes task-progress dialogue, support reply style, or style-regression acceptance but does not update persona-lab rubrics/cases or explicitly record `persona_lab_impact: none`.
+
+## 5) Failure Attribution for New Contract Lints
+
+- Response/task-progress violations are blocking for support/frontend-visible contract work.
+- Missing showcase artifacts are blocking only when the task claims testing/showing capability; a non-visual flow may omit screenshots only with an explicit recorded reason.
+- Version mismatch is blocking; missing version in a note that makes no version claim is advisory.
+- Persona regression asset drift is blocking when the patch changes style contracts, support lane style behavior, or style acceptance criteria.
+- Conflicting legacy docs must be marked `deprecated` / `superseded` in the same patch rather than silently removed.
+
+## 6) Optional Full Gate
 
 - Enable via `--full` or `CTCP_FULL_GATE=1`.
 - Windows runs `scripts/test_all.ps1` when present.
 - Unix runs `scripts/test_all.sh` when present.
 - Missing full test script is logged as skip, not silent pass.
 
-## 5) Contract Update Rule
+## 7) Contract Update Rule
 
 If a failure class is not covered by current gates:
 
 1. Add the check to `scripts/verify_repo.ps1` and `.sh` (or shared gate script invoked by both).
 2. Add/adjust tests or scenarios so the new gate is reproducible.
 3. Update this document and `docs/30_artifact_contracts.md` in the same patch.
+4. If the failure class changes user-visible task dialogue, persona regression, or showcase semantics, update `docs/11_task_progress_dialogue.md`, `docs/14_persona_test_lab.md`, or `docs/40_reference_project.md` in the same patch.

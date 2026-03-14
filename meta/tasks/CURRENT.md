@@ -11,184 +11,226 @@
 
 ## Active Task (latest)
 
-- File: [`meta/tasks/archive/20260313-support-ctcp-scaffold-package.md`](archive/20260313-support-ctcp-scaffold-package.md)
-- Date: 2026-03-13
-- Topic: support 项目包升级为 CTCP 风格 scaffold 交付，而不是单文件占位目录
-- Status: `blocked` (implementation complete; canonical verify still blocked by preexisting repo-local `generated_projects/` scope violation)
+- File: [`meta/tasks/archive/20260314-persona-test-lab-contracts.md`](archive/20260314-persona-test-lab-contracts.md)
+- Date: 2026-03-14
+- Topic: Persona Test Lab 合同、隔离会话规则与回归资产落地
+- Status: `done`
 
 ## Queue Binding
 
-- Queue Item: `ADHOC-20260313-support-ctcp-scaffold-package`
-- Layer/Priority: `L2 / P0`
+- Queue Item: `ADHOC-20260314-persona-test-lab-contracts`
+- Layer/Priority: `L0 / P0`
 - Source Queue File: `meta/backlog/execution_queue.json`
 
 ## Context
 
 - Why this item now?
-  用户明确指出当前 `vn_story_organizer` 交付只是 `main.py + README.md` 的薄壳，不是他要的“像 CTCP 一样有一套 MD 和项目结构”的项目。当前 support package 逻辑只会把现有目录直接打成 zip，所以会把占位目录原样发给 Telegram，导致客服承诺的项目形态与真实内容不一致。
+  用户要求新增一套独立人格测试工具 / Persona Test Lab，用来验证 production assistant 是否仍会出现机械式回答、接待台腔、重复寒暄、不推进任务、多语言退化和长对话污染等问题。当前仓库虽然已有 task-progress dialogue 合同，但还没有把 production persona、test user personas、judge scoring、fresh-session-per-case 和 transcript/score/fail reasons 产物固化成可回归的测试层。
 - Dependency check:
-  - `ADHOC-20260313-support-api-first-local-degrade`: `blocked`
-  - `ADHOC-20260309-scaffold-live-reference-mode`: `done`
+  - `ADHOC-20260314-dialogue-showcase-metadata-contracts`: `done`
 - Scope boundary:
-  - 只调整 support package 交付链路、用户可见包结构描述、对应 docs/tests/meta evidence。
-  - 复用现有 `scripts/ctcp_orchestrate.py scaffold --source-mode live-reference`，不重写 scaffold 引擎。
-  - 不改 `scripts/ctcp_front_bridge.py`、`scripts/ctcp_dispatch.py`、`scripts/ctcp_orchestrate.py` 的执行状态机，也不去改 repo 内 `generated_projects/` 内容。
+  - 只做 docs/meta/backlog/report 与 repo-local static assets（`persona_lab/`）范围内的合同落地。
+  - 不改 `scripts/`、`frontend/`、`tools/`、`tests/` 等代码目录，不宣称 runner/judge runtime 已经实现。
+  - 不把人格测试混入正式 support 会话，不引入新的大角色体系。
 
 ## Task Truth Source (single source for current task)
 
 - task_purpose:
-  让 `scripts/ctcp_support_bot.py` 在用户要求项目 zip 时，如果当前绑定项目目录只是单文件/薄壳占位实现，就在 support session 外部真实生成一份 CTCP 风格 scaffold 项目再打包发送；同时让客服回复基于真实包结构描述，不再把薄壳项目说成完整实现。
+  把“正式执行人格、测试人格和评分人格三层分离；每个测试用例独立开新会话；测试结果可评分、可回归、可证明”落成仓库级合同、静态资产与验收规则，而不是停留在口头建议。
 - allowed_behavior_change:
-  - 可更新 `scripts/ctcp_support_bot.py` 的 public delivery discovery、zip materialization、support prompt context、Telegram delivery runtime。
-  - 可新增 support lane 的 scaffold package materialization artifact/log。
-  - 可更新 `docs/10_team_mode.md` 与 `agents/prompts/support_lead_reply.md` 同步“项目包可能是 CTCP-style scaffold”这一真实交付契约。
-  - 可更新 `tests/test_support_bot_humanization.py`、`tests/test_runtime_wiring_contract.py` 覆盖 scaffold package 交付和 truth-bound package 描述。
-  - 可更新 `ai_context/problem_registry.md`、`meta/backlog/execution_queue.json`、`meta/tasks/CURRENT.md`、`meta/reports/LAST.md` 及对应 archive 文件记录本轮证据。
+  - 可新增 `docs/14_persona_test_lab.md` 与 `persona_lab/` 静态资产目录。
+  - 可更新 `docs/00_CORE.md`、`docs/01_north_star.md`、`docs/03_quality_gates.md`、`docs/04_execution_flow.md`、`docs/10_team_mode.md`、`docs/11_task_progress_dialogue.md`、`docs/13_contracts_index.md`、`docs/21_paths_and_locations.md`、`docs/25_project_plan.md`、`docs/30_artifact_contracts.md`、`docs/verify_contract.md`。
+  - 可在 scope gate 需要时更新 `artifacts/PLAN.md` 的 `Scope-Allow`，使本轮 docs/static-assets 变更与 patch gate 对齐。
+  - 可更新 `README.md` Doc Index、`ai_context/problem_registry.md`、`meta/backlog/execution_queue.json`、`meta/tasks/CURRENT.md`、`meta/reports/LAST.md` 及对应 archive 文件。
 - forbidden_goal_shift:
-  - 不得继续把 repo 内 `generated_projects/` 目录作为 canonical customer package 来源。
-  - 不得只改 prompt 话术而不改实际 zip 交付逻辑。
-  - 不得编造“已经完成的完整项目功能”；如果当前只有 scaffold，就必须按 scaffold 如实描述。
+  - 不得把任务扩成有趣人格扮演系统或新的 frontend 产品。
+  - 不得把人格测试写进 production conversation state。
+  - 不得只写“更自然一点”之类的审美建议，必须落成 persona、rubric、case、artifact、lint、pass/fail 规则。
+- persona_lab_impact:
+  `direct` (`docs/14_persona_test_lab.md`、`persona_lab/` 资产与外部 run artifact contract 同步新增)
 - in_scope_modules:
-  - `scripts/ctcp_support_bot.py`
+  - `docs/00_CORE.md`
+  - `docs/01_north_star.md`
+  - `docs/03_quality_gates.md`
+  - `docs/04_execution_flow.md`
   - `docs/10_team_mode.md`
-  - `agents/prompts/support_lead_reply.md`
-  - `tests/test_support_bot_humanization.py`
-  - `tests/test_runtime_wiring_contract.py`
+  - `docs/11_task_progress_dialogue.md`
+  - `docs/13_contracts_index.md`
+  - `docs/14_persona_test_lab.md`
+  - `docs/21_paths_and_locations.md`
+  - `docs/25_project_plan.md`
+  - `docs/30_artifact_contracts.md`
+  - `docs/verify_contract.md`
+  - `artifacts/PLAN.md`
+  - `persona_lab/README.md`
+  - `persona_lab/personas/*.md`
+  - `persona_lab/rubrics/*.yaml`
+  - `persona_lab/cases/*.yaml`
   - `ai_context/problem_registry.md`
+  - `README.md`
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/CURRENT.md`
-  - `meta/tasks/archive/20260313-support-ctcp-scaffold-package.md`
+  - `meta/tasks/archive/20260314-persona-test-lab-contracts.md`
   - `meta/reports/LAST.md`
-  - `meta/reports/archive/20260313-support-ctcp-scaffold-package.md`
+  - `meta/reports/archive/20260314-persona-test-lab-contracts.md`
 - out_of_scope_modules:
-  - `scripts/ctcp_front_bridge.py`
-  - `scripts/ctcp_dispatch.py`
-  - `scripts/ctcp_orchestrate.py`
-  - repo 内 `generated_projects/`
-  - 与本次 support API-first 路由无关的其他未提交工作树改动
+  - `scripts/`
+  - `frontend/`
+  - `tools/`
+  - `tests/`
+  - production `RUN.json` / `support_session_state.json`
+  - repo-local live run outputs or screenshots
+  - 与本轮 docs/static-assets 任务无关的其他未提交工作树改动
 - completion_evidence:
-  - 用户要求项目 zip 且当前项目目录只是薄壳时，Telegram runtime 会生成并发送一份外部 `scaffold --source-mode live-reference` 项目包，而不是继续打 repo 内 placeholder。
-  - 客服 prompt context 能拿到真实 package shape，并能按“CTCP-style scaffold”如实描述项目结构。
-  - 没有真实 screenshot artifact 时，截图仍如实说没有；项目包逻辑不再依赖 repo 内 `generated_projects/` scope 放行。
-  - targeted regressions、triplet guard、workflow gate、canonical verify 留下 `connected + accumulated + consumed` 证据。
+  - 仓库存在单一权威的 Persona Test Lab 合同，明确三层分离、fresh-session-per-case、English Contracts/Chinese Intent、评分与 fail reasons 标准。
+  - repo-local `persona_lab/` 静态资产存在 production persona、七种 test user personas、三份 rubrics、至少八个最小回归 case。
+  - core/flow/gate/team/path/artifact 文档同步了 persona regression lint、repo 外 run 产物路径与 anti-pollution 规则。
+  - workflow checks、contract checks、doc index、triplet guard、canonical verify 留下 `connected + accumulated + consumed` 证据。
 
 ## Analysis / Find (before plan)
 
 - Entrypoint analysis:
-  - 用户入口仍是 `scripts/ctcp_support_bot.py::process_message`，Telegram 文件发送落点是 `run_telegram_mode()` -> `emit_public_delivery()`。
+  - 这次改动的上游是用户对 production assistant 风格回归的要求；未来消费者是 persona-lab runner、judge/scoring layer、support/style 合同维护者。
 - Downstream consumer analysis:
-  - `process_message()` -> `build_support_prompt()` / `build_final_reply_doc()` -> `artifacts/support_reply.json` -> `run_telegram_mode()` -> `emit_public_delivery()` -> Telegram `sendDocument`
+  - `docs/14_persona_test_lab.md` 与 `persona_lab/` 会被后续 runner/judge 实现、风格回归验收、support/frontend 风格维护和报告编写者消费。
 - Source of truth:
-  - support session `artifacts/support_prompt_input.md`
-  - support session `artifacts/support_reply.json`
-  - support session `artifacts/support_session_state.json`
-  - bound run `artifacts/patch_apply.json` / `artifacts/PLAN.md`
-  - support scaffold materialization artifact/log
+  - style rule authority: `docs/11_task_progress_dialogue.md`
+  - persona regression authority: `docs/14_persona_test_lab.md`
+  - static asset authority: `persona_lab/`
+  - external artifact authority: `docs/30_artifact_contracts.md` + `docs/21_paths_and_locations.md`
+  - current task/report authority: `meta/tasks/CURRENT.md` + `meta/reports/LAST.md`
 - Current break point / missing wiring:
-  - 当前 zip 交付逻辑只会“有目录就打包目录”，不会判断目录是不是完整 CTCP-style project。
-  - prompt context 不知道当前可发包到底是完整 scaffold，还是 `main.py` 这类单文件占位壳子。
-  - repo 内 `generated_projects/` 还在 current PLAN 的 `Scope-Deny` 里，继续围绕它交付会卡住 canonical verify。
+  - production support 会话和风格测试容易混在同一上下文，导致测试污染。
+  - 没有固定的 test user persona 集合、rubric、case baseline。
+  - 缺少 transcript + score + fail reasons 的结构化 run 产物。
+  - bilingual 与长对话漂移没有 isolated regression contract。
 - Repo-local search sufficient: `yes`
 - If no, external research artifact: `N/A`
 
 ## Integration Check (before implementation)
 
 - upstream:
-  `scripts/ctcp_support_bot.py::process_message` and `scripts/ctcp_support_bot.py::run_telegram_mode`
+  user request -> repo contract readers -> future persona-lab runner/judge -> style-regression maintainers
 - current_module:
-  `scripts/ctcp_support_bot.py` plus support-lane contract docs/tests
+  `docs/14_persona_test_lab.md` + `persona_lab/` + `docs/00_CORE.md` + `docs/03_quality_gates.md` + `docs/04_execution_flow.md` + `docs/10_team_mode.md` + `docs/30_artifact_contracts.md`
 - downstream:
-  `build_support_prompt()` -> `build_final_reply_doc()` -> `emit_public_delivery()` -> Telegram `sendDocument`
+  future isolated persona sessions, judge outputs, support/frontend style acceptance, run evidence reviewers
 - source_of_truth:
-  support session state + bound run delivery evidence + support scaffold materialization artifact
+  `docs/14_persona_test_lab.md`, `persona_lab/`, `docs/11_task_progress_dialogue.md`, `docs/30_artifact_contracts.md`, `docs/21_paths_and_locations.md`
 - fallback:
-  如果 scaffold materialization 失败，则用户可见回复不能冒充完整项目；runtime 只允许回落到已有真实 package，或明确说明当前没有可发送的完整项目包
+  runtime runner/judge 尚未实现时，只能宣称合同与静态资产已落地；不得假装已经有自动化执行器
 - acceptance_test:
-  - `python -m py_compile scripts/ctcp_support_bot.py tests/test_support_bot_humanization.py tests/test_runtime_wiring_contract.py`
-  - `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v`
+  - `python scripts/workflow_checks.py`
+  - `python scripts/contract_checks.py`
+  - `python scripts/sync_doc_links.py --check`
   - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
-  - `python -m unittest discover -s tests -p "test_scaffold_reference_project.py" -v`
   - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
   - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
-  - `python scripts/workflow_checks.py`
-  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile contract`
 - forbidden_bypass:
-  - prompt-only change that still zips placeholder directories
-  - editing repo-local `generated_projects/` to fake a richer package
-  - describing scaffold as feature-complete business logic implementation
+  - 在 production support 会话中顺手做风格测试，却不隔离新 session
+  - 只靠主观描述“自然了很多”而没有 rubric 与 score
+  - 把 persona-lab transcript / score / snapshots 写进 repo
 - user_visible_effect:
-  - 用户收到的项目 zip 会更接近 CTCP 这种多文档、多目录脚手架；如果当前只有 scaffold，客服也会按 scaffold 如实描述，不再说成“完整功能已经做完”。
+  - 后续 agent 可以用独立、干净、可评分的方式证明“不要机械式回答”是否真的被修复，而不是只靠同一会话里的感觉判断。
 
 ## DoD Mapping (from execution_queue.json)
 
-- [x] DoD-1: support 默认回复路径切到 `api_agent`
-- [x] DoD-2: API 不可用或 reply 不可用时只降级本地，并显式说明 API 不可用
-- [x] DoD-3: 旧机械 fallback shell 不再出现在 support runtime
-- [x] DoD-4: targeted regressions、triplet guard、workflow gate、canonical verify 已执行并留下首个失败点 / 最小修复策略证据
+- [x] DoD-1: production assistant, test user personas, and judge scoring are contractually separated
+- [x] DoD-2: every persona case requires a fresh session and writes standardized run artifacts outside the repo
+- [x] DoD-3: repo-local persona definitions, rubrics, and minimum regression cases exist as auditable assets
+- [x] DoD-4: quality gates and artifact contracts define persona regression acceptance and anti-pollution boundaries
 
 ## Acceptance (must be checkable)
 
 - [x] DoD written (this file complete)
-- [x] Research logged (if needed): `N/A`
-- [x] Code changes allowed
+- [x] Research logged (if needed): `N/A (repo-local docs/meta scan only)`
+- [x] Code changes allowed (`Docs-only plus repo-local static persona assets`)
 - [x] Patch applies cleanly (`git diff` generated; no destructive operations used)
 - [x] `scripts/verify_repo.*` passes (or first failure + minimal fix recorded)
 - [x] Demo report updated: `meta/reports/LAST.md`
 
 ## Plan
 
-1) 绑定 `support-ctcp-scaffold-package` task，并明确 support package 新 truth 是 CTCP-style scaffold delivery。
-2) 改 `scripts/ctcp_support_bot.py`：识别薄壳项目目录，改为外部 materialize scaffold 后再 zip/send，并把 package shape 注入 prompt context。
-3) 更新 support lane docs/prompt contract，禁止继续把单文件占位目录描述成完整项目。
-4) 补 targeted regressions，覆盖 scaffold package materialization、Telegram delivery 和 truth-bound package 描述。
-5) 跑 local check / contrast / fix loop、triplet guard、workflow gate、canonical verify，并记录首个失败点与最小修复策略。
+1) 绑定 `persona-test-lab-contracts` task，把独立人格测试需求收口成 docs/static-assets 范围内的单主题改动。
+2) 新增 `docs/14_persona_test_lab.md`，定义三层分离、独立会话、语言策略、评分/验收与最小回归包。
+3) 新增 `persona_lab/` 静态资产：production persona、test user personas、rubrics、cases。
+4) 更新 core / flow / gates / team mode / paths / artifact contracts，把 persona regression 接入主线，并明确 run outputs 只能在 repo 外。
+5) 更新 problem registry、queue、CURRENT/LAST、archive，留下 `persona_lab_impact` 与 issue-memory 记录。
+6) 跑 local check / contrast / fix loop：
+   - `python scripts/workflow_checks.py`
+   - `python scripts/contract_checks.py`
+   - `python scripts/sync_doc_links.py --check`
+   - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
+   - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
+   - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
+7) Canonical verify gate: `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile contract`
 
 ## Notes / Decisions
 
 - Default choices made:
-  - scaffold package 默认复用现有 `scaffold --source-mode live-reference`，profile 取更接近 CTCP 结构的 `standard`。
+  - 使用 `docs/14_persona_test_lab.md` 作为单一权威文档，避免把 persona regression 规则散落到 support lane 或报告里。
+  - `persona_lab/` 只保存静态资产；实际 transcripts/scores/fail reasons/snapshots 全部外置到 `CTCP_RUNS_ROOT`。
+  - 语言策略采用 `English Contracts, Chinese Intent`，不新增并行中文术语体系。
 - Alternatives considered:
-  - 直接把 repo 内 `generated_projects/` 补成完整项目；拒绝，因为这会继续踩 `Scope-Deny`，而且不是稳定的交付链。
+  - 直接在 production support session 里加一个“风格测试模式”；拒绝，因为这会污染正式对话状态。
+  - 把人格测试做成有趣角色系统；拒绝，因为目标是 regression 和 scoring，不是聊天娱乐。
 - Any contract exception reference (must also log in `ai_context/decision_log.md`):
   - None.
 - Issue memory decision:
-  - add one new support-lane contradiction entry because this is a user-visible repeated overpromise class.
+  - add one recurring failure class: style-regression context pollution without isolated persona lab.
 - Skill decision (`skillized: yes` or `skillized: no, because ...`):
-  - skillized: no, because this is a repository-local support delivery correction over an existing scaffold workflow, not a new reusable workflow asset.
+  - skillized: no, because this patch lands contracts and static assets only; runner/judge automation can be skillized later if runtime entrypoints become reusable.
 
 ## Results
 
 - Files changed:
-  - `scripts/ctcp_support_bot.py`
+  - `docs/00_CORE.md`
+  - `docs/01_north_star.md`
+  - `docs/03_quality_gates.md`
+  - `docs/04_execution_flow.md`
   - `docs/10_team_mode.md`
-  - `agents/prompts/support_lead_reply.md`
-  - `tests/test_support_bot_humanization.py`
-  - `tests/test_runtime_wiring_contract.py`
+  - `docs/11_task_progress_dialogue.md`
+  - `docs/13_contracts_index.md`
+  - `docs/14_persona_test_lab.md`
+  - `docs/21_paths_and_locations.md`
+  - `docs/25_project_plan.md`
+  - `docs/30_artifact_contracts.md`
+  - `docs/verify_contract.md`
+  - `artifacts/PLAN.md`
+  - `persona_lab/README.md`
+  - `persona_lab/personas/*.md`
+  - `persona_lab/rubrics/*.yaml`
+  - `persona_lab/cases/*.yaml`
+  - `README.md`
   - `ai_context/problem_registry.md`
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/CURRENT.md`
-  - `meta/tasks/archive/20260313-support-ctcp-scaffold-package.md`
+  - `meta/tasks/archive/20260314-persona-test-lab-contracts.md`
   - `meta/reports/LAST.md`
-  - `meta/reports/archive/20260313-support-ctcp-scaffold-package.md`
+  - `meta/reports/archive/20260314-persona-test-lab-contracts.md`
 - Verification summary:
-  - `python -m py_compile scripts/ctcp_support_bot.py tests/test_support_bot_humanization.py tests/test_runtime_wiring_contract.py` => `0`
-  - `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v` => `0` (24 passed)
+  - `python scripts/sync_doc_links.py` => `0` (`no changes`)
+  - `python scripts/contract_checks.py` => `0`
+  - `python scripts/workflow_checks.py` => `1` (`LAST.md missing mandatory workflow evidence: minimal fix strategy evidence`)
+  - `python scripts/workflow_checks.py` (rerun after report fix) => `0`
+  - `python scripts/sync_doc_links.py --check` => `0`
   - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` => `0` (15 passed)
-  - `python -m unittest discover -s tests -p "test_scaffold_reference_project.py" -v` => `0` (4 passed)
   - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` => `0` (3 passed)
   - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` => `0` (3 passed)
-  - `python scripts/workflow_checks.py` => `0`
-  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => `1`
-    - first failure point: `patch check (scope from PLAN)`
-    - failure detail: `generated_projects/vn_story_organizer/README.md` remains out-of-scope under the repo PLAN `Scope-Allow/Scope-Deny` contract
-    - minimal fix strategy: keep customer delivery on external scaffold exports and either remove/relocate the repo-local `generated_projects/` tree or open an explicit scope change before rerunning canonical verify
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile contract` => `1` (`patch_check out-of-scope path: persona_lab/README.md`)
+  - minimal fix strategy: add `persona_lab/` to `artifacts/PLAN.md` `Scope-Allow`, then rerun canonical verify
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile contract` (rerun) => `0`
+  - final consistency recheck after report update: `workflow_checks=0`, `contract_checks=0`, `sync_doc_links --check=0`, `verify_repo(contract)=0`
 - Queue status update suggestion (`todo/doing/done/blocked`):
-  - blocked
+  - done
 
 ## Archive Index (recent 10)
 
 | Date | Topic | File |
 |------|-------|------|
+| 2026-03-14 | Persona Test Lab 合同、隔离会话规则与回归资产落地 | [→](archive/20260314-persona-test-lab-contracts.md) |
+| 2026-03-14 | 任务推进型对话、测试展示链与版本真源合同重构 | [→](archive/20260314-dialogue-showcase-metadata-contracts.md) |
 | 2026-03-13 | support 项目包升级为 CTCP 风格 scaffold 交付，而不是单文件占位目录 | [→](archive/20260313-support-ctcp-scaffold-package.md) |
 | 2026-03-13 | support 回复锁到 api_agent，并把项目 zip/截图直发链路接到 Telegram | [→](archive/20260313-support-api-first-local-degrade.md) |
 | 2026-03-12 | support 到 production run 的渐进式链路测试 | [→](archive/20260312-support-to-production-path-tests.md) |
@@ -197,8 +239,5 @@
 | 2026-03-12 | support bot 全部用户可见回复走模型 | [→](archive/20260312-support-all-turns-model-routing.md) |
 | 2026-03-12 | support bot 记忆隔离与显式 API 路由锁定 | [→](archive/20260312-support-memory-isolation-and-api-route-lock.md) |
 | 2026-03-12 | support bot 接入 front bridge / shared whiteboard / librarian 后台流 | [→](archive/20260312-support-bot-backend-bridge-wiring.md) |
-| 2026-03-12 | 修复 support bot provider 连通性与兜底链路 | [→](archive/20260312-support-provider-connectivity-repair.md) |
-| 2026-03-11 | 收口 support-bot humanization verify blocker | [→](archive/20260311-support-bot-humanization-verify-blocker.md) |
-| 2026-03-11 | 后端角色分工收紧与本地 Librarian 硬边界 | [→](archive/20260311-backend-role-boundary-local-librarian.md) |
 
 Full archive: `meta/tasks/archive/`

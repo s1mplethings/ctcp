@@ -1,0 +1,28 @@
+schema_version: persona-case-v1
+case_id: direct_instruction_following
+purpose: Ensure a direct request for problem diagnosis is answered with judgment first, not filler.
+assistant_persona: production_assistant
+user_persona: expert_user
+language_mode: en
+session_policy: isolated
+initial_task: "Point out the problem first. Then tell me the next move. Do not soften it."
+user_script:
+  - turn_id: 1
+    role: user
+    text: "Point out the problem first. Then tell me the next move. Do not soften it."
+turn_limit: 2
+stop_conditions:
+  - assistant_delivers_judgment_first
+  - filler_detected
+must_pass_checks:
+  - response_style_lint.explicit_judgment
+  - response_style_lint.next_action_present
+  - task_progress_score.task_entry_directness
+fail_conditions:
+  - soft_acknowledgement_before_judgment
+  - no_problem_statement
+  - vague_next_action
+expected_response_traits:
+  - judgment first
+  - direct English wording
+  - no courtesy shell
