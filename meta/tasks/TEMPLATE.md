@@ -12,9 +12,9 @@ Hard rule:
 
 ## Context
 
-- Why this item now?
-- Dependency check: list required `deps` and their status (`done` / `blocked`).
-- Scope boundary: what is explicitly out-of-scope in this patch?
+- Why this item now: `<one line>`
+- Dependency check: `<dep id> = done|blocked`
+- Scope boundary: `<one line>`
 
 ## Task Truth Source (single source for current task)
 
@@ -27,23 +27,25 @@ Hard rule:
 
 ## Analysis / Find (before plan)
 
-- Entrypoint analysis:
-- Downstream consumer analysis:
-- Source of truth:
-- Current break point / missing wiring:
+- Entrypoint analysis: `<one line>`
+- Downstream consumer analysis: `<one line>`
+- Source of truth: `<one line>`
+- Current break point / missing wiring: `<one line>`
 - Repo-local search sufficient: `yes/no`
 - If no, external research artifact: `meta/externals/YYYYMMDD-<topic>.md`
 
 ## Integration Check (before implementation)
 
-- upstream:
-- current_module:
-- downstream:
-- source_of_truth:
-- fallback:
+- upstream: `<one line>`
+- current_module: `<one line>`
+- downstream: `<one line>`
+- source_of_truth: `<one line>`
+- fallback: `<one line>`
 - acceptance_test:
+  - `<one line per command>`
 - forbidden_bypass:
-- user_visible_effect:
+  - `<one line per bypass>`
+- user_visible_effect: `<one line>`
 
 ## DoD Mapping (from execution_queue.json)
 
@@ -65,28 +67,29 @@ Hard rule:
 1) Analysis/find tasks (if pending).
 2) Docs/spec/meta changes first.
 3) Minimal implementation changes.
-4) Local check/contrast/fix loop:
-   - topic-related tests
-   - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
-   - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
-   - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
-   - record first failure and minimal fix strategy
-5) Canonical verify gate: `scripts/verify_repo.*`
-6) Completion criteria: prove `connected + accumulated + consumed`.
+4) Topic-related local checks.
+5) `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
+6) `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
+7) `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
+8) Record the first failure and minimal fix strategy.
+9) Canonical verify gate: `scripts/verify_repo.*`
+10) Completion criteria: prove `connected + accumulated + consumed`.
 
 ## Notes / Decisions
 
-- Default choices made:
-- Alternatives considered:
+- Default choices made: `<one line>`
+- Alternatives considered: `<one line>`
 - Any contract exception reference (must also log in `ai_context/decision_log.md`):
-- Issue memory decision:
-- Skill decision (`skillized: yes` or `skillized: no, because ...`):
+  - `<one line or None>`
+- Issue memory decision: `<one line>`
+- Skill decision (`skillized: yes` or `skillized: no, because ...`): `<one line>`
 
 ## Results
 
 - Files changed:
-- Verification summary:
-- Queue status update suggestion (`todo/doing/done/blocked`):
+  - `<one line per file>`
+- Verification summary: `<one line>`
+- Queue status update suggestion (`todo/doing/done/blocked`): `<one line>`
 
 ## Minimal Example
 

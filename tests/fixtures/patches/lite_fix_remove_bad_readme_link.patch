@@ -5,17 +5,9 @@ diff --git a/README.md b/README.md
  # CTCP — ADLC + Multi-Agent Execution Engine
 +<!-- simlab-s16-touch-readme -->
  
- Authoritative source map:
+ Human navigation map:
  
-diff --git a/meta/reports/LAST.md b/meta/reports/LAST.md
---- a/meta/reports/LAST.md
-+++ b/meta/reports/LAST.md
-@@ -1,4 +1,5 @@
- # Demo Report - LAST
-+<!-- simlab-s16-touch-report -->
- 
- > **用法**：本文件保留最近一次报告指针，同时内嵌 workflow gate 所需的最新报告摘要。
- > 历史报告正文在 `meta/reports/archive/`。
+ - Agent main contract: `AGENTS.md`
 diff --git a/meta/tasks/CURRENT.md b/meta/tasks/CURRENT.md
 --- a/meta/tasks/CURRENT.md
 +++ b/meta/tasks/CURRENT.md
@@ -25,3 +17,12 @@ diff --git a/meta/tasks/CURRENT.md b/meta/tasks/CURRENT.md
  
  > **用法**：本文件保留当前活跃任务指针，同时内嵌 workflow gate 所需的最新任务摘要。
  > 历史任务正文在 `meta/tasks/archive/`。
+diff --git a/meta/reports/LAST.md b/meta/reports/LAST.md
+--- a/meta/reports/LAST.md
++++ b/meta/reports/LAST.md
+@@ -1,4 +1,5 @@
+ # Demo Report - LAST
++<!-- simlab-s16-touch-report -->
+ 
+ > **用法**：本文件保留最近一次报告指针，同时内嵌 workflow gate 所需的最新报告摘要。
+ > 历史报告正文在 `meta/reports/archive/`。

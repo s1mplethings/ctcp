@@ -37,18 +37,27 @@ Additional constraints:
 - Only change repository behavior when required by the goal and within approved scope; avoid unrelated behavior changes.
 END SYSTEM CONTRACT
 
-## Fixed 10-Step Workflow Contract
+## Agent Workflow Contract
 
-All repository modifications MUST follow the fixed 10-step workflow defined only in `docs/04_execution_flow.md`.
+All repository modifications MUST enter through the root 5-step flow in `AGENTS.md`.
+`docs/04_execution_flow.md` is the expanded workflow reference for detailed step mapping, supporting chains, and verification profiles.
 
 Single source map per concern:
 
 - repo purpose: `docs/01_north_star.md`
-- canonical flow: `docs/04_execution_flow.md`
+- agent main contract: `AGENTS.md`
+- expanded flow reference: `docs/04_execution_flow.md`
 - current task purpose/scope: `meta/tasks/CURRENT.md`
 - runtime engineering truth: run artifacts + canonical verify outputs + explicit repository reports (`meta/reports/LAST.md`) under `docs/00_CORE.md` contract
 
-Mandatory sequence:
+Visible mainline:
+1. Bind
+2. Read
+3. Analyze
+4. Change
+5. Verify/Close
+
+Expanded mapping when detail matters:
 1. task binding
 2. required contract readlist
 3. find/analysis

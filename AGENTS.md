@@ -1,291 +1,108 @@
-# CTCP — Agent Contract (Hard Rules)
-
-> 目标：让 agent 变成“项目团队”：自驱推进、可验证交付、只问必要问题、能演示全过程。
-
-这份文件是 **强约束**：任何 agent/自动化必须遵守。违反即视为失败交付。
-<!-- TOC (agent: 跳到你需要的节，不要通读全文) -->
-
-| # | 节 | 用途 | 锚点 |
-|---|---|------|------|
-| — | Fast Rules | 4 条最高优先级硬规则 | [→](#fast-rules前两屏必须可见) |
-| 0.A | 三重识别 | 行动前必须的 purpose/flow/task 识别 | [→](#0a-目的流程任务三重识别行动前强制) |
-| 0 | 允许提问 | 唯一允许向用户提问的 3 种场景 | [→](#0-允许提问的唯一条件否则不要问) |
-| 1 | 必读文件 | 任务开始前的 readlist | [→](#1-必读文件开始任何动作之前) |
-| 2 | 执行顺序 | 10-step flow 义务 + CURRENT.md 范围锁 | [→](#2-执行顺序不可跳过) |
-| 3 | 验收入口 | verify_repo 门禁覆盖范围 | [→](#3-唯一验收入口dod-gate) |
-| 4 | 强制交付 | 6 项交付内容 + 落盘位置 | [→](#4-强制交付) |
-| 5 | 最小改动 | 单主题 patch 原则 | [→](#5-最小改动原则) |
-| 6 | Patch 输出 | UI 渲染稳定性规则 | [→](#6-patch-输出稳定性避免-ui-渲染复制导致代码框忽有忽无) |
-| — | Integration | 集成证明要求 | [→](#integration-proof-requirement) |
-| — | Frontend | 前端边界规则 | [→](#frontend-boundary-rule) |
-| — | Skills | repo-local Codex Skills 清单 | [→](#codex-skillsrepo-local) |
-
-<!-- /TOC -->
-
-**Concern→权威文件速查：**
-repo purpose → `docs/01_north_star.md` ·
-canonical flow → `docs/04_execution_flow.md` ·
-current task → `meta/tasks/CURRENT.md` ·
-runtime truth → `docs/00_CORE.md`
----
-
-## 6) Patch 输出稳定性（避免 UI 渲染/复制导致“代码框忽有忽无”）
+# CTCP Agent Contract
 
-你看到“程序框一会有一会没有”，通常不是 agent 真输出不一致，而是：
-- Markdown 渲染把某些片段识别为代码（缩进/围栏/关键字触发）
-- 从富文本 diff 视图复制时丢失了 `+/-/@@` 或缩进，导致分段被当作普通文本
+## 1. Purpose
 
-**稳定输出规则（强约束）**：
-1. Chat/控制台最终输出必须是 **patch-only**：只输出 ONE unified diff patch，不得夹杂任何说明文字。
-2. 输出必须是**单一连续 patch**：从第一行 `diff --git` 开始到最后一行结束，中间不得分段、不得插入普通文本。
-3. 不要使用 Markdown 围栏（```）；如平台强制代码块，只允许一个代码块且块内只有 patch。
-4. 不要从富文本 diff 视图复制；优先以补丁文件为准（例如 run_dir 的 `artifacts/diff.patch`，或 `git diff > diff.patch`）。
-5. Readlist/Plan/Verify/Demo 等报告正文写入 `meta/reports/LAST.md`，不要写进 chat 输出（遵守 `ai_context/00_AI_CONTRACT.md`）。
+CTCP is a contract-first execution repo. Agents should make the smallest scoped change that satisfies the bound task, preserve auditability, and close through the canonical verify gate.
 
-### Prompt 模板（UI-safe + MD-driven）
+Default operating stance:
+- spec-first when behavior or contract meaning changes
+- verify-gated before claiming completion
+- local-by-default unless the task explicitly requires a broader contract update
 
-```text
-你是 ctcp 仓库的 patch-first agent。先读 AGENTS.md / ai_context/00_AI_CONTRACT.md / PATCH_README.md，再按门禁推进。
+## 2. Single Entry
 
-硬约束：
-- 最终输出必须且只能是一份 unified diff patch（git apply compatible）。
-- 输出必须单一连续：从 `diff --git` 到结尾，不拆分、不夹杂说明文字。
-- 不要使用 ``` 围栏；如平台强制代码块，只允许一个代码块且块内只有 patch。
-- 报告正文（Readlist/Plan/Verify/Demo）写入 meta/reports/LAST.md，不写进 chat 输出。
-- 验收只走 scripts/verify_repo.ps1 / scripts/verify_repo.sh。
+Execution entry for repo changes:
+- bind one queue item in `meta/backlog/execution_queue.json`
+- work from `meta/tasks/CURRENT.md`
+- if no suitable queue item exists, create one `ADHOC-YYYYMMDD-<slug>` item before implementation
 
-交付：只输出 ONE unified diff patch。
-```
+Acceptance entry:
+- Windows: `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
+- Unix: `bash scripts/verify_repo.sh`
 
-来源冲突处理（按 concern 分流）：
-- repo purpose: `docs/01_north_star.md`
-- canonical flow: `docs/04_execution_flow.md`
-- current task purpose/scope: `meta/tasks/CURRENT.md`
-- runtime truth: `docs/00_CORE.md`
+Everything else is supporting material:
+- `README.md` is human navigation only
+- `docs/04_execution_flow.md` is the expanded flow reference
+- repo code or docs do not become authority just because they are nearby
 
----
+## 3. Single Flow
 
-## Fast Rules（前两屏必须可见）
+Use one visible mainline only:
 
-1. **唯一验收入口（DoD Gate）**
-   - Windows: `scripts/verify_repo.ps1`
-   - Unix: `scripts/verify_repo.sh`
-2. **输出规则（Chat/控制台/patch 输出）**
-   - Chat/控制台最终输出：**patch-only**（unified diff），不得包含报告正文。
-   - 报告正文落盘：`meta/reports/LAST.md`
-   - run_dir 证据链主产物：`TRACE.md`、`artifacts/verify_report.json`
-   - `proof.json` 为兼容遗留项（非权威）；`verify_report.md` 为可选人类可读摘要（非权威）
-   - 快速硬规则速览：`ai_context/CTCP_FAST_RULES.md`
-3. **允许提问的唯一条件**
-   - 仅限：密钥/账号/权限；互斥方案拍板；缺少关键约束导致无法继续。
-4. **执行顺序**
-   - Follow canonical flow in `docs/04_execution_flow.md`（详见第 2 节）
+1. `Bind`
+   Bind exactly one task in `meta/tasks/CURRENT.md` before changing files.
+2. `Read`
+   Read the root contract, current task, and only the docs/files needed for the scoped change.
+3. `Analyze`
+   Record purpose, source of truth, affected paths, acceptance tests, and scope boundaries before editing.
+4. `Change`
+   Make the minimal patch for the current topic; update docs/spec/meta first when the behavior contract changes, and prefer existing repo workflows, docs, and skills over inventing a new flow.
+5. `Verify/Close`
+   Run the canonical verify entrypoint, record the first failure point and minimal fix when needed, update `meta/reports/LAST.md`, and close the task with explicit evidence.
 
----
+The repository still keeps a finer-grained internal workflow; see `docs/04_execution_flow.md` only when detailed step mapping or profile behavior matters.
+Do not pull that expanded detail into the root contract unless the root contract itself is being changed.
 
-## 0.A) 目的/流程/任务三重识别（行动前强制）
+## 4. Allowed Questions
 
-在任何修改前，必须先识别并记录：
+Ask the user only when one of these blocks safe continuation:
 
-1. repo purpose source: `docs/01_north_star.md`
-2. current lane/subsystem purpose source: 对应 lane 文档（例如 `docs/00_overview.md` / `docs/10_team_mode.md`）
-3. current task purpose source: `meta/tasks/CURRENT.md`
+- secrets, credentials, accounts, or external permissions
+- a mutually exclusive product decision with real compatibility or scope impact
+- a missing hard constraint that cannot be discovered locally
 
-若三者冲突，必须停止实现，先走 contract-change style 任务路径（queue + CURRENT 变更）再继续。
+Otherwise continue with the best bounded default and record it in `meta/reports/LAST.md`.
 
----
+## 5. Required Outputs
 
-## 0) 允许提问的唯一条件（否则不要问）
+For every repo task, write:
 
-你只能在下面场景提问（写入外部 run 包的 `QUESTIONS.md`，通过 `meta/run_pointers/LAST_RUN.txt` 定位）：
+- `meta/tasks/CURRENT.md`
+  Must bind one queue item and define scope, acceptance, and integration fields.
+- `meta/reports/LAST.md`
+  Must contain `Readlist`, `Plan`, `Changes`, `Verify`, `Questions`, and `Demo`.
+- report archive entry when the task changes the active report topic
+- task archive entry when the task changes the active task topic
 
-1. 需要用户提供 **密钥/账号/外部权限**（例如 API key、访问令牌）
-2. 需要用户在 **互斥方案** 中拍板（例如“重命名项目/大重构/破坏兼容”）
-3. 缺少关键约束导致无法继续（例如目标平台、必须支持的版本、许可证限制）
+When the task creates or advances an external run, keep runtime evidence outside the repo and point to it from the report:
 
-除此之外，全部用默认策略推进，并在报告里写明默认选择与可替代项。
+- `${run_dir}/TRACE.md`
+- `${run_dir}/artifacts/verify_report.json`
+- any additional run evidence required by the routed contract
 
----
+## 6. Non-Negotiable Rules
 
-## 1) 必读文件（开始任何动作之前）
+- One topic per patch. Do not combine unrelated cleanup or opportunistic refactors.
+- Do not expand scope without rebinding `meta/tasks/CURRENT.md`.
+- Use the current task card as the only task-purpose authority.
+- Keep repo purpose in `docs/01_north_star.md`, runtime truth in `docs/00_CORE.md`, and do not collapse those concerns into one file.
+- Do not skip the canonical verify entrypoint.
+- Keep generated runs, transcripts, screenshots, and other runtime outputs outside the repo unless a contract explicitly says otherwise.
+- For routing, integration, bridge, state propagation, memory accumulation, or user-visible leakage defects, prompt-only edits are not enough.
+- Prefer existing repo skills and documented local rules over inventing a parallel workflow.
+- Do not reintroduce frontend/support style contracts into the root agent contract; route them to their own docs.
+- If older docs conflict with the new rule, mark them `deprecated`, `superseded`, or `replaced by`; do not silently leave duplicate authorities in place.
 
-必须读取并总结（写入 `meta/reports/LAST.md` 的 Readlist）：
+## 7. Routing
 
-- `docs/00_CORE.md`
-- `docs/01_north_star.md`
-- `docs/04_execution_flow.md`
-- `AGENTS.md`
-- `ai_context/00_AI_CONTRACT.md`
-- `docs/03_quality_gates.md`（如果存在）
-- `ai_context/CTCP_FAST_RULES.md`
-- `README.md`
-- `BUILD.md`
-- `PATCH_README.md`
-- `TREE.md`（如果存在）
-- `ai_context/problem_registry.md`
-- `ai_context/decision_log.md`
+Use the narrowest authority that matches the concern:
 
----
+- Current task scope and allowed behavior: `meta/tasks/CURRENT.md`
+- Expanded workflow details, internal step mapping, and verify profiles: `docs/04_execution_flow.md`
+- Runtime truth, provenance, and verify artifact semantics: `docs/00_CORE.md`
+- Acceptance gate behavior: `docs/03_quality_gates.md` and `scripts/verify_repo.ps1` / `scripts/verify_repo.sh`
+- Queue/task/report discipline: `docs/25_project_plan.md`
+- Reusable repo workflows: `.agents/skills/`
+- Frontend/support/dialogue-specific rules: `docs/10_team_mode.md`, `docs/11_task_progress_dialogue.md`, `docs/14_persona_test_lab.md`
+- Human-oriented overview and quickstart: `README.md`
+- Output/report discipline shared with automation: `ai_context/00_AI_CONTRACT.md`
+- Fast mirror for quick lookup: `ai_context/CTCP_FAST_RULES.md`
 
-## 2) 执行顺序（不可跳过）
+If more than one file appears to define the same concern, follow this order:
 
-Canonical 10-step flow is defined only in `docs/04_execution_flow.md`.
-AGENTS.md does not redefine step semantics.
+1. `AGENTS.md` for the root agent contract
+2. `meta/tasks/CURRENT.md` for the active task
+3. the routed concern-specific document
+4. the verify scripts for final pass/fail
 
-Agent operating obligations:
-
-1. bind queue item + update `meta/tasks/CURRENT.md`
-2. record readlist/plan/verify/demo in `meta/reports/LAST.md`
-3. fill integration check fields before implementation
-4. run local check/fix loop including triplet guard commands
-5. run canonical verify gate (`scripts/verify_repo.ps1` / `scripts/verify_repo.sh`)
-6. finalize with evidence for `connected + accumulated + consumed`
-
-### Current Task Truth (No Silent Scope Expansion)
-
-- `meta/tasks/CURRENT.md` is the only current-task purpose/scope authority.
-- Required fields: `task_purpose`、`allowed_behavior_change`、`forbidden_goal_shift`、`in_scope_modules`、`out_of_scope_modules`、`completion_evidence`。
-- If implementation intent exceeds `CURRENT.md` scope, stop and open a contract-change style queue/task update before coding.
-
----
-
-## 3) 唯一验收入口（DoD Gate）
-
-只允许使用：
-
-- Windows: `scripts/verify_repo.ps1`
-- Unix: `scripts/verify_repo.sh`
-
-`verify_repo` 必须覆盖：
-
-- anti-pollution gate（禁止 build/run 产物进入 repo）
-- headless lite build gate（`CTCP_ENABLE_GUI=OFF`；无 cmake 时可跳过并记录）
-- workflow gate（`scripts/workflow_checks.py`）
-- plan/patch/behavior gate（`plan_check.py`、`patch_check.py`、`behavior_catalog_check.py`）
-- contract + doc index gate（`contract_checks.py`、`sync_doc_links.py --check`）
-- triplet guard gate（`test_runtime_wiring_contract.py`、`test_issue_memory_accumulation_contract.py`、`test_skill_consumption_contract.py`）
-- lite replay + python unit tests（可按环境变量跳过 lite replay）
-- plan declared-gates/evidence 复检（`plan_check.py --executed-gates ... --check-evidence`）
-- full gate（`CTCP_FULL_GATE=1` 或 `--full` 时附加执行）
-
----
-
-## 4) 强制交付
-
-### 强制交付内容（必须具备）
-
-1. Readlist（读了哪些文件 + 关键约束）
-2. Plan（分阶段：Docs/Spec → Code → Verify → Report）
-3. Changes（文件清单 + 关键 diff 摘要）
-4. Verify（命令 + 关键输出 / 失败原因）
-5. Questions（若有：阻塞问题 + 选项 + 默认建议）
-6. Demo（指出 `meta/reports/LAST.md` 与外部 run_dir 证据链文件路径）
-
-### 强制交付位置（必须落盘）
-
-- 上述 1~6 的正文必须写入 `meta/reports/LAST.md`。
-- 外部 run 包证据链必须写入 run_dir 的对应文件（例如 `TRACE.md`、`artifacts/verify_report.json`）。
-- Chat/控制台的最终输出必须遵守 `ai_context/00_AI_CONTRACT.md`：patch-only（unified diff），不得附带报告正文。
-
----
-
-## 5) 最小改动原则
-
-- 一个 patch 只做一件事（一个主题）
-- 新依赖必须记录到 `third_party/THIRD_PARTY.md`（若目录存在）
-- 任何绕过 gate 的行为必须写入 `ai_context/decision_log.md`
-
----
-
-## Integration Proof Requirement
-
-When modifying or adding any feature, the implementing agent MUST provide an explicit integration proof.
-
-The proof MUST include:
-
-1. **Entry trigger**
-   - Which real entrypoint reaches this feature?
-2. **Call path**
-   - What exact runtime path connects the entrypoint to the feature and from the feature to the next stage?
-3. **Truth source**
-   - What state/artifact is authoritative for this feature?
-4. **Failure behavior**
-   - What happens on failure?
-   - Does the system retry, degrade, block, or ask the user?
-5. **Verification**
-   - Which automated test or end-to-end scenario proves the feature is actually connected?
-
-Required output format for each changed feature:
-- upstream:
-- current_module:
-- downstream:
-- source_of_truth:
-- fallback:
-- acceptance_test:
-- forbidden_bypass:
-- user_visible_effect:
-
-Without this integration proof, the change is incomplete.
-
-## No Prompt-Only Completion for Wiring Problems
-
-If the task is about:
-- routing
-- integration
-- bridge connection
-- state propagation
-- memory accumulation
-- skill activation
-- user-visible error leakage
-
-then prompt-only edits are insufficient.
-
-The agent MUST modify executable code and tests.
-If the task is an integration defect, changing prompt text alone does not count as completion.
-
-## Frontend Boundary Rule
-
-Frontend/customer-facing agents MAY:
-- classify conversation mode
-- extract requirement summaries
-- render project-manager-style replies
-- ask high-leverage clarification questions
-- present execution progress to the user
-
-Frontend/customer-facing agents MUST NOT:
-- directly mutate project execution state outside the bridge
-- directly invent engineering status from chat memory
-- directly expose backend raw errors to the user
-- open parallel execution paths that bypass CTCP runtime contracts
-
----
-
-## Codex Skills（repo-local）
-
-- `ctcp-workflow`：固定执行 CTCP/ADLC 流程（spec-first -> gate -> verify -> report，失败走证据链）
-  - path: `.agents/skills/ctcp-workflow/SKILL.md`
-  - invoke: `$ctcp-workflow`
-- `ctcp-verify`：执行仓库唯一验收入口并给出首个失败点与最小修复策略
-  - path: `.agents/skills/ctcp-verify/SKILL.md`
-  - invoke: `$ctcp-verify`
-- `ctcp-failure-bundle`：在失败后收集证据链并输出可审计失败闭环
-  - path: `.agents/skills/ctcp-failure-bundle/SKILL.md`
-  - invoke: `$ctcp-failure-bundle`
-- `ctcp-gate-precheck`：改动前检查任务门禁与契约前置条件
-  - path: `.agents/skills/ctcp-gate-precheck/SKILL.md`
-  - invoke: `$ctcp-gate-precheck`
-- `ctcp-doc-index-sync`：处理 README Doc Index 同步与复检闭环
-  - path: `.agents/skills/ctcp-doc-index-sync/SKILL.md`
-  - invoke: `$ctcp-doc-index-sync`
-- `ctcp-orchestrate-loop`：驱动 `ctcp_orchestrate` 的状态推进与阻塞分流
-  - path: `.agents/skills/ctcp-orchestrate-loop/SKILL.md`
-  - invoke: `$ctcp-orchestrate-loop`
-- `ctcp-patch-guard`：执行 patch 范围/契约守卫并给出最小修复策略
-  - path: `.agents/skills/ctcp-patch-guard/SKILL.md`
-  - invoke: `$ctcp-patch-guard`
-- `ctcp-simlab-lite`：运行轻量 SimLab 回放并输出首个失败点
-  - path: `.agents/skills/ctcp-simlab-lite/SKILL.md`
-  - invoke: `$ctcp-simlab-lite`
-- `ctcp-run-report`：汇总 run 证据并生成可审计报告
-  - path: `.agents/skills/ctcp-run-report/SKILL.md`
-  - invoke: `$ctcp-run-report`
+If none of the routed docs clearly owns the concern, prefer simplifying the rule surface instead of adding another parallel authority.

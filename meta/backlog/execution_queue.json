@@ -1288,6 +1288,256 @@
       },
       "status": "done",
       "notes": "Added Persona Test Lab as an isolated regression layer with repo-local persona/rubric/case assets, external run artifact rules, and contract wiring across core/flow/gate/support docs; workflow checks, contract checks, doc index, triplet guards, and verify_repo contract profile passed."
+    },
+    {
+      "id": "ADHOC-20260315-persona-test-lab-runner-judge",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Implement minimal Persona Test Lab fixture runner and scoring judge",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260314-persona-test-lab-contracts"
+      ],
+      "dod": [
+        "scripts/ctcp_persona_lab.py can create external persona-lab run artifacts from repo-local case specs and fixture assistant replies",
+        "judge output includes transcript.json, score.json, fail_reasons.md, summary.md, and root manifest or summary with fresh-session-per-case evidence",
+        "tests cover at least one pass path, one fail-fast lint path, and fresh session isolation for multiple cases",
+        "docs reflect the current executable entrypoint and clearly mark production-assistant adapter work as still pending"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_persona_lab.py",
+          "tests/test_persona_lab_runner.py",
+          "docs/14_persona_test_lab.md",
+          "docs/30_artifact_contracts.md",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_persona_lab.py tests/test_persona_lab_runner.py",
+          "python -m unittest discover -s tests -p \"test_persona_lab_runner.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Added scripts/ctcp_persona_lab.py as a fixture-driven isolated runner and judge, added tests/test_persona_lab_runner.py for pass/fail-fast/fresh-session coverage, updated Persona Test Lab authority docs and issue memory, and passed py_compile, persona-lab tests, triplet guards, workflow/contract/doc-index checks, and scripts/verify_repo.ps1."
+    },
+    {
+      "id": "ADHOC-20260315-agent-contract-thin-mainline",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "Simplify agent contracts into thin root AGENTS, single 5-step flow, and minimal local overrides",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260315-persona-test-lab-runner-judge"
+      ],
+      "dod": [
+        "root AGENTS.md becomes a short agent main contract with Purpose, Single Entry, Single Flow, Allowed Questions, Required Outputs, Non-Negotiable Rules, and Routing",
+        "README.md is downgraded to human navigation and no longer competes as an agent authority entrypoint",
+        "docs/04_execution_flow.md becomes an expanded explanatory flow reference instead of the root agent contract",
+        "directly conflicting agent-entry docs are aligned without creating a new heavy local-rule hierarchy"
+      ],
+      "artifacts": {
+        "produces": [
+          "AGENTS.md",
+          "README.md",
+          "docs/04_execution_flow.md",
+          "docs/00_CORE.md",
+          "docs/01_north_star.md",
+          "docs/25_project_plan.md",
+          "ai_context/00_AI_CONTRACT.md",
+          "ai_context/CTCP_FAST_RULES.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python scripts/workflow_checks.py",
+          "python scripts/contract_checks.py",
+          "python scripts/sync_doc_links.py --check",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile contract"
+        ]
+      },
+      "status": "done",
+      "notes": "Rewrote AGENTS.md as a thin root contract, downgraded README.md to human navigation, repositioned docs/04_execution_flow.md as an expanded workflow reference, aligned direct conflict entry docs, and passed workflow_checks, contract_checks, sync_doc_links --check, and verify_repo contract profile without adding a new local-rule hierarchy."
+    },
+    {
+      "id": "ADHOC-20260315-full-flow-validation",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Run full canonical validation flow after agent-contract simplification",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260315-agent-contract-thin-mainline"
+      ],
+      "dod": [
+        "CURRENT/LAST are rebound to a validation-only task",
+        "the default verify_repo entrypoint is executed without a reduced profile",
+        "the first failure point or full pass is recorded in LAST.md",
+        "the task closes without unrelated code or doc churn"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260315-full-flow-validation.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260315-full-flow-validation.md"
+        ],
+        "tests": [
+          "python scripts/workflow_checks.py",
+          "python scripts/contract_checks.py",
+          "python scripts/sync_doc_links.py --check",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Validation-only run executed the default verify_repo entrypoint, passed workflow/contract/doc-index prechecks, then failed first at lite scenario replay with S15_lite_fail_produces_bundle and S16_lite_fixer_loop_pass under C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260315-025740."
+    },
+    {
+      "id": "ADHOC-20260316-repo-health-audit",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Audit current repo health and surface blocking project issues",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260315-full-flow-validation"
+      ],
+      "dod": [
+        "CURRENT/LAST are rebound to a project-health audit task",
+        "the canonical verify_repo entrypoint is executed and its current pass/fail state is recorded",
+        "blocking failures and repo-state risks are summarized with evidence pointers",
+        "the audit closes without unrelated repairs"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260316-repo-health-audit.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260316-repo-health-audit.md"
+        ],
+        "tests": [
+          "python scripts/workflow_checks.py",
+          "python scripts/contract_checks.py",
+          "python scripts/sync_doc_links.py --check",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Audit-only task for the user request to inspect the whole project; workflow/contract/doc-index prechecks passed, canonical verify failed first at lite scenario replay and a final recheck failed the same way under C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260316-130140, and the audit isolated two current blockers: S15 no longer surfaces failure_bundle.zip in the fixer provider prompt, and S16 reapply is blocked by repo_dirty_before_apply after LAST_BUNDLE pointer writes dirty the sandbox repo."
+    },
+    {
+      "id": "ADHOC-20260316-markdown-flow-clarity",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "Clarify markdown task/report flow into one-item-per-line structure",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260316-repo-health-audit"
+      ],
+      "dod": [
+        "docs/25_project_plan.md plus task/report templates define a linear one-item-per-line markdown flow rule",
+        "CURRENT.md and LAST.md are rebound to this docs-only task and keep scope, plan, verify, and results clearly separated",
+        "the canonical verify_repo entrypoint is executed and its current result is recorded",
+        "the task closes as docs/meta-only without code, test, or script edits"
+      ],
+      "artifacts": {
+        "produces": [
+          "docs/25_project_plan.md",
+          "meta/tasks/TEMPLATE.md",
+          "meta/reports/TEMPLATE_LAST.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260316-markdown-flow-clarity.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260316-markdown-flow-clarity.md"
+        ],
+        "tests": [
+          "python scripts/workflow_checks.py",
+          "python scripts/contract_checks.py",
+          "python scripts/sync_doc_links.py --check",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Docs-only task for the user's request to make repo markdown flow clearer: docs/25_project_plan.md plus task/report templates now define a one-item-per-line flow rule, active CURRENT/LAST were rebound to the clearer structure, workflow/contract/doc-index checks passed, and canonical verify still fails first at lite scenario replay under C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260316-132409 with the pre-existing S15/S16 blockers."
+    },
+    {
+      "id": "ADHOC-20260316-telegram-to-project-generation-smoke",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Smoke-validate Telegram support entry through project generation and capture live blockers",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260316-markdown-flow-clarity"
+      ],
+      "dod": [
+        "CURRENT/LAST are rebound to a Telegram-to-project-generation smoke task",
+        "support selftest and local project-intake smoke leave auditable run evidence",
+        "live-reference scaffold generates an external project and its generated verify exits 0",
+        "live Telegram startup attempt is executed and its first blocker is recorded instead of claimed as healthy",
+        "the canonical verify_repo entrypoint is executed and its current result is recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260316-telegram-to-project-generation-smoke.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260316-telegram-to-project-generation-smoke.md"
+        ],
+        "tests": [
+          "python scripts/ctcp_support_bot.py --selftest",
+          "@'...project request...'@ | python scripts/ctcp_support_bot.py --stdin --chat-id local-telegram-smoke",
+          "python scripts/ctcp_orchestrate.py status --run-dir <bound_run_dir>",
+          "python scripts/ctcp_orchestrate.py scaffold --out <external_path> --name <name> --profile minimal --source-mode live-reference --runs-root <external_runs_root>",
+          "powershell -ExecutionPolicy Bypass -File <generated_project>\\scripts\\verify_repo.ps1",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Operational smoke task for the user's request to go from Telegram testing to project generation: support selftest passed, a local project-intake smoke bound run 20260316-134016-895506-orchestrate, live-reference scaffold generated D:/.c_projects/adc/generated_projects/telegram-smoke-20260316 and its generated verify exited 0, the user-provided token was verified via Telegram getMe for bot username my_t2e5s9t_bot, and a real long-poll process is now running as PID 37404 with allowlist 6092527664 and clean stderr; final canonical verify still reaches lite scenario replay before failing on the pre-existing S15/S16 SimLab regressions under C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260316-153942."
+    },
+    {
+      "id": "ADHOC-20260316-simlab-fixer-loop-repair",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Repair SimLab S15/S16 fixer-loop regressions in failure-bundle prompt and managed dirty reapply",
+      "owner_role": "Local Orchestrator",
+      "deps": [
+        "ADHOC-20260316-telegram-to-project-generation-smoke"
+      ],
+      "dod": [
+        "fixer dispatch prompt for failed or rejected patch paths preserves `failure_bundle.zip` in its missing-artifact inputs",
+        "managed runtime pointer drift no longer blocks fixer reapply in S16 while preserving real dirty-repo protection for other files",
+        "issue memory records the recurring S15/S16 regression and its repaired status",
+        "the canonical verify_repo entrypoint is executed and its current result is recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_dispatch.py",
+          "scripts/ctcp_orchestrate.py",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260316-simlab-fixer-loop-repair.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260316-simlab-fixer-loop-repair.md"
+        ],
+        "tests": [
+          "python simlab/run.py --scenario S15_lite_fail_produces_bundle",
+          "python simlab/run.py --scenario S16_lite_fixer_loop_pass",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "doing",
+      "notes": "Scoped repair task opened from the Telegram smoke follow-up after canonical verify consistently failed first at lite scenario replay: S15 no longer exposes failure_bundle.zip in the fixer provider prompt, and S16 reapply is blocked by managed LAST_BUNDLE pointer drift."
     }
   ]
 }

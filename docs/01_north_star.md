@@ -31,11 +31,12 @@ Its core value is deterministic execution evidence. User-visible dialogue, tests
 ## Default Operating Mode
 
 - Headless-first, contract-first, verify-gated.
-- Repository work follows the canonical execution flow in [docs/04_execution_flow.md](docs/04_execution_flow.md).
+- Repository work enters through [AGENTS.md](../AGENTS.md) and uses [docs/04_execution_flow.md](docs/04_execution_flow.md) only as the expanded workflow reference.
 
-## Canonical Execution Flow
+## Workflow Reference
 
-- Canonical flow definition lives only in [docs/04_execution_flow.md](docs/04_execution_flow.md).
+- Root agent contract lives in [AGENTS.md](../AGENTS.md).
+- Expanded workflow details live in [docs/04_execution_flow.md](docs/04_execution_flow.md).
 
 ## Product Lanes / Subsystem Map
 

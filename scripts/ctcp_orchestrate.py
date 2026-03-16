@@ -26,6 +26,12 @@ REPORT_LAST = REPORTS_DIR / "LAST.md"
 DEFAULT_MAX_ITERATIONS = 3
 DEFAULT_REFERENCE_EXPORT_MANIFEST = "meta/reference_export_manifest.yaml"
 
+MANAGED_DIRTY_POINTERS = {
+    LAST_RUN_POINTER.relative_to(ROOT).as_posix(),
+    LAST_BUNDLE_POINTER.relative_to(ROOT).as_posix(),
+}
+
+
 try:
     from tools.run_paths import get_repo_slug, get_runs_root, make_run_dir
 except ModuleNotFoundError:
@@ -521,11 +527,24 @@ def append_command_trace(
         fh.write("\n".join(lines) + "\n")
 
 
-def repo_dirty_status() -> tuple[bool, list[str]]:
+def _porcelain_path(row: str) -> str:
+    text = str(row or "")
+    if len(text) >= 3:
+        text = text[3:]
+    text = text.strip()
+    if " -> " in text:
+        text = text.split(" -> ", 1)[1].strip()
+    return text.replace("\\", "/")
+
+
+def repo_dirty_status(ignore_paths: set[str] | None = None) -> tuple[bool, list[str]]:
     rc, out, _ = run_cmd(["git", "status", "--porcelain", "--untracked-files=no"], ROOT)
     if rc != 0:
         return True, ["git status --porcelain failed"]
     rows = [ln.rstrip() for ln in out.splitlines() if ln.strip()]
+    ignored = {str(x or "").strip().replace("\\", "/") for x in (ignore_paths or set()) if str(x or "").strip()}
+    if ignored:
+        rows = [row for row in rows if _porcelain_path(row) not in ignored]
     return bool(rows), rows
 
 
@@ -2680,7 +2699,7 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
                         source="artifacts/last_applied.patch",
                     )
 
-            dirty, dirty_rows = repo_dirty_status()
+            dirty, dirty_rows = repo_dirty_status(ignore_paths=MANAGED_DIRTY_POINTERS)
             if dirty and not allow_managed_dirty:
                 run_doc["status"] = "blocked"
                 run_doc["blocked_reason"] = "repo_dirty_before_apply"

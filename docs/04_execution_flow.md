@@ -1,10 +1,23 @@
-# Canonical Execution Flow (Single Flow Source)
+# Execution Flow (Expanded Reference)
 
-This file is the only authoritative source for repository modification workflow.
+`AGENTS.md` is the root agent contract and the first file an agent should use.
+This document expands the root 5-step flow into the repository's detailed sequencing, supporting chains, and verification-profile behavior.
 
-Canonical flow:
+Root agent flow:
+
+`bind -> read -> analyze -> change -> verify/close`
+
+Expanded repository flow:
 
 `bind -> read -> analyze/find -> integration check -> plan -> spec -> implement -> check/fix loop -> verify -> finalize`
+
+Expanded mapping from the root flow:
+
+- `Bind` -> Step 1
+- `Read` -> Step 2
+- `Analyze` -> Steps 3–5
+- `Change` -> Steps 6–8
+- `Verify/Close` -> Steps 9–10
 
 Supporting chains (mandatory when relevant):
 
@@ -85,7 +98,8 @@ Profiles:
 - `contract`: for authoritative governance/workflow/runtime contract sources. Stricter than `doc-only`; includes behavior catalog checks. Still skips code-only gates.
 - `code`: for any code/integration/script/runtime/test/build change. Full current behavior; no gates skipped.
 
-The canonical 10-step flow remains mandatory regardless of profile.
+The expanded 10-step sequence remains the detailed workflow reference regardless of profile.
+Agents should still enter through the root 5-step flow in `AGENTS.md`.
 `meta/tasks/CURRENT.md` and `meta/reports/LAST.md` remain required across all profiles.
 
 ## Step 10: Finalize

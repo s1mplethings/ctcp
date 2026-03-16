@@ -412,11 +412,11 @@ When to add:
 - Expected correct behavior:
   production assistant、test user persona、judge/scoring 三层分离；每个 case 用 fresh session；结果必须带 transcript、score、fail reasons，并且多语言与长对话漂移都可重放。
 - Fix:
-  增加独立的 Persona Test Lab 合同和静态资产，要求 fresh-session-per-case、固定 persona、评分 rubric、最小回归 cases，以及 repo 外的结果产物结构。
+  先增加独立的 Persona Test Lab 合同和静态资产，再补一个 fixture runner / judge 基线，要求 fresh-session-per-case、固定 persona、评分 rubric、最小回归 cases，以及 repo 外的结果产物结构。
 - Fix attempt status:
-  2026-03-14 docs-first contract landing bound under `ADHOC-20260314-persona-test-lab-contracts`.
+  2026-03-14 docs-first contract landing bound under `ADHOC-20260314-persona-test-lab-contracts`; 2026-03-15 fixture runner / judge baseline bound under `ADHOC-20260315-persona-test-lab-runner-judge`.
 - Regression test status:
-  Pending future runner/judge automation; authoritative contract and repo-local assets now live in `docs/14_persona_test_lab.md` and `persona_lab/`.
+  Baseline runner/judge now exists in `scripts/ctcp_persona_lab.py` with `tests/test_persona_lab_runner.py`; live production-adapter regression is still pending.
 - Prevention:
   任何“风格已修复”的声明都必须附带 isolated persona-lab evidence，而不是只引用同一正式会话里的主观观感。
 - Tags:

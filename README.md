@@ -1,30 +1,37 @@
 # CTCP — ADLC + Multi-Agent Execution Engine
 
-Authoritative source map:
+Human navigation map:
 
+- Agent main contract: `AGENTS.md`
 - Repo purpose: `docs/01_north_star.md`
-- Canonical execution flow: `docs/04_execution_flow.md`
+- Expanded workflow reference: `docs/04_execution_flow.md`
 - Current task purpose/scope: `meta/tasks/CURRENT.md`
 - Runtime engineering truth: `docs/00_CORE.md`
 
-This README is quickstart guidance and does not redefine those sources.
+This README is human-oriented quickstart and navigation. It does not act as the root agent contract.
 
 ---
 
 ## Quick Start
 
-唯一主入口（执行）：
+For agents:
+- start from `AGENTS.md`
+- bind the current task in `meta/tasks/CURRENT.md`
+
+For operators or humans running the runtime pipeline:
+
+运行入口（runtime orchestrator）：
 ```powershell
 python scripts\ctcp_orchestrate.py new-run --goal "your-goal"
 python scripts\ctcp_orchestrate.py advance --max-steps 8
 ```
 
-唯一验收入口（Windows）：
+验收入口（Windows）：
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
 ```
 
-唯一验收入口（Unix）：
+验收入口（Unix）：
 ```bash
 bash scripts/verify_repo.sh
 ```

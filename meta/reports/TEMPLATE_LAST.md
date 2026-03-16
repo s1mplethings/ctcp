@@ -1,33 +1,42 @@
-# Demo Report — LAST
+# Demo Report - LAST
 
-## Goal
--
+## Latest Report
 
-## Readlist
-- (list the files you read and the key constraints)
+- File: [`meta/reports/archive/YYYYMMDD-<topic>.md`](archive/YYYYMMDD-<topic>.md)
+- Date: `YYYY-MM-DD`
+- Topic: `<one line>`
 
-## Plan
-- Docs/Spec
-- Code (if allowed)
-- Verify
-- Report
+### Readlist
+- `<one file per line>`
 
-## Timeline / Trace
-- Run pointer: `meta/run_pointers/LAST_RUN.txt`
-- Run folder (external): `${CTCP_RUNS_ROOT:-~/.ctcp/runs}/<repo_slug>/<run_id>/`
-- Trace file (external): `${CTCP_RUNS_ROOT:-~/.ctcp/runs}/<repo_slug>/<run_id>/TRACE.md`
+### Plan
+1) `<one step per line>`
+2) `<one step per line>`
+3) `<one step per line>`
 
-## Changes
-- Files changed:
--
+### Changes
+- `<one file per line>`
 
-## Verify
-- Command:
-- Output (key lines):
--
+### Verify
+- `<command>` -> `<exit code>`
+- first failure point: `<PASS or first failure>`
+- minimal fix strategy: `<one line>`
 
-## Questions (only if blocking)
-- (write to external run bundle QUESTIONS.md; locate via meta/run_pointers/LAST_RUN.txt)
+### Questions
+- None.
 
-## Next steps
--
+### Demo
+- verify summary: `meta/run_pointers/LAST_RUN.txt` or external run summary path
+- trace: `${CTCP_RUNS_ROOT:-~/.ctcp/runs}/<repo_slug>/<run_id>/TRACE.md`
+
+### Integration Proof
+- upstream: `<one line>`
+- current_module: `<one line>`
+- downstream: `<one line>`
+- source_of_truth: `<one line>`
+- fallback: `<one line>`
+- acceptance_test:
+  - `<one command per line>`
+- forbidden_bypass:
+  - `<one line per bypass>`
+- user_visible_effect: `<one line>`

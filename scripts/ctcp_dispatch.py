@@ -753,6 +753,19 @@ def _split_missing_paths(path_value: str) -> list[str]:
     return out
 
 
+def _merge_missing_paths(*groups: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for group in groups:
+        for raw in group:
+            value = str(raw or "").strip()
+            if not value or value in seen:
+                continue
+            seen.add(value)
+            out.append(value)
+    return out
+
+
 def _gate_owner(owner: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", (owner or "").strip().lower()).strip("_")
 
@@ -824,7 +837,11 @@ def derive_request(gate: dict[str, str], run_doc: dict[str, Any]) -> dict[str, A
         "role": role,
         "action": action,
         "target_path": target,
-        "missing_paths": _split_missing_paths(path_value),
+        "missing_paths": (
+            _merge_missing_paths(["failure_bundle.zip"], _split_missing_paths(path_value))
+            if role == "fixer"
+            else _split_missing_paths(path_value)
+        ),
         "reason": reason,
         "goal": goal,
     }

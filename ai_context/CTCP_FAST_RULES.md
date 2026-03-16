@@ -1,6 +1,6 @@
 # CTCP Fast Rules (Hard)
 
-> **Agent 入口文件**：新任务从这里开始，不需要先通读其他 MD。
+> Fast mirror only. Root agent entry is `AGENTS.md`.
 
 <!-- TOC -->
 | 区域 | 锚点 |
@@ -18,7 +18,7 @@
 4. Canonical verify artifact is `artifacts/verify_report.json` in external `run_dir` (`TRACE.md` + related artifacts).
 5. `proof.json` is deprecated and non-authoritative; `verify_report.md` is optional human-readable material only.
 6. Proceed by default; only ask when blocked by credentials/permissions, mutually exclusive decisions, or missing critical constraints.
-7. Execution order is fixed and mandatory; canonical source is `docs/04_execution_flow.md` (do not redefine locally).
+7. The visible agent flow is defined in `AGENTS.md`; `docs/04_execution_flow.md` is the expanded reference. Do not redefine either locally.
 8. Verification profiles (`doc-only`, `contract`, `code`) are supported via `--Profile`/`--profile` flag, `CTCP_VERIFY_PROFILE` env, or auto-detection. Default is `code`. See `docs/00_CORE.md` §9.1 and `docs/04_execution_flow.md` Step 9.
 9. Cleanup follows archive-first policy for knowledge assets; hard delete only for generated/temp artifacts. See `docs/cleanup_policy.md`.
 
@@ -29,10 +29,10 @@
 | Concern | 权威文件 |
 |---------|---------|
 | Repo purpose | `docs/01_north_star.md` |
-| Canonical 10-step flow | `docs/04_execution_flow.md` |
+| Agent main contract | `AGENTS.md` |
+| Expanded execution flow | `docs/04_execution_flow.md` |
 | Current task scope | `meta/tasks/CURRENT.md` |
 | Runtime truth | `docs/00_CORE.md` |
-| Agent hard rules | `AGENTS.md` |
 | AI system contract | `ai_context/00_AI_CONTRACT.md` |
 | This fast-rules file | `ai_context/CTCP_FAST_RULES.md` |
 | Verify gate scripts | `scripts/verify_repo.ps1` / `.sh` |
@@ -41,10 +41,10 @@
 
 ## Agent Minimal Startup
 
-新任务只需读 3 个文件就能开始：
+新任务只需读 3 类信息就能开始：
 
-1. **本文件** (`ai_context/CTCP_FAST_RULES.md`) — 规则 + 速查表
+1. **`AGENTS.md`** — 根级 agent 主合同
 2. **`meta/tasks/CURRENT.md`** — 当前任务范围
-3. **任务相关代码** — 按 CURRENT.md `in_scope_modules` 定位
+3. **任务相关文件** — 按 CURRENT.md `in_scope_modules` 定位
 
-其余文件按需查，不必每次全读。
+本文件只是速查，不替代根合同。

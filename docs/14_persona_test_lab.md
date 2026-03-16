@@ -121,6 +121,24 @@ Run outputs stay outside repo:
 
 The repo MUST NOT store live persona-lab transcripts, scores, or snapshots.
 
+### 6.1 Current Executable Baseline
+
+Current repo entrypoint:
+
+- `scripts/ctcp_persona_lab.py`
+
+Current runtime scope:
+
+- runs fixed `persona_lab/cases/*.yaml` with fixture assistant replies
+- scores replies against repo-local rubrics
+- writes `manifest.json`, `summary.md`, `transcript.md`, `transcript.json`, `score.json`, `fail_reasons.md`, and case `summary.md`
+
+Current limitation:
+
+- this is a fixture runner / judge baseline only
+- it does not yet call the live production support path or a model provider
+- live production-assistant adapter work remains a separate next-stage task
+
 ## 7) Static Asset Meaning and Minimum Fields
 
 ### 7.1 Persona Files
@@ -277,10 +295,11 @@ Prompt-only “we now speak better” claims do not count as persona-lab complet
 
 ## 14) Next-Stage Roadmap
 
-Current patch lands the contracts and static assets only.
+Current patch series lands the contracts, static assets, and a fixture runner / judge baseline.
 
 Next-stage goals:
-- build a persona-lab runner that starts a fresh session per case
-- build a judge executor that emits `score.json` and `fail_reasons.md`
+- `superseded by scripts/ctcp_persona_lab.py`: build a persona-lab runner that starts a fresh session per case
+- `superseded by scripts/ctcp_persona_lab.py`: build a judge executor that emits `score.json` and `fail_reasons.md`
+- connect the live production assistant path to Persona Test Lab without mutating production conversation state
 - connect persona-lab regression into style acceptance and CI/verify policy when runtime support exists
 - extend SimLab or replay tooling with snapshot-capable scene replay so visible UI or chat-step evidence can be bound to persona transcripts without mixing them into production runs

@@ -6,7 +6,8 @@ It does not redefine repository purpose or canonical execution flow.
 Source map:
 
 - Repo purpose: `docs/01_north_star.md`
-- Canonical flow: `docs/04_execution_flow.md`
+- Agent main contract: `AGENTS.md`
+- Expanded flow: `docs/04_execution_flow.md`
 - Current task purpose/scope truth: `meta/tasks/CURRENT.md`
 
 ## 1) Three Planning Scopes
@@ -44,7 +45,7 @@ Execution should be dependency-safe: bottom-up by deps, top-down by urgency.
 
 ## 4) Agent Working Rule
 
-0. Follow canonical execution flow from `docs/04_execution_flow.md`.
+0. Follow the root agent flow from `AGENTS.md`; use `docs/04_execution_flow.md` only when detailed workflow mapping is needed.
 1. Read `meta/backlog/execution_queue.json`.
 2. Pick the highest-priority item whose `deps` are all `done`.
 3. Write/refresh `meta/tasks/CURRENT.md` for that exact item id.
@@ -63,6 +64,19 @@ A queue item is complete only when all conditions hold:
 - evidence and reproducible command trace are recorded in `meta/reports/LAST.md`.
 
 No evidence, no completion.
+
+## 5.1) Markdown Flow Layout Rule
+
+Task/report markdown must keep the execution flow readable as a single visible mainline.
+
+Hard layout rules:
+
+- One concern per bullet or numbered line.
+- One flow step per numbered line.
+- Scope, plan, verify, and result must live under separate headings; do not mix them into one bullet.
+- When a line needs evidence, append the evidence on that same line or in the next single-purpose bullet; do not merge multiple evidence types into one paragraph.
+- `meta/tasks/CURRENT.md` and `meta/reports/LAST.md` should prefer short label-first bullets such as `- task_purpose: ...` or `- first failure point: ...`.
+- Templates must preserve workflow-gate-required headings, but the content inside those headings should remain line-by-line and scan-friendly.
 
 ## 6) Minimal Reproduction Flow (Docs-Only Task)
 

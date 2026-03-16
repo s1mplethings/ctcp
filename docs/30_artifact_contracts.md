@@ -496,6 +496,11 @@ External run outputs:
 - Runs MUST be outside repo under:
   - `<CTCP_RUNS_ROOT>/<repo_slug>/persona_lab/<lab_run_id>/`
 
+- Current baseline producer:
+  - `scripts/ctcp_persona_lab.py`
+  - scope: fixture assistant replies only
+  - live production-assistant adapter remains pending and MUST NOT be implied by fixture-only artifacts
+
 - `<lab_run_id>/manifest.json`
   MUST include:
   - `schema_version`

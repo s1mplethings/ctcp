@@ -11,233 +11,156 @@
 
 ## Active Task (latest)
 
-- File: [`meta/tasks/archive/20260314-persona-test-lab-contracts.md`](archive/20260314-persona-test-lab-contracts.md)
-- Date: 2026-03-14
-- Topic: Persona Test Lab 合同、隔离会话规则与回归资产落地
-- Status: `done`
+- File: [`meta/tasks/archive/20260316-simlab-fixer-loop-repair.md`](archive/20260316-simlab-fixer-loop-repair.md)
+- Date: 2026-03-16
+- Topic: SimLab fixer-loop 回归修复（S15 / S16）
+- Status: `doing`
 
 ## Queue Binding
 
-- Queue Item: `ADHOC-20260314-persona-test-lab-contracts`
-- Layer/Priority: `L0 / P0`
+- Queue Item: `ADHOC-20260316-simlab-fixer-loop-repair`
+- Layer/Priority: `L1 / P0`
 - Source Queue File: `meta/backlog/execution_queue.json`
 
 ## Context
 
-- Why this item now?
-  用户要求新增一套独立人格测试工具 / Persona Test Lab，用来验证 production assistant 是否仍会出现机械式回答、接待台腔、重复寒暄、不推进任务、多语言退化和长对话污染等问题。当前仓库虽然已有 task-progress dialogue 合同，但还没有把 production persona、test user personas、judge scoring、fresh-session-per-case 和 transcript/score/fail reasons 产物固化成可回归的测试层。
-- Dependency check:
-  - `ADHOC-20260314-dialogue-showcase-metadata-contracts`: `done`
-- Scope boundary:
-  - 只做 docs/meta/backlog/report 与 repo-local static assets（`persona_lab/`）范围内的合同落地。
-  - 不改 `scripts/`、`frontend/`、`tools/`、`tests/` 等代码目录，不宣称 runner/judge runtime 已经实现。
-  - 不把人格测试混入正式 support 会话，不引入新的大角色体系。
+- Why this item now: 用户要求直接解决当前真实失败点，而 canonical verify 稳定卡在 `S15` / `S16`。
+- Dependency check: `ADHOC-20260316-telegram-to-project-generation-smoke` = `done`.
+- Scope boundary: 允许修改 `scripts/ctcp_dispatch.py`、`scripts/ctcp_orchestrate.py`、`tests/fixtures/patches/` 下本次回归对应 fixture、`ai_context/problem_registry.md` 与 queue/current/report meta 文件；不扩到 Telegram/support/scaffold 其他功能。
 
 ## Task Truth Source (single source for current task)
 
-- task_purpose:
-  把“正式执行人格、测试人格和评分人格三层分离；每个测试用例独立开新会话；测试结果可评分、可回归、可证明”落成仓库级合同、静态资产与验收规则，而不是停留在口头建议。
-- allowed_behavior_change:
-  - 可新增 `docs/14_persona_test_lab.md` 与 `persona_lab/` 静态资产目录。
-  - 可更新 `docs/00_CORE.md`、`docs/01_north_star.md`、`docs/03_quality_gates.md`、`docs/04_execution_flow.md`、`docs/10_team_mode.md`、`docs/11_task_progress_dialogue.md`、`docs/13_contracts_index.md`、`docs/21_paths_and_locations.md`、`docs/25_project_plan.md`、`docs/30_artifact_contracts.md`、`docs/verify_contract.md`。
-  - 可在 scope gate 需要时更新 `artifacts/PLAN.md` 的 `Scope-Allow`，使本轮 docs/static-assets 变更与 patch gate 对齐。
-  - 可更新 `README.md` Doc Index、`ai_context/problem_registry.md`、`meta/backlog/execution_queue.json`、`meta/tasks/CURRENT.md`、`meta/reports/LAST.md` 及对应 archive 文件。
-- forbidden_goal_shift:
-  - 不得把任务扩成有趣人格扮演系统或新的 frontend 产品。
-  - 不得把人格测试写进 production conversation state。
-  - 不得只写“更自然一点”之类的审美建议，必须落成 persona、rubric、case、artifact、lint、pass/fail 规则。
-- persona_lab_impact:
-  `direct` (`docs/14_persona_test_lab.md`、`persona_lab/` 资产与外部 run artifact contract 同步新增)
+- task_purpose: 修复 canonical verify 当前首个失败点对应的两个 SimLab 回归：先保住 `S15` 的 fixer prompt `failure_bundle.zip` 输入与 `S16` 的 managed dirty reapply，再修复因 README 头部漂移导致 `S15/S16` fixture patch 不再进入预期 verify/fixer-loop 分支的问题。
+- allowed_behavior_change: 可更新 `scripts/ctcp_dispatch.py`、`scripts/ctcp_orchestrate.py`、`tests/fixtures/patches/lite_fail_bad_readme_link.patch`、`tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch`、`ai_context/problem_registry.md`、`meta/backlog/execution_queue.json`、`meta/tasks/CURRENT.md`、`meta/tasks/archive/20260316-simlab-fixer-loop-repair.md`、`meta/reports/LAST.md`、`meta/reports/archive/20260316-simlab-fixer-loop-repair.md`。
+- forbidden_goal_shift: 不得顺手重构 dispatcher/orchestrator 其他路径；不得扩修 Telegram/support/scaffold 逻辑；不得只改 SimLab 场景断言绕开真实运行时缺陷。
 - in_scope_modules:
-  - `docs/00_CORE.md`
-  - `docs/01_north_star.md`
-  - `docs/03_quality_gates.md`
-  - `docs/04_execution_flow.md`
-  - `docs/10_team_mode.md`
-  - `docs/11_task_progress_dialogue.md`
-  - `docs/13_contracts_index.md`
-  - `docs/14_persona_test_lab.md`
-  - `docs/21_paths_and_locations.md`
-  - `docs/25_project_plan.md`
-  - `docs/30_artifact_contracts.md`
-  - `docs/verify_contract.md`
-  - `artifacts/PLAN.md`
-  - `persona_lab/README.md`
-  - `persona_lab/personas/*.md`
-  - `persona_lab/rubrics/*.yaml`
-  - `persona_lab/cases/*.yaml`
+  - `scripts/ctcp_dispatch.py`
+  - `scripts/ctcp_orchestrate.py`
+  - `tests/fixtures/patches/lite_fail_bad_readme_link.patch`
+  - `tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch`
   - `ai_context/problem_registry.md`
-  - `README.md`
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/CURRENT.md`
-  - `meta/tasks/archive/20260314-persona-test-lab-contracts.md`
+  - `meta/tasks/archive/20260316-simlab-fixer-loop-repair.md`
   - `meta/reports/LAST.md`
-  - `meta/reports/archive/20260314-persona-test-lab-contracts.md`
+  - `meta/reports/archive/20260316-simlab-fixer-loop-repair.md`
 - out_of_scope_modules:
-  - `scripts/`
+  - `scripts/ctcp_support_bot.py`
+  - `tools/providers/`
   - `frontend/`
-  - `tools/`
-  - `tests/`
-  - production `RUN.json` / `support_session_state.json`
-  - repo-local live run outputs or screenshots
-  - 与本轮 docs/static-assets 任务无关的其他未提交工作树改动
-- completion_evidence:
-  - 仓库存在单一权威的 Persona Test Lab 合同，明确三层分离、fresh-session-per-case、English Contracts/Chinese Intent、评分与 fail reasons 标准。
-  - repo-local `persona_lab/` 静态资产存在 production persona、七种 test user personas、三份 rubrics、至少八个最小回归 case。
-  - core/flow/gate/team/path/artifact 文档同步了 persona regression lint、repo 外 run 产物路径与 anti-pollution 规则。
-  - workflow checks、contract checks、doc index、triplet guard、canonical verify 留下 `connected + accumulated + consumed` 证据。
+  - `docs/`
+- completion_evidence: `S15` 场景里的 fixer prompt 明确包含 `failure_bundle.zip` 且场景重新进入 verify 失败分支，`S16` 第二次 advance 后 `verify_report.json` 为 `PASS`，issue memory 记录该回归及修复状态，canonical verify 已执行并记录最终结果。
 
 ## Analysis / Find (before plan)
 
-- Entrypoint analysis:
-  - 这次改动的上游是用户对 production assistant 风格回归的要求；未来消费者是 persona-lab runner、judge/scoring layer、support/style 合同维护者。
-- Downstream consumer analysis:
-  - `docs/14_persona_test_lab.md` 与 `persona_lab/` 会被后续 runner/judge 实现、风格回归验收、support/frontend 风格维护和报告编写者消费。
-- Source of truth:
-  - style rule authority: `docs/11_task_progress_dialogue.md`
-  - persona regression authority: `docs/14_persona_test_lab.md`
-  - static asset authority: `persona_lab/`
-  - external artifact authority: `docs/30_artifact_contracts.md` + `docs/21_paths_and_locations.md`
-  - current task/report authority: `meta/tasks/CURRENT.md` + `meta/reports/LAST.md`
-- Current break point / missing wiring:
-  - production support 会话和风格测试容易混在同一上下文，导致测试污染。
-  - 没有固定的 test user persona 集合、rubric、case baseline。
-  - 缺少 transcript + score + fail reasons 的结构化 run 产物。
-  - bilingual 与长对话漂移没有 isolated regression contract。
+- Entrypoint analysis: 当前失败入口都是 `scripts/ctcp_orchestrate.py advance` 驱动出的 fixer-loop 路径；`S15` 经过 `ctcp_dispatch` 生成 fixer prompt，`S16` 经过 `repo_dirty_status()` 进入 reapply 前脏仓库保护。
+- Downstream consumer analysis: canonical verify、SimLab lite suite、以及之后任何失败后进入 fixer-loop 的运行路径都会消费这两个修复。
+- Source of truth: `scripts/ctcp_dispatch.py` 的 request/prompt 输入、`scripts/ctcp_orchestrate.py` 的 `ready_apply` / `ready_verify` 状态推进、`simlab/scenarios/S15_lite_fail_produces_bundle.yaml`、`simlab/scenarios/S16_lite_fixer_loop_pass.yaml`、`scripts/verify_repo.ps1`。
+- Current break point / missing wiring: 第一轮 runtime 修复后，provider prompt 丢 bundle 与 managed pointer dirty block 已被推进；最新首个失败点变成 `tests/fixtures/patches/lite_fail_bad_readme_link.patch` / `lite_fix_remove_bad_readme_link.patch` 仍引用旧 README 头部，导致 `S15/S16` 在 patch-first gate 就失败，无法进入预期 verify/fixer-loop 分支。
 - Repo-local search sufficient: `yes`
 - If no, external research artifact: `N/A`
 
 ## Integration Check (before implementation)
 
-- upstream:
-  user request -> repo contract readers -> future persona-lab runner/judge -> style-regression maintainers
-- current_module:
-  `docs/14_persona_test_lab.md` + `persona_lab/` + `docs/00_CORE.md` + `docs/03_quality_gates.md` + `docs/04_execution_flow.md` + `docs/10_team_mode.md` + `docs/30_artifact_contracts.md`
-- downstream:
-  future isolated persona sessions, judge outputs, support/frontend style acceptance, run evidence reviewers
-- source_of_truth:
-  `docs/14_persona_test_lab.md`, `persona_lab/`, `docs/11_task_progress_dialogue.md`, `docs/30_artifact_contracts.md`, `docs/21_paths_and_locations.md`
-- fallback:
-  runtime runner/judge 尚未实现时，只能宣称合同与静态资产已落地；不得假装已经有自动化执行器
+- upstream: 用户要求直接解决当前真实失败点，而不是停留在 smoke 结论。
+- current_module: `ctcp_dispatch` 的 fixer request 构造 + `ctcp_orchestrate` 的 patch reapply 脏仓库保护。
+- downstream: SimLab lite suite、canonical verify、失败后的 failure-bundle/fixer loop。
+- source_of_truth: `S15` / `S16` 场景输出的 run_dir 证据 + orchestrator/dispatch 源码。
+- fallback: 若最小修复后 canonical verify 仍失败，则记录新的首个失败点并停止在该点。
 - acceptance_test:
-  - `python scripts/workflow_checks.py`
-  - `python scripts/contract_checks.py`
-  - `python scripts/sync_doc_links.py --check`
-  - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
-  - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
-  - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
-  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile contract`
+  - `python simlab/run.py --scenario S15_lite_fail_produces_bundle`
+  - `python simlab/run.py --scenario S16_lite_fixer_loop_pass`
+  - `python simlab/run.py --suite lite`
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
 - forbidden_bypass:
-  - 在 production support 会话中顺手做风格测试，却不隔离新 session
-  - 只靠主观描述“自然了很多”而没有 rubric 与 score
-  - 把 persona-lab transcript / score / snapshots 写进 repo
-- user_visible_effect:
-  - 后续 agent 可以用独立、干净、可评分的方式证明“不要机械式回答”是否真的被修复，而不是只靠同一会话里的感觉判断。
+  - 不得只改 SimLab 场景断言
+  - 不得通过完全关闭 dirty-repo 保护来放过所有脏状态
+  - 不得通过放宽 `git apply --check` 或关闭 patch-first gate 来掩盖 fixture 漂移
+  - 不得只改 fallback prompt，而不修 provider 实际生成的 fixer request 输入
+- user_visible_effect: 当前仓库默认验收不应再先死在 `S15/S16` 这两个 fixer-loop 回归上。
 
 ## DoD Mapping (from execution_queue.json)
 
-- [x] DoD-1: production assistant, test user personas, and judge scoring are contractually separated
-- [x] DoD-2: every persona case requires a fresh session and writes standardized run artifacts outside the repo
-- [x] DoD-3: repo-local persona definitions, rubrics, and minimum regression cases exist as auditable assets
-- [x] DoD-4: quality gates and artifact contracts define persona regression acceptance and anti-pollution boundaries
+- [ ] DoD-1: fixer dispatch prompt for failed or rejected patch paths preserves `failure_bundle.zip`
+- [ ] DoD-2: managed runtime pointer drift no longer blocks fixer reapply in S16 while preserving real dirty-repo protection
+- [ ] DoD-3: S15/S16 对应的 README fixture patch 重新命中当前仓库头部并恢复原场景意图
+- [ ] DoD-4: issue memory records the recurring S15/S16 regression and repaired status
+- [ ] DoD-5: the canonical verify_repo entrypoint is executed and its current result is recorded
 
 ## Acceptance (must be checkable)
 
 - [x] DoD written (this file complete)
-- [x] Research logged (if needed): `N/A (repo-local docs/meta scan only)`
-- [x] Code changes allowed (`Docs-only plus repo-local static persona assets`)
-- [x] Patch applies cleanly (`git diff` generated; no destructive operations used)
-- [x] `scripts/verify_repo.*` passes (or first failure + minimal fix recorded)
-- [x] Demo report updated: `meta/reports/LAST.md`
+- [x] Research logged (repo-local docs/runtime scan only)
+- [x] Code changes allowed (`Scoped code fix in orchestrator/dispatch + issue memory + meta only`)
+- [x] Patch applies cleanly
+- [ ] `scripts/verify_repo.*` passes (or first failure + minimal fix recorded)
+- [ ] Demo report updated: `meta/reports/LAST.md`
 
 ## Plan
 
-1) 绑定 `persona-test-lab-contracts` task，把独立人格测试需求收口成 docs/static-assets 范围内的单主题改动。
-2) 新增 `docs/14_persona_test_lab.md`，定义三层分离、独立会话、语言策略、评分/验收与最小回归包。
-3) 新增 `persona_lab/` 静态资产：production persona、test user personas、rubrics、cases。
-4) 更新 core / flow / gates / team mode / paths / artifact contracts，把 persona regression 接入主线，并明确 run outputs 只能在 repo 外。
-5) 更新 problem registry、queue、CURRENT/LAST、archive，留下 `persona_lab_impact` 与 issue-memory 记录。
-6) 跑 local check / contrast / fix loop：
-   - `python scripts/workflow_checks.py`
-   - `python scripts/contract_checks.py`
-   - `python scripts/sync_doc_links.py --check`
-   - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
-   - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
-   - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
-7) Canonical verify gate: `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile contract`
+1) Bind a repair task scoped only to `S15` / `S16`.
+2) Fix fixer request/prompt inputs so failed runs keep `failure_bundle.zip` visible.
+3) Exempt managed pointer drift from the second-pass dirty-repo block without weakening real dirty protection.
+4) Refresh the stale README-based SimLab fixture patches so `S15/S16` re-enter their intended verify/fixer-loop branches.
+5) Update issue memory for the recurring SimLab regression.
+6) Re-run targeted SimLab scenarios, lite suite, and then canonical verify.
+7) Record the new first failure point or full pass.
+
+## Check / Contrast / Fix Loop Evidence
+
+- check / contrast / fix loop:
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` (baseline) -> `1`
+  - baseline first failure gate: `lite scenario replay`
+  - baseline summary: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260316-153942/summary.json`
+  - baseline `S15` symptom: fixer prompt missing `failure_bundle.zip`
+  - baseline `S16` symptom: `APPLY_BLOCKED_DIRTY` with `dirty_preview=M meta/run_pointers/LAST_BUNDLE.txt`
+  - post-runtime-fix current symptom: `S15/S16` fixture patches no longer apply because current README header drifted from the fixture context
+
+## Completion Criteria Evidence
+
+- connected + accumulated + consumed:
+  - connected: `ctcp_dispatch` 的 fixer request 和 `ctcp_orchestrate` 的 ready_apply/ready_verify 路径直接连接到 `S15` / `S16` 失败证据。
+  - accumulated: 最新失败 run_dir、TRACE、events、prompt、verify_report 都已收集。
+  - consumed: 目标修复要由 SimLab 场景和 canonical verify 实际消费，而不是停留在代码阅读结论。
 
 ## Notes / Decisions
 
-- Default choices made:
-  - 使用 `docs/14_persona_test_lab.md` 作为单一权威文档，避免把 persona regression 规则散落到 support lane 或报告里。
-  - `persona_lab/` 只保存静态资产；实际 transcripts/scores/fail reasons/snapshots 全部外置到 `CTCP_RUNS_ROOT`。
-  - 语言策略采用 `English Contracts, Chinese Intent`，不新增并行中文术语体系。
-- Alternatives considered:
-  - 直接在 production support session 里加一个“风格测试模式”；拒绝，因为这会污染正式对话状态。
-  - 把人格测试做成有趣角色系统；拒绝，因为目标是 regression 和 scoring，不是聊天娱乐。
-- Any contract exception reference (must also log in `ai_context/decision_log.md`):
-  - None.
-- Issue memory decision:
-  - add one recurring failure class: style-regression context pollution without isolated persona lab.
-- Skill decision (`skillized: yes` or `skillized: no, because ...`):
-  - skillized: no, because this patch lands contracts and static assets only; runner/judge automation can be skillized later if runtime entrypoints become reusable.
+- Default choices made: 保持修复只落在 orchestrator/dispatch/fixture/issue-memory，不碰 Telegram/support 已跑通的路径。
+- Alternatives considered: 直接改 SimLab 断言接受当前 prompt 内容；暂不采纳，先按运行时合同修真实缺口。
+- Any contract exception reference (must also log in `ai_context/decision_log.md`): none.
+- Issue memory decision: required; this is a recurring integration failure and will be更新 in `ai_context/problem_registry.md`.
+- Skill decision (`skillized: yes` or `skillized: no, because ...`): skillized: yes; this task uses `ctcp-workflow`, `ctcp-verify`, and `ctcp-failure-bundle`.
+- persona_lab_impact: none; this task does not change customer-facing reply contracts.
 
 ## Results
 
 - Files changed:
-  - `docs/00_CORE.md`
-  - `docs/01_north_star.md`
-  - `docs/03_quality_gates.md`
-  - `docs/04_execution_flow.md`
-  - `docs/10_team_mode.md`
-  - `docs/11_task_progress_dialogue.md`
-  - `docs/13_contracts_index.md`
-  - `docs/14_persona_test_lab.md`
-  - `docs/21_paths_and_locations.md`
-  - `docs/25_project_plan.md`
-  - `docs/30_artifact_contracts.md`
-  - `docs/verify_contract.md`
-  - `artifacts/PLAN.md`
-  - `persona_lab/README.md`
-  - `persona_lab/personas/*.md`
-  - `persona_lab/rubrics/*.yaml`
-  - `persona_lab/cases/*.yaml`
-  - `README.md`
-  - `ai_context/problem_registry.md`
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/CURRENT.md`
-  - `meta/tasks/archive/20260314-persona-test-lab-contracts.md`
+  - `meta/tasks/archive/20260316-simlab-fixer-loop-repair.md`
   - `meta/reports/LAST.md`
-  - `meta/reports/archive/20260314-persona-test-lab-contracts.md`
+  - `meta/reports/archive/20260316-simlab-fixer-loop-repair.md`
 - Verification summary:
-  - `python scripts/sync_doc_links.py` => `0` (`no changes`)
-  - `python scripts/contract_checks.py` => `0`
-  - `python scripts/workflow_checks.py` => `1` (`LAST.md missing mandatory workflow evidence: minimal fix strategy evidence`)
-  - `python scripts/workflow_checks.py` (rerun after report fix) => `0`
-  - `python scripts/sync_doc_links.py --check` => `0`
-  - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` => `0` (15 passed)
-  - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` => `0` (3 passed)
-  - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` => `0` (3 passed)
-  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile contract` => `1` (`patch_check out-of-scope path: persona_lab/README.md`)
-  - minimal fix strategy: add `persona_lab/` to `artifacts/PLAN.md` `Scope-Allow`, then rerun canonical verify
-  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile contract` (rerun) => `0`
-  - final consistency recheck after report update: `workflow_checks=0`, `contract_checks=0`, `sync_doc_links --check=0`, `verify_repo(contract)=0`
-- Queue status update suggestion (`todo/doing/done/blocked`):
-  - done
+  - baseline canonical repo verify:
+    - final run: `1` (`lite scenario replay`; `passed=12`, `failed=2`)
+    - failed scenarios:
+      - `S15_lite_fail_produces_bundle`: missing expected text `failure_bundle.zip`
+      - `S16_lite_fixer_loop_pass`: missing expected text `"result": "PASS"`
+- Queue status update suggestion (`todo/doing/done/blocked`): doing.
 
 ## Archive Index (recent 10)
 
 | Date | Topic | File |
 |------|-------|------|
+| 2026-03-16 | SimLab fixer-loop 回归修复（S15 / S16） | [→](archive/20260316-simlab-fixer-loop-repair.md) |
+| 2026-03-16 | Telegram 测试到项目生成 smoke 联通与启动检查 | [→](archive/20260316-telegram-to-project-generation-smoke.md) |
+| 2026-03-16 | Markdown 流程拆清与逐条表达 | [→](archive/20260316-markdown-flow-clarity.md) |
+| 2026-03-16 | 全项目健康检查与阻塞问题审计 | [→](archive/20260316-repo-health-audit.md) |
+| 2026-03-15 | 完整默认验收流回归验证 | [→](archive/20260315-full-flow-validation.md) |
+| 2026-03-15 | 薄主合同 + 单流程 + 局部覆盖的 agent 规则收口 | [→](archive/20260315-agent-contract-thin-mainline.md) |
+| 2026-03-15 | Persona Test Lab fixture runner / judge 基线落地 | [→](archive/20260315-persona-test-lab-runner-judge.md) |
 | 2026-03-14 | Persona Test Lab 合同、隔离会话规则与回归资产落地 | [→](archive/20260314-persona-test-lab-contracts.md) |
 | 2026-03-14 | 任务推进型对话、测试展示链与版本真源合同重构 | [→](archive/20260314-dialogue-showcase-metadata-contracts.md) |
 | 2026-03-13 | support 项目包升级为 CTCP 风格 scaffold 交付，而不是单文件占位目录 | [→](archive/20260313-support-ctcp-scaffold-package.md) |
-| 2026-03-13 | support 回复锁到 api_agent，并把项目 zip/截图直发链路接到 Telegram | [→](archive/20260313-support-api-first-local-degrade.md) |
-| 2026-03-12 | support 到 production run 的渐进式链路测试 | [→](archive/20260312-support-to-production-path-tests.md) |
-| 2026-03-12 | support bot 项目记忆隔离、执行指令路由与 blocked 状态落地修复 | [→](archive/20260312-support-project-state-grounding-hardening.md) |
-| 2026-03-12 | support bot API 中文回复编码修复 | [→](archive/20260312-support-api-encoding-hardening.md) |
-| 2026-03-12 | support bot 全部用户可见回复走模型 | [→](archive/20260312-support-all-turns-model-routing.md) |
-| 2026-03-12 | support bot 记忆隔离与显式 API 路由锁定 | [→](archive/20260312-support-memory-isolation-and-api-route-lock.md) |
-| 2026-03-12 | support bot 接入 front bridge / shared whiteboard / librarian 后台流 | [→](archive/20260312-support-bot-backend-bridge-wiring.md) |
 
 Full archive: `meta/tasks/archive/`

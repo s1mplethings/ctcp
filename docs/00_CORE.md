@@ -30,7 +30,8 @@ This file is the authoritative runtime-truth contract source.
 Source map (single source per concern):
 
 - Repo purpose source: `docs/01_north_star.md`
-- Canonical execution flow source: `docs/04_execution_flow.md`
+- Agent main contract source: `AGENTS.md`
+- Expanded execution flow source: `docs/04_execution_flow.md`
 - Current task source: `meta/tasks/CURRENT.md`
 - Runtime engineering truth source: `docs/00_CORE.md` (this file)
 - Task-progress dialogue source: `docs/11_task_progress_dialogue.md`
@@ -82,7 +83,8 @@ Rules:
 
 ## 0.W Fixed 10-Step Execution Flow Principle
 
-Repository modifications MUST follow the canonical 10-step flow defined only in `docs/04_execution_flow.md`.
+Repository modifications MUST follow the root 5-step flow in `AGENTS.md`.
+`docs/04_execution_flow.md` keeps the expanded step mapping and detailed sequencing.
 This file does not redefine step ordering.
 
 ## 0.X Runtime Wiring Contract
