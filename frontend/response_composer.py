@@ -11,6 +11,7 @@ from .conversation_mode_router import (
     compute_task_signal_score,
     has_sufficient_task_signal,
     has_valid_task_summary,
+    is_capability_query,
     is_generic_tradeoff_question,
     is_project_execution_followup,
     route_conversation_mode,
@@ -87,6 +88,15 @@ _FORBIDDEN_PUBLIC_TOKENS = (
 _FORBIDDEN_PUBLIC_LABEL_RE = re.compile(r"\b(CONTEXT|CONSTRAINTS|EXTERNALS|PLAN|PATCH)\b")
 _RC_FIELD_RE = re.compile(r"\b(?:rc|exit[_ ]?code|return[_ ]?code)\s*[:=]?\s*\d+\b", re.IGNORECASE)
 _WAITING_INTERNAL_REQUEST_RE = re.compile(r"\bwaiting\s+for\s+[^\s]+\.(?:md|json|patch)\b", re.IGNORECASE)
+_PROGRESS_UPDATE_PATTERNS_ZH = (
+    re.compile(r"(进度|状态|做到什么程度|做到哪|做到哪一步|到哪了|到哪一步|做了什么|现在什么情况|到什么阶段|卡在哪)"),
+)
+_PROGRESS_UPDATE_PATTERNS_EN = (
+    re.compile(
+        r"\b(progress|status|how far|where are we|what(?:'| i)?s done|what has been done|what did you do|what.?s the update|what.?s the status)\b",
+        re.IGNORECASE,
+    ),
+)
 
 
 def _question_block(questions: list[str], *, lang: str) -> str:
@@ -111,6 +121,107 @@ def _join_questions(questions: list[str], *, lang: str) -> str:
     if len(picked) == 1:
         return picked[0]
     return f"{picked[0]}另外，{picked[1]}"
+
+
+def _is_progress_update_request(text: str) -> bool:
+    raw = re.sub(r"\s+", " ", str(text or "").strip())
+    if not raw:
+        return False
+    low = raw.lower()
+    return any(p.search(raw) for p in _PROGRESS_UPDATE_PATTERNS_ZH) or any(p.search(low) for p in _PROGRESS_UPDATE_PATTERNS_EN)
+
+
+def _normalize_progress_binding(raw: Any) -> dict[str, Any]:
+    if not isinstance(raw, Mapping):
+        return {}
+    done_items = [
+        re.sub(r"\s+", " ", str(item or "").strip())
+        for item in raw.get("last_confirmed_items", [])
+        if re.sub(r"\s+", " ", str(item or "").strip())
+    ] if isinstance(raw.get("last_confirmed_items", []), list) else []
+    proof_refs = [
+        re.sub(r"\s+", " ", str(item or "").strip())
+        for item in raw.get("proof_refs", [])
+        if re.sub(r"\s+", " ", str(item or "").strip())
+    ] if isinstance(raw.get("proof_refs", []), list) else []
+    normalized = {
+        "current_task_goal": re.sub(r"\s+", " ", str(raw.get("current_task_goal", "")).strip()),
+        "current_phase": re.sub(r"\s+", " ", str(raw.get("current_phase", "")).strip()),
+        "last_confirmed_items": done_items,
+        "current_blocker": re.sub(r"\s+", " ", str(raw.get("current_blocker", "")).strip()),
+        "message_purpose": re.sub(r"\s+", " ", str(raw.get("message_purpose", "")).strip()),
+        "question_needed": re.sub(r"\s+", " ", str(raw.get("question_needed", "")).strip().lower()),
+        "next_action": re.sub(r"\s+", " ", str(raw.get("next_action", "")).strip()),
+        "blocking_question": re.sub(r"\s+", " ", str(raw.get("blocking_question", "")).strip()),
+        "proof_refs": proof_refs,
+    }
+    if not any(
+        (
+            normalized["current_task_goal"],
+            normalized["current_phase"],
+            normalized["last_confirmed_items"],
+            normalized["current_blocker"],
+            normalized["next_action"],
+            normalized["blocking_question"],
+            normalized["proof_refs"],
+        )
+    ):
+        return {}
+    return normalized
+
+
+def _compose_progress_update_reply(
+    *,
+    binding: Mapping[str, Any],
+    visible_state: VisibleState,
+    lang: str,
+    fallback_question: str = "",
+) -> tuple[str, list[str]]:
+    done_items = _dedupe_items(list(binding.get("last_confirmed_items", []) or []), limit=3)
+    phase = re.sub(r"\s+", " ", str(binding.get("current_phase", "")).strip())
+    blocker = re.sub(r"\s+", " ", str(binding.get("current_blocker", "")).strip())
+    next_action = re.sub(r"\s+", " ", str(binding.get("next_action", "")).strip())
+    question_needed = str(binding.get("question_needed", "")).strip().lower() in {"yes", "true", "1"}
+    blocking_question = re.sub(r"\s+", " ", str(binding.get("blocking_question", "")).strip()) or re.sub(
+        r"\s+", " ", str(fallback_question or "").strip()
+    )
+    rows: list[str] = []
+    questions: list[str] = []
+
+    if lang == "en":
+        if done_items:
+            rows.append(f"Confirmed progress so far: {'; '.join(done_items)}.")
+        if blocker and blocker.lower() != "none":
+            if phase:
+                rows.append(f"Current phase: {phase}. The blocker is {blocker}.")
+            else:
+                rows.append(f"The current blocker is {blocker}.")
+        else:
+            phase_text = phase or ("delivery" if visible_state == "DONE" else "execution")
+            rows.append(f"Current phase: {phase_text}. There is no extra blocker right now.")
+        if next_action:
+            rows.append(f"Next I will {next_action}.")
+        if question_needed and blocking_question:
+            rows.append(f"Before I continue, I need your call on this: {blocking_question}")
+            questions = [blocking_question]
+        return "\n\n".join([row for row in rows if row]).strip(), questions
+
+    if done_items:
+        rows.append("，".join(done_items) + "。")
+    if blocker and blocker.lower() != "none":
+        if phase:
+            rows.append(f"当前阶段在{phase}，当前卡点是{blocker}。")
+        else:
+            rows.append(f"当前卡点是{blocker}。")
+    else:
+        phase_text = phase or ("结果整理/交付" if visible_state == "DONE" else "执行推进")
+        rows.append(f"当前阶段在{phase_text}，目前没有额外阻塞。")
+    if next_action:
+        rows.append(f"下一步我会{next_action}。")
+    if question_needed and blocking_question:
+        rows.append(f"继续前需要你先拍板这个点：{blocking_question}")
+        questions = [blocking_question]
+    return "\n\n".join([row for row in rows if row]).strip(), questions
 
 
 def _execution_direction_text(note: Mapping[str, Any], lang: str) -> str:
@@ -359,15 +470,21 @@ def _is_internal_question_leak(question: str) -> bool:
     return bool(_WAITING_INTERNAL_REQUEST_RE.search(low))
 
 
-def _is_capability_query(text: str) -> bool:
+def _capability_query_kind(text: str) -> str:
     raw = re.sub(r"\s+", " ", str(text or "").strip())
     if not raw:
-        return False
+        return ""
     low = raw.lower()
+    if any(token in raw for token in ("你是谁", "你是做什么的")) or any(token in low for token in ("who are you", "what are you")):
+        return "identity"
+    if any(token in raw for token in ("怎么用", "怎么开始", "怎么配合")) or any(
+        token in low for token in ("how to use", "how do i use", "how should i use", "how do we start")
+    ):
+        return "usage"
     if any(token in raw for token in ("你能做什么", "你到底能帮我做什么", "能不能改前端", "改前端吗", "前端这块")):
-        return True
+        return "frontend" if _capability_mentions_frontend(raw) else "capability"
     if ("你能" in raw or "可以" in raw) and any(token in raw for token in ("做什么", "前端", "界面", "网页", "web")):
-        return True
+        return "frontend" if _capability_mentions_frontend(raw) else "capability"
     if any(
         token in low
         for token in (
@@ -380,8 +497,12 @@ def _is_capability_query(text: str) -> bool:
             "can you help with frontend",
         )
     ):
-        return True
-    return low.startswith("can you") and any(token in low for token in ("frontend", "front-end", "ui", "web"))
+        return "frontend" if _capability_mentions_frontend(raw) else "capability"
+    if low.startswith("can you") and any(token in low for token in ("frontend", "front-end", "ui", "web")):
+        return "frontend"
+    if is_capability_query(raw):
+        return "frontend" if _capability_mentions_frontend(raw) else "capability"
+    return ""
 
 
 def _capability_mentions_frontend(text: str) -> bool:
@@ -393,8 +514,19 @@ def _capability_mentions_frontend(text: str) -> bool:
 
 
 def _compose_capability_reply(*, lang: str, latest_user_message: str) -> str:
-    mentions_frontend = _capability_mentions_frontend(latest_user_message)
+    kind = _capability_query_kind(latest_user_message)
+    mentions_frontend = kind == "frontend" or _capability_mentions_frontend(latest_user_message)
     if str(lang).lower() == "en":
+        if kind == "identity":
+            return (
+                "I'm the CTCP support entry here. I first sort whether this turn is greeting, capability, project work, or status, "
+                "then keep the next step on that lane. You can tell me the goal directly or point at the path you want changed."
+            )
+        if kind == "usage":
+            return (
+                "Send me the goal or current blocker directly. If it's a project turn, I will first lock the goal, inputs, and expected result, "
+                "then move into the next concrete step."
+            )
         if mentions_frontend:
             return (
                 "Yes. I can work on frontend behavior, bridge-safe execution handoff, and the matching regression tests. "
@@ -403,6 +535,16 @@ def _compose_capability_reply(*, lang: str, latest_user_message: str) -> str:
         return (
             "I can help clarify the goal, adjust frontend or execution behavior, add regression tests, and carry the change through verification. "
             "Tell me which part you want to change first, and I will narrow it down."
+        )
+    if kind == "identity":
+        return (
+            "我是这里的 CTCP support 入口，会先判断这轮是寒暄、能力咨询、项目需求还是进度追问，再按对应链路往下接。"
+            "你现在可以直接说目标，或者告诉我想改哪条回复/流程。"
+        )
+    if kind == "usage":
+        return (
+            "你直接发目标或当前卡点就行。"
+            "如果是项目类，我会先收目标、输入和想要的结果，再往下一步推进。"
         )
     if mentions_frontend:
         return (
@@ -523,6 +665,8 @@ def _compose_entry_reply(
             open_line = _pick_hint(hints.get("greet_open", []), seed + "|o", "Hi, I'm here.")
             next_line = _pick_hint(hints.get("greet_next", []), seed + "|n", "What can I help you with?")
             return f"{open_line} {next_line}"
+        if mode == "CAPABILITY_QUERY":
+            return _compose_capability_reply(lang=low_lang, latest_user_message=latest)
         if mode == "STATUS_QUERY":
             if has_active_task:
                 status = _pick_hint(hints.get("status_active", []), seed + "|sa", "I'm tracking your active task now.")
@@ -537,13 +681,15 @@ def _compose_entry_reply(
                 "Share the project goal, input, and expected output in one sentence.",
             )
             return f"{open_line} {next_line}"
-        if mode == "SMALLTALK" and _is_capability_query(latest):
+        if mode == "SMALLTALK" and _capability_query_kind(latest):
             return _compose_capability_reply(lang=low_lang, latest_user_message=latest)
         return _pick_hint(hints.get("smalltalk", []), seed + "|s", "I'm here and ready to help.")
     if mode == "GREETING":
         open_line = _pick_hint(hints.get("greet_open", []), seed + "|o", "你好！")
         next_line = _pick_hint(hints.get("greet_next", []), seed + "|n", "有什么需要帮忙的？")
         return f"{open_line}{next_line}"
+    if mode == "CAPABILITY_QUERY":
+        return _compose_capability_reply(lang=low_lang, latest_user_message=latest)
     if mode == "STATUS_QUERY":
         if has_active_task:
             status = _pick_hint(hints.get("status_active", []), seed + "|sa", "你的任务我还在跟着。")
@@ -558,7 +704,7 @@ def _compose_entry_reply(
             "简单说一下目标、输入和想要什么结果，我来帮你理。",
         )
         return f"{open_line}{next_line}"
-    if mode == "SMALLTALK" and _is_capability_query(latest):
+    if mode == "SMALLTALK" and _capability_query_kind(latest):
         return _compose_capability_reply(lang=low_lang, latest_user_message=latest)
     return _pick_hint(hints.get("smalltalk", []), seed + "|s", "在的，有什么需要？")
 
@@ -698,7 +844,7 @@ def _stage_project_manager_draft(
         raw_state["needs_input"] = False
         raw_state["missing_count"] = 0
     state.visible_state = resolve_visible_state(raw_state)
-    if mode in {"GREETING", "SMALLTALK", "STATUS_QUERY", "PROJECT_INTAKE"} and state.visible_state in {
+    if mode in {"GREETING", "SMALLTALK", "CAPABILITY_QUERY", "STATUS_QUERY", "PROJECT_INTAKE"} and state.visible_state in {
         "BLOCKED_NEEDS_INPUT",
         "WAITING_FOR_DECISION",
     }:
@@ -905,8 +1051,33 @@ def run_internal_reply_pipeline(
     state.conversation_context["conversation_mode"] = mode
     state.conversation_context["task_signal_score"] = float(signal_score)
     state.conversation_context["has_sufficient_task_signal"] = bool(has_signal)
+    progress_binding = _normalize_progress_binding(raw_backend_state.get("progress_binding", {}))
+    progress_requested = bool(progress_binding) and (mode == "STATUS_QUERY" or _is_progress_update_request(latest_user_message))
 
-    non_project_modes = {"GREETING", "SMALLTALK", "STATUS_QUERY", "PROJECT_INTAKE"}
+    if progress_requested:
+        raw_state = dict(raw_backend_state)
+        raw_state["has_actionable_goal"] = bool(
+            raw_backend_state.get("has_actionable_goal", False) or state.task_summary or progress_binding.get("current_task_goal")
+        )
+        raw_state["first_pass_understood"] = bool(raw_backend_state.get("first_pass_understood", False) or progress_binding)
+        state.visible_state = resolve_visible_state(raw_state)
+        if state.visible_state == "NEEDS_ONE_OR_TWO_DETAILS":
+            state.visible_state = "EXECUTING"
+        progress_reply, progress_questions = _compose_progress_update_reply(
+            binding=progress_binding,
+            visible_state=state.visible_state,
+            lang=lang,
+            fallback_question=raw_next_question,
+        )
+        state.review_flags.append("progress_binding_consumed")
+        state.candidate_questions = progress_questions
+        state.draft_reply = progress_reply
+        state = _stage_consistency_review(state, notes=note, lang=lang)
+        state = _stage_safety_sanitization(state, lang=lang)
+        state = _stage_final_emission(state)
+        return state
+
+    non_project_modes = {"GREETING", "SMALLTALK", "CAPABILITY_QUERY", "STATUS_QUERY", "PROJECT_INTAKE"}
     if mode in non_project_modes:
         if mode == "STATUS_QUERY" and has_active_task:
             resolved_visible_state = resolve_visible_state(raw_backend_state)
@@ -944,7 +1115,7 @@ def run_internal_reply_pipeline(
             state.visible_state = "UNDERSTOOD"
         raw_sanitized = sanitize_internal_text(raw_reply_text)
         raw_text = raw_sanitized.text.strip()
-        if raw_text and mode in {"GREETING", "SMALLTALK"} and _reply_leaks_project_context(raw_text, latest_user_message):
+        if raw_text and mode in {"GREETING", "SMALLTALK", "CAPABILITY_QUERY"} and _reply_leaks_project_context(raw_text, latest_user_message):
             # Safety guard: model hallucinated project-specific content on a
             # greeting/smalltalk turn (e.g. stale session context leaking).
             # Fall back to template entry reply.
@@ -1090,14 +1261,14 @@ def _user_reply_hint_bank(lang: str) -> dict[str, list[str]]:
             "遇到一个临时状况，正在重新整理。",
         ],
         "executing": [
-            "好的，正在做。",
-            "收到，已经在处理了。",
-            "OK，这就开始。",
+            "这边已经进入处理阶段。",
+            "当前在按这个方向推进。",
+            "现在就在往下做。",
         ],
         "understood": [
-            "好的，我来帮你搞定。",
-            "了解，这就开始安排。",
-            "OK，交给我。",
+            "这件事我先按你刚说的范围收进来。",
+            "当前目标已经锁住，我先顺着这个方向整理第一版。",
+            "方向清楚了，我先把第一步往前推。",
         ],
         "needs_details": [
             "大方向清楚了，再确认一两个细节就能开始。",

@@ -1536,8 +1536,262 @@
           "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
         ]
       },
-      "status": "doing",
-      "notes": "Scoped repair task opened from the Telegram smoke follow-up after canonical verify consistently failed first at lite scenario replay: S15 no longer exposes failure_bundle.zip in the fixer provider prompt, and S16 reapply is blocked by managed LAST_BUNDLE pointer drift."
+      "status": "done",
+      "notes": "Scoped repair task completed: fixer dispatch now preserves failure_bundle.zip for patch-fix prompts, managed LAST_BUNDLE pointer drift no longer blocks second-pass reapply, the S15/S16 SimLab fixture patches were refreshed to the current README/workflow gates, issue memory was recorded, `python simlab/run.py --suite lite` passed at C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260316-165332, and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` returned 0 under the doc-only profile."
+    },
+    {
+      "id": "ADHOC-20260316-support-conversation-situation-routing",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Differentiate support conversation situations before reply emission",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260316-simlab-fixer-loop-repair"
+      ],
+      "dod": [
+        "support/frontend routing distinguishes greeting, capability query, project-like turns, and status queries before public reply selection",
+        "customer-facing reply composition uses different entry text for greeting, capability, project, and status situations without collapsing them into one generic shell",
+        "support/frontend regressions cover the new situation split and canonical verify is executed with the current result recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "frontend/conversation_mode_router.py",
+          "frontend/response_composer.py",
+          "scripts/ctcp_support_bot.py",
+          "docs/10_team_mode.md",
+          "tests/test_frontend_rendering_boundary.py",
+          "tests/test_runtime_wiring_contract.py",
+          "tests/test_support_bot_humanization.py",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260316-support-conversation-situation-routing.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260316-support-conversation-situation-routing.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_frontend_rendering_boundary.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Scoped support-lane routing task completed: shared router now splits capability queries from generic smalltalk, response fallbacks differentiate identity/capability/project/status situations, support prompt guards treat capability turns as latest-turn-only, issue memory was recorded, focused support/frontend regressions passed, and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` returned 0 under the code profile with final lite replay summary at C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260316-180422."
+    },
+    {
+      "id": "ADHOC-20260316-support-greeting-stale-context-hardening",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Harden support greeting turns against stale project and package context",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260316-support-conversation-situation-routing"
+      ],
+      "dod": [
+        "non-project support turns do not inject stale project or package delivery context into the provider prompt unless the latest user turn explicitly asks to continue or deliver",
+        "customer-facing final reply strips package or screenshot delivery actions on greeting/smalltalk/capability turns that did not explicitly request delivery",
+        "focused regressions cover stale greeting leakage and the Telegram test chat is restarted on the new code with canonical verify executed and recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "docs/10_team_mode.md",
+          "tests/test_support_bot_humanization.py",
+          "tests/test_runtime_wiring_contract.py",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260316-support-greeting-stale-context-hardening.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260316-support-greeting-stale-context-hardening.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Scoped support stale-context hardening completed: non-project turns no longer inject old project/package context into the provider prompt or retain unsolicited delivery actions, old chat session 6092527664 was backed up to C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/support_sessions/6092527664.backup-20260316-182553, the Telegram bot was restarted on the new code as PID 45900 at 2026-03-16 18:26:10, and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` returned 0 under the code profile with final lite replay summary at C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260316-182824."
+    },
+    {
+      "id": "ADHOC-20260316-support-status-progress-grounding",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Ground support status replies to concrete run progress and next actions",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260316-support-greeting-stale-context-hardening"
+      ],
+      "dod": [
+        "support status/progress replies automatically summarize completed work, current phase, blocker or clear-path status, and next action instead of generic executing shells",
+        "status-like progress follow-ups on bound runs use the same grounded summary path even when the turn routes through project detail",
+        "focused support/frontend regressions cover concrete progress wording and canonical verify is executed with the current result recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "frontend/response_composer.py",
+          "scripts/ctcp_support_bot.py",
+          "docs/10_team_mode.md",
+          "tests/test_frontend_rendering_boundary.py",
+          "tests/test_support_bot_humanization.py",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260316-support-status-progress-grounding.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260316-support-status-progress-grounding.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_frontend_rendering_boundary.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Scoped support status-progress grounding completed: support runtime now derives structured progress binding from run status/gate/whiteboard tail, frontend status-like replies consume that binding to summarize completed work, current phase, blocker, and next action, focused regressions passed, canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` returned 0 with latest lite replay summary at C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260316-204454, and the Telegram bot was restarted on the new code as PID 42328 at 2026-03-16 20:28:58."
+    },
+    {
+      "id": "ADHOC-20260316-support-proactive-progress-and-resume",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Proactively push support progress updates and recover previous-outline project context",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260316-support-status-progress-grounding"
+      ],
+      "dod": [
+        "Telegram support runtime periodically advances active bound runs when no user decision is needed and proactively sends one grounded progress update when the visible progress digest changes",
+        "support session continuity can recover a concrete archived project brief when the user explicitly asks to continue or redo the previous outline, preventing a new generic run from binding to an underspecified goal",
+        "focused support/runtime regressions cover proactive push plus previous-outline recovery, and canonical verify is executed with the current result recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "docs/10_team_mode.md",
+          "tests/test_runtime_wiring_contract.py",
+          "tests/test_support_bot_humanization.py",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260316-support-proactive-progress-and-resume.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260316-support-proactive-progress-and-resume.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed: support runtime now auto-recovers explicit previous-outline requests from archived briefs, proactively pushes grounded progress updates during idle polling, canonical verify passed, and the live Telegram session was rebound from the generic blocked run to concrete VN brief run 20260316-220645-742889-orchestrate."
+    },
+    {
+      "id": "ADHOC-20260317-support-proactive-push-greeting-dup-guard",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Guard proactive support pushes from reusing the latest greeting and duplicating smalltalk",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260316-support-proactive-progress-and-resume"
+      ],
+      "dod": [
+        "proactive support push reuses grounded status/progress semantics instead of letting the latest inbox greeting reclassify the push into GREETING/SMALLTALK",
+        "a focused regression covers the case where the latest user turn is `你好` but the proactive push must still emit a progress update rather than a second greeting",
+        "canonical verify is executed with the current result recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "docs/10_team_mode.md",
+          "tests/test_support_bot_humanization.py",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260317-support-proactive-push-greeting-dup-guard.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260317-support-proactive-push-greeting-dup-guard.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed: proactive push now injects an explicit status latest-turn override instead of reusing the latest greeting, `test_build_grounded_status_reply_doc_does_not_repeat_latest_greeting` was added, canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` returned 0 with lite replay summary at C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260317-165350, and the Telegram bot was restarted on the repaired runtime as PID 26304 at 2026-03-17 16:59:35."
+    },
+    {
+      "id": "ADHOC-20260317-support-proactive-baseline-preserve-on-greeting",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Preserve proactive progress baseline across greeting turns on active support sessions",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260317-support-proactive-push-greeting-dup-guard"
+      ],
+      "dod": [
+        "non-project support turns with an active bound run do not overwrite the last real proactive-progress digest with a synthetic empty-context digest",
+        "a focused regression covers greeting on an active bound run without triggering a same-state proactive push immediately afterward",
+        "canonical verify is executed with the current result recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "docs/10_team_mode.md",
+          "tests/test_support_bot_humanization.py",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260317-support-proactive-baseline-preserve-on-greeting.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260317-support-proactive-baseline-preserve-on-greeting.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-03-17: `remember_progress_notification()` now ignores greeting/non-project turns without a real `run_id`, focused regression coverage landed in `tests/test_support_bot_humanization.py`, canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` returned 0, and the Telegram bot was restarted on the repaired runtime."
+    },
+    {
+      "id": "ADHOC-20260317-support-previous-project-status-grounding",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Ground previous-project status follow-ups to the bound run instead of reopening planning",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260317-support-proactive-baseline-preserve-on-greeting"
+      ],
+      "dod": [
+        "status-like follow-ups about the previous or earlier project on an active support session route through the status/progress path instead of project-detail replanning",
+        "those follow-ups do not overwrite the current project brief or trigger fresh planning/file-request work on the already bound run",
+        "focused regressions plus canonical verify and a Telegram bot restart are executed and recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "frontend/conversation_mode_router.py",
+          "scripts/ctcp_support_bot.py",
+          "docs/10_team_mode.md",
+          "tests/test_frontend_rendering_boundary.py",
+          "tests/test_support_bot_humanization.py",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260317-support-previous-project-status-grounding.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260317-support-previous-project-status-grounding.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_frontend_rendering_boundary.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-03-17: old-project progress follow-ups now route through `STATUS_QUERY`, `should_refresh_project_brief()` preserves the existing brief for this wording class, focused regressions landed in `tests/test_frontend_rendering_boundary.py` and `tests/test_support_bot_humanization.py`, canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` returned 0 with lite replay summary at C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260317-180318/summary.json, and the Telegram bot was restarted as PID 37072 at 2026-03-17 18:01:38."
     }
   ]
 }

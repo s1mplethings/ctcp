@@ -1,15 +1,6 @@
-# Demo Report - LAST
+# Report Archive - 2026-03-17 - Support 旧项目进度追问绑定真实 run 状态
 
-> **用法**：本文件保留最近一次报告指针，同时内嵌 workflow gate 所需的最新报告摘要。
-> 历史报告正文在 `meta/reports/archive/`。
-
-## Latest Report
-
-- File: [`meta/reports/archive/20260317-support-previous-project-status-grounding.md`](archive/20260317-support-previous-project-status-grounding.md)
-- Date: 2026-03-17
-- Topic: Support 旧项目进度追问绑定真实 run 状态
-
-### Readlist
+## Readlist
 
 - `AGENTS.md`
 - `ai_context/00_AI_CONTRACT.md`
@@ -29,14 +20,14 @@
 - `.agents/skills/ctcp-workflow/SKILL.md`
 - `.agents/skills/ctcp-verify/SKILL.md`
 
-### Plan
+## Plan
 
 1. Bind a narrow previous-project status-grounding task.
 2. Route old-project progress follow-ups into the grounded status path and preserve the existing project brief.
 3. Add focused regressions for routing and brief preservation.
 4. Run canonical verify and restart the live bot.
 
-### Changes
+## Changes
 
 - `frontend/conversation_mode_router.py`
 - `scripts/ctcp_support_bot.py`
@@ -50,7 +41,7 @@
 - `meta/reports/LAST.md`
 - `meta/reports/archive/20260317-support-previous-project-status-grounding.md`
 
-### Verify
+## Verify
 
 - `python -m py_compile frontend\conversation_mode_router.py scripts\ctcp_support_bot.py tests\test_frontend_rendering_boundary.py tests\test_support_bot_humanization.py` -> `0`
 - `python -m unittest discover -s tests -p "test_frontend_rendering_boundary.py" -v` -> `0`
@@ -58,18 +49,18 @@
 - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` -> `0` via canonical verify
 - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` -> `0` via canonical verify
 - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` -> `0` via canonical verify
-- first failure point: live runtime currently routes “我想要知道我之前那个项目做成什么样子了” as `PROJECT_DETAIL`, overwrites the support brief, and returns a planning-doc question instead of grounded progress
+- first failure point: live runtime currently routes `我想要知道我之前那个项目做成什么样子了` as `PROJECT_DETAIL`, overwrites the support brief, and asks for fresh planning docs
 - minimal fix strategy: teach the router/runtime to treat old-project progress follow-ups as `STATUS_QUERY` and stop them from refreshing the bound project brief, then rerun canonical verify and live bot restart
 - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` -> `0`
 - final verify result:
   - profile: `code`
   - lite replay summary: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\simlab_runs\20260317-180318\summary.json`
 
-### Questions
+## Questions
 
 - None.
 
-### Demo
+## Demo
 
 - live evidence before fix:
   - `2026-03-17T09:41:01Z` inbound `我想要知道我之前那个项目做成什么样子了`
@@ -83,20 +74,3 @@
 - live runtime after fix:
   - restarted Telegram bot `PID 37072`, created `2026-03-17 18:01:38`
   - `getMe` returned `ok=true` for `@my_t2e5s9t_bot`
-
-### Integration Proof
-
-- upstream: user provided a real Telegram transcript where “旧项目现在做成什么样了” was answered with a planning-doc question.
-- current_module: conversation-mode routing plus `sync_project_context()` brief-refresh behavior.
-- downstream: bound-run grounded status replies and support whiteboard churn.
-- source_of_truth: live support session `6092527664` artifacts, bound run `20260316-220645-742889-orchestrate`, and current script/tests.
-- fallback: if canonical verify fails, record only the first failing gate.
-- acceptance_test:
-  - `python -m unittest discover -s tests -p "test_frontend_rendering_boundary.py" -v`
-  - `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v`
-  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
-- forbidden_bypass:
-  - do not turn every active-run follow-up into `STATUS_QUERY` and break real detail collection
-  - do not answer status only with a hardcoded shell that ignores run truth
-  - do not leak internal trace/logs
-- user_visible_effect: old-project status follow-ups should answer with concrete bound-run progress instead of asking the user for fresh planning documents.

@@ -64,6 +64,30 @@ class RuntimeWiringContractTests(unittest.TestCase):
             msg=result.reply_text,
         )
 
+    def test_capability_query_does_not_enter_project_planning_pipeline(self) -> None:
+        result = render_frontend_output(
+            raw_backend_state={
+                "stage": "support_provider_failed",
+                "blocked_needs_input": True,
+                "needs_input": True,
+                "missing_fields": ["runtime_target"],
+            },
+            task_summary="你是谁",
+            raw_reply_text="plan agent command failed rc=2",
+            raw_next_question="这轮你希望我优先速度、质量，还是成本？",
+            notes={
+                "lang": "zh",
+                "recent_user_messages": ["你是谁"],
+            },
+        )
+        state = dict(result.pipeline_state or {})
+        self.assertEqual(str(state.get("conversation_mode", "")), "CAPABILITY_QUERY")
+        self.assertEqual(result.followup_questions, ())
+        self.assertEqual(str(state.get("selected_requirement_source", "")), "")
+        self.assertIn("CTCP support 入口", result.reply_text)
+        self.assertNotIn("速度、质量", result.reply_text)
+        self.assertFalse(any(tok in result.reply_text for tok in ("CONTEXT", "PLAN", "PATCH")))
+
     def test_detailed_project_request_enters_project_manager_mode(self) -> None:
         request = str(self.fixture.get("detailed_project_request", "")).strip()
         result = render_frontend_output(
@@ -443,6 +467,15 @@ class RuntimeWiringContractTests(unittest.TestCase):
             mode = support_bot.detect_conversation_mode(run_dir, "你先做出第一版给我看，然后我在做调整", state)
             self.assertEqual(mode, "PROJECT_DETAIL")
 
+    def test_support_bot_capability_query_stays_non_project_mode(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_runtime_support_capability_mode_") as td:
+            run_dir = Path(td)
+            state = support_bot.default_support_session_state("capability-mode-demo")
+            state["project_memory"]["project_brief"] = "我想做一个无人机视频转点云项目"
+            state["task_summary"] = "我想做一个无人机视频转点云项目"
+            mode = support_bot.detect_conversation_mode(run_dir, "你是谁", state)
+            self.assertEqual(mode, "CAPABILITY_QUERY")
+
     def test_support_bot_stdin_entrypoint_consumes_process_message_output(self) -> None:
         with mock.patch.object(
             support_bot,
@@ -544,6 +577,112 @@ class RuntimeWiringContractTests(unittest.TestCase):
             process_spy.assert_called_once_with(chat_id="123", user_text="zip就行", source="telegram", provider_override="")
             manifest = json.loads((support_run_dir / support_bot.SUPPORT_PUBLIC_DELIVERY_REL_PATH).read_text(encoding="utf-8"))
             self.assertEqual(len(list(manifest.get("sent", []))), 1)
+
+    def test_run_telegram_mode_pushes_proactive_progress_update_when_idle(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_telegram_proactive_") as td:
+            root = Path(td)
+            runs_root = root / "runs"
+            support_run_dir = runs_root / "ctcp" / "support_sessions" / "123"
+            (support_run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+            state = support_bot.default_support_session_state("123")
+            state["bound_run_id"] = "run-proactive"
+            state["bound_run_dir"] = "D:/tmp/run-proactive"
+            (support_run_dir / support_bot.SUPPORT_SESSION_STATE_REL_PATH).write_text(
+                json.dumps(state, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            running_context = {
+                "run_id": "run-proactive",
+                "run_dir": "D:/tmp/run-proactive",
+                "goal": "我想要你继续优化我的vn项目",
+                "status": {
+                    "run_status": "running",
+                    "verify_result": "",
+                    "gate": {"state": "open", "owner": "", "reason": ""},
+                    "needs_user_decision": False,
+                    "decisions_needed_count": 0,
+                },
+                "whiteboard": {},
+            }
+            blocked_context = {
+                "run_id": "run-proactive",
+                "run_dir": "D:/tmp/run-proactive",
+                "goal": "我想要你继续优化我的vn项目",
+                "status": {
+                    "run_status": "blocked",
+                    "verify_result": "",
+                    "gate": {
+                        "state": "blocked",
+                        "owner": "Contract Guardian",
+                        "reason": "waiting for APPROVE review_contract (verdict=BLOCK)",
+                    },
+                    "needs_user_decision": False,
+                    "decisions_needed_count": 0,
+                },
+                "whiteboard": {},
+            }
+            context_calls = {"count": 0}
+
+            def _fake_get_support_context(_run_id: str) -> dict[str, object]:
+                context_calls["count"] += 1
+                return running_context if context_calls["count"] == 1 else blocked_context
+
+            class _FakeTelegram:
+                def __init__(self, token: str, timeout_sec: int) -> None:
+                    del token, timeout_sec
+                    self.sent_messages: list[tuple[int, str]] = []
+                    self.calls = 0
+
+                def get_updates(self, offset: int) -> list[dict[str, object]]:
+                    del offset
+                    self.calls += 1
+                    if self.calls == 1:
+                        return []
+                    raise KeyboardInterrupt()
+
+                def send_message(self, chat_id: int, text: str) -> None:
+                    self.sent_messages.append((chat_id, text))
+
+                def send_document(self, chat_id: int, file_path: Path, caption: str = "") -> None:
+                    raise AssertionError(f"unexpected document send: {file_path} {caption}")
+
+                def send_photo(self, chat_id: int, file_path: Path, caption: str = "") -> None:
+                    raise AssertionError(f"unexpected photo send: {file_path} {caption}")
+
+            fake_holder: dict[str, _FakeTelegram] = {}
+
+            def _fake_tg_factory(token: str, timeout_sec: int) -> _FakeTelegram:
+                fake_holder["tg"] = _FakeTelegram(token, timeout_sec)
+                return fake_holder["tg"]
+
+            with mock.patch.object(support_bot, "TelegramClient", side_effect=_fake_tg_factory), mock.patch.object(
+                support_bot, "get_runs_root", return_value=runs_root
+            ), mock.patch.object(
+                support_bot, "get_repo_slug", return_value="ctcp"
+            ), mock.patch.object(
+                support_bot.ctcp_front_bridge,
+                "ctcp_get_support_context",
+                side_effect=_fake_get_support_context,
+            ), mock.patch.object(
+                support_bot.ctcp_front_bridge,
+                "ctcp_advance",
+                return_value={"status": "advanced"},
+            ) as advance_spy, mock.patch.object(
+                support_bot,
+                "build_grounded_status_reply_doc",
+                return_value={"reply_text": "合同评审有新进展，我已经同步到当前阶段。", "provider_status": "executed", "actions": []},
+            ):
+                with self.assertRaises(KeyboardInterrupt):
+                    support_bot.run_telegram_mode(token="fake", poll_seconds=1, allowlist_raw="123")
+
+            fake = fake_holder["tg"]
+            self.assertEqual(fake.sent_messages, [(123, "合同评审有新进展，我已经同步到当前阶段。")])
+            advance_spy.assert_called_once_with("run-proactive", max_steps=2)
+            updated_state = json.loads((support_run_dir / support_bot.SUPPORT_SESSION_STATE_REL_PATH).read_text(encoding="utf-8"))
+            notification_state = dict(updated_state.get("notification_state", {}))
+            self.assertTrue(str(notification_state.get("last_progress_hash", "")))
+            self.assertTrue(str(notification_state.get("last_auto_advance_ts", "")))
 
     def test_support_bot_rejects_in_repo_run_dir(self) -> None:
         with mock.patch.object(support_bot, "get_runs_root", return_value=ROOT), mock.patch.object(

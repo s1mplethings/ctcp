@@ -88,6 +88,68 @@ class SupportBotHumanizationTests(unittest.TestCase):
         self.assertIn("mechanical safeguards decide the boundary", text)
         self.assertIn("do not require a fixed reply template", text)
         self.assertIn("Primary support reply path is api_agent", text)
+        self.assertIn("greeting, capability, or smalltalk turns", text)
+
+    def test_build_support_prompt_treats_capability_query_as_latest_turn_only(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_capability_prompt_") as td:
+            run_dir = Path(td)
+            session_state = support_bot.default_support_session_state("capability-demo")
+            session_state["project_memory"]["project_brief"] = "我想做一个无人机视频转点云项目"
+            prompt = support_bot.build_support_prompt(
+                run_dir,
+                "capability-demo",
+                "你是谁",
+                source="telegram",
+                conversation_mode="CAPABILITY_QUERY",
+                session_state=session_state,
+            )
+
+        self.assertIn('"conversation_mode": "CAPABILITY_QUERY"', prompt)
+        self.assertIn('"allow_existing_project_reference": false', prompt)
+        self.assertIn('"latest_turn_only": true', prompt)
+
+    def test_build_support_prompt_greeting_hides_old_project_and_delivery_context(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_greeting_prompt_") as td:
+            run_dir = Path(td)
+            session_state = support_bot.default_support_session_state("greeting-demo")
+            session_state["bound_run_id"] = "r-old"
+            session_state["bound_run_dir"] = "D:/tmp/r-old"
+            session_state["project_memory"]["project_brief"] = "我想要你继续优化我的vn项目"
+            session_state["project_constraints_memory"]["constraint_brief"] = "zip交付"
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "我想要你继续优化我的vn项目",
+                },
+            )
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "你好",
+                },
+            )
+            prompt = support_bot.build_support_prompt(
+                run_dir,
+                "greeting-demo",
+                "你好",
+                source="telegram",
+                conversation_mode="GREETING",
+                session_state=session_state,
+                project_context={"run_id": "r-old", "run_dir": "D:/tmp/r-old", "goal": "我想要你继续优化我的vn项目"},
+                delivery_state={"channel": "telegram", "channel_can_send_files": True, "package_ready": True, "package_delivery_mode": "existing_package"},
+            )
+
+        self.assertIn('"conversation_mode": "GREETING"', prompt)
+        self.assertIn('"allow_existing_project_reference": false', prompt)
+        self.assertIn('"bound_run_id": ""', prompt)
+        self.assertIn('"project_brief": ""', prompt)
+        self.assertNotIn('"project_run":', prompt)
+        self.assertNotIn('"public_delivery":', prompt)
+        self.assertNotIn('我想要你继续优化我的vn项目', prompt)
 
     def test_default_support_dispatch_config_prefers_api_with_local_fallback(self) -> None:
         cfg = support_bot.default_support_dispatch_config()
@@ -213,6 +275,33 @@ class SupportBotHumanizationTests(unittest.TestCase):
             self.assertTrue(str(doc["reply_text"]).strip())
             for token in ("trace", "logs/", "diff --git", "stack trace"):
                 self.assertNotIn(token, low)
+
+    def test_build_final_reply_doc_strips_delivery_actions_on_greeting_without_delivery_request(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_greeting_delivery_strip_") as td:
+            run_dir = Path(td)
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "你好",
+                },
+            )
+            doc = support_bot.build_final_reply_doc(
+                run_dir=run_dir,
+                provider="api_agent",
+                provider_result={"status": "executed", "reason": "ok"},
+                provider_doc={
+                    "reply_text": "你好，之前项目已经打包好了。",
+                    "next_question": "",
+                    "actions": [{"type": "send_project_package", "format": "zip"}],
+                    "debug_notes": "",
+                },
+                conversation_mode="GREETING",
+                delivery_state={"channel": "telegram", "channel_can_send_files": True, "package_ready": True},
+            )
+
+            self.assertEqual(list(doc.get("actions", [])), [])
 
     def test_process_message_writes_support_reply_artifacts(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_process_") as td:
@@ -824,6 +913,351 @@ class SupportBotHumanizationTests(unittest.TestCase):
             # should treat this as executing, NOT as user-facing blocked.
             self.assertNotIn("后台还没进入", reply)
             self.assertNotIn("先不对你承诺已经开工", reply)
+
+    def test_build_final_reply_doc_grounds_project_detail_progress_followup(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_progress_grounding_") as td:
+            run_dir = Path(td)
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "你能不能重新做一个我之前想要你做的项目",
+                },
+            )
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "现在做到什么程度了",
+                },
+            )
+            provider_doc = {
+                "reply_text": "现在就在往下做。",
+                "next_question": "",
+                "actions": [],
+                "debug_notes": "",
+            }
+            project_context = {
+                "run_id": "r-progress",
+                "goal": "你能不能重新做一个我之前想要你做的项目",
+                "status": {
+                    "run_status": "blocked",
+                    "verify_result": "",
+                    "needs_user_decision": False,
+                    "decisions_needed_count": 0,
+                    "gate": {
+                        "state": "blocked",
+                        "owner": "Contract Guardian",
+                        "path": "reviews/review_contract.md",
+                        "reason": "waiting for APPROVE review_contract (verdict=BLOCK)",
+                    },
+                },
+                "decisions": {"count": 0, "decisions": []},
+                "whiteboard": {
+                    "path": "artifacts/support_whiteboard.json",
+                    "hits": [],
+                    "snapshot": {
+                        "path": "artifacts/support_whiteboard.json",
+                        "entry_count": 3,
+                        "entries": [
+                            {"role": "librarian", "kind": "dispatch_lookup", "text": "lookup completed with 0 hits"},
+                            {
+                                "role": "cost_controller",
+                                "kind": "dispatch_result",
+                                "text": "cost_controller/review_cost via api_agent => executed (reviews/review_cost.md)",
+                            },
+                            {
+                                "role": "contract_guardian",
+                                "kind": "dispatch_result",
+                                "text": "contract_guardian/review_contract via local_exec => exec_failed (reviews/review_contract.md); contract_guard failed",
+                            },
+                        ],
+                    },
+                },
+            }
+
+            doc = support_bot.build_final_reply_doc(
+                run_dir=run_dir,
+                provider="api_agent",
+                provider_result={"status": "executed", "reason": "ok"},
+                provider_doc=provider_doc,
+                project_context=project_context,
+                conversation_mode="PROJECT_DETAIL",
+                task_summary_hint="你能不能重新做一个我之前想要你做的项目",
+                lang_hint="zh",
+            )
+
+            reply = str(doc.get("reply_text", ""))
+            self.assertIn("项目已接到后台流程", reply)
+            self.assertIn("成本评审已跑过一轮", reply)
+            self.assertIn("当前阶段在合同评审", reply)
+            self.assertIn("下一步我会先处理合同评审卡住的点", reply)
+            self.assertNotEqual(reply.strip(), "现在就在往下做。")
+
+    def test_detect_conversation_mode_treats_previous_project_progress_followup_as_status_query(self) -> None:
+        session_state = support_bot.default_support_session_state("6092527664")
+        session_state["bound_run_id"] = "r-prev"
+        session_state["project_memory"]["project_brief"] = "我想要你继续优化我的vn项目"
+
+        mode = support_bot.detect_conversation_mode(
+            Path("."),
+            "我想要知道我之前那个项目做成什么样子了",
+            session_state,
+        )
+
+        self.assertEqual(mode, "STATUS_QUERY")
+        self.assertFalse(
+            support_bot.should_refresh_project_brief(
+                "我想要知道我之前那个项目做成什么样子了",
+                "PROJECT_DETAIL",
+            )
+        )
+
+    def test_build_final_reply_doc_grounds_previous_project_status_followup(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_previous_project_status_") as td:
+            run_dir = Path(td)
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "我想要知道我之前那个项目做成什么样子了",
+                },
+            )
+            provider_doc = {
+                "reply_text": "你是否方便提供最新的规划文档，或者有什么新的想法和优先需求希望这次优化时重点考虑？",
+                "next_question": "",
+                "actions": [],
+                "debug_notes": "",
+            }
+            project_context = {
+                "run_id": "r-prev-status",
+                "goal": "我想要你继续优化我的vn项目",
+                "status": {
+                    "run_status": "blocked",
+                    "verify_result": "",
+                    "needs_user_decision": False,
+                    "decisions_needed_count": 0,
+                    "gate": {
+                        "state": "blocked",
+                        "owner": "Chair",
+                        "path": "artifacts/PLAN_draft.md",
+                        "reason": "waiting for PLAN_draft.md",
+                    },
+                },
+                "decisions": {"count": 0, "decisions": []},
+                "whiteboard": {
+                    "path": "artifacts/support_whiteboard.json",
+                    "hits": [],
+                    "snapshot": {
+                        "path": "artifacts/support_whiteboard.json",
+                        "entry_count": 3,
+                        "entries": [
+                            {
+                                "role": "support",
+                                "kind": "support_turn",
+                                "text": "telegram_auto_resume PROJECT_DETAIL: 就直接按之前的大纲走就行了",
+                            },
+                            {
+                                "role": "chair",
+                                "kind": "dispatch_result",
+                                "text": "chair/plan_draft via api_agent => executed (artifacts/analysis.md)",
+                            },
+                            {
+                                "role": "librarian",
+                                "kind": "dispatch_result",
+                                "text": "librarian/context_pack via local_exec => executed (artifacts/context_pack.json)",
+                            },
+                        ],
+                    },
+                },
+            }
+
+            doc = support_bot.build_final_reply_doc(
+                run_dir=run_dir,
+                provider="api_agent",
+                provider_result={"status": "executed", "reason": "ok"},
+                provider_doc=provider_doc,
+                project_context=project_context,
+                conversation_mode="STATUS_QUERY",
+                task_summary_hint="我想要你继续优化我的vn项目",
+                lang_hint="zh",
+            )
+
+            reply = str(doc.get("reply_text", ""))
+            self.assertIn("项目已接到后台流程", reply)
+            self.assertIn("当前阶段在方案整理", reply)
+            self.assertIn("下一步我会先处理方案整理卡住的点", reply)
+            self.assertNotIn("规划文档", reply)
+
+    def test_sync_project_context_recovers_archived_previous_outline_brief(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_resume_outline_") as td:
+            runs_root = Path(td) / "runs"
+            current_run_dir = runs_root / "ctcp" / "support_sessions" / "6092527664"
+            backup_run_dir = runs_root / "ctcp" / "support_sessions" / "6092527664.backup-20260316-182553"
+            (current_run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+            (backup_run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+
+            backup_state = support_bot.default_support_session_state("6092527664")
+            backup_state["bound_run_id"] = "old-vn-run"
+            backup_state["project_memory"]["project_brief"] = "我想要你继续优化我的vn项目"
+            (backup_run_dir / support_bot.SUPPORT_SESSION_STATE_REL_PATH).write_text(
+                json.dumps(backup_state, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            current_state = support_bot.default_support_session_state("6092527664")
+            new_run_calls: list[str] = []
+
+            def _fake_new_run(goal: str) -> dict[str, str]:
+                new_run_calls.append(goal)
+                return {"run_id": "new-vn-run", "run_dir": "D:/tmp/new-vn-run"}
+
+            fake_context = {
+                "run_id": "new-vn-run",
+                "run_dir": "D:/tmp/new-vn-run",
+                "goal": "我想要你继续优化我的vn项目",
+                "status": {
+                    "run_status": "running",
+                    "verify_result": "",
+                    "gate": {"state": "open", "owner": "", "reason": ""},
+                    "needs_user_decision": False,
+                    "decisions_needed_count": 0,
+                },
+                "whiteboard": {},
+            }
+
+            with mock.patch.object(support_bot, "get_runs_root", return_value=runs_root), mock.patch.object(
+                support_bot, "get_repo_slug", return_value="ctcp"
+            ), mock.patch.object(
+                support_bot.ctcp_front_bridge,
+                "ctcp_new_run",
+                side_effect=_fake_new_run,
+            ), mock.patch.object(
+                support_bot.ctcp_front_bridge,
+                "ctcp_record_support_turn",
+                return_value={"ok": True},
+            ), mock.patch.object(
+                support_bot.ctcp_front_bridge,
+                "ctcp_get_support_context",
+                return_value=fake_context,
+            ), mock.patch.object(
+                support_bot.ctcp_front_bridge,
+                "ctcp_advance",
+                return_value={"status": "advanced"},
+            ):
+                project_context, updated_state = support_bot.sync_project_context(
+                    run_dir=current_run_dir,
+                    chat_id="6092527664",
+                    user_text="就直接按之前的大纲走就行了",
+                    source="telegram",
+                    conversation_mode="PROJECT_DETAIL",
+                    session_state=current_state,
+                )
+
+            self.assertEqual(new_run_calls, ["我想要你继续优化我的vn项目"])
+            self.assertEqual(str(updated_state.get("bound_run_id", "")), "new-vn-run")
+            self.assertEqual(str(updated_state.get("task_summary", "")), "我想要你继续优化我的vn项目")
+            self.assertEqual(str(updated_state.get("resume_state", {}).get("last_resume_source_run_id", "")), "old-vn-run")
+            self.assertEqual(str(project_context.get("goal", "")), "我想要你继续优化我的vn项目")
+
+    def test_build_grounded_status_reply_doc_does_not_repeat_latest_greeting(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_proactive_greeting_guard_") as td:
+            run_dir = Path(td)
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "你好",
+                },
+            )
+            session_state = support_bot.default_support_session_state("proactive-demo")
+            session_state["bound_run_id"] = "run-proactive"
+            session_state["project_memory"]["project_brief"] = "我想要你继续优化我的vn项目"
+            session_state["session_profile"]["lang_hint"] = "zh"
+            project_context = {
+                "run_id": "run-proactive",
+                "goal": "我想要你继续优化我的vn项目",
+                "status": {
+                    "run_status": "running",
+                    "verify_result": "",
+                    "gate": {
+                        "state": "open",
+                        "owner": "Chair/Planner",
+                        "path": "artifacts/analysis.md",
+                        "reason": "waiting for analysis.md",
+                    },
+                    "needs_user_decision": False,
+                    "decisions_needed_count": 0,
+                },
+                "whiteboard": {
+                    "snapshot": {
+                        "entries": [
+                            {
+                                "kind": "dispatch_result",
+                                "text": "chair/plan_draft via api_agent => executed (artifacts/analysis.md)",
+                            }
+                        ]
+                    }
+                },
+            }
+
+            doc = support_bot.build_grounded_status_reply_doc(
+                run_dir=run_dir,
+                session_state=session_state,
+                project_context=project_context,
+            )
+
+            reply = str(doc.get("reply_text", ""))
+            self.assertIn("当前阶段在", reply)
+            self.assertIn("下一步我会", reply)
+            self.assertNotIn("你好，随时可以开始", reply)
+            self.assertNotEqual(reply.strip(), "你好，随时可以开始。你说说看要做什么？")
+
+    def test_process_message_greeting_does_not_reset_real_progress_digest(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_progress_baseline_guard_") as td:
+            runs_root = Path(td) / "runs"
+
+            def _fake_execute(*, provider, run_dir, request, config):  # type: ignore[no-untyped-def]
+                del provider, request, config
+                _write_provider_doc(run_dir, "很高兴收到你的消息。请告诉我你这次需要什么帮助或者遇到了什么问题，我们可以一起推进解决。")
+                return {"status": "executed", "reason": "ok"}
+
+            with mock.patch.object(support_bot, "get_runs_root", return_value=runs_root), mock.patch.object(
+                support_bot, "get_repo_slug", return_value="ctcp"
+            ), mock.patch.object(
+                support_bot, "load_dispatch_config", return_value=({"mode": "manual_outbox", "role_providers": {"support_lead": "api_agent"}}, "ok")
+            ), mock.patch.object(
+                support_bot, "execute_provider", side_effect=_fake_execute
+            ), mock.patch.object(
+                support_bot,
+                "sync_project_context",
+                side_effect=lambda **kwargs: ({}, kwargs["session_state"]),
+            ):
+                session_dir = runs_root / "ctcp" / "support_sessions" / "baseline-demo"
+                session_dir.mkdir(parents=True, exist_ok=True)
+                state = support_bot.default_support_session_state("baseline-demo")
+                state["bound_run_id"] = "run-proactive"
+                state["bound_run_dir"] = "D:/tmp/run-proactive"
+                state["project_memory"]["project_brief"] = "我想要你继续优化我的vn项目"
+                state["notification_state"]["last_progress_hash"] = "existing-real-hash"
+                state["notification_state"]["last_progress_ts"] = "2026-03-17T09:00:00Z"
+                support_bot.write_json(session_dir / support_bot.SUPPORT_SESSION_STATE_REL_PATH, state)
+
+                _doc, run_dir = support_bot.process_message(
+                    chat_id="baseline-demo",
+                    user_text="你好",
+                    source="telegram",
+                    provider_override="api_agent",
+                )
+
+            saved = json.loads((run_dir / support_bot.SUPPORT_SESSION_STATE_REL_PATH).read_text(encoding="utf-8"))
+            notification_state = dict(saved.get("notification_state", {}))
+            self.assertEqual(str(notification_state.get("last_progress_hash", "")), "existing-real-hash")
+            self.assertEqual(str(notification_state.get("last_notified_run_id", "")), "")
 
     def test_run_stdin_mode_emits_reply_text_only(self) -> None:
         with mock.patch.object(

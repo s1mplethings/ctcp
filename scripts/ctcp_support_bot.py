@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import mimetypes
 import os
@@ -160,7 +161,7 @@ PROJECT_EXECUTION_FOLLOWUP_HINTS_EN = (
     "i will adjust later",
     "keep building",
 )
-NON_PROJECT_SUPPORT_REPLY_MODES = {"GREETING", "SMALLTALK", "PROJECT_INTAKE"}
+NON_PROJECT_SUPPORT_REPLY_MODES = {"GREETING", "SMALLTALK", "CAPABILITY_QUERY", "PROJECT_INTAKE"}
 PROJECT_CONTEXT_LEAK_TOKENS_ZH = (
     "项目",
     "开发",
@@ -190,7 +191,35 @@ PROJECT_CONTEXT_LEAK_TOKENS_EN = (
     "framework",
     "codebase",
 )
+SUPPORT_AUTO_ADVANCE_INTERVAL_SEC = 20
+SUPPORT_PROGRESS_PUSH_IDLE_INTERVAL_SEC = 6
+PREVIOUS_OUTLINE_REQUEST_PATTERNS_ZH = (
+    re.compile(r"之前.*大纲"),
+    re.compile(r"(按|照).*(之前|原来).*(大纲|方案|项目)"),
+    re.compile(r"(继续|接着|重做|重新做).*(之前|原来).*(项目|大纲|方案)"),
+    re.compile(r"之前想要你做的项目"),
+    re.compile(r"之前那个项目"),
+)
+PREVIOUS_OUTLINE_REQUEST_PATTERNS_EN = (
+    re.compile(r"previous outline", re.IGNORECASE),
+    re.compile(r"continue .*previous", re.IGNORECASE),
+    re.compile(r"redo .*previous", re.IGNORECASE),
+    re.compile(r"previous project", re.IGNORECASE),
+)
+PREVIOUS_PROJECT_STATUS_PATTERNS_ZH = (
+    re.compile(r"(之前|原来).*(项目|方案|大纲).*(进度|状态|做到什么程度|做到哪|做到哪一步|做成什么样|做得怎么样|现在怎么样|现在什么情况)"),
+    re.compile(r"(之前那个项目|之前的项目|原来的项目).*(做成什么样|做得怎么样|现在怎么样|进度|状态|做到哪|做到什么程度)"),
+)
+PREVIOUS_PROJECT_STATUS_PATTERNS_EN = (
+    re.compile(
+        r"\b(previous|earlier|old)\b.{0,24}\b(project|plan|outline)\b.{0,24}\b(status|progress|done|ready|finished|latest)\b",
+        re.IGNORECASE,
+    ),
+)
 SCREENSHOT_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
+_WHITEBOARD_DISPATCH_RESULT_RE = re.compile(
+    r"^(?P<role>[^/\s]+)/(?P<action>[^\s]+)\s+via\s+(?P<provider>[^\s]+)\s+=>\s+(?P<status>[^\s]+)\s+\((?P<target>[^)]+)\)(?:;\s*(?P<reason>.*))?$"
+)
 
 
 try:
@@ -224,7 +253,9 @@ except ModuleNotFoundError:
 try:
     from frontend.conversation_mode_router import (
         has_sufficient_task_signal as frontend_has_sufficient_task_signal,
+        is_capability_query as frontend_is_capability_query,
         is_greeting_only as frontend_is_greeting_only,
+        is_status_query as frontend_is_status_query,
         route_conversation_mode as frontend_route_conversation_mode,
     )
     from frontend.response_composer import render_frontend_output
@@ -233,19 +264,41 @@ except ModuleNotFoundError:
         sys.path.insert(0, str(ROOT))
     from frontend.conversation_mode_router import (
         has_sufficient_task_signal as frontend_has_sufficient_task_signal,
+        is_capability_query as frontend_is_capability_query,
         is_greeting_only as frontend_is_greeting_only,
+        is_status_query as frontend_is_status_query,
         route_conversation_mode as frontend_route_conversation_mode,
     )
     from frontend.response_composer import render_frontend_output
 except Exception:
     frontend_has_sufficient_task_signal = None  # type: ignore[assignment]
+    frontend_is_capability_query = None  # type: ignore[assignment]
     frontend_is_greeting_only = None  # type: ignore[assignment]
+    frontend_is_status_query = None  # type: ignore[assignment]
     frontend_route_conversation_mode = None  # type: ignore[assignment]
     render_frontend_output = None  # type: ignore[assignment]
 
 
 def now_iso() -> str:
     return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def parse_iso_ts(text: str) -> dt.datetime | None:
+    raw = str(text or "").strip()
+    if not raw:
+        return None
+    try:
+        return dt.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except Exception:
+        return None
+
+
+def seconds_since(text: str) -> float | None:
+    stamp = parse_iso_ts(text)
+    if stamp is None:
+        return None
+    now = dt.datetime.now(dt.timezone.utc)
+    return max(0.0, (now - stamp.astimezone(dt.timezone.utc)).total_seconds())
 
 
 def utf8_clean(text: str) -> str:
@@ -518,7 +571,7 @@ def load_inbox_history(run_dir: Path, limit: int = 8) -> list[dict[str, str]]:
 
 def default_support_session_state(chat_id: str) -> dict[str, Any]:
     return {
-        "schema_version": "ctcp-support-session-state-v3",
+        "schema_version": "ctcp-support-session-state-v4",
         "chat_id": chat_id,
         "bound_run_id": "",
         "bound_run_dir": "",
@@ -556,6 +609,20 @@ def default_support_session_state(chat_id: str) -> dict[str, Any]:
             "last_provider_status": "",
             "last_provider_reason": "",
         },
+        "notification_state": {
+            "last_progress_hash": "",
+            "last_progress_ts": "",
+            "last_notified_run_id": "",
+            "last_notified_phase": "",
+            "last_auto_advance_ts": "",
+        },
+        "resume_state": {
+            "last_resume_ts": "",
+            "last_resume_source_dir": "",
+            "last_resume_source_run_id": "",
+            "last_resume_brief": "",
+            "superseded_run_id": "",
+        },
     }
 
 
@@ -590,6 +657,14 @@ def latest_provider_runtime(session_state: dict[str, Any]) -> dict[str, Any]:
     return _state_zone(session_state, "provider_runtime_buffer")
 
 
+def latest_notification_state(session_state: dict[str, Any]) -> dict[str, Any]:
+    return _state_zone(session_state, "notification_state")
+
+
+def latest_resume_state(session_state: dict[str, Any]) -> dict[str, Any]:
+    return _state_zone(session_state, "resume_state")
+
+
 def normalize_support_session_state(doc: dict[str, Any] | None, chat_id: str) -> dict[str, Any]:
     state = default_support_session_state(chat_id)
     if isinstance(doc, dict):
@@ -601,6 +676,8 @@ def normalize_support_session_state(doc: dict[str, Any] | None, chat_id: str) ->
                 "execution_memory",
                 "turn_memory",
                 "provider_runtime_buffer",
+                "notification_state",
+                "resume_state",
                 "latest_support_context",
             }:
                 if isinstance(value, dict):
@@ -615,6 +692,8 @@ def normalize_support_session_state(doc: dict[str, Any] | None, chat_id: str) ->
     turn_memory = _state_zone(state, "turn_memory")
     session_profile = _state_zone(state, "session_profile")
     provider_runtime = _state_zone(state, "provider_runtime_buffer")
+    notification_state = _state_zone(state, "notification_state")
+    resume_state = _state_zone(state, "resume_state")
     latest_support_context = state.get("latest_support_context")
     if not isinstance(latest_support_context, dict):
         latest_support_context = {}
@@ -663,6 +742,30 @@ def normalize_support_session_state(doc: dict[str, Any] | None, chat_id: str) ->
     provider_runtime["last_provider_reason"] = sanitize_inline_text(
         str(provider_runtime.get("last_provider_reason", "")), max_chars=220
     )
+    notification_state["last_progress_hash"] = sanitize_inline_text(
+        str(notification_state.get("last_progress_hash", "")), max_chars=80
+    )
+    notification_state["last_progress_ts"] = sanitize_inline_text(
+        str(notification_state.get("last_progress_ts", "")), max_chars=40
+    )
+    notification_state["last_notified_run_id"] = sanitize_inline_text(
+        str(notification_state.get("last_notified_run_id", "")), max_chars=80
+    )
+    notification_state["last_notified_phase"] = sanitize_inline_text(
+        str(notification_state.get("last_notified_phase", "")), max_chars=80
+    )
+    notification_state["last_auto_advance_ts"] = sanitize_inline_text(
+        str(notification_state.get("last_auto_advance_ts", "")), max_chars=40
+    )
+    resume_state["last_resume_ts"] = sanitize_inline_text(str(resume_state.get("last_resume_ts", "")), max_chars=40)
+    resume_state["last_resume_source_dir"] = sanitize_inline_text(
+        str(resume_state.get("last_resume_source_dir", "")), max_chars=260
+    )
+    resume_state["last_resume_source_run_id"] = sanitize_inline_text(
+        str(resume_state.get("last_resume_source_run_id", "")), max_chars=80
+    )
+    resume_state["last_resume_brief"] = sanitize_inline_text(str(resume_state.get("last_resume_brief", "")), max_chars=280)
+    resume_state["superseded_run_id"] = sanitize_inline_text(str(resume_state.get("superseded_run_id", "")), max_chars=80)
 
     state["task_summary"] = current_project_brief(state)
     state["latest_conversation_mode"] = sanitize_inline_text(
@@ -743,6 +846,104 @@ def support_active_task_state(session_state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def is_previous_outline_request(text: str) -> bool:
+    raw = sanitize_inline_text(text, max_chars=280)
+    if not raw:
+        return False
+    low = raw.lower()
+    return any(p.search(raw) for p in PREVIOUS_OUTLINE_REQUEST_PATTERNS_ZH) or any(
+        p.search(low) for p in PREVIOUS_OUTLINE_REQUEST_PATTERNS_EN
+    )
+
+
+def iter_archived_support_session_dirs(chat_id: str, current_run_dir: Path | None = None) -> list[Path]:
+    sessions_root = session_run_dir(chat_id).parent
+    if not sessions_root.exists():
+        return []
+    prefix = f"{safe_session_id(chat_id)}.backup-"
+    current_resolved = current_run_dir.resolve() if current_run_dir is not None else None
+    rows: list[Path] = []
+    for path in sessions_root.iterdir():
+        if not path.is_dir():
+            continue
+        if not path.name.startswith(prefix):
+            continue
+        if current_resolved is not None and path.resolve() == current_resolved:
+            continue
+        rows.append(path)
+    return sorted(rows, key=lambda item: item.stat().st_mtime, reverse=True)
+
+
+def resolve_archived_resume_candidate(
+    *,
+    chat_id: str,
+    current_run_dir: Path,
+    session_state: dict[str, Any],
+) -> dict[str, str]:
+    current_brief = current_project_brief(session_state)
+    for session_dir in iter_archived_support_session_dirs(chat_id, current_run_dir=current_run_dir):
+        archived_state = load_support_session_state(session_dir, chat_id)
+        archived_brief = current_project_brief(archived_state)
+        if not archived_brief:
+            continue
+        if archived_brief == current_brief:
+            continue
+        if is_previous_outline_request(archived_brief):
+            continue
+        return {
+            "session_dir": str(session_dir),
+            "project_brief": archived_brief,
+            "bound_run_id": sanitize_inline_text(str(archived_state.get("bound_run_id", "")), max_chars=80),
+        }
+    return {}
+
+
+def latest_resume_request_text(run_dir: Path, session_state: dict[str, Any]) -> str:
+    latest_turn = sanitize_inline_text(str(latest_turn_memory(session_state).get("latest_user_turn", "")), max_chars=280)
+    if latest_turn and is_previous_outline_request(latest_turn):
+        return latest_turn
+    execution_directive = sanitize_inline_text(
+        str(_state_zone(session_state, "execution_memory").get("latest_user_directive", "")),
+        max_chars=280,
+    )
+    if execution_directive and is_previous_outline_request(execution_directive):
+        return execution_directive
+    for item in reversed(load_inbox_history(run_dir, limit=12)):
+        text = sanitize_inline_text(str(item.get("text", "")), max_chars=280)
+        if text and is_previous_outline_request(text):
+            return text
+    return ""
+
+
+def should_supersede_bound_run_for_resume(
+    *,
+    project_context: dict[str, Any] | None,
+    current_goal_hint: str,
+    recovered_brief: str,
+) -> bool:
+    current_goal = sanitize_inline_text(
+        str(current_goal_hint or (project_context or {}).get("goal", "")),
+        max_chars=280,
+    )
+    recovered = sanitize_inline_text(recovered_brief, max_chars=280)
+    if not recovered:
+        return False
+    if current_goal == recovered:
+        return False
+    if not current_goal:
+        return True
+    if is_previous_outline_request(current_goal):
+        return True
+    status = project_context.get("status", {}) if isinstance(project_context, dict) else {}
+    if not isinstance(status, dict):
+        status = {}
+    gate = status.get("gate", {}) if isinstance(status.get("gate", {}), dict) else {}
+    run_status = str(status.get("run_status", "")).strip().lower()
+    needs_user_decision = bool(status.get("needs_user_decision", False))
+    gate_state = str(gate.get("state", "")).strip().lower()
+    return run_status == "blocked" and gate_state == "blocked" and (not needs_user_decision)
+
+
 def is_greeting_only_message(text: str) -> bool:
     raw = str(text or "").strip()
     if not raw:
@@ -793,12 +994,30 @@ def is_project_execution_followup(text: str) -> bool:
     )
 
 
+def is_previous_project_status_followup(text: str) -> bool:
+    raw = sanitize_inline_text(text, max_chars=280)
+    if not raw:
+        return False
+    if frontend_is_status_query is not None:
+        try:
+            if frontend_is_status_query(raw):
+                return True
+        except Exception:
+            pass
+    low = raw.lower()
+    return any(pattern.search(raw) for pattern in PREVIOUS_PROJECT_STATUS_PATTERNS_ZH) or any(
+        pattern.search(low) for pattern in PREVIOUS_PROJECT_STATUS_PATTERNS_EN
+    )
+
+
 def should_refresh_project_brief(user_text: str, conversation_mode: str) -> bool:
     mode = str(conversation_mode or "").strip().upper()
     if mode not in {"PROJECT_INTAKE", "PROJECT_DETAIL", "PROJECT_DECISION_REPLY"}:
         return False
     raw = sanitize_inline_text(user_text, max_chars=280)
     if not raw or is_low_signal_project_followup(raw):
+        return False
+    if is_previous_project_status_followup(raw):
         return False
     if is_project_execution_followup(raw):
         return False
@@ -836,9 +1055,12 @@ def should_force_project_detail(user_text: str, session_state: dict[str, Any]) -
 
 def detect_conversation_mode(run_dir: Path, user_text: str, session_state: dict[str, Any]) -> str:
     active_state = support_active_task_state(session_state)
+    has_bound_run = bool(str(session_state.get("bound_run_id", "")).strip())
     if frontend_route_conversation_mode is not None:
         try:
             mode = str(frontend_route_conversation_mode([user_text], user_text, active_state)).strip().upper() or "SMALLTALK"
+            if has_bound_run and mode in {"PROJECT_INTAKE", "PROJECT_DETAIL"} and is_previous_project_status_followup(user_text):
+                return "STATUS_QUERY"
             if mode == "PROJECT_INTAKE" and current_project_brief(session_state) and not should_refresh_project_brief(user_text, mode):
                 return "PROJECT_DETAIL"
             if mode == "SMALLTALK" and should_force_project_detail(user_text, session_state):
@@ -848,8 +1070,16 @@ def detect_conversation_mode(run_dir: Path, user_text: str, session_state: dict[
             pass
     if is_greeting_only_message(user_text):
         return "GREETING"
+    if frontend_is_capability_query is not None:
+        try:
+            if frontend_is_capability_query(user_text):
+                return "CAPABILITY_QUERY"
+        except Exception:
+            pass
     if is_smalltalk_only_message(user_text):
         return "SMALLTALK"
+    if has_bound_run and is_previous_project_status_followup(user_text):
+        return "STATUS_QUERY"
     if should_force_project_detail(user_text, session_state):
         return "PROJECT_DETAIL"
     if active_state.get("task_summary"):
@@ -910,6 +1140,334 @@ def _project_prompt_context(project_context: dict[str, Any] | None) -> dict[str,
     }
 
 
+def _progress_step_label(*, action: str = "", target_path: str = "", role: str = "", reason: str = "") -> str:
+    action_l = str(action or "").strip().lower()
+    path_l = str(target_path or "").strip().lower()
+    role_l = str(role or "").strip().lower()
+    reason_l = str(reason or "").strip().lower()
+    if "review_contract" in action_l or "review_contract" in path_l or "review_contract" in reason_l or "contract" in role_l:
+        return "合同评审"
+    if "review_cost" in action_l or "review_cost" in path_l or "review_cost" in reason_l or "cost" in role_l:
+        return "成本评审"
+    if "lookup" in action_l or "context_pack" in path_l or "librarian" in role_l:
+        return "资料检索"
+    if "analysis" in action_l or "analysis.md" in path_l:
+        return "需求分析"
+    if "plan" in action_l or "plan" in path_l:
+        return "方案整理"
+    if "patch" in action_l or "diff.patch" in path_l:
+        return "实现修复"
+    if "verify" in action_l or "verify" in path_l or "verifier" in role_l:
+        return "验收检查"
+    return ""
+
+
+def _append_progress_item(items: list[str], text: str, *, limit: int = 3) -> None:
+    normalized = sanitize_inline_text(text, max_chars=120)
+    if not normalized or normalized in items:
+        return
+    if len(items) >= max(1, limit):
+        return
+    items.append(normalized)
+
+
+def _whiteboard_snapshot_entries(project_context: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not isinstance(project_context, dict):
+        return []
+    whiteboard = project_context.get("whiteboard", {})
+    if not isinstance(whiteboard, dict):
+        return []
+    snapshot = whiteboard.get("snapshot", {})
+    if not isinstance(snapshot, dict):
+        return []
+    entries = snapshot.get("entries", [])
+    if not isinstance(entries, list):
+        return []
+    return [item for item in entries if isinstance(item, dict)]
+
+
+def build_progress_binding(*, project_context: dict[str, Any] | None, task_summary_hint: str = "") -> dict[str, Any]:
+    if not isinstance(project_context, dict):
+        return {}
+
+    status = project_context.get("status", {})
+    if not isinstance(status, dict):
+        status = {}
+    gate = status.get("gate", {})
+    if not isinstance(gate, dict):
+        gate = {}
+    decisions = project_context.get("decisions", {})
+    if not isinstance(decisions, dict):
+        decisions = {}
+
+    run_id = sanitize_inline_text(str(project_context.get("run_id", "")), max_chars=80)
+    task_goal = sanitize_inline_text(
+        str(task_summary_hint or project_context.get("goal", "")).strip(),
+        max_chars=260,
+    )
+    run_status = str(status.get("run_status", "")).strip().lower()
+    verify_result = str(status.get("verify_result", "")).strip().upper()
+    gate_reason = sanitize_inline_text(str(gate.get("reason", "")), max_chars=220)
+    gate_owner = sanitize_inline_text(str(gate.get("owner", "")), max_chars=120)
+    gate_path = sanitize_inline_text(str(gate.get("path", "")), max_chars=180)
+    gate_label = _progress_step_label(target_path=gate_path, role=gate_owner, reason=gate_reason)
+
+    done_items: list[str] = []
+    if run_id:
+        _append_progress_item(done_items, "项目已接到后台流程")
+
+    for entry in _whiteboard_snapshot_entries(project_context):
+        kind = str(entry.get("kind", "")).strip().lower()
+        text = str(entry.get("text", "")).strip()
+        low = text.lower()
+        if kind in {"dispatch_lookup", "support_lookup"} and "lookup completed" in low:
+            _append_progress_item(done_items, "资料检索已跑过一轮")
+            continue
+        if kind != "dispatch_result":
+            continue
+        match = _WHITEBOARD_DISPATCH_RESULT_RE.match(text)
+        if not match:
+            continue
+        result_status = str(match.group("status") or "").strip().lower()
+        if result_status != "executed":
+            continue
+        label = _progress_step_label(
+            action=str(match.group("action") or ""),
+            target_path=str(match.group("target") or ""),
+            role=str(match.group("role") or ""),
+            reason=str(match.group("reason") or ""),
+        )
+        if not label:
+            continue
+        if label == "资料检索":
+            _append_progress_item(done_items, "资料检索已跑过一轮")
+        else:
+            _append_progress_item(done_items, f"{label}已跑过一轮")
+
+    decision_rows = decisions.get("decisions", [])
+    if not isinstance(decision_rows, list):
+        decision_rows = []
+    decision_question = ""
+    for item in decision_rows:
+        if not isinstance(item, dict):
+            continue
+        question_hint = sanitize_inline_text(str(item.get("question_hint", "")), max_chars=220)
+        if question_hint:
+            decision_question = question_hint
+            break
+
+    decision_count = int(status.get("decisions_needed_count", decisions.get("count", 0) or 0) or 0)
+    current_phase = ""
+    current_blocker = "none"
+    next_action = "继续往下一步推进，有新的结果或阻塞会直接同步给你"
+    question_needed = "no"
+    message_purpose = "progress"
+
+    if verify_result == "PASS" or run_status in {"pass", "done", "completed"}:
+        current_phase = "结果整理/交付"
+        current_blocker = "none"
+        next_action = "把这一轮结果和可交付内容整理给你"
+        message_purpose = "delivery"
+    elif decision_count > 0:
+        current_phase = gate_label or "等待关键决定"
+        current_blocker = "等你先确认一个关键决定"
+        next_action = "先等你拍板这个点，一拿到答复就继续往下推"
+        question_needed = "yes"
+    elif run_status == "blocked":
+        current_phase = gate_label or "当前评审"
+        if gate_label:
+            current_blocker = f"{gate_label}这一步还没过，后面的推进先停在这里"
+            next_action = f"先处理{gate_label}卡住的点，过掉这一步再继续往下推"
+        else:
+            current_blocker = "当前评审这一步还没过，后面的推进先停在这里"
+            next_action = "先把当前卡点处理掉，再继续往下推"
+    elif run_status in {"running", "in_progress", "working"}:
+        current_phase = gate_label or "执行推进"
+        current_blocker = "none"
+    else:
+        current_phase = gate_label or "处理中"
+        current_blocker = "none"
+
+    return {
+        "current_task_goal": task_goal,
+        "current_phase": current_phase,
+        "last_confirmed_items": done_items,
+        "current_blocker": current_blocker,
+        "message_purpose": message_purpose,
+        "question_needed": question_needed,
+        "next_action": sanitize_inline_text(next_action, max_chars=220),
+        "blocking_question": decision_question,
+        "proof_refs": [f"run_id={run_id}"] if run_id else [],
+    }
+
+
+def build_progress_digest(*, project_context: dict[str, Any] | None, task_summary_hint: str = "") -> tuple[str, dict[str, Any]]:
+    if not isinstance(project_context, dict):
+        return "", {}
+    binding = build_progress_binding(project_context=project_context, task_summary_hint=task_summary_hint)
+    if not binding:
+        return "", {}
+    status = project_context.get("status", {})
+    if not isinstance(status, dict):
+        status = {}
+    gate = status.get("gate", {})
+    if not isinstance(gate, dict):
+        gate = {}
+    payload = {
+        "run_id": sanitize_inline_text(str(project_context.get("run_id", "")), max_chars=80),
+        "run_status": sanitize_inline_text(str(status.get("run_status", "")), max_chars=40),
+        "verify_result": sanitize_inline_text(str(status.get("verify_result", "")), max_chars=20),
+        "gate_state": sanitize_inline_text(str(gate.get("state", "")), max_chars=40),
+        "gate_reason": sanitize_inline_text(str(gate.get("reason", "")), max_chars=220),
+        "progress_binding": binding,
+    }
+    raw = json.dumps(clean_json_value(payload), ensure_ascii=False, sort_keys=True)
+    return hashlib.sha1(raw.encode("utf-8")).hexdigest(), binding
+
+
+def remember_progress_notification(
+    session_state: dict[str, Any],
+    *,
+    project_context: dict[str, Any] | None,
+    task_summary_hint: str = "",
+    ts: str = "",
+) -> None:
+    if not isinstance(project_context, dict):
+        return
+    run_id = sanitize_inline_text(str(project_context.get("run_id", "")), max_chars=80)
+    if not run_id:
+        return
+    digest, binding = build_progress_digest(project_context=project_context, task_summary_hint=task_summary_hint)
+    if not digest:
+        return
+    notification_state = latest_notification_state(session_state)
+    notification_state["last_progress_hash"] = digest
+    notification_state["last_progress_ts"] = sanitize_inline_text(ts or now_iso(), max_chars=40)
+    notification_state["last_notified_run_id"] = run_id
+    notification_state["last_notified_phase"] = sanitize_inline_text(str(binding.get("current_phase", "")), max_chars=80)
+
+
+def should_auto_advance_project_context(session_state: dict[str, Any], project_context: dict[str, Any] | None) -> bool:
+    if not isinstance(project_context, dict):
+        return False
+    status = project_context.get("status", {})
+    if not isinstance(status, dict):
+        return False
+    gate = status.get("gate", {})
+    if not isinstance(gate, dict):
+        gate = {}
+    run_status = str(status.get("run_status", "")).strip().lower()
+    verify_result = str(status.get("verify_result", "")).strip().upper()
+    gate_state = str(gate.get("state", "")).strip().lower()
+    if verify_result == "PASS" or run_status in {"pass", "done", "completed", "fail", "failed", "error"}:
+        return False
+    if bool(status.get("needs_user_decision", False)) or int(status.get("decisions_needed_count", 0) or 0) > 0:
+        return False
+    if gate_state == "blocked":
+        return False
+    elapsed = seconds_since(str(latest_notification_state(session_state).get("last_auto_advance_ts", "")))
+    if elapsed is not None and elapsed < SUPPORT_AUTO_ADVANCE_INTERVAL_SEC:
+        return False
+    return run_status in {"running", "in_progress", "working"} or gate_state in {"", "open", "ready"}
+
+
+def remember_resume_recovery(
+    session_state: dict[str, Any],
+    *,
+    candidate: dict[str, str],
+    superseded_run_id: str = "",
+) -> None:
+    resume_state = latest_resume_state(session_state)
+    resume_state["last_resume_ts"] = now_iso()
+    resume_state["last_resume_source_dir"] = sanitize_inline_text(str(candidate.get("session_dir", "")), max_chars=260)
+    resume_state["last_resume_source_run_id"] = sanitize_inline_text(str(candidate.get("bound_run_id", "")), max_chars=80)
+    resume_state["last_resume_brief"] = sanitize_inline_text(str(candidate.get("project_brief", "")), max_chars=280)
+    resume_state["superseded_run_id"] = sanitize_inline_text(superseded_run_id, max_chars=80)
+
+
+def maybe_recover_previous_outline_context(
+    *,
+    run_dir: Path,
+    chat_id: str,
+    user_text: str,
+    source: str,
+    conversation_mode: str,
+    session_state: dict[str, Any],
+    project_context: dict[str, Any] | None,
+    allow_history_resume: bool,
+) -> tuple[dict[str, Any] | None, dict[str, Any], dict[str, Any] | None]:
+    request_text = sanitize_inline_text(user_text, max_chars=280)
+    if not is_previous_outline_request(request_text) and allow_history_resume:
+        request_text = latest_resume_request_text(run_dir, session_state)
+    if not request_text:
+        return project_context, session_state, None
+
+    candidate = resolve_archived_resume_candidate(chat_id=chat_id, current_run_dir=run_dir, session_state=session_state)
+    recovered_brief = sanitize_inline_text(str(candidate.get("project_brief", "")), max_chars=280)
+    if not recovered_brief:
+        return project_context, session_state, None
+
+    bound_run_id = sanitize_inline_text(str(session_state.get("bound_run_id", "")), max_chars=80)
+    current_goal_hint = sanitize_inline_text(
+        str((project_context or {}).get("goal", "") if isinstance(project_context, dict) else current_project_brief(session_state)),
+        max_chars=280,
+    ) or current_project_brief(session_state)
+    if bound_run_id and (not should_supersede_bound_run_for_resume(
+        project_context=project_context,
+        current_goal_hint=current_goal_hint,
+        recovered_brief=recovered_brief,
+    )):
+        return project_context, session_state, None
+
+    created = ctcp_front_bridge.ctcp_new_run(goal=recovered_brief)
+    new_run_id = sanitize_inline_text(str(created.get("run_id", "")), max_chars=80)
+    session_state["bound_run_id"] = new_run_id
+    session_state["bound_run_dir"] = sanitize_inline_text(str(created.get("run_dir", "")), max_chars=260)
+    set_current_project_brief(session_state, recovered_brief)
+    project_memory = _state_zone(session_state, "project_memory")
+    project_memory["last_detail_turn"] = recovered_brief
+    project_memory["last_detail_ts"] = now_iso()
+    remember_resume_recovery(session_state, candidate=candidate, superseded_run_id=bound_run_id)
+    append_event(
+        run_dir,
+        "SUPPORT_PREVIOUS_OUTLINE_RECOVERED",
+        SUPPORT_SESSION_STATE_REL_PATH.as_posix(),
+        old_run_id=bound_run_id,
+        new_run_id=new_run_id,
+        source_run_id=str(candidate.get("bound_run_id", "")),
+    )
+
+    recorded = ctcp_front_bridge.ctcp_record_support_turn(
+        new_run_id,
+        text=request_text,
+        source=source,
+        chat_id=chat_id,
+        conversation_mode=conversation_mode,
+    )
+    refreshed = ctcp_front_bridge.ctcp_get_support_context(new_run_id)
+    advanced: dict[str, Any] | None = None
+    status = refreshed.get("status", {}) if isinstance(refreshed, dict) else {}
+    if (
+        str(conversation_mode or "").strip().upper() in {"PROJECT_INTAKE", "PROJECT_DETAIL", "PROJECT_DECISION_REPLY", "STATUS_QUERY"}
+        and isinstance(status, dict)
+        and (not bool(status.get("needs_user_decision", False)))
+    ):
+        advanced = ctcp_front_bridge.ctcp_advance(new_run_id, max_steps=4 if not bound_run_id else 2)
+        refreshed = ctcp_front_bridge.ctcp_get_support_context(new_run_id)
+    if not isinstance(refreshed, dict):
+        refreshed = {}
+    refreshed["created"] = created
+    refreshed["recorded_turn"] = recorded or {}
+    refreshed["advance"] = advanced or {}
+    session_state["last_bridge_sync_ts"] = now_iso()
+    session_state["latest_support_context"] = {
+        "run_id": str(refreshed.get("run_id", "")),
+        "status": refreshed.get("status", {}),
+        "whiteboard": refreshed.get("whiteboard", {}),
+    }
+    return refreshed, session_state, candidate
+
+
 def sync_project_context(
     *,
     run_dir: Path,
@@ -928,9 +1486,29 @@ def sync_project_context(
     created: dict[str, Any] | None = None
     recorded: dict[str, Any] | None = None
     advanced: dict[str, Any] | None = None
+    recovered_candidate: dict[str, Any] | None = None
     bridge_error = ""
 
     try:
+        if bound_run_id:
+            project_context = ctcp_front_bridge.ctcp_get_support_context(bound_run_id)
+
+        project_context, session_state, recovered_candidate = maybe_recover_previous_outline_context(
+            run_dir=run_dir,
+            chat_id=chat_id,
+            user_text=user_text,
+            source=source,
+            conversation_mode=mode if mode != "STATUS_QUERY" else "PROJECT_DETAIL",
+            session_state=session_state,
+            project_context=project_context,
+            allow_history_resume=(mode == "STATUS_QUERY"),
+        )
+        if recovered_candidate is not None:
+            bound_run_id = str(session_state.get("bound_run_id", "")).strip()
+            created = project_context.get("created", {}) if isinstance(project_context, dict) else {}
+            recorded = project_context.get("recorded_turn", {}) if isinstance(project_context, dict) else {}
+            advanced = project_context.get("advance", {}) if isinstance(project_context, dict) else {}
+
         if not bound_run_id and mode != "STATUS_QUERY":
             created = ctcp_front_bridge.ctcp_new_run(goal=user_text)
             bound_run_id = str(created.get("run_id", "")).strip()
@@ -943,20 +1521,21 @@ def sync_project_context(
         if not bound_run_id:
             return {}, session_state
 
-        recorded = ctcp_front_bridge.ctcp_record_support_turn(
-            bound_run_id,
-            text=user_text,
-            source=source,
-            chat_id=chat_id,
-            conversation_mode=mode,
-        )
-        project_context = ctcp_front_bridge.ctcp_get_support_context(bound_run_id)
-        if mode in {"PROJECT_INTAKE", "PROJECT_DETAIL"}:
-            status = project_context.get("status", {})
-            if isinstance(status, dict) and not bool(status.get("needs_user_decision", False)):
-                steps = 4 if created is not None else 2
-                advanced = ctcp_front_bridge.ctcp_advance(bound_run_id, max_steps=steps)
-                project_context = ctcp_front_bridge.ctcp_get_support_context(bound_run_id)
+        if recovered_candidate is None:
+            recorded = ctcp_front_bridge.ctcp_record_support_turn(
+                bound_run_id,
+                text=user_text,
+                source=source,
+                chat_id=chat_id,
+                conversation_mode=mode,
+            )
+            project_context = ctcp_front_bridge.ctcp_get_support_context(bound_run_id)
+            if mode in {"PROJECT_INTAKE", "PROJECT_DETAIL"}:
+                status = project_context.get("status", {})
+                if isinstance(status, dict) and not bool(status.get("needs_user_decision", False)):
+                    steps = 4 if created is not None else 2
+                    advanced = ctcp_front_bridge.ctcp_advance(bound_run_id, max_steps=steps)
+                    project_context = ctcp_front_bridge.ctcp_get_support_context(bound_run_id)
 
         project_context["created"] = created or {}
         project_context["recorded_turn"] = recorded or {}
@@ -1252,7 +1831,7 @@ def default_prompt_template() -> str:
         "There are no preset opening or fallback customer sentences in this lane; each turn must be authored fresh from the latest user message.\n"
         "Keep the reply in the user's current primary language unless the user clearly switches.\n"
         "When session context contains an active project brief, keep it as memory only.\n"
-        "On greeting or smalltalk turns, do not mention existing project memory unless the latest user message explicitly asks to continue it.\n"
+        "On greeting, capability, or smalltalk turns, do not mention existing project memory unless the latest user message explicitly asks to continue it.\n"
         "When the current channel can send files directly, do not ask for email or off-platform transfer.\n"
         "Only promise package/screenshot delivery when the prompt context says public delivery is ready for this turn.\n"
         "If public delivery says package_delivery_mode is materialize_ctcp_scaffold, describe the package honestly as a CTCP-style scaffold using the provided structure hint.\n"
@@ -1265,6 +1844,20 @@ def default_prompt_template() -> str:
         "Ask at most one high-leverage follow-up question when route-changing details are missing.\n"
         "If package/screenshot delivery should happen now, use actions only: send_project_package(format=zip) and send_project_screenshot(count=1-3).\n"
     )
+
+
+def should_expose_existing_project_context(conversation_mode: str, user_text: str) -> bool:
+    mode = str(conversation_mode or "").strip().upper()
+    if mode in {"GREETING", "SMALLTALK", "CAPABILITY_QUERY"}:
+        return False
+    return True
+
+
+def should_expose_delivery_context(conversation_mode: str, user_text: str) -> bool:
+    mode = str(conversation_mode or "").strip().upper()
+    if mode in {"GREETING", "SMALLTALK", "CAPABILITY_QUERY"}:
+        return user_requests_project_package(user_text) or user_requests_project_screenshot(user_text)
+    return True
 
 
 def load_prompt_template() -> str:
@@ -1286,6 +1879,10 @@ def build_support_prompt(
 ) -> str:
     history = load_inbox_history(run_dir)
     mode = str(conversation_mode or "").strip().upper()
+    expose_project_context = should_expose_existing_project_context(mode, user_text)
+    expose_delivery_context = should_expose_delivery_context(mode, user_text)
+    if not expose_project_context and history:
+        history = history[-1:]
     context = {
         "schema_version": "ctcp-support-context-v1",
         "chat_id": chat_id,
@@ -1296,8 +1893,8 @@ def build_support_prompt(
         "conversation_mode": mode,
         "reply_guard": {
             "preset_customer_reply_allowed": False,
-            "allow_existing_project_reference": mode not in {"GREETING", "SMALLTALK"},
-            "latest_turn_only": mode in {"GREETING", "SMALLTALK"},
+            "allow_existing_project_reference": expose_project_context,
+            "latest_turn_only": not expose_project_context,
         },
     }
     if isinstance(session_state, dict):
@@ -1307,23 +1904,27 @@ def build_support_prompt(
         project_constraints = _state_zone(session_state, "project_constraints_memory")
         execution_memory = _state_zone(session_state, "execution_memory")
         context["session_state"] = {
-            "bound_run_id": sanitize_inline_text(str(session_state.get("bound_run_id", "")), max_chars=80),
-            "task_summary": project_brief,
-            "project_brief": project_brief,
-            "project_constraints": sanitize_inline_text(str(project_constraints.get("constraint_brief", "")), max_chars=260),
-            "latest_execution_directive": sanitize_inline_text(
-                str(execution_memory.get("latest_user_directive", "")), max_chars=260
-            ),
+            "bound_run_id": sanitize_inline_text(str(session_state.get("bound_run_id", "")), max_chars=80)
+            if expose_project_context
+            else "",
+            "task_summary": project_brief if expose_project_context else "",
+            "project_brief": project_brief if expose_project_context else "",
+            "project_constraints": sanitize_inline_text(str(project_constraints.get("constraint_brief", "")), max_chars=260)
+            if expose_project_context
+            else "",
+            "latest_execution_directive": sanitize_inline_text(str(execution_memory.get("latest_user_directive", "")), max_chars=260)
+            if expose_project_context
+            else "",
             "latest_user_turn": sanitize_inline_text(str(turn_memory.get("latest_user_turn", "")), max_chars=260),
             "latest_turn_mode": sanitize_inline_text(str(turn_memory.get("latest_conversation_mode", "")), max_chars=40),
             "lang_hint": sanitize_inline_text(str(session_profile.get("lang_hint", "")), max_chars=12),
             "last_bridge_sync_ts": sanitize_inline_text(str(session_state.get("last_bridge_sync_ts", "")), max_chars=40),
         }
     project_prompt = _project_prompt_context(project_context)
-    if project_prompt:
+    if expose_project_context and project_prompt:
         context["project_run"] = project_prompt
     delivery_prompt = public_delivery_prompt_context(delivery_state)
-    if delivery_prompt:
+    if expose_delivery_context and delivery_prompt:
         context["public_delivery"] = delivery_prompt
     prompt = (
         load_prompt_template().rstrip()
@@ -1689,12 +2290,20 @@ def synthesize_delivery_actions(
     actions: list[dict[str, Any]],
     user_text: str,
     delivery_state: dict[str, Any] | None,
+    conversation_mode: str = "",
 ) -> list[dict[str, Any]]:
     out = [dict(item) for item in actions if isinstance(item, dict)]
     if not isinstance(delivery_state, dict):
         return out
     if not bool(delivery_state.get("channel_can_send_files", False)):
         return out
+    allow_delivery_actions = should_expose_delivery_context(conversation_mode, user_text)
+    if not allow_delivery_actions:
+        out = [
+            dict(item)
+            for item in out
+            if str(item.get("type", "")).strip().lower() not in {"send_project_package", "send_project_screenshot"}
+        ]
     types = {str(item.get("type", "")).strip().lower() for item in out}
     if user_requests_project_package(user_text) and bool(delivery_state.get("package_ready", False)) and "send_project_package" not in types:
         out.append({"type": "send_project_package", "format": "zip"})
@@ -1822,7 +2431,7 @@ def classify_api_failover_kind(*, status: str = "", reason: str = "") -> str:
 
 
 def stale_project_context_reply_reason(reply_text: str, user_text: str, conversation_mode: str) -> str:
-    if str(conversation_mode or "").strip().upper() not in {"GREETING", "SMALLTALK"}:
+    if str(conversation_mode or "").strip().upper() not in {"GREETING", "SMALLTALK", "CAPABILITY_QUERY"}:
         return ""
     reply = re.sub(r"\s+", " ", str(reply_text or "")).strip()
     user = re.sub(r"\s+", " ", str(user_text or "")).strip()
@@ -1884,6 +2493,7 @@ def build_frontend_backend_state(
     project_context: dict[str, Any] | None,
     conversation_mode: str,
     has_user_msgs: bool,
+    task_summary_hint: str = "",
 ) -> dict[str, Any]:
     status_text = str(provider_result.get("status", "")).strip().lower()
     reason_text = str(provider_result.get("reason", "")).strip()
@@ -1967,6 +2577,10 @@ def build_frontend_backend_state(
             "blocked_needs_input": gate_blocked_on_user,
             "has_actionable_goal": True,
             "first_pass_understood": True,
+            "progress_binding": build_progress_binding(
+                project_context=project_context,
+                task_summary_hint=task_summary_hint,
+            ),
         }
     )
     return backend_state
@@ -1984,6 +2598,7 @@ def build_final_reply_doc(
     task_summary_hint: str = "",
     lang_hint: str = "",
     delivery_state: dict[str, Any] | None = None,
+    latest_user_message_override: str = "",
 ) -> dict[str, Any]:
     raw_doc = provider_doc if isinstance(provider_doc, dict) else fallback_reply_doc(provider_result)
     raw_reply_text = str(raw_doc.get("reply_text", ""))
@@ -2003,16 +2618,20 @@ def build_final_reply_doc(
     rendered_visible_state = ""
     reply_text = ""
     next_question = ""
+    latest_user_message_for_render = sanitize_inline_text(latest_user_message_override, max_chars=280)
+    if not latest_user_message_for_render:
+        latest_user_message_for_render = user_msgs[-1] if user_msgs else task_summary_hint
     if render_frontend_output is not None and not is_non_project_support_mode(conversation_mode):
         try:
+            summary_text = task_summary_hint.strip() or (user_msgs[-1] if user_msgs else raw_reply_text)
             backend_state = build_frontend_backend_state(
                 provider_result=provider_result,
                 raw_doc=raw_doc,
                 project_context=project_context,
                 conversation_mode=conversation_mode,
                 has_user_msgs=bool(user_msgs),
+                task_summary_hint=summary_text,
             )
-            summary_text = task_summary_hint.strip() or (user_msgs[-1] if user_msgs else raw_reply_text)
             rendered = render_frontend_output(
                 raw_backend_state=backend_state,
                 task_summary=summary_text,
@@ -2022,6 +2641,7 @@ def build_final_reply_doc(
                     "lang": lang,
                     "max_questions": 2,
                     "recent_user_messages": user_msgs,
+                    "latest_user_message": latest_user_message_for_render,
                     "active_task_state": {
                         "task_summary": summary_text,
                         "run_id": str(project_context.get("run_id", "")).strip() if isinstance(project_context, dict) else "",
@@ -2069,6 +2689,7 @@ def build_final_reply_doc(
         actions=normalize_actions(raw_doc.get("actions")),
         user_text=latest_user_text,
         delivery_state=delivery_state,
+        conversation_mode=conversation_mode,
     )
     reply_text = align_reply_with_delivery_actions(reply_text, actions=actions, source_hint=source_hint)
 
@@ -2355,6 +2976,11 @@ def process_message(
         delivery_state=delivery_state,
     )
     write_json(run_dir / SUPPORT_REPLY_REL_PATH, final_doc)
+    remember_progress_notification(
+        session_state,
+        project_context=project_context,
+        task_summary_hint=current_project_brief(session_state),
+    )
     session_state["latest_support_context"] = {
         "run_id": str(project_context.get("run_id", "")) if isinstance(project_context, dict) else "",
         "provider_status": str(final_doc.get("provider_status", "")),
@@ -2703,6 +3329,126 @@ def emit_public_delivery(
     return plan
 
 
+def iter_telegram_support_chat_ids(allowlist: set[int] | None) -> list[int]:
+    if allowlist is not None:
+        return sorted(int(item) for item in allowlist)
+    sessions_root = session_run_dir("telegram").parent
+    if not sessions_root.exists():
+        return []
+    out: list[int] = []
+    for path in sessions_root.iterdir():
+        if not path.is_dir() or ".backup-" in path.name:
+            continue
+        try:
+            out.append(int(path.name))
+        except Exception:
+            continue
+    return sorted(set(out))
+
+
+def build_grounded_status_reply_doc(
+    *,
+    run_dir: Path,
+    session_state: dict[str, Any],
+    project_context: dict[str, Any] | None,
+) -> dict[str, Any]:
+    delivery_state = collect_public_delivery_state(session_state=session_state, project_context=project_context, source="telegram")
+    lang_hint = str(_state_zone(session_state, "session_profile").get("lang_hint", "")).strip().lower()
+    synthetic_status_turn = "what's the latest progress?" if lang_hint.startswith("en") else "现在做到什么程度了"
+    doc = build_final_reply_doc(
+        run_dir=run_dir,
+        provider="support_runtime",
+        provider_result={"status": "executed", "reason": "proactive_progress"},
+        provider_doc={"reply_text": "", "next_question": "", "actions": [], "debug_notes": "proactive_progress"},
+        project_context=project_context,
+        source_hint="telegram",
+        conversation_mode="STATUS_QUERY",
+        task_summary_hint=current_project_brief(session_state),
+        lang_hint=lang_hint,
+        delivery_state=delivery_state,
+        latest_user_message_override=synthetic_status_turn,
+    )
+    return doc
+
+
+def run_proactive_support_cycle(tg: TelegramClient, allowlist: set[int] | None) -> None:
+    for chat_id in iter_telegram_support_chat_ids(allowlist):
+        run_dir = session_run_dir(chat_id)
+        state_path = run_dir / SUPPORT_SESSION_STATE_REL_PATH
+        if not state_path.exists():
+            continue
+        session_state = load_support_session_state(run_dir, str(chat_id))
+        bound_run_id = sanitize_inline_text(str(session_state.get("bound_run_id", "")), max_chars=80)
+        if not bound_run_id:
+            continue
+
+        project_context = ctcp_front_bridge.ctcp_get_support_context(bound_run_id)
+        project_context, session_state, recovered_candidate = maybe_recover_previous_outline_context(
+            run_dir=run_dir,
+            chat_id=str(chat_id),
+            user_text="",
+            source="telegram_auto_resume",
+            conversation_mode="PROJECT_DETAIL",
+            session_state=session_state,
+            project_context=project_context,
+            allow_history_resume=True,
+        )
+        if not isinstance(project_context, dict):
+            continue
+
+        auto_advanced = False
+        if should_auto_advance_project_context(session_state, project_context):
+            bound_run_id = sanitize_inline_text(str(session_state.get("bound_run_id", "")), max_chars=80)
+            if bound_run_id:
+                ctcp_front_bridge.ctcp_advance(bound_run_id, max_steps=2)
+                latest_notification_state(session_state)["last_auto_advance_ts"] = now_iso()
+                project_context = ctcp_front_bridge.ctcp_get_support_context(bound_run_id)
+                auto_advanced = True
+
+        digest, binding = build_progress_digest(
+            project_context=project_context,
+            task_summary_hint=current_project_brief(session_state),
+        )
+        if not digest:
+            continue
+        notification_state = latest_notification_state(session_state)
+        if digest == str(notification_state.get("last_progress_hash", "")).strip():
+            if recovered_candidate is not None:
+                save_support_session_state(run_dir, session_state)
+            continue
+
+        doc = build_grounded_status_reply_doc(run_dir=run_dir, session_state=session_state, project_context=project_context)
+        reply_text = str(doc.get("reply_text", "")).strip()
+        if not reply_text:
+            continue
+        emit_public_message(tg, chat_id, reply_text)
+        write_json(run_dir / SUPPORT_REPLY_REL_PATH, doc)
+        session_state["latest_support_context"] = {
+            "run_id": str(project_context.get("run_id", "")),
+            "provider_status": str(doc.get("provider_status", "")),
+            "conversation_mode": "STATUS_QUERY",
+            "package_ready": False,
+            "package_delivery_mode": "",
+            "package_structure_hint": [],
+            "screenshot_ready": False,
+        }
+        remember_progress_notification(
+            session_state,
+            project_context=project_context,
+            task_summary_hint=current_project_brief(session_state),
+        )
+        save_support_session_state(run_dir, session_state)
+        append_event(
+            run_dir,
+            "SUPPORT_PROGRESS_PUSHED",
+            SUPPORT_REPLY_REL_PATH.as_posix(),
+            run_id=str(project_context.get("run_id", "")),
+            auto_advanced=auto_advanced,
+            recovered=bool(recovered_candidate),
+            phase=str(binding.get("current_phase", "")),
+        )
+
+
 def resolve_telegram_token(raw: str) -> str:
     text = str(raw or "").strip()
     if text:
@@ -2735,6 +3481,13 @@ def run_telegram_mode(token: str, poll_seconds: int, allowlist_raw: str, provide
         except Exception as exc:
             print(f"[ctcp_support_bot] telegram getUpdates error: {exc}", file=sys.stderr)
             time.sleep(1.0)
+            continue
+
+        if not updates:
+            try:
+                run_proactive_support_cycle(tg, allowlist)
+            except Exception as exc:
+                print(f"[ctcp_support_bot] proactive progress error: {exc}", file=sys.stderr)
             continue
 
         for upd in updates:

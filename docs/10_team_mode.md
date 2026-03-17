@@ -74,11 +74,19 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
   - `PROJECT_INTAKE / PROJECT_DETAIL / STATUS_QUERY` 等项目型 turn 只能通过 `scripts/ctcp_front_bridge.py` 创建/绑定/查询/推进 CTCP run。
   - 绑定 run 后，support bot 通过 bridge 读取真实 `RUN.json` / `verify_report.json` 摘要与 `artifacts/support_whiteboard.json` 快照，不直接在客服层发明工程状态。
   - 在发出 `support_reply.json.reply_text` 前，reply builder 必须绑定 `task_goal / current_phase / last_confirmed_items / current_blocker / message_purpose / question_needed / next_action`。
+  - 对 `STATUS_QUERY` 以及“继续按这个做 / 现在做到什么程度了”这类 status-like progress follow-up，runtime 必须消费 bound run 的 gate/status 与 whiteboard tail，自动总结已完成事项、当前阶段、当前阻塞或 clear path、以及下一步；不得退回 `EXECUTING` 固定壳文案。
+  - 对“之前那个项目现在做成什么样了 / 之前的项目现在怎么样”这类旧项目状态追问，只要 support session 已绑定 active run，runtime 必须优先走 `STATUS_QUERY`/grounded progress path；不得把这类句子写回长期 `project_brief`，也不得因此触发新的 planning/file-request 轮次。
+  - Telegram long-poll 在空闲轮询周期里必须检查 active bound run：若 run 仍可推进且不需要用户决策，runtime 可自动 `advance`；一旦 grounded progress digest 发生变化，必须主动发送一条新的 progress update，而不是等用户追问。
+  - 若用户显式要求“按之前的大纲 / 之前的项目继续”，而当前会话只有 generic previous-project 占位语，runtime 必须优先恢复 archived support session 里的 concrete project brief，再创建或重绑 run；不得把这类句子直接当成一个新的空泛 goal。
 - 双通道约束：
   - 用户可见只输出 `support_reply.json.reply_text`。
   - 机械层只约束 `reply_text` 的边界：禁止内部泄漏、最多一个关键问题、必须推动一个具体下一步，并且首句直入任务本体。
   - 禁止在用户回复中出现 `TRACE/logs/outbox/diff --git` 等内部信息。
-  - `GREETING / SMALLTALK / PROJECT_* / STATUS_QUERY` 的正常用户可见回复都经 `support_lead` model 生成；mode 只限制后续逻辑边界，不再决定“本地模板 vs 模型回复”。
+  - `GREETING / CAPABILITY_QUERY / SMALLTALK / PROJECT_* / STATUS_QUERY` 的正常用户可见回复都经 `support_lead` model 生成；mode 只限制后续逻辑边界，不再决定“本地模板 vs 模型回复”。
+  - `GREETING / CAPABILITY_QUERY / SMALLTALK` turn 默认不得把旧项目摘要、bound run、package/screenshot delivery 状态继续注入 prompt；只有当最新 user turn 明确要求继续旧项目或直接请求交付时，runtime 才允许带入这些上下文。
+  - proactive progress push 复用同一条 grounded status reply path；不得另外生成一套未绑定 run truth 的“自动播报模板”。
+  - proactive progress push 不得直接复用 inbox 里的最新 greeting/smalltalk 作为 latest-turn 语义；它必须显式以 status/progress 语义渲染，避免“用户问候一次，系统主动再问候一次”的重复输出。
+  - greeting / capability / smalltalk 这类 non-project turn 在 active bound run 上不得重置 `notification_state` 里的真实 progress baseline；若 run digest 本身没有变化，后续 idle cycle 不应把同一状态再主动推一次。
   - fallback / capability 兜底也必须保持任务推进型口吻，不得退回“项目经理方式推进”“API 和本地模型都不可用”这类机械系统句。
   - Telegram 当前对话支持直接发送文件时，客服不得再问邮箱；只有当绑定 run 里存在真实 package/screenshot artifact 时，runtime 才允许直发 `zip/photo`。
   - 若绑定项目目录只是 `main.py + README.md` 这类薄壳占位实现，support package runtime 必须先在 support session 外部 materialize 一份 CTCP-style scaffold，再打包发送；客服回复也必须按 scaffold 如实描述，不得把它说成完整功能已经做完的项目。

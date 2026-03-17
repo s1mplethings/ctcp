@@ -8,6 +8,7 @@ from .project_manager_mode import requirement_information_score
 ConversationMode = Literal[
     "GREETING",
     "SMALLTALK",
+    "CAPABILITY_QUERY",
     "PROJECT_INTAKE",
     "PROJECT_DETAIL",
     "PROJECT_DECISION_REPLY",
@@ -40,6 +41,8 @@ _SMALLTALK_ZH = {
     "谢谢",
     "感谢",
     "辛苦了",
+}
+_CAPABILITY_ZH = {
     "你是谁",
     "你能做什么",
     "怎么用",
@@ -47,6 +50,8 @@ _SMALLTALK_ZH = {
 _SMALLTALK_EN = {
     "thanks",
     "thank you",
+}
+_CAPABILITY_EN = {
     "who are you",
     "what can you do",
     "how to use",
@@ -91,7 +96,12 @@ _PROJECT_EXECUTION_FOLLOWUP_EN = (
 _STATUS_PATTERNS = (
     re.compile(r"(进度|状态|还在做吗|进行到哪|卡住|阻塞|当前项目|有没有在进行)"),
     re.compile(r"(什么情况|做好了吗|完成了吗|好了没|生成了.{0,4}吗|弄好了吗|搞定了吗|做完了吗|出来了吗|结果.{0,4}(怎|如何|出))"),
+    re.compile(r"(之前|原来).*(项目|方案|大纲).*(进度|状态|做到什么程度|做到哪|做到哪一步|做成什么样|做得怎么样|现在怎么样|现在什么情况)"),
     re.compile(r"\b(status|progress|blocked|stuck|what.?s running|running now|is it done|finished|ready)\b", re.IGNORECASE),
+    re.compile(
+        r"\b(previous|earlier|old)\b.{0,24}\b(project|plan|outline)\b.{0,24}\b(status|progress|done|ready|finished|latest)\b",
+        re.IGNORECASE,
+    ),
 )
 _PROJECT_INTENT_PATTERNS = (
     re.compile(r"(做一个|做个|新建|创建|搭建|开发|实现).{0,20}(项目|流程|系统|工具|机器人|bot|游戏|应用)"),
@@ -216,11 +226,46 @@ def _is_smalltalk(text: str) -> bool:
     return False
 
 
+def is_capability_query(text: str) -> bool:
+    raw = _norm(text)
+    if not raw or is_greeting_only(raw):
+        return False
+    low = raw.lower()
+    if raw in _CAPABILITY_ZH or low in _CAPABILITY_EN:
+        return True
+    if any(token in raw for token in ("你是谁", "你是做什么的", "你能做什么", "怎么用", "怎么开始")):
+        return True
+    if ("你能" in raw or "可以" in raw) and any(token in raw for token in ("做什么", "前端", "界面", "网页", "web")):
+        return True
+    if any(
+        token in low
+        for token in (
+            "who are you",
+            "what can you do",
+            "how to use",
+            "how do i use this",
+            "how should i use this",
+            "how do we start",
+            "can you change the frontend",
+            "can you work on the frontend",
+            "can you modify the frontend",
+            "can you handle frontend",
+            "can you help with frontend",
+        )
+    ):
+        return True
+    return low.startswith("can you") and any(token in low for token in ("frontend", "front-end", "ui", "web"))
+
+
 def _is_status_query(text: str) -> bool:
     raw = _norm(text)
     if not raw:
         return False
     return any(p.search(raw) for p in _STATUS_PATTERNS)
+
+
+def is_status_query(text: str) -> bool:
+    return _is_status_query(text)
 
 
 def _contains_any_token(text: str, tokens: Iterable[str]) -> bool:
@@ -275,7 +320,7 @@ def compute_task_signal_score(messages: Iterable[str]) -> float:
     if not rows:
         return 0.0
     latest = rows[-1]
-    if is_greeting_only(latest):
+    if is_greeting_only(latest) or is_capability_query(latest):
         return 0.0
     base = requirement_information_score(latest)
     best_recent = max(requirement_information_score(x) for x in rows[-4:])
@@ -318,7 +363,7 @@ def has_valid_task_summary(state: Mapping[str, Any] | str | None) -> bool:
         return False
     if not summary:
         return False
-    if is_greeting_only(summary) or _is_smalltalk(summary):
+    if is_greeting_only(summary) or _is_smalltalk(summary) or is_capability_query(summary):
         return False
     if requirement_information_score(summary) >= 1.4:
         return True
@@ -391,6 +436,8 @@ def route_conversation_mode(
         return "GREETING"
     if _is_status_query(latest):
         return "STATUS_QUERY"
+    if is_capability_query(latest):
+        return "CAPABILITY_QUERY"
     if _is_smalltalk(latest):
         return "SMALLTALK"
 

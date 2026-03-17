@@ -145,7 +145,111 @@ class FrontendRenderingBoundaryTests(unittest.TestCase):
         self.assertNotIn("速度、质量", result.reply_text)
         self.assertEqual(result.followup_questions, ())
         state = dict(result.pipeline_state or {})
-        self.assertEqual(str(state.get("conversation_mode", "")), "SMALLTALK")
+        self.assertEqual(str(state.get("conversation_mode", "")), "CAPABILITY_QUERY")
+
+    def test_identity_query_uses_capability_reply_instead_of_generic_smalltalk(self) -> None:
+        result = render_frontend_output(
+            raw_backend_state={
+                "stage": "support_provider_failed",
+                "blocked_needs_input": True,
+                "needs_input": True,
+            },
+            task_summary="你是谁",
+            raw_reply_text="plan agent command failed rc=3",
+            raw_next_question="这轮你希望我优先速度、质量，还是成本？",
+            notes={
+                "lang": "zh",
+                "recent_user_messages": ["你是谁"],
+            },
+        )
+        state = dict(result.pipeline_state or {})
+        self.assertEqual(str(state.get("conversation_mode", "")), "CAPABILITY_QUERY")
+        self.assertIn("CTCP support 入口", result.reply_text)
+        self.assertNotIn("我在，你说。", result.reply_text)
+        self.assertEqual(result.followup_questions, ())
+
+    def test_status_query_with_active_task_uses_status_shell_not_generic_kickoff(self) -> None:
+        result = render_frontend_output(
+            raw_backend_state={
+                "stage": "running",
+            },
+            task_summary="做一个无人机视频转点云项目",
+            raw_reply_text="",
+            raw_next_question="",
+            notes={
+                "lang": "zh",
+                "recent_user_messages": ["现在进度到哪了"],
+            },
+        )
+        state = dict(result.pipeline_state or {})
+        self.assertEqual(str(state.get("conversation_mode", "")), "STATUS_QUERY")
+        self.assertIn("项目：做一个无人机视频转点云项目", result.reply_text)
+        self.assertNotIn("OK，这就开始", result.reply_text)
+
+    def test_previous_project_status_followup_routes_to_status_query(self) -> None:
+        result = render_frontend_output(
+            raw_backend_state={
+                "stage": "executing",
+                "run_status": "blocked",
+                "progress_binding": {
+                    "current_task_goal": "我想要你继续优化我的vn项目",
+                    "current_phase": "方案整理",
+                    "last_confirmed_items": ["项目已接到后台流程"],
+                    "current_blocker": "none",
+                    "message_purpose": "progress",
+                    "question_needed": "no",
+                    "next_action": "继续推进当前 run",
+                    "proof_refs": ["run_id=demo"],
+                },
+            },
+            task_summary="我想要你继续优化我的vn项目",
+            raw_reply_text="你是否方便提供最新的规划文档？",
+            raw_next_question="",
+            notes={
+                "lang": "zh",
+                "recent_user_messages": ["我想要知道我之前那个项目做成什么样子了"],
+            },
+        )
+        state = dict(result.pipeline_state or {})
+        self.assertEqual(str(state.get("conversation_mode", "")), "STATUS_QUERY")
+        self.assertIn("项目已接到后台流程", result.reply_text)
+        self.assertNotIn("规划文档", result.reply_text)
+
+    def test_progress_binding_status_query_prefers_concrete_progress_summary(self) -> None:
+        result = render_frontend_output(
+            raw_backend_state={
+                "stage": "executing",
+                "run_status": "blocked",
+                "progress_binding": {
+                    "current_task_goal": "你能不能重新做一个我之前想要你做的项目",
+                    "current_phase": "合同评审",
+                    "last_confirmed_items": [
+                        "项目已接到后台流程",
+                        "资料检索已跑过一轮",
+                        "成本评审已跑过一轮",
+                    ],
+                    "current_blocker": "合同评审这一步还没过，后面的推进先停在这里",
+                    "message_purpose": "progress",
+                    "question_needed": "no",
+                    "next_action": "先处理合同评审卡住的点，过掉这一步再继续往下推",
+                    "proof_refs": ["run_id=demo"],
+                },
+            },
+            task_summary="你能不能重新做一个我之前想要你做的项目",
+            raw_reply_text="这边已经进入处理阶段。",
+            raw_next_question="",
+            notes={
+                "lang": "zh",
+                "recent_user_messages": ["现在做到什么程度了"],
+            },
+        )
+        state = dict(result.pipeline_state or {})
+        self.assertEqual(str(state.get("conversation_mode", "")), "PROJECT_DETAIL")
+        self.assertIn("项目已接到后台流程", result.reply_text)
+        self.assertIn("成本评审已跑过一轮", result.reply_text)
+        self.assertIn("当前阶段在合同评审", result.reply_text)
+        self.assertIn("下一步我会先处理合同评审卡住的点", result.reply_text)
+        self.assertNotEqual(result.reply_text.strip(), "这边已经进入处理阶段。")
 
     def test_summary_selection_prefers_detailed_recent_message(self) -> None:
         ctx = build_project_manager_context(

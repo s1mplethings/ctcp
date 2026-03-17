@@ -1,7 +1,7 @@
 # Task Archive - 2026-03-16 - SimLab fixer-loop 回归修复（S15 / S16）
 
 Queue Item: `ADHOC-20260316-simlab-fixer-loop-repair`
-Status: `doing`
+Status: `done`
 
 ## Summary
 
@@ -32,3 +32,8 @@ Status: `doing`
 - stale README fixture patches re-enter the intended verify/fixer-loop paths
 - issue memory records the recurring regression and repair
 - task closes with canonical verify evidence
+
+## Outcome
+
+- `python simlab/run.py --suite lite` passed with `passed=14`, `failed=0` at `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260316-165332`.
+- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` passed under the auto-selected `doc-only` profile after refreshing `CURRENT.md` / `LAST.md`.

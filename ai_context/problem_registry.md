@@ -421,3 +421,223 @@ When to add:
   任何“风格已修复”的声明都必须附带 isolated persona-lab evidence，而不是只引用同一正式会话里的主观观感。
 - Tags:
   support, dialogue, persona-lab, context-isolation, regression, scoring
+
+## Example 17
+
+- Symptom:
+  `python simlab/run.py --suite lite` 长期卡在 `S15_lite_fail_produces_bundle` / `S16_lite_fixer_loop_pass`，而且失败形态会来回漂移：有时 fixer prompt 丢 `failure_bundle.zip`，有时 second-pass reapply 被 managed dirty pointer 拦住，有时又变成 fixture patch 提前 patch-first fail 或坏 patch 意外直接 PASS。
+- Repro:
+  1. 运行 `python simlab/run.py --suite lite`。
+  2. 查看 `S15` / `S16` 的 `TRACE.md`、`events.jsonl`、`artifacts/verify_report.json`、`logs/patch_apply.stderr.log`。
+  3. 如果 `S15` 缺 `VERIFY_STARTED`、`S16` 第二次 `advance` 因 `PATCH_GIT_CHECK_FAIL` / `workflow_checks` 卡住，或者坏 patch 直接 `PASS: verify succeeded`，通常就是这类回归。
+- Root cause:
+  这是一个叠层回归。runtime 侧先后出现过 fixer dispatch 对 patch 路径丢 `failure_bundle.zip` 输入，以及 `LAST_BUNDLE.txt` 这类受管 run pointer 让 second-pass reapply 误判 dirty；在这些 runtime 缺口修掉后，SimLab fixture patch 仍依赖旧 README 头部、旧失败触发器和“环境里刚好还有别的 meta 脏改动”这种偶然条件，导致当前 `doc-only` profile 下的真实 first-failure 与场景预期脱钩。
+- Fix:
+  在 `scripts/ctcp_dispatch.py` 为 fixer patch 路径保留 `failure_bundle.zip` 输入，在 `scripts/ctcp_orchestrate.py` 只豁免受管 run pointer 的 dirty 检查；同时把 `tests/fixtures/patches/lite_fail_bad_readme_link.patch` / `lite_fix_remove_bad_readme_link.patch` 刷新成对当前 README + `CURRENT/LAST` 可 `git apply --check` 的最小 patch，并把坏 patch 的失败触发器切到当前 lite/doc-only profile 稳定执行的 `doc index check`。
+- Prevention:
+  每次改 README 顶部结构、verify profile、workflow gate 或 SimLab fixture，都先跑一次 `git apply --check` 覆核这两份 patch，再跑 `python simlab/run.py --suite lite`；不要让 SimLab fixture 依赖 incidental dirty meta state。
+- Tags:
+  simlab, fixtures, fixer-loop, verify-profile, doc-index, dirty-pointer
+
+## Example 18
+
+- Symptom:
+  support 对话明明已经先做了场景分流，但“你是谁 / 你能做什么 / 怎么用”这类能力询问仍被折叠成 generic smalltalk，状态追问和项目开场也容易共用同一套 kickoff 壳。
+- Repro:
+  1. 调用 `frontend.conversation_mode_router.route_conversation_mode()` 处理 `你是谁` 或 `你能不能按 CTCP 的方式改前端这块`。
+  2. 再用 `frontend.response_composer.render_frontend_output()` 渲染这些 turn。
+  3. 观察 capability turn 落到 `SMALLTALK`，或者状态 fallback 用 `OK，这就开始` 这类 generic kickoff。
+- Root cause:
+  shared router 之前只区分 `GREETING/SMALLTALK/PROJECT_*/STATUS_QUERY`，没有把 capability query 作为独立场景；reply composer 的 fallback 也没有为身份/能力/使用方式问题提供独立 customer-facing reply。
+- Affected entrypoint:
+  support/frontend user-visible reply path
+- Affected modules:
+  `frontend/conversation_mode_router.py`, `frontend/response_composer.py`, `scripts/ctcp_support_bot.py`
+- Observed fallback behavior:
+  能力询问得到 generic smalltalk；状态追问和项目开场都可能复用偏泛的 kickoff 句壳。
+- Expected correct behavior:
+  support lane 应先把 capability query 从 generic smalltalk 中分离，再根据 greeting/capability/project/status 不同场景输出不同的 customer-facing entry reply。
+- Fix:
+  在 shared router 增加 `CAPABILITY_QUERY` 场景，给 response composer 增加 identity/usage/frontend-capability fallback reply，并让 support bot 的 latest-turn-only / stale-context guard 同步覆盖 capability turn。
+- Fix attempt status:
+  2026-03-16 scoped fix bound under `ADHOC-20260316-support-conversation-situation-routing`.
+- Regression test status:
+  Covered by `tests/test_frontend_rendering_boundary.py`, `tests/test_runtime_wiring_contract.py`, and `tests/test_support_bot_humanization.py`.
+- Prevention:
+  任何新增的 support 场景都要同时更新 shared router、customer-facing fallback reply、support bot non-project guard 和 focused regressions；不要只在 prompt 里口头说“先识别场景”。
+- Tags:
+  support, frontend, routing, capability-query, status-reply, dialogue
+
+## Example 19
+
+- Symptom:
+  真实 Telegram 旧会话里只发一句 `你好`，support bot 仍会回“之前的 VN 项目已经打包好了”并直接附带 zip 发送动作。
+- Repro:
+  1. 使用一个已经绑定旧 run 且 `package_ready=true` 的 support session。
+  2. 在 Telegram 里只发送 greeting，例如 `你好`。
+  3. 观察 `support_reply.json`，发现 reply_text 引用旧项目/旧交付，`actions` 里还带 `send_project_package(zip)`。
+- Root cause:
+  `scripts/ctcp_support_bot.py` 之前即使在 `GREETING / SMALLTALK / CAPABILITY_QUERY` turn，也会继续把旧 `project_brief`、`bound_run_id`、`public_delivery` 注入 prompt；最终 reply 阶段也不会剥离 provider 主动给出的 delivery action。
+- Affected entrypoint:
+  `scripts/ctcp_support_bot.py::process_message` live Telegram path
+- Affected modules:
+  `scripts/ctcp_support_bot.py`
+- Observed fallback behavior:
+  简单寒暄被旧项目和旧 zip 交付状态污染，用户看见的像是在继续上一次交付。
+- Expected correct behavior:
+  non-project turn 默认只看 latest turn；除非最新 user turn 明确要求继续旧项目或直接请求 package/screenshot，否则 prompt 和 final actions 都不应携带旧交付上下文。
+- Fix:
+  对 non-project turn 关闭旧项目/旧交付 prompt 注入，并在 final reply 里剥离未被本轮显式请求的 `send_project_package` / `send_project_screenshot` action。
+- Fix attempt status:
+  2026-03-16 scoped fix bound under `ADHOC-20260316-support-greeting-stale-context-hardening`.
+- Regression test status:
+  Covered by `tests/test_support_bot_humanization.py` and `tests/test_runtime_wiring_contract.py`.
+- Prevention:
+  任何 support 的旧会话恢复逻辑都要区分“继续项目”与“只是寒暄”；非项目 turn 的 prompt/action gating 必须由 runtime 兜底，不要把防泄露责任只交给模型。
+- Tags:
+  support, telegram, stale-context, delivery-action, greeting, runtime
+
+## Example 20
+
+- Symptom:
+  用户在真实 Telegram 里追问 `现在做到什么程度了`，support bot 只回 `这边已经进入处理阶段。` / `现在就在往下做。`，没有告诉用户已经做了什么、卡在哪里、接下来干什么。
+- Repro:
+  1. 让 support session 绑定一个已经有真实 run status 和 whiteboard tail 的项目 run。
+  2. 发送 status/progress follow-up，例如 `现在做到什么程度了` 或 `就按之前的大纲继续走`。
+  3. 观察 `support_reply.json.reply_text`，发现它只消费 `visible_state=EXECUTING` 的模板壳，而没有消费 run gate/status 与 whiteboard 里的已完成步骤。
+- Root cause:
+  `scripts/ctcp_support_bot.py` 先前只把状态压成 `stage/run_status/decision_count` 之类的粗粒度 backend state；`frontend/response_composer.py` 遇到 `STATUS_QUERY` 或 internal blocked project turn 时又直接落回 `compose_user_reply(EXECUTING)`，导致真实的 `review_cost executed / review_contract blocked / next repair` 这些信息没有进入用户可见回复。
+- Affected entrypoint:
+  `scripts/ctcp_support_bot.py::build_final_reply_doc` live Telegram progress path
+- Affected modules:
+  `scripts/ctcp_support_bot.py`, `frontend/response_composer.py`
+- Observed fallback behavior:
+  用户只看到泛化的“处理中”壳话术，不知道后台具体已经做了什么，也不知道当前阻塞和下一步。
+- Expected correct behavior:
+  status/progress reply 应自动总结已完成事项、当前阶段、当前阻塞或无阻塞状态、以及下一步动作；status-like follow-up 即使被路由成 `PROJECT_DETAIL`，也应走同一条 grounded summary 路径。
+- Fix:
+  在 support runtime 中把 run status + gate reason + whiteboard tail 提炼成结构化 `progress_binding`，并让 frontend reply layer 在 status/progress follow-up 上优先消费这份 binding，输出 concrete progress summary。
+- Fix attempt status:
+  2026-03-16 scoped fix bound under `ADHOC-20260316-support-status-progress-grounding`.
+- Regression test status:
+  Covered by `tests/test_frontend_rendering_boundary.py` and `tests/test_support_bot_humanization.py`.
+- Prevention:
+  任何 user-visible progress/status reply 都不能只依赖 `visible_state` 模板映射；只要 run/whiteboard 已经有具体进展，runtime 就必须把这些字段显式注入 customer-facing summary path。
+- Tags:
+  support, telegram, progress-grounding, whiteboard, status-reply, runtime
+
+## Example 21
+
+- Symptom:
+  用户在 Telegram 里已经明确说过“按之前的大纲走”，但 support bot 既不会在后台进展变化时主动发消息，也会把这类续做请求直接绑定成一个 generic 新 run，随后卡在合同评审。
+- Repro:
+  1. 在已有历史 support session/backup session 的 Telegram chat 中发送类似 `你能不能重新做一个我之前想要你做的项目`、`就直接按之前的大纲走就行了`。
+  2. 观察 support runtime：新 run goal 直接等于这句泛化续做文本，随后用户只能靠不断追问状态。
+  3. 在长轮询空闲期间等待后台状态变化，发现 Telegram 不会主动推送任何 grounded update。
+- Root cause:
+  `scripts/ctcp_support_bot.py` 之前只在收到新用户消息时才会 `process_message()`，没有 idle-phase `advance + digest compare + send_message`；同时 `sync_project_context()` 缺少 archived brief recovery，导致 explicit previous-outline request 被当成一个新的 generic run goal。
+- Affected entrypoint:
+  `scripts/ctcp_support_bot.py::run_telegram_mode` and `scripts/ctcp_support_bot.py::sync_project_context`
+- Affected modules:
+  `scripts/ctcp_support_bot.py`, `docs/10_team_mode.md`
+- Observed fallback behavior:
+  用户不追问就收不到进度变化；“之前的大纲/之前的项目”被错误地降格成空泛 goal，新 run 很快卡在合同评审或其它早期 gate。
+- Expected correct behavior:
+  Telegram idle 轮询应在无用户新消息时继续推进可推进的 run，并在 grounded progress digest 变化时主动发一条具体更新；explicit previous-outline request 应优先恢复 archived session 里的 concrete brief，而不是重复创建 generic run。
+- Fix:
+  为 support session 增加 notification/resume metadata，在 Telegram idle cycle 里加入 background `ctcp_advance()` 与 progress digest compare，并在 `sync_project_context()` / proactive cycle 中增加 archived previous-outline brief recovery 与必要的 run rebinding。
+- Fix attempt status:
+  2026-03-16 scoped fix bound under `ADHOC-20260316-support-proactive-progress-and-resume`.
+- Regression test status:
+  Covered by `tests/test_runtime_wiring_contract.py` and `tests/test_support_bot_humanization.py`.
+- Prevention:
+  任何“继续之前项目”的能力都必须同时覆盖三件事：history brief recovery、live run rebinding 策略、idle-phase proactive progress push；不要只修某一层 prompt 或只靠人工手动 rebind。
+- Tags:
+  support, telegram, proactive-update, idle-loop, continuity, previous-outline, runtime
+
+## Example 22
+
+- Symptom:
+  用户在 Telegram 里只发一次 `你好`，support bot 先正常回 greeting，随后又因 `SUPPORT_PROGRESS_PUSHED` 主动发出第二条 greeting-like 文案，形成重复寒暄。
+- Repro:
+  1. 让 support session 绑定一个 active run，并开启 proactive progress push。
+  2. 用户发送一条 greeting，例如 `你好`。
+  3. 观察 `support_inbox.jsonl` 只有一条新消息，但稍后 `events.jsonl` 仍追加 `SUPPORT_PROGRESS_PUSHED`，且 `support_reply.json` 变成第二条 greeting-like 主动回复。
+- Root cause:
+  proactive push 复用了 inbox 里的最新用户消息作为 frontend latest-turn 语义；当这条最新消息是 greeting/smalltalk 时，internal reply pipeline 会把主动 push 重新分类成 `GREETING`，从而把本应是 progress update 的消息渲染成第二条问候。
+- Affected entrypoint:
+  `scripts/ctcp_support_bot.py::run_proactive_support_cycle` -> `build_grounded_status_reply_doc`
+- Affected modules:
+  `scripts/ctcp_support_bot.py`, `docs/10_team_mode.md`
+- Observed fallback behavior:
+  一条真实用户问候后，bot 会额外主动再发一条“随时可以开始/你说说看要做什么”之类的寒暄。
+- Expected correct behavior:
+  proactive push 应强制沿用 status/progress 语义；即使最新 inbox turn 是 greeting，后续主动消息也必须呈现为具体进展更新，而不是第二条 greeting。
+- Fix:
+  为 proactive push 增加 latest-turn status override，避免 customer-facing render path 直接复用最新 greeting；并补 focused regression 锁住这条语义。
+- Fix attempt status:
+  2026-03-17 scoped fix bound under `ADHOC-20260317-support-proactive-push-greeting-dup-guard`.
+- Regression test status:
+  Covered by `tests/test_support_bot_humanization.py`.
+- Prevention:
+  任何 customer-facing proactive push 都要显式声明自己的 latest-turn semantic purpose，不得默认复用 inbox 里的最后一条用户文本做 conversation re-routing。
+- Tags:
+  support, telegram, proactive-update, greeting-dup, latest-turn, runtime
+
+## Example 23
+
+- Symptom:
+  greeting-dup wording 问题修掉后，用户只发一次 `你好`，bot 仍可能在几秒后主动发出一条具体 progress update，即使 run 状态本身没有新变化。
+- Repro:
+  1. 让 support session 绑定 active run，且 `notification_state.last_progress_hash` 已记录上一条真实进度摘要。
+  2. 用户发送一条 non-project greeting，例如 `你好`。
+  3. 观察 greeting turn 自身正常结束后，idle proactive cycle 又把同一份 run 状态当成“新变化”推送一次。
+- Root cause:
+  `process_message()` 之前会在任何 turn 结束后调用 `remember_progress_notification()`；对于 greeting/non-project turn，`sync_project_context()` 返回空 `project_context`，但 progress digest 仍会基于空 context + `task_summary_hint` 生成一份 synthetic digest，覆盖掉之前记录的真实 run digest。下一轮 idle proactive cycle 读到真实 run context 时，digest 看起来“变了”，于是同状态再次被主动推送。
+- Affected entrypoint:
+  `scripts/ctcp_support_bot.py::process_message`
+- Affected modules:
+  `scripts/ctcp_support_bot.py`, `docs/10_team_mode.md`
+- Observed fallback behavior:
+  用户打一声招呼后，没有任何真实 run 进展变化，系统仍会紧跟着主动再发一条已有状态的 progress update。
+- Expected correct behavior:
+  non-project turn 不应覆盖 `notification_state` 里的最后一条真实 run digest；只有真实 run context 存在时，progress baseline 才允许更新。
+- Fix:
+  让 `remember_progress_notification()` 只在 `project_context.run_id` 存在时更新 baseline，并补 focused regression 锁住 greeting turn 的 baseline preservation。
+- Fix attempt status:
+  2026-03-17 scoped fix bound under `ADHOC-20260317-support-proactive-baseline-preserve-on-greeting`.
+- Regression test status:
+  Covered by `tests/test_support_bot_humanization.py`.
+- Prevention:
+  任何 proactive dedupe / notification baseline 都必须明确区分“真实 run digest”和“non-project synthetic context”；不要让 greeting/smalltalk turn 改写工程态去重基线。
+- Tags:
+  support, telegram, proactive-update, dedupe, greeting, baseline, runtime
+
+## Example 24
+
+- Symptom:
+  用户在 Telegram 里追问 `我想要知道我之前那个项目做成什么样子了`，support bot 没有汇报 bound run 的真实进展，反而回成“请提供最新规划文档”。
+- Repro:
+  1. 让 support session 已绑定一个 active run，并保留已有 `project_brief`。
+  2. 发送旧项目状态追问，例如 `我想要知道我之前那个项目做成什么样子了`。
+  3. 观察 `support_reply.json`、`support_session_state.json` 和 `artifacts/support_whiteboard.json`。
+- Root cause:
+  status-query 识别词没有覆盖“之前那个项目做成什么样了”这类旧项目进度追问，导致该句被错误路由成 `PROJECT_DETAIL`；随后 `should_refresh_project_brief()` 只看项目 goal marker，又把这句写回长期 brief，并让 bound run 继续触发新的 planning/file-request 工作。
+- Affected entrypoint:
+  `scripts/ctcp_support_bot.py::process_message`
+- Affected modules:
+  `frontend/conversation_mode_router.py`, `scripts/ctcp_support_bot.py`
+- Observed fallback behavior:
+  用户看到的是重新补规划文档的问题，session brief 也被错误覆盖，whiteboard 还会追加新的 `file_request/context_pack` 轨迹。
+- Expected correct behavior:
+  active support session 上的旧项目状态追问应优先走 `STATUS_QUERY` / grounded progress path，直接消费当前 bound run 的状态、whiteboard 和下一步，不得覆盖长期 brief。
+- Fix:
+  扩展 status-query 识别以覆盖旧项目进度追问，并在 `should_refresh_project_brief()` / `detect_conversation_mode()` 中显式保护这类句子，不让它们重写 `project_brief`。
+- Fix attempt status:
+  2026-03-17 scoped fix bound under `ADHOC-20260317-support-previous-project-status-grounding`.
+- Regression test status:
+  Covered by `tests/test_frontend_rendering_boundary.py` and `tests/test_support_bot_humanization.py`.
+- Prevention:
+  任何“之前那个项目/之前的项目现在怎么样”这类 active-run follow-up，都要同时检查三件事：conversation mode 是否命中 `STATUS_QUERY`、长期 brief 是否保持原项目 goal、以及用户可见回复是否真正消费了 bound run progress。
+- Tags:
+  support, telegram, status-query, previous-project, brief-memory, runtime
