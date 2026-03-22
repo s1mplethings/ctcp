@@ -190,6 +190,10 @@ final_output.patch
 final_patch_out.diff
 diff.patch
 artifacts/verify/
+artifacts/bot_logs/
+artifacts/runtime/
+artifacts/runtime_logs/
+artifacts/history/
 simlab/_runs/
 simlab/_runs*/
 simlab/_runs_repo_gate/

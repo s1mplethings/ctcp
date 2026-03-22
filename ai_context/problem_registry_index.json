@@ -1,0 +1,156 @@
+{
+  "description": "Lightweight index for problem_registry.md. Use this to find relevant examples by tag or module before reading the full registry.",
+  "usage": "Filter by tags or affected_modules, then read only the matching Examples in problem_registry.md.",
+  "entries": [
+    {
+      "id": "E01",
+      "summary": "Agent claims verified but no reproducible evidence artifacts exist",
+      "tags": ["verify", "gate", "evidence", "reproducibility"],
+      "affected_modules": ["scripts/verify_repo.ps1", "scripts/verify_repo.sh", "meta/reports/LAST.md"]
+    },
+    {
+      "id": "E02",
+      "summary": "Docs claim rules that scripts do not enforce (contract drift)",
+      "tags": ["docs", "contract", "drift", "verify"],
+      "affected_modules": ["docs/03_quality_gates.md", "scripts/verify_repo.ps1", "scripts/verify_repo.sh"]
+    },
+    {
+      "id": "E03",
+      "summary": "Support replies expose internal file names or system fallback wording",
+      "tags": ["support", "frontend", "leakage", "wording", "fallback"],
+      "affected_modules": ["scripts/ctcp_support_bot.py", "frontend/response_composer.py"]
+    },
+    {
+      "id": "E04",
+      "summary": "First real project turn fails with external API 401 after greeting works",
+      "tags": ["telegram", "provider", "api", "config", "401", "local-first"],
+      "affected_modules": ["scripts/ctcp_support_bot.py", "tools/providers/api_agent.py"]
+    },
+    {
+      "id": "E05",
+      "summary": "Support project turns regress to generic kickoff or leak internal markers",
+      "tags": ["support", "frontend", "reply-shaping", "requirement-source", "leakage"],
+      "affected_modules": ["scripts/ctcp_support_bot.py", "frontend/response_composer.py"]
+    },
+    {
+      "id": "E06",
+      "summary": "Support bot chains through all providers and falls back to unavailable message",
+      "tags": ["support", "provider", "fallback", "ollama", "api", "credentials"],
+      "affected_modules": ["scripts/ctcp_support_bot.py", "tools/providers/ollama_agent.py", "tools/providers/api_agent.py", "scripts/externals/openai_responses_client.py"]
+    },
+    {
+      "id": "E07",
+      "summary": "Support bot gives support-only reply without routing project turns to backend bridge",
+      "tags": ["support", "bridge", "whiteboard", "librarian", "runtime-wiring"],
+      "affected_modules": ["scripts/ctcp_support_bot.py", "scripts/ctcp_front_bridge.py", "scripts/ctcp_dispatch.py"]
+    },
+    {
+      "id": "E08",
+      "summary": "Support bot forgets project mid-session; short follow-up triggers wrong semantic",
+      "tags": ["support", "memory", "routing", "api", "fallback", "mojibake"],
+      "affected_modules": ["scripts/ctcp_support_bot.py"]
+    },
+    {
+      "id": "E09",
+      "summary": "Greeting/smalltalk still uses local fast-path despite all-turns-model requirement",
+      "tags": ["support", "product-policy", "routing", "greeting", "model"],
+      "affected_modules": ["scripts/ctcp_support_bot.py", "docs/00_CORE.md", "docs/10_team_mode.md", "agents/prompts/support_lead_reply.md"]
+    },
+    {
+      "id": "E10",
+      "summary": "Chinese support reply garbled (mojibake) on Windows via subprocess stdout",
+      "tags": ["support", "encoding", "mojibake", "api_agent", "windows", "subprocess"],
+      "affected_modules": ["tools/providers/api_agent.py", "scripts/externals/openai_agent_api.py", "scripts/ctcp_support_bot.py"]
+    },
+    {
+      "id": "E11",
+      "summary": "Support bot promises first version but backend never actually started; project goal overwritten",
+      "tags": ["support", "memory", "routing", "blocked-state", "overpromise", "frontend"],
+      "affected_modules": ["scripts/ctcp_support_bot.py", "frontend/conversation_mode_router.py", "frontend/response_composer.py"]
+    },
+    {
+      "id": "E12",
+      "summary": "Default support provider not api_agent; API failure shows mechanical fallback shell",
+      "tags": ["support", "api-first", "fallback", "local-degrade", "product-policy", "wording"],
+      "affected_modules": ["scripts/ctcp_support_bot.py", "docs/10_team_mode.md", "agents/prompts/support_lead_reply.md"]
+    },
+    {
+      "id": "E13",
+      "summary": "Support delivers placeholder zip as if it were a complete project",
+      "tags": ["support", "delivery", "scaffold", "overpromise", "placeholder", "package"],
+      "affected_modules": ["scripts/ctcp_support_bot.py", "docs/10_team_mode.md", "agents/prompts/support_lead_reply.md"]
+    },
+    {
+      "id": "E14",
+      "summary": "Task turn opens with reception-desk phrasing instead of task-first content",
+      "tags": ["support", "frontend", "dialogue", "wording", "task-progress", "lint"],
+      "affected_modules": ["docs/10_team_mode.md", "docs/11_task_progress_dialogue.md", "frontend/response_composer.py", "agents/prompts/support_lead_reply.md"]
+    },
+    {
+      "id": "E15",
+      "summary": "Version/provenance inconsistent across run reports, scaffold, and human summaries",
+      "tags": ["metadata", "version", "provenance", "scaffold", "report", "consistency"],
+      "affected_modules": ["VERSION", "docs/30_artifact_contracts.md", "docs/40_reference_project.md", "meta/reports/LAST.md"]
+    },
+    {
+      "id": "E16",
+      "summary": "Style fix only holds in current session; reverts in new dialogue or long context",
+      "tags": ["support", "dialogue", "persona-lab", "context-isolation", "regression", "scoring"],
+      "affected_modules": ["docs/11_task_progress_dialogue.md", "docs/14_persona_test_lab.md", "persona_lab/", "docs/10_team_mode.md"]
+    },
+    {
+      "id": "E17",
+      "summary": "SimLab S15/S16 drift: fixer-loop fails intermittently due to fixture/profile mismatch",
+      "tags": ["simlab", "fixtures", "fixer-loop", "verify-profile", "doc-index", "dirty-pointer"],
+      "affected_modules": ["simlab/", "scripts/ctcp_dispatch.py", "scripts/ctcp_orchestrate.py", "tests/fixtures/patches/"]
+    },
+    {
+      "id": "E18",
+      "summary": "Capability query folded into generic smalltalk; status follow-up reuses kickoff shell",
+      "tags": ["support", "frontend", "routing", "capability-query", "status-reply", "dialogue"],
+      "affected_modules": ["frontend/conversation_mode_router.py", "frontend/response_composer.py", "scripts/ctcp_support_bot.py"]
+    },
+    {
+      "id": "E19",
+      "summary": "Simple greeting triggers stale project delivery action from old session",
+      "tags": ["support", "telegram", "stale-context", "delivery-action", "greeting", "runtime"],
+      "affected_modules": ["scripts/ctcp_support_bot.py"]
+    },
+    {
+      "id": "E20",
+      "summary": "Status follow-up returns generic 'processing' shell instead of grounded run progress",
+      "tags": ["support", "telegram", "progress-grounding", "whiteboard", "status-reply", "runtime"],
+      "affected_modules": ["scripts/ctcp_support_bot.py", "frontend/response_composer.py"]
+    },
+    {
+      "id": "E21",
+      "summary": "Previous-outline resume creates generic new run; no idle proactive progress push",
+      "tags": ["support", "telegram", "proactive-update", "idle-loop", "continuity", "previous-outline", "runtime"],
+      "affected_modules": ["scripts/ctcp_support_bot.py", "docs/10_team_mode.md"]
+    },
+    {
+      "id": "E22",
+      "summary": "Greeting followed by duplicate proactive push rendered as second greeting",
+      "tags": ["support", "telegram", "proactive-update", "greeting-dup", "latest-turn", "runtime"],
+      "affected_modules": ["scripts/ctcp_support_bot.py", "docs/10_team_mode.md"]
+    },
+    {
+      "id": "E23",
+      "summary": "Non-project greeting overwrites real run digest; idle cycle re-pushes unchanged state",
+      "tags": ["support", "telegram", "proactive-update", "dedupe", "greeting", "baseline", "runtime"],
+      "affected_modules": ["scripts/ctcp_support_bot.py", "docs/10_team_mode.md"]
+    },
+    {
+      "id": "E24",
+      "summary": "Old-project status query misrouted as PROJECT_DETAIL; long-term brief overwritten",
+      "tags": ["support", "telegram", "status-query", "previous-project", "brief-memory", "runtime"],
+      "affected_modules": ["frontend/conversation_mode_router.py", "scripts/ctcp_support_bot.py"]
+    },
+    {
+      "id": "E25",
+      "summary": "Support lacks explicit frontdesk state machine; continuity breaks on interrupts/style changes",
+      "tags": ["support", "frontend", "state-machine", "interrupt-recovery", "style-profile", "routing"],
+      "affected_modules": ["scripts/ctcp_support_bot.py", "frontend/conversation_mode_router.py", "frontend/response_composer.py", "frontend/frontdesk_state_machine.py"]
+    }
+  ]
+}

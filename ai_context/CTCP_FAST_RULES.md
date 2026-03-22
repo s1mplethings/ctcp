@@ -37,7 +37,13 @@
 | This fast-rules file | `ai_context/CTCP_FAST_RULES.md` |
 | Verify gate scripts | `scripts/verify_repo.ps1` / `.sh` |
 | Problem registry | `ai_context/problem_registry.md` |
+| Problem registry index (fast lookup) | `ai_context/problem_registry_index.json` |
 | Decision log | `ai_context/decision_log.md` |
+| Task queue / backlog | `meta/backlog/execution_queue.json` |
+| Task card template | `meta/tasks/TEMPLATE.md` |
+| Reusable skills (index) | `.agents/skills/INDEX.md` |
+| Support whiteboard (runtime) | `${run_dir}/artifacts/support_whiteboard.json` |
+| Support whiteboard contract | `contracts/support_whiteboard_contract.md` |
 
 ## Agent Minimal Startup
 
