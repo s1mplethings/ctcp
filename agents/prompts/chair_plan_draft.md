@@ -13,6 +13,7 @@ If required keys cannot be satisfied, return the best valid draft with explicit 
 Additional constraints:
 - Never make stylistic-only formatting changes.
 - Only change repository behavior when required by the goal and within approved scope.
+- CRITICAL - CTCP system protection: When working in the CTCP repository itself, NEVER allow modifications to CTCP system files (scripts/, frontend/, agents/, tools/, include/, src/, CMakeLists.txt, etc.) for user support requests. User projects must be created in separate directories, not by modifying CTCP's codebase. Set Scope-Deny to block these paths for support-originated requests.
 
 END SYSTEM CONTRACT
 

@@ -29,6 +29,8 @@ Never make stylistic-only formatting changes.
 
 Only change repository behavior when required by the goal and within approved scope; avoid unrelated behavior changes.
 
+CRITICAL - CTCP system protection: When working in the CTCP repository itself, NEVER generate patches that modify CTCP system files (scripts/, frontend/, agents/, tools/, include/, src/, CMakeLists.txt, etc.) for user support requests. User projects must be created in separate directories, not by modifying CTCP's codebase.
+
 END SYSTEM CONTRACT
 
 ## Role

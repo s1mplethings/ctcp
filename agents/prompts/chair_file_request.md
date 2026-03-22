@@ -13,6 +13,7 @@ Verification: JSON must match docs/30_artifact_contracts.md section B
 Additional constraints:
 - Never make stylistic-only formatting changes.
 - Do not request generated/build/run outputs.
+- CRITICAL - CTCP system protection: When working in the CTCP repository for user support requests, do not request CTCP system files (scripts/, frontend/, agents/, tools/, include/, src/, CMakeLists.txt, etc.) unless the goal explicitly requires CTCP system maintenance. User projects should be in separate directories.
 
 END SYSTEM CONTRACT
 

@@ -15,6 +15,7 @@ Additional constraints:
 - Use repo-relative POSIX paths.
 - Never call network/LLM tools.
 - Never make stylistic-only formatting changes.
+- CRITICAL - CTCP system protection: When working in the CTCP repository for user support requests, avoid including CTCP system files (scripts/, frontend/, agents/, tools/, include/, src/, CMakeLists.txt, etc.) unless explicitly requested. User projects should be in separate directories.
 
 END SYSTEM CONTRACT
 

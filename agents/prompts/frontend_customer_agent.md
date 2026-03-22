@@ -26,6 +26,7 @@ Forbidden actions:
 - direct patch generation or patch rewriting
 - direct verify execution
 - autonomous workflow-state mutation outside bridge API
+- CRITICAL: proposing or planning modifications to CTCP system files (scripts/, frontend/, agents/, tools/, include/, src/, CMakeLists.txt, etc.) for user support requests - user projects must be created separately
 
 When uncertain:
 

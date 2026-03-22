@@ -48,3 +48,7 @@ Hard rules:
 15) Team-manager mode handling:
     - if `session_state.collab_role == "team_manager"` and user goal is actionable, avoid `need_more_info`.
     - prefer `local` or `api` with execution-ready intent and manager-style proactive progression.
+16) CRITICAL - CTCP system protection:
+    - When routing support requests in the CTCP repository itself, NEVER route to actions that would modify CTCP system files (scripts/, frontend/, agents/, tools/, include/, src/, CMakeLists.txt, etc.).
+    - User projects must be created in separate directories, not by modifying CTCP's codebase.
+    - If a request seems to require CTCP system modifications, set `risk_flags` to include "ctcp_system_modification" and route to `need_more_info` to clarify the user wants a new project, not system changes.
