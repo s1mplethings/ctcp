@@ -48,6 +48,7 @@ if(CTCP_ENABLE_GUI)
       src/MetaStore.cpp
       src/RunLoader.cpp
       src/GraphBuilder.cpp
+      src/GraphViewProjector.cpp
       src/Bridge.cpp
       src/FileIndexer.cpp
       src/LayoutEngine.cpp
@@ -64,6 +65,7 @@ if(CTCP_ENABLE_GUI)
       include/MetaStore.h
       include/RunLoader.h
       include/GraphBuilder.h
+      include/GraphViewProjector.h
       include/Bridge.h
       include/GraphTypes.h
       include/FileIndexer.h

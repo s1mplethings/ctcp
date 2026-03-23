@@ -16,7 +16,7 @@
 | Contract | Schema | Producer / Consumer |
 |---|---|---|
 | [frontend_bridge_contract.md](../contracts/frontend_bridge_contract.md) | Markdown contract | Frontend bridge → CTCP orchestrator + run artifacts |
-| [frontend_session_contract.md](../contracts/frontend_session_contract.md) | Markdown contract | Frontend session manager → frontend gateway adapters |
+| [frontend_session_contract.md](../contracts/frontend_session_contract.md) | Markdown contract | Frontdesk state machine / session manager → frontend gateway adapters |
 
 ## Runtime Markdown Contracts
 

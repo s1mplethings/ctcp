@@ -71,9 +71,13 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
   - provider 调试日志统一写入 `logs/support_bot.*.log`，并追加 `TRACE.md`。
 - 项目型消息接线：
   - support bot 先做 conversation-mode classification。
+  - 在任何 prompt/reply 生成前，runtime 还必须基于 latest turn、active run、session slots 解析一层显式 frontdesk state machine；权威结构见 `contracts/frontend_session_contract.md`。
+  - 这层 frontdesk state machine 至少要覆盖 `Idle / IntentDetect / Collect / Clarify / Confirm / Execute / AwaitDecision / ReturnResult / InterruptRecover / StyleAdjust / Error`，并持久化 `current_goal / current_scope / active_task_id / waiting_for / user_style_profile / decision_points / artifacts / blocked_reason / resumable_state`。
+  - 处理顺序必须是：先判断 frontdesk state，再决定回复策略，再生成回复内容；`visible_state` 只是用户可见执行态折叠，不能替代 frontdesk state。
   - `PROJECT_INTAKE / PROJECT_DETAIL / STATUS_QUERY` 等项目型 turn 只能通过 `scripts/ctcp_front_bridge.py` 创建/绑定/查询/推进 CTCP run。
   - 绑定 run 后，support bot 通过 bridge 读取真实 `RUN.json` / `verify_report.json` 摘要与 `artifacts/support_whiteboard.json` 快照，不直接在客服层发明工程状态。
   - 在发出 `support_reply.json.reply_text` 前，reply builder 必须绑定 `task_goal / current_phase / last_confirmed_items / current_blocker / message_purpose / question_needed / next_action`。
+  - `style_change` 必须只更新持久 `user_style_profile`，不得覆盖当前任务主线；`clarify / redirect / override / sidequest / status_query / result_query` 等中断分类必须显式写入 frontdesk state，并保留 `resumable_state`。
   - 对 `STATUS_QUERY` 以及“继续按这个做 / 现在做到什么程度了”这类 status-like progress follow-up，runtime 必须消费 bound run 的 gate/status 与 whiteboard tail，自动总结已完成事项、当前阶段、当前阻塞或 clear path、以及下一步；不得退回 `EXECUTING` 固定壳文案。
   - 对“之前那个项目现在做成什么样了 / 之前的项目现在怎么样”这类旧项目状态追问，只要 support session 已绑定 active run，runtime 必须优先走 `STATUS_QUERY`/grounded progress path；不得把这类句子写回长期 `project_brief`，也不得因此触发新的 planning/file-request 轮次。
   - Telegram long-poll 在空闲轮询周期里必须检查 active bound run：若 run 仍可推进且不需要用户决策，runtime 可自动 `advance`；一旦 grounded progress digest 发生变化，必须主动发送一条新的 progress update，而不是等用户追问。

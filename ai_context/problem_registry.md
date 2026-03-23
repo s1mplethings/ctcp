@@ -641,3 +641,32 @@ When to add:
   任何“之前那个项目/之前的项目现在怎么样”这类 active-run follow-up，都要同时检查三件事：conversation mode 是否命中 `STATUS_QUERY`、长期 brief 是否保持原项目 goal、以及用户可见回复是否真正消费了 bound run progress。
 - Tags:
   support, telegram, status-query, previous-project, brief-memory, runtime
+
+## Example 25
+
+- Symptom:
+  support/frontend 明明已经有 conversation mode、session memory zone 和 run binding，但用户一旦插话、改风格或追问结果，前台仍可能像“按最后一句自由回复”的 shell，而不是一个持续推进主任务的前台状态机。
+- Repro:
+  1. 让 support session 先绑定一个 active run。
+  2. 依次发送风格调整、非项目插话、状态追问、结果追问等 turn。
+  3. 检查 `support_session_state.json`、`support_prompt_input.md`、`support_reply.json`，会发现旧 runtime 只有零散 memory zone 和 `conversation_mode`，没有单一 frontdesk `state + slots + interrupt_kind + resumable_state` 结构。
+- Root cause:
+  support runtime 的 continuity 逻辑分散在 `detect_conversation_mode()`、`sync_project_context()`、`build_support_prompt()`、`build_final_reply_doc()` 和 `response_composer` 局部分支里；同时 `状态` 这类宽松词面还会误命中 `状态机` 这类普通工程词，导致主线任务被错分流。
+- Affected entrypoint:
+  `scripts/ctcp_support_bot.py::process_message`
+- Affected modules:
+  `scripts/ctcp_support_bot.py`, `frontend/conversation_mode_router.py`, `frontend/response_composer.py`
+- Observed fallback behavior:
+  用户可见 reply 依赖 latest turn shell；style change 只能临时生效；interrupt/resume/decision gating 缺少显式状态；涉及“状态机”的正常需求还可能被误分成 `STATUS_QUERY`。
+- Expected correct behavior:
+  support entrypoint 应显式持久化并消费 frontdesk state machine、任务槽位、风格 profile 和 interrupt 分类；`状态机` 这类正常工程词不能被误判成 status query。
+- Fix:
+  增加 `frontend/frontdesk_state_machine.py` 作为显式状态协调层，把它持久化进 `support_session_state.json`，并让 prompt/reply/runtime 消费这份结构；同时收紧 `conversation_mode_router` 的 `状态` 词面，避免误伤 `状态机`。
+- Fix attempt status:
+  2026-03-17 scoped fix bound under `ADHOC-20260317-support-frontdesk-state-machine`.
+- Regression test status:
+  Covered by `tests/test_frontdesk_state_machine.py`, `tests/test_runtime_wiring_contract.py`, and `tests/test_support_bot_humanization.py`.
+- Prevention:
+  任何声称“前台已经任务型化”的能力，都必须同时证明 `state` 已连接到 session persistence、prompt context、reply strategy 和 runtime tests；状态类关键词规则要避免误伤 `状态机` 这类工程名词。
+- Tags:
+  support, frontend, state-machine, interrupt-recovery, style-profile, routing

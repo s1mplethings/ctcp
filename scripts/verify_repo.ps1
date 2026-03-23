@@ -69,6 +69,94 @@ function Invoke-ExternalChecked {
   )
   & $Command
   if ($LASTEXITCODE -ne 0) {
+    Write-Host ""
+    Write-Host "[verify_repo] === FAILURE DIAGNOSTICS ==="
+    Write-Host "[verify_repo] Gate failed: $Label (exit=$LASTEXITCODE)"
+    Write-Host ""
+
+    # Gate-specific hints
+    if ($Label -like "*cmake configure*") {
+      Write-Host "[verify_repo] Hints for cmake configure failure:"
+      Write-Host "  - Check CMakeLists.txt for syntax errors"
+      Write-Host "  - Verify Qt6 is installed: cmake --version, qmake -version"
+      Write-Host "  - Check compiler: cl.exe (MSVC) or g++ --version"
+      Write-Host "  - Try: cmake -S . -B build_lite -DCMAKE_BUILD_TYPE=Release"
+    }
+    elseif ($Label -like "*cmake build*") {
+      Write-Host "[verify_repo] Hints for cmake build failure:"
+      Write-Host "  - Check compiler errors in output above"
+      Write-Host "  - Verify all source files exist and have no syntax errors"
+      Write-Host "  - Try building single target: cmake --build build_lite --target <target>"
+      Write-Host "  - Clean rebuild: rm -r build_lite && scripts\verify_repo.ps1"
+    }
+    elseif ($Label -like "*ctest*") {
+      Write-Host "[verify_repo] Hints for ctest failure:"
+      Write-Host "  - Check test output above for assertion failures"
+      Write-Host "  - Run single test: ctest --test-dir build_lite -R <test_name> -V"
+      Write-Host "  - Check test logs: build_lite/Testing/Temporary/LastTest.log"
+    }
+    elseif ($Label -like "*workflow*") {
+      Write-Host "[verify_repo] Hints for workflow gate failure:"
+      Write-Host "  - Check workflow_registry/index.json for schema errors"
+      Write-Host "  - Run: python scripts\workflow_checks.py --verbose"
+      Write-Host "  - Verify all referenced workflow files exist"
+    }
+    elseif ($Label -like "*plan check*") {
+      Write-Host "[verify_repo] Hints for plan check failure:"
+      Write-Host "  - Check artifacts/PLAN.md for required sections"
+      Write-Host "  - Verify PLAN.md matches schema in contracts/plan_contract.md"
+      Write-Host "  - Run: python scripts\plan_check.py --verbose"
+    }
+    elseif ($Label -like "*patch check*") {
+      Write-Host "[verify_repo] Hints for patch check failure:"
+      Write-Host "  - Verify git diff matches scope declared in PLAN.md"
+      Write-Host "  - Check for unexpected file modifications"
+      Write-Host "  - Run: python scripts\patch_check.py --verbose"
+    }
+    elseif ($Label -like "*behavior catalog*") {
+      Write-Host "[verify_repo] Hints for behavior catalog failure:"
+      Write-Host "  - Check for BEHAVIOR_ID comments in modified files"
+      Write-Host "  - Verify behavior_catalog.json is up to date"
+      Write-Host "  - Run: python scripts\behavior_catalog_check.py --verbose"
+    }
+    elseif ($Label -like "*contract check*") {
+      Write-Host "[verify_repo] Hints for contract checks failure:"
+      Write-Host "  - Check contracts/*.md files for schema violations"
+      Write-Host "  - Verify contract implementations match declarations"
+      Write-Host "  - Run: python scripts\contract_checks.py --verbose"
+    }
+    elseif ($Label -like "*doc index*") {
+      Write-Host "[verify_repo] Hints for doc index failure:"
+      Write-Host "  - Check docs/*.md files for broken links"
+      Write-Host "  - Run: python scripts\sync_doc_links.py --check --verbose"
+      Write-Host "  - Auto-fix: python scripts\sync_doc_links.py (without --check)"
+    }
+    elseif ($Label -like "*triplet*") {
+      Write-Host "[verify_repo] Hints for triplet integration failure:"
+      Write-Host "  - Check tests/test_runtime_wiring_contract.py output"
+      Write-Host "  - Verify Python/C++ bridge contracts are satisfied"
+      Write-Host "  - Run single test: python -m unittest tests.test_runtime_wiring_contract -v"
+    }
+    elseif ($Label -like "*lite scenario*") {
+      Write-Host "[verify_repo] Hints for lite scenario replay failure:"
+      Write-Host "  - Check simlab/run.py for errors"
+      Write-Host "  - Verify test fixtures exist in tests/fixtures/"
+      Write-Host "  - Run: python simlab\run.py --suite lite --verbose"
+    }
+    elseif ($Label -like "*python unit*") {
+      Write-Host "[verify_repo] Hints for python unit tests failure:"
+      Write-Host "  - Check test output above for assertion failures"
+      Write-Host "  - Run single test: python -m unittest tests.test_<name> -v"
+      Write-Host "  - Check for missing dependencies: pip list"
+    }
+    else {
+      Write-Host "[verify_repo] General debugging hints:"
+      Write-Host "  - Check the error output above for specific failure details"
+      Write-Host "  - Try running the failed command directly to see full output"
+      Write-Host "  - Check git status for unexpected file changes"
+    }
+
+    Write-Host ""
     Write-Error "[verify_repo] FAILED: $Label (exit=$LASTEXITCODE)"
     exit $LASTEXITCODE
   }

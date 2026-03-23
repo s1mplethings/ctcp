@@ -151,6 +151,50 @@ class SupportBotHumanizationTests(unittest.TestCase):
         self.assertNotIn('"public_delivery":', prompt)
         self.assertNotIn('我想要你继续优化我的vn项目', prompt)
 
+    def test_build_support_prompt_includes_frontdesk_state_and_style_profile(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_frontdesk_prompt_") as td:
+            run_dir = Path(td)
+            session_state = support_bot.default_support_session_state("frontdesk-demo")
+            session_state["bound_run_id"] = "r-frontdesk"
+            session_state["bound_run_dir"] = "D:/tmp/r-frontdesk"
+            session_state["project_memory"]["project_brief"] = "我想要你继续优化我的vn项目"
+            session_state["task_summary"] = "我想要你继续优化我的vn项目"
+            project_context = {
+                "run_id": "r-frontdesk",
+                "run_dir": "D:/tmp/r-frontdesk",
+                "goal": "我想要你继续优化我的vn项目",
+                "status": {
+                    "run_status": "running",
+                    "verify_result": "",
+                    "needs_user_decision": False,
+                    "decisions_needed_count": 0,
+                    "gate": {"state": "open", "owner": "", "reason": ""},
+                },
+                "whiteboard": {},
+            }
+            support_bot.sync_frontdesk_state(
+                session_state,
+                user_text="后面用中文回答，简短一点，别太机械",
+                conversation_mode="SMALLTALK",
+                project_context=project_context,
+            )
+            prompt = support_bot.build_support_prompt(
+                run_dir,
+                "frontdesk-demo",
+                "后面用中文回答，简短一点，别太机械",
+                source="telegram",
+                conversation_mode="SMALLTALK",
+                session_state=session_state,
+                project_context=project_context,
+            )
+
+        self.assertIn('"frontdesk_state": {', prompt)
+        self.assertIn('"state": "StyleAdjust"', prompt)
+        self.assertIn('"resumable_state": "Execute"', prompt)
+        self.assertIn('"verbosity": "brief"', prompt)
+        self.assertIn('"tone": "natural"', prompt)
+        self.assertIn('"current_goal": ""', prompt)
+
     def test_default_support_dispatch_config_prefers_api_with_local_fallback(self) -> None:
         cfg = support_bot.default_support_dispatch_config()
         role_providers = dict(cfg.get("role_providers", {}))

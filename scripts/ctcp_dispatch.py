@@ -135,6 +135,13 @@ def _brief_text(value: str, *, max_chars: int = 260) -> str:
 
 
 def _safe_whiteboard_hits(rows: Any, *, max_items: int = 5) -> list[dict[str, Any]]:
+    """Sanitize and limit librarian search hits for whiteboard storage.
+
+    WHITEBOARD HELPER: Validates and truncates hit arrays to prevent whiteboard bloat
+    CALLED BY: record_support_turn_whiteboard(), _prepare_dispatch_whiteboard_context(), _compact_whiteboard_snapshot()
+
+    Returns list of dicts with path, start_line, snippet (max 5 items by default).
+    """
     out: list[dict[str, Any]] = []
     if not isinstance(rows, list):
         return out
@@ -161,6 +168,13 @@ def _safe_whiteboard_hits(rows: Any, *, max_items: int = 5) -> list[dict[str, An
 
 
 def _safe_whiteboard_entries(rows: Any, *, max_items: int = 120) -> list[dict[str, Any]]:
+    """Sanitize and limit whiteboard entries to prevent unbounded growth.
+
+    WHITEBOARD HELPER: Validates, truncates, and normalizes entry arrays (max 120 by default)
+    CALLED BY: All whiteboard read/write functions to enforce size limits and data consistency
+
+    Returns list of normalized entry dicts with ts, role, kind, text, optional query/hits.
+    """
     out: list[dict[str, Any]] = []
     if not isinstance(rows, list):
         return out
@@ -191,6 +205,13 @@ def _safe_whiteboard_entries(rows: Any, *, max_items: int = 120) -> list[dict[st
 
 
 def _load_support_whiteboard(run_dir: Path) -> dict[str, Any]:
+    """Load support whiteboard from run directory.
+
+    WHITEBOARD READ: Loads ${run_dir}/artifacts/support_whiteboard.json
+    CONSUMED BY: get_support_whiteboard_context() → ctcp_front_bridge → ctcp_support_bot
+
+    Returns dict with schema_version and entries array (max 120 items).
+    """
     path = run_dir / SUPPORT_WHITEBOARD_REL
     state: dict[str, Any] = {
         "schema_version": SUPPORT_WHITEBOARD_SCHEMA_VERSION,
@@ -209,6 +230,11 @@ def _load_support_whiteboard(run_dir: Path) -> dict[str, Any]:
 
 
 def _save_support_whiteboard(run_dir: Path, state: dict[str, Any]) -> None:
+    """Save support whiteboard to run directory.
+
+    WHITEBOARD WRITE: Writes to ${run_dir}/artifacts/support_whiteboard.json
+    CALLED BY: record_support_turn_whiteboard(), _append_dispatch_result_whiteboard()
+    """
     payload = {
         "schema_version": SUPPORT_WHITEBOARD_SCHEMA_VERSION,
         "entries": _safe_whiteboard_entries((state or {}).get("entries", []), max_items=120),
@@ -217,6 +243,13 @@ def _save_support_whiteboard(run_dir: Path, state: dict[str, Any]) -> None:
 
 
 def _append_support_whiteboard_log(run_dir: Path, line: str) -> None:
+    """Append human-readable log entry to whiteboard markdown file.
+
+    WHITEBOARD WRITE: Appends to ${run_dir}/artifacts/support_whiteboard.md (markdown log)
+    CALLED BY: record_support_turn_whiteboard(), _append_dispatch_result_whiteboard()
+
+    Creates timestamped markdown list entries for human inspection of whiteboard activity.
+    """
     path = run_dir / SUPPORT_WHITEBOARD_LOG_REL
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as fh:
@@ -224,6 +257,14 @@ def _append_support_whiteboard_log(run_dir: Path, line: str) -> None:
 
 
 def _compact_whiteboard_snapshot(state: dict[str, Any], *, max_entries: int = 5) -> dict[str, Any]:
+    """Create compact whiteboard snapshot for display/transmission.
+
+    WHITEBOARD HELPER: Reduces full whiteboard to last N entries with truncated fields
+    CALLED BY: get_support_whiteboard_context(), _append_dispatch_result_whiteboard()
+    CONSUMED BY: ctcp_support_bot.build_progress_binding() for recent activity summary
+
+    Returns dict with schema_version, path, entry_count, and last N entries (default 5).
+    """
     entries = _safe_whiteboard_entries(state.get("entries", []), max_items=120)
     tail = entries[-max(1, int(max_entries)) :]
     summary_entries: list[dict[str, Any]] = []
@@ -275,6 +316,13 @@ def _latest_librarian_context(entries: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def get_support_whiteboard_context(run_dir: Path) -> dict[str, Any]:
+    """Get whiteboard snapshot for support bot consumption.
+
+    WHITEBOARD READ: Loads full whiteboard, returns snapshot (last 5 entries) + latest librarian context
+    CONSUMED BY: ctcp_front_bridge.ctcp_get_support_context() → ctcp_support_bot.build_progress_binding()
+
+    Returns dict with path, query, hits, lookup_error, and snapshot (last 5 entries).
+    """
     board = _load_support_whiteboard(run_dir)
     entries = _safe_whiteboard_entries(board.get("entries", []), max_items=120)
     latest = _latest_librarian_context(entries)
@@ -296,6 +344,16 @@ def record_support_turn_whiteboard(
     conversation_mode: str,
     chat_id: str = "",
 ) -> dict[str, Any]:
+    """Record support turn and librarian lookup to whiteboard.
+
+    WHITEBOARD WRITE: Appends support_turn + support_lookup entries to whiteboard
+    CALLED BY: ctcp_front_bridge.ctcp_record_support_turn() → ctcp_support_bot.sync_project_context()
+    CONSUMED BY: ctcp_support_bot.build_progress_binding() extracts done_items from these entries
+
+    Writes two entries:
+    1. support_turn: records user message
+    2. support_lookup: records librarian search results (if query changed)
+    """
     board = _load_support_whiteboard(run_dir)
     entries = _safe_whiteboard_entries(board.get("entries", []), max_items=120)
     query = _brief_text(str(text or ""), max_chars=220)
@@ -358,6 +416,13 @@ def record_support_turn_whiteboard(
 
 
 def _dispatch_whiteboard_query(request: dict[str, Any]) -> str:
+    """Extract search query from dispatch request for librarian lookup.
+
+    WHITEBOARD HELPER: Determines what to search for based on goal/reason/role/action
+    CALLED BY: _prepare_dispatch_whiteboard_context() before librarian search
+
+    Returns query string prioritizing: goal > reason > "{role} {action}".
+    """
     goal = _brief_text(str(request.get("goal", "")), max_chars=220)
     reason = _brief_text(str(request.get("reason", "")), max_chars=220)
     role = _brief_text(str(request.get("role", "")), max_chars=32)
@@ -385,6 +450,15 @@ def _prepare_dispatch_whiteboard_context(
     repo_root: Path,
     request: dict[str, Any],
 ) -> dict[str, Any]:
+    """Prepare whiteboard context before agent dispatch execution.
+
+    WHITEBOARD WRITE: Appends dispatch_request entry + performs librarian lookup if query changed
+    CALLED BY: dispatch_once() before every agent execution
+    CONSUMED BY: Agent receives hits in context; support_bot sees dispatch_request in whiteboard
+
+    Writes dispatch_request entry with role/action/target/reason, runs librarian search if needed.
+    Returns dict with hits, lookup_error, and compact snapshot for agent context injection.
+    """
     board = _load_support_whiteboard(run_dir)
     entries = _safe_whiteboard_entries(board.get("entries", []), max_items=120)
     role = _brief_text(str(request.get("role", "")).lower(), max_chars=32) or "agent"
@@ -457,6 +531,15 @@ def _append_dispatch_result_whiteboard(
     request: dict[str, Any],
     result: dict[str, Any],
 ) -> dict[str, Any]:
+    """Append dispatch execution result to whiteboard.
+
+    WHITEBOARD WRITE: Appends dispatch_result entry after agent execution
+    CALLED BY: dispatch_once() after every agent (analyst/architect/coder/reviewer/etc) execution
+    CONSUMED BY: ctcp_support_bot.build_progress_binding() extracts done_items from status=executed entries
+
+    Entry format: "{role}/{action} via {provider} => {status} ({target_path}); {reason}"
+    Example: "analyst/file_request via api_agent => executed (docs/spec.md); context gathering"
+    """
     board = _load_support_whiteboard(run_dir)
     entries = _safe_whiteboard_entries(board.get("entries", []), max_items=120)
     role = _brief_text(str(request.get("role", "")).lower(), max_chars=32) or "agent"

@@ -2,8 +2,8 @@
 #pragma once
 
 #include "GraphBuilder.h"
+#include "GraphViewProjector.h"
 #include "LayoutEngine.h"
-#include "DocPreviewer.h"
 #include "MetaStore.h"
 #include "ProjectScanner.h"
 #include "RunLoader.h"
@@ -29,11 +29,6 @@ public:
     Q_INVOKABLE QJsonObject requestMeta();
     Q_INVOKABLE QJsonObject requestNodeDetail(const QString &nodeId);
     Q_INVOKABLE bool editEdge(const QJsonObject &op);
-    Q_INVOKABLE bool openFile(const QString &path);
-    Q_INVOKABLE QString previewFile(const QString &path); // DocPreviewer
-    Q_INVOKABLE bool openPath(const QString &path); // alias for openFile
-    Q_INVOKABLE bool openNode(const QString &nodeId); // open by node id if path known
-    Q_INVOKABLE void readTextFile(const QString &path, const QJSValue &callback);
 
 signals:
     void graphChanged(const QJsonObject &graph);
@@ -49,8 +44,8 @@ private:
     MetaStore metaStore_;
     RunLoader runLoader_;
     GraphBuilder graphBuilder_;
+    GraphViewProjector graphViewProjector_;
     LayoutEngine layoutEngine_;
-    DocPreviewer docPreviewer_;
 
     QString currentRoot_;
     ProjectLayout layout_;

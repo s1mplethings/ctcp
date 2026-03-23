@@ -94,7 +94,7 @@ _PROJECT_EXECUTION_FOLLOWUP_EN = (
     "keep building",
 )
 _STATUS_PATTERNS = (
-    re.compile(r"(进度|状态|还在做吗|进行到哪|卡住|阻塞|当前项目|有没有在进行)"),
+    re.compile(r"(进度|状态(?!机)|还在做吗|进行到哪|卡住|阻塞|当前项目|有没有在进行)"),
     re.compile(r"(什么情况|做好了吗|完成了吗|好了没|生成了.{0,4}吗|弄好了吗|搞定了吗|做完了吗|出来了吗|结果.{0,4}(怎|如何|出))"),
     re.compile(r"(之前|原来).*(项目|方案|大纲).*(进度|状态|做到什么程度|做到哪|做到哪一步|做成什么样|做得怎么样|现在怎么样|现在什么情况)"),
     re.compile(r"\b(status|progress|blocked|stuck|what.?s running|running now|is it done|finished|ready)\b", re.IGNORECASE),

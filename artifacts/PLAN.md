@@ -1,5 +1,5 @@
 Status: SIGNED
-Scope-Allow: AGENTS.md,README.md,BUILD.md,PATCH_README.md,APPLY_OVERLAY.md,.gitignore,_tmp_final_patch.diff,_tmp_final_user.diff,_tmp_final_user_small.diff,diff.patch,final_output.patch,final_patch_out.diff,scripts/,tools/,agents/,ai_context/,docs/,contracts/,web/,frontend/,tests/,simlab/,artifacts/,meta/,persona_lab/,workflow_registry/,templates/,ctcp_cos_user_v2p_taskpack/,ctcp_pointcloud_full_project_taskpack/,ctcp_pointcloud_concrete_impl_taskpack/,ctcp_v2p_fixture_clean_taskpack/
+Scope-Allow: AGENTS.md,README.md,BUILD.md,PATCH_README.md,APPLY_OVERLAY.md,CMakeLists.txt,.gitignore,_tmp_final_patch.diff,_tmp_final_user.diff,_tmp_final_user_small.diff,diff.patch,final_output.patch,final_patch_out.diff,src/,include/,scripts/,tools/,agents/,ai_context/,docs/,contracts/,web/,frontend/,tests/,simlab/,artifacts/,meta/,persona_lab/,workflow_registry/,templates/,ctcp_cos_user_v2p_taskpack/,ctcp_pointcloud_full_project_taskpack/,ctcp_pointcloud_concrete_impl_taskpack/,ctcp_v2p_fixture_clean_taskpack/
 Scope-Deny: .git/,build/,build_lite/,build_verify/,dist/,generated_projects/,runs/,simlab/_runs/,meta/runs/
 Gates: lite,workflow_gate,plan_check,patch_check,behavior_catalog_check,contract_checks,doc_index_check,lite_replay,python_unit_tests
 Budgets: max_iterations=3,max_files=200,max_total_bytes=300000

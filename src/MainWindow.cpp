@@ -49,7 +49,9 @@ void MainWindow::createUi() {
     tree_->setMaximumWidth(280);
     tree_->setMinimumWidth(180);
     connect(tree_, &QTreeView::doubleClicked, [this](const QModelIndex &idx) {
-        bridge_->openFile(fsModel_->filePath(idx));
+        if (exposedBridge_) {
+            exposedBridge_->openPath(fsModel_->filePath(idx));
+        }
     });
 
     webView_ = new QWebEngineView(splitter);

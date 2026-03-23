@@ -1,0 +1,94 @@
+{
+  "schema_version": "ctcp-support-session-state-v5",
+  "chat_id": "test_user_002",
+  "bound_run_id": "20260323-135443-565653-orchestrate",
+  "bound_run_dir": "C:\\Users\\sunom\\AppData\\Local\\ctcp\\runs\\ctcp\\20260323-135443-565653-orchestrate",
+  "task_summary": "我想做一个简单的视觉小说游戏，有剧情分支",
+  "latest_conversation_mode": "STATUS_QUERY",
+  "last_bridge_sync_ts": "2026-03-23T05:55:27Z",
+  "latest_support_context": {
+    "run_id": "20260323-135443-565653-orchestrate",
+    "provider_status": "executed",
+    "conversation_mode": "STATUS_QUERY",
+    "frontdesk_state": "InterruptRecover",
+    "interrupt_kind": "status_query",
+    "package_ready": false,
+    "package_delivery_mode": "",
+    "package_structure_hint": [],
+    "screenshot_ready": false
+  },
+  "frontdesk_state": {
+    "state": "InterruptRecover",
+    "interrupt_kind": "status_query",
+    "current_goal": "我想做一个简单的视觉小说游戏，有剧情分支",
+    "current_scope": "优先速度，先做出第一版",
+    "active_task_id": "20260323-135443-565653-orchestrate",
+    "waiting_for": "",
+    "user_style_profile": {
+      "language": "auto",
+      "tone": "task_progressive",
+      "initiative": "balanced",
+      "verbosity": "normal"
+    },
+    "decision_points": [],
+    "artifacts": [
+      "run_id=20260323-135443-565653-orchestrate",
+      "artifacts/support_whiteboard.json"
+    ],
+    "blocked_reason": "waiting for review_cost.md",
+    "resumable_state": "Execute",
+    "latest_conversation_mode": "STATUS_QUERY",
+    "state_reason": "interrupt:status_query"
+  },
+  "session_profile": {
+    "lang_hint": "zh",
+    "last_source": "stdin"
+  },
+  "project_memory": {
+    "project_brief": "我想做一个简单的视觉小说游戏，有剧情分支",
+    "last_detail_turn": "我想做一个简单的视觉小说游戏，有剧情分支",
+    "last_detail_ts": "2026-03-23T05:55:02Z"
+  },
+  "project_constraints_memory": {
+    "constraint_brief": "",
+    "constraint_ts": ""
+  },
+  "execution_memory": {
+    "latest_user_directive": "优先速度，先做出第一版",
+    "latest_user_directive_ts": "2026-03-23T05:55:18Z"
+  },
+  "turn_memory": {
+    "latest_user_turn": "进度怎么样了？",
+    "latest_user_turn_ts": "2026-03-23T05:55:26Z",
+    "latest_conversation_mode": "STATUS_QUERY",
+    "latest_source": "stdin"
+  },
+  "provider_runtime_buffer": {
+    "preferred_provider": "api_agent",
+    "attempted_providers": [
+      "api_agent",
+      "ollama_agent",
+      "api_agent",
+      "api_agent",
+      "api_agent",
+      "api_agent"
+    ],
+    "last_provider": "api_agent",
+    "last_provider_status": "executed",
+    "last_provider_reason": ""
+  },
+  "notification_state": {
+    "last_progress_hash": "8f9090b8aeaa0883124e75ffe53b916d51aeb96a",
+    "last_progress_ts": "2026-03-23T05:55:31Z",
+    "last_notified_run_id": "20260323-135443-565653-orchestrate",
+    "last_notified_phase": "成本评审",
+    "last_auto_advance_ts": ""
+  },
+  "resume_state": {
+    "last_resume_ts": "",
+    "last_resume_source_dir": "",
+    "last_resume_source_run_id": "",
+    "last_resume_brief": "",
+    "superseded_run_id": ""
+  }
+}

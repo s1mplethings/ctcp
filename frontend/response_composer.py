@@ -16,6 +16,7 @@ from .conversation_mode_router import (
     is_project_execution_followup,
     route_conversation_mode,
 )
+from .frontdesk_state_machine import normalize_frontdesk_state
 from .message_sanitizer import sanitize_internal_text
 from .missing_info_rewriter import infer_missing_fields_from_text, rewrite_missing_requirements
 from .project_manager_mode import (
@@ -32,6 +33,7 @@ from .state_resolver import VisibleState, resolve_visible_state
 class InternalReplyPipelineState:
     conversation_context: dict[str, Any] = field(default_factory=dict)
     conversation_mode: ConversationMode = "SMALLTALK"
+    frontdesk_state: dict[str, Any] = field(default_factory=dict)
     selected_requirement_source: str = ""
     task_summary: str = ""
     known_facts: list[str] = field(default_factory=list)
@@ -558,94 +560,17 @@ def _compose_capability_reply(*, lang: str, latest_user_message: str) -> str:
 
 
 def _entry_hint_bank(lang: str, rag_hints: Mapping[str, Any] | None = None) -> dict[str, list[str]]:
-    if str(lang).lower() == "en":
-        base = {
-            "greet_open": [
-                "Hi, I'm here.",
-                "Hello, I'm online and ready.",
-                "Hey, I'm here with you.",
-            ],
-            "greet_next": [
-                "What can I help you with?",
-                "Tell me your target and I'll help structure it.",
-                "You can share your project goal and I'll shape it into an executable plan.",
-            ],
-            "status_idle": [
-                "There is no active task yet.",
-                "I don't have an active project bound yet.",
-            ],
-            "status_active": [
-                "I'm tracking your active task now.",
-                "Your current task is still in progress on my side.",
-            ],
-            "intake_open": [
-                "Understood.",
-                "Got it.",
-                "Thanks, received.",
-            ],
-            "intake_next": [
-                "Share the project goal, input, and expected output in one sentence.",
-                "Give me one concise line with target, input, and output; I'll convert it into an executable plan.",
-                "Tell me what to build, what goes in, and what should come out, and I'll structure the first plan.",
-            ],
-            "smalltalk": [
-                "I'm here and ready to help.",
-                "I'm here with you. Tell me what you want to handle first.",
-                "I'm online. Send your goal and I'll pick it up.",
-            ],
-            "blocked_no_task": [
-                "I got your message. Share this round's concrete goal and I'll continue immediately.",
-                "I received this. Tell me the exact goal for this round and I'll move forward now.",
-            ],
-        }
-    else:
-        base = {
-            "greet_open": [
-                "你好！",
-                "嗨，在的。",
-                "你好，随时可以开始。",
-            ],
-            "greet_next": [
-                "有什么需要帮忙的？",
-                "你说说看要做什么？",
-                "想做什么项目？直接告诉我就行。",
-            ],
-            "status_idle": [
-                "目前没有在做的任务。",
-                "手头没有进行中的项目。",
-            ],
-            "status_active": [
-                "你的任务我还在跟着。",
-                "在做呢，还在推进中。",
-            ],
-            "intake_open": [
-                "收到。",
-                "明白。",
-                "OK。",
-            ],
-            "intake_next": [
-                "简单说一下目标、输入和想要什么结果，我来帮你理。",
-                "你把要做的事情、输入和期望结果告诉我，我帮你整理成方案。",
-                "目标和预期结果说一下，我来帮你规划。",
-            ],
-            "smalltalk": [
-                "在的，有什么需要？",
-                "我在，你说。",
-                "随时可以开始，你说目标就行。",
-            ],
-            "blocked_no_task": [
-                "收到了。你告诉我这轮想做什么，我马上接着来。",
-                "消息收到。你给我个具体目标，我就能继续。",
-            ],
-        }
-    if isinstance(rag_hints, Mapping):
-        for key, value in rag_hints.items():
-            if not isinstance(value, list):
-                continue
-            hints = [re.sub(r"\s+", " ", str(x or "").strip()) for x in value if re.sub(r"\s+", " ", str(x or "").strip())]
-            if hints:
-                base[str(key)] = hints
-    return base
+    """Return empty lists - no preset messages, rely 100% on API generated content."""
+    return {
+        "greet_open": [],
+        "greet_next": [],
+        "status_idle": [],
+        "status_active": [],
+        "intake_open": [],
+        "intake_next": [],
+        "smalltalk": [],
+        "blocked_no_task": [],
+    }
 
 
 def _compose_entry_reply(
@@ -1028,38 +953,72 @@ def run_internal_reply_pipeline(
     active_task_state: dict[str, Any] = dict(active_state_raw) if isinstance(active_state_raw, Mapping) else {}
     if re.sub(r"\s+", " ", str(task_summary or "").strip()):
         active_task_state.setdefault("task_summary", re.sub(r"\s+", " ", str(task_summary or "").strip()))
+    frontdesk_state = normalize_frontdesk_state(note.get("frontdesk_state", {}), lang)
+    frontdesk_question = ""
+    decision_points = frontdesk_state.get("decision_points", [])
+    if isinstance(decision_points, list):
+        for item in decision_points:
+            if not isinstance(item, Mapping):
+                continue
+            question = re.sub(r"\s+", " ", str(item.get("question", "")).strip())
+            if question:
+                frontdesk_question = question
+                break
+    raw_backend = dict(raw_backend_state)
+    frontdesk_name = str(frontdesk_state.get("state", "")).strip()
+    frontdesk_interrupt = str(frontdesk_state.get("interrupt_kind", "")).strip()
+    if frontdesk_name == "AwaitDecision":
+        raw_backend["waiting_for_decision"] = True
+        raw_backend["decisions_count"] = max(int(raw_backend.get("decisions_count", 0) or 0), max(1, len(decision_points)))
+        if frontdesk_question and not str(raw_next_question or "").strip():
+            raw_next_question = frontdesk_question
+    elif frontdesk_name == "Error":
+        raw_backend["blocked_needs_input"] = True
+        raw_backend["needs_input"] = bool(frontdesk_question or str(raw_next_question or "").strip())
+    elif frontdesk_name == "ReturnResult":
+        raw_backend["stage"] = str(raw_backend.get("stage", "")).strip() or "done"
     mode = route_conversation_mode(
         user_messages,
         latest_user_message,
         active_task_state,
     )
+    if frontdesk_name == "AwaitDecision":
+        mode = "PROJECT_DECISION_REPLY"
+    elif frontdesk_name in {"ReturnResult", "InterruptRecover"} and frontdesk_interrupt in {"status_query", "result_query"}:
+        mode = "STATUS_QUERY"
     signal_score = compute_task_signal_score(user_messages + ([latest_user_message] if latest_user_message else []))
     has_signal = has_sufficient_task_signal(user_messages + ([latest_user_message] if latest_user_message else []))
     has_active_task = has_valid_task_summary(active_task_state)
     state = InternalReplyPipelineState(
         conversation_context={
             "user_messages": list(user_messages),
-            "raw_backend_state": dict(raw_backend_state),
+            "raw_backend_state": dict(raw_backend),
             "latest_user_message": latest_user_message,
             "has_active_task": has_active_task,
         },
         conversation_mode=mode,
+        frontdesk_state=dict(frontdesk_state),
         task_summary=re.sub(r"\s+", " ", str(task_summary or "").strip()),
         task_signal_score=float(signal_score),
         has_sufficient_task_signal=bool(has_signal),
     )
     state.conversation_context["conversation_mode"] = mode
+    state.conversation_context["frontdesk_state"] = dict(frontdesk_state)
     state.conversation_context["task_signal_score"] = float(signal_score)
     state.conversation_context["has_sufficient_task_signal"] = bool(has_signal)
-    progress_binding = _normalize_progress_binding(raw_backend_state.get("progress_binding", {}))
-    progress_requested = bool(progress_binding) and (mode == "STATUS_QUERY" or _is_progress_update_request(latest_user_message))
+    progress_binding = _normalize_progress_binding(raw_backend.get("progress_binding", {}))
+    progress_requested = bool(progress_binding) and (
+        mode == "STATUS_QUERY"
+        or _is_progress_update_request(latest_user_message)
+        or (frontdesk_name in {"InterruptRecover", "ReturnResult"} and frontdesk_interrupt in {"status_query", "result_query"})
+    )
 
     if progress_requested:
-        raw_state = dict(raw_backend_state)
+        raw_state = dict(raw_backend)
         raw_state["has_actionable_goal"] = bool(
-            raw_backend_state.get("has_actionable_goal", False) or state.task_summary or progress_binding.get("current_task_goal")
+            raw_backend.get("has_actionable_goal", False) or state.task_summary or progress_binding.get("current_task_goal")
         )
-        raw_state["first_pass_understood"] = bool(raw_backend_state.get("first_pass_understood", False) or progress_binding)
+        raw_state["first_pass_understood"] = bool(raw_backend.get("first_pass_understood", False) or progress_binding)
         state.visible_state = resolve_visible_state(raw_state)
         if state.visible_state == "NEEDS_ONE_OR_TWO_DETAILS":
             state.visible_state = "EXECUTING"
@@ -1067,7 +1026,7 @@ def run_internal_reply_pipeline(
             binding=progress_binding,
             visible_state=state.visible_state,
             lang=lang,
-            fallback_question=raw_next_question,
+            fallback_question=frontdesk_question or raw_next_question,
         )
         state.review_flags.append("progress_binding_consumed")
         state.candidate_questions = progress_questions
@@ -1077,10 +1036,26 @@ def run_internal_reply_pipeline(
         state = _stage_final_emission(state)
         return state
 
+    if frontdesk_name == "AwaitDecision":
+        state.visible_state = "WAITING_FOR_DECISION"
+        if frontdesk_question:
+            state.candidate_questions = [frontdesk_question]
+        state.draft_reply = compose_user_reply(
+            visible_state=state.visible_state,
+            task_summary=state.task_summary,
+            followup_questions=state.candidate_questions,
+            notes={"lang": lang},
+        )
+        state.review_flags.append("frontdesk_await_decision_consumed")
+        state = _stage_consistency_review(state, notes=note, lang=lang)
+        state = _stage_safety_sanitization(state, lang=lang)
+        state = _stage_final_emission(state)
+        return state
+
     non_project_modes = {"GREETING", "SMALLTALK", "CAPABILITY_QUERY", "STATUS_QUERY", "PROJECT_INTAKE"}
     if mode in non_project_modes:
         if mode == "STATUS_QUERY" and has_active_task:
-            resolved_visible_state = resolve_visible_state(raw_backend_state)
+            resolved_visible_state = resolve_visible_state(raw_backend)
             if resolved_visible_state in {"WAITING_FOR_DECISION", "BLOCKED_NEEDS_INPUT", "DONE", "EXECUTING"}:
                 state.visible_state = resolved_visible_state
             else:
@@ -1155,7 +1130,7 @@ def run_internal_reply_pipeline(
     state = _stage_requirement_extraction(state, notes=note, lang=lang)
     state = _stage_project_manager_draft(
         state,
-        raw_backend_state=raw_backend_state,
+        raw_backend_state=raw_backend,
         raw_reply_text=raw_reply_text,
         raw_next_question=raw_next_question,
         notes={
@@ -1174,6 +1149,7 @@ def _pipeline_state_to_dict(state: InternalReplyPipelineState) -> dict[str, Any]
     return {
         "conversation_context": dict(state.conversation_context),
         "conversation_mode": state.conversation_mode,
+        "frontdesk_state": dict(state.frontdesk_state),
         "selected_requirement_source": state.selected_requirement_source,
         "task_summary": state.task_summary,
         "known_facts": list(state.known_facts),
@@ -1192,89 +1168,16 @@ def _pipeline_state_to_dict(state: InternalReplyPipelineState) -> dict[str, Any]
 
 
 def _user_reply_hint_bank(lang: str) -> dict[str, list[str]]:
-    """Return multiple natural-sounding reply variants per visible state."""
-    if lang == "en":
-        return {
-            "done": [
-                "Done — results are ready for you to review.",
-                "All finished. Want me to walk you through the highlights?",
-                "This round is wrapped up. I can pull out the key points whenever you're ready.",
-            ],
-            "waiting_decision": [
-                "I need your call on something before I keep going.",
-                "There's a fork in the road — which way do you want to go?",
-                "One decision point left. Once you pick, I'll keep moving.",
-            ],
-            "blocked_input": [
-                "I still need a bit more info to keep going.",
-                "Almost there — just missing one or two details.",
-                "I need you to fill in a gap before I can continue.",
-            ],
-            "blocked_internal": [
-                "Working on it — I'll update you as soon as there's progress.",
-                "Still setting things up on my end. Hang tight.",
-                "Preparing your plan now. I'll share it once it's solid.",
-            ],
-            "blocked_temp_fail": [
-                "Hit a small hiccup while preparing the plan. Let me try again rather than send something unreliable.",
-                "Ran into a temporary issue on my side. Regrouping now.",
-            ],
-            "executing": [
-                "On it.",
-                "Got it, working on it now.",
-                "Understood — already on it.",
-            ],
-            "understood": [
-                "Got it. Let me set this up and get it moving.",
-                "Understood — I'll get this started for you.",
-                "OK, I'll take it from here.",
-            ],
-            "needs_details": [
-                "I get the idea. Just need a couple specifics before I dive in.",
-                "Direction is clear. A few details will help me nail the first version.",
-                "Almost ready to start — one or two things to confirm first.",
-            ],
-        }
+    """Return empty lists - no preset messages, rely 100% on API generated content."""
     return {
-        "done": [
-            "做好了，你可以看一下结果。",
-            "这轮完成了，需要我帮你划重点吗？",
-            "结果出来了，随时可以看。",
-        ],
-        "waiting_decision": [
-            "有个地方需要你来定一下。",
-            "到一个选择的节点了，你来拍板。",
-            "需要你做个决定，定了我马上继续。",
-        ],
-        "blocked_input": [
-            "还差一点信息才能继续。",
-            "差不多了，再补一两个细节就行。",
-            "需要你补充一下，我才好往下走。",
-        ],
-        "blocked_internal": [
-            "正在帮你准备方案，好了会告诉你。",
-            "还在整理中，稍等一下。",
-            "正在处理，有进展马上同步给你。",
-        ],
-        "blocked_temp_fail": [
-            "刚才处理时碰到一个小问题，我重新来过，不会把不靠谱的结果发给你。",
-            "遇到一个临时状况，正在重新整理。",
-        ],
-        "executing": [
-            "这边已经进入处理阶段。",
-            "当前在按这个方向推进。",
-            "现在就在往下做。",
-        ],
-        "understood": [
-            "这件事我先按你刚说的范围收进来。",
-            "当前目标已经锁住，我先顺着这个方向整理第一版。",
-            "方向清楚了，我先把第一步往前推。",
-        ],
-        "needs_details": [
-            "大方向清楚了，再确认一两个细节就能开始。",
-            "整体明白了，补充一两个参数就可以动手。",
-            "方向没问题，还差一点具体信息。",
-        ],
+        "done": [],
+        "waiting_decision": [],
+        "blocked_input": [],
+        "blocked_internal": [],
+        "blocked_temp_fail": [],
+        "executing": [],
+        "understood": [],
+        "needs_details": [],
     }
 
 

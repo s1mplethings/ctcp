@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la scripts/*.py)",
+      "Read(//c//**)",
+      "Bash(ls /projects/)",
+      "Bash(ollama list:*)",
+      "Bash(echo $CTCP_TG_TOKEN)",
+      "Bash(python scripts/ctcp_support_bot.py --help)",
+      "Bash(python scripts/ctcp_support_bot.py --stdin --provider ollama_agent --chat-id test123)",
+      "Bash(python scripts/ctcp_support_bot.py telegram --help)",
+      "Bash(python -c \"import os; token = os.environ.get\\(''CTCP_TG_TOKEN''\\) or os.environ.get\\(''TELEGRAM_BOT_TOKEN''\\); print\\(''Token found'' if token else ''Token not found''\\)\")",
+      "Bash(taskkill //F //IM python.exe //FI \"WINDOWTITLE eq ctcp_support_bot*\")",
+      "Bash(curl -s \"https://api.telegram.org/bot$CTCP_TG_BOT_TOKEN/getMe\")",
+      "Bash(iconv -f gbk -t utf-8)",
+      "Bash(export CTCP_TG_TOKEN=\"8589287444:AAERk8TVIoJGFIj5X2-eIFaic5er2A1J1uQ\")",
+      "Bash(python scripts/ctcp_support_bot.py --provider ollama_agent telegram)",
+      "Bash(python scripts/ctcp_support_bot.py telegram)",
+      "Bash(find D:/.c_projects/adc/ctcp/runtime -type f -name *.json*)",
+      "Bash(python:*)",
+      "Bash(find C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/support_sessions/6092527664 -name *review* -o -name *contract*)",
+      "Bash(CTCP_TG_TOKEN=\"$CTCP_TG_BOT_TOKEN\" python scripts/ctcp_support_bot.py telegram)"
+    ]
+  }
+}

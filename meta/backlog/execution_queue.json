@@ -1792,6 +1792,85 @@
       },
       "status": "done",
       "notes": "Completed on 2026-03-17: old-project progress follow-ups now route through `STATUS_QUERY`, `should_refresh_project_brief()` preserves the existing brief for this wording class, focused regressions landed in `tests/test_frontend_rendering_boundary.py` and `tests/test_support_bot_humanization.py`, canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` returned 0 with lite replay summary at C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260317-180318/summary.json, and the Telegram bot was restarted as PID 37072 at 2026-03-17 18:01:38."
+    },
+    {
+      "id": "ADHOC-20260317-support-frontdesk-state-machine",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Land an explicit task-oriented support frontdesk state machine",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260317-support-previous-project-status-grounding"
+      ],
+      "dod": [
+        "authoritative support/session contracts define an explicit frontdesk state machine, required slots, interrupt classes, and the boundary that it augments rather than replaces the existing CTCP flow",
+        "support runtime persists and consumes frontdesk state plus style profile so reply strategy, decision gating, and interrupt recovery follow explicit state instead of only the latest-turn free reply path",
+        "focused regressions plus canonical verify prove the support entrypoint accumulates and consumes the new state-machine structure"
+      ],
+      "artifacts": {
+        "produces": [
+          "frontend/conversation_mode_router.py",
+          "frontend/frontdesk_state_machine.py",
+          "frontend/response_composer.py",
+          "scripts/ctcp_support_bot.py",
+          "contracts/frontend_session_contract.md",
+          "docs/10_team_mode.md",
+          "docs/13_contracts_index.md",
+          "tests/test_frontdesk_state_machine.py",
+          "tests/test_runtime_wiring_contract.py",
+          "tests/test_support_bot_humanization.py",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260317-support-frontdesk-state-machine.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260317-support-frontdesk-state-machine.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_frontdesk_state_machine.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-03-17: explicit frontdesk-state contracts landed in `contracts/frontend_session_contract.md` and `docs/10_team_mode.md`, runtime persistence/consumption landed across `frontend/frontdesk_state_machine.py`, `frontend/response_composer.py`, and `scripts/ctcp_support_bot.py`, focused regressions landed in `tests/test_frontdesk_state_machine.py`, `tests/test_runtime_wiring_contract.py`, and `tests/test_support_bot_humanization.py`, and final canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` returned 0 after queue/task/report closure sync with lite replay summary at C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260317-205618."
+    },
+    {
+      "id": "ADHOC-20260321-src-functional-boundary-refactor",
+      "layer": "L2",
+      "priority": "P1",
+      "title": "Refactor GUI src functional boundaries for thinner Bridge and single file-operation adapter",
+      "owner_role": "Desktop Runtime Maintainer",
+      "deps": [
+        "ADHOC-20260317-support-frontdesk-state-machine"
+      ],
+      "dod": [
+        "Bridge graph-view projection logic is extracted into a dedicated projector module so core bridge no longer owns Summary/Pipeline projection details",
+        "Bridge and SddaiBridge no longer overlap on file-open/read APIs; file opening and safe file reading stay in SddaiBridge while Bridge focuses on project graph orchestration",
+        "build wiring and canonical verify are executed, with command evidence, first failure point, and minimal fix strategy recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "include/Bridge.h",
+          "src/Bridge.cpp",
+          "include/GraphViewProjector.h",
+          "src/GraphViewProjector.cpp",
+          "src/MainWindow.cpp",
+          "CMakeLists.txt",
+          "artifacts/PLAN.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260321-src-functional-boundary-refactor.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260321-src-functional-boundary-refactor.md"
+        ],
+        "tests": [
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-03-21: extracted graph view projection logic from `src/Bridge.cpp` into `include/GraphViewProjector.h` + `src/GraphViewProjector.cpp`, removed duplicate file-open/read API surface from `Bridge` so file operations remain in `SddaiBridge`, switched `MainWindow` file-tree double click to `SddaiBridge::openPath`, and passed canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` after the minimal first-failure repair (`patch_check` Scope-Allow update in `artifacts/PLAN.md`). Final closure lite replay run_dir: C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260321-113846."
     }
   ]
 }

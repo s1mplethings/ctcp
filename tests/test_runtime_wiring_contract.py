@@ -117,6 +117,39 @@ class RuntimeWiringContractTests(unittest.TestCase):
         self.assertNotIn("什么类型的项目", result.reply_text)
         self.assertFalse(any("什么类型的项目" in q for q in result.followup_questions), msg=result.followup_questions)
 
+    def test_frontend_render_consumes_frontdesk_await_decision_state(self) -> None:
+        result = render_frontend_output(
+            raw_backend_state={
+                "stage": "analysis",
+                "has_actionable_goal": True,
+                "first_pass_understood": True,
+            },
+            task_summary="继续优化 VN 前台",
+            raw_reply_text="",
+            raw_next_question="",
+            notes={
+                "lang": "zh",
+                "recent_user_messages": ["继续优化这个项目"],
+                "frontdesk_state": {
+                    "state": "AwaitDecision",
+                    "active_task_id": "run-vn",
+                    "current_goal": "继续优化 VN 前台",
+                    "decision_points": [
+                        {
+                            "decision_id": "d-ui",
+                            "question": "这轮你要保留旧 UI，还是直接重做 UI？",
+                        }
+                    ],
+                },
+            },
+        )
+        state = dict(result.pipeline_state or {})
+        self.assertEqual(str(dict(state.get("frontdesk_state", {})).get("state", "")), "AwaitDecision")
+        self.assertTrue(
+            ("重做 UI" in result.reply_text) or any("重做 UI" in q for q in result.followup_questions),
+            msg=f"reply={result.reply_text}; questions={result.followup_questions}",
+        )
+
     def test_frontend_new_run_path_calls_bridge_entrypoint(self) -> None:
         args = argparse.Namespace(
             goal="build a support bot project",
@@ -208,6 +241,75 @@ class RuntimeWiringContractTests(unittest.TestCase):
             self.assertEqual(str(saved.get("reply_text", "")), "收到，我先整理成客户可见的支持答复。")
             events = (run_dir / "events.jsonl").read_text(encoding="utf-8", errors="replace")
             self.assertIn("SUPPORT_REPLY_WRITTEN", events)
+
+    def test_support_bot_process_message_persists_frontdesk_state_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_runtime_support_frontdesk_state_") as td:
+            runs_root = Path(td) / "runs"
+
+            def _fake_sync_project_context(**kwargs):  # type: ignore[no-untyped-def]
+                session_state = kwargs["session_state"]
+                session_state["bound_run_id"] = "r-frontdesk"
+                session_state["bound_run_dir"] = "D:/tmp/r-frontdesk"
+                session_state["project_memory"]["project_brief"] = "请帮我把前台改成状态机"
+                session_state["task_summary"] = "请帮我把前台改成状态机"
+                return (
+                    {
+                        "run_id": "r-frontdesk",
+                        "run_dir": "D:/tmp/r-frontdesk",
+                        "goal": "请帮我把前台改成状态机",
+                        "status": {
+                            "run_status": "running",
+                            "verify_result": "",
+                            "needs_user_decision": False,
+                            "decisions_needed_count": 0,
+                            "gate": {"state": "open", "owner": "", "reason": ""},
+                        },
+                        "whiteboard": {},
+                    },
+                    session_state,
+                )
+
+            def _fake_execute(*, provider, run_dir, request, config):  # type: ignore[no-untyped-def]
+                del provider, request, config
+                target = run_dir / support_bot.SUPPORT_REPLY_PROVIDER_REL_PATH
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(
+                    json.dumps(
+                        {
+                            "reply_text": "我先按状态机这条主线往下推。",
+                            "next_question": "",
+                            "actions": [],
+                            "debug_notes": "",
+                        },
+                        ensure_ascii=False,
+                    ),
+                    encoding="utf-8",
+                )
+                return {"status": "executed", "reason": "ok"}
+
+            with mock.patch.object(support_bot, "get_runs_root", return_value=runs_root), mock.patch.object(
+                support_bot, "get_repo_slug", return_value="ctcp"
+            ), mock.patch.object(
+                support_bot, "frontend_route_conversation_mode", return_value="PROJECT_DETAIL"
+            ), mock.patch.object(
+                support_bot, "sync_project_context", side_effect=_fake_sync_project_context
+            ), mock.patch.object(
+                support_bot, "execute_provider", side_effect=_fake_execute
+            ), mock.patch.object(
+                support_bot, "render_frontend_output", None
+            ):
+                _doc, run_dir = support_bot.process_message(
+                    chat_id="runtime-frontdesk-demo",
+                    user_text="请帮我把前台改成状态机",
+                    source="stdin",
+                )
+
+            session_state = json.loads((run_dir / support_bot.SUPPORT_SESSION_STATE_REL_PATH).read_text(encoding="utf-8"))
+            frontdesk_state = dict(session_state.get("frontdesk_state", {}))
+            latest_support_context = dict(session_state.get("latest_support_context", {}))
+            self.assertEqual(str(frontdesk_state.get("state", "")), "Execute")
+            self.assertEqual(str(frontdesk_state.get("active_task_id", "")), "r-frontdesk")
+            self.assertEqual(str(latest_support_context.get("frontdesk_state", "")), "Execute")
 
     def test_support_bot_greeting_turn_still_uses_provider_path(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_runtime_support_greeting_") as td:
