@@ -763,6 +763,22 @@ def _render_prompt(
         "",
     ]
 
+    # Add detailed patch format instructions for patchmaker role
+    if role.lower() == "patchmaker":
+        lines += [
+            "## Patch Format Requirements",
+            "",
+            "For creating new files:",
+            "- Use hunk header: @@ -0,0 +1,N @@ where N is the number of lines in the new file",
+            "- Example for a 57-line file: @@ -0,0 +1,57 @@",
+            "- WRONG: @@ -0,57 +1,57 @@ (this is invalid)",
+            "",
+            "For modifying existing files:",
+            "- Use standard hunk header: @@ -start,count +start,count @@",
+            "- Example: @@ -10,5 +10,7 @@ (removes 5 lines starting at 10, adds 7 lines starting at 10)",
+            "",
+        ]
+
     for key in ("context", "constraints", "fix_brief", "externals"):
         p = evidence[key]
         lines += [f"## {p.name}", _read_text(p, limit=18000), ""]
