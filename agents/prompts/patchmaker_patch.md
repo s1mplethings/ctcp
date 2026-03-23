@@ -44,12 +44,28 @@ END SYSTEM CONTRACT
 - End output with a trailing newline.
 
 ## Patch Shape (required)
+
+### For modifying existing files:
 diff --git a/<path> b/<path>
 --- a/<path>
 +++ b/<path>
 @@ -old_start,old_len +new_start,new_len @@
  <context/removed lines>
 +<added lines>
+
+### For creating new files (CRITICAL):
+diff --git a/<path> b/<path>
+new file mode 100644
+index 0000000..<hash>
+--- /dev/null
++++ b/<path>
+@@ -0,0 +1,<line_count> @@
++<all lines of the new file>
+
+IMPORTANT: When creating a new file, the hunk header MUST be:
+@@ -0,0 +1,N @@
+Where N is the number of lines in the new file.
+DO NOT use @@ -0,N +1,N @@ - this is WRONG and will cause git apply to fail.
 
 ## Safety
 - Do not rewrite full files outside hunk format.
