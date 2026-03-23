@@ -258,6 +258,12 @@ try:
         is_status_query as frontend_is_status_query,
         route_conversation_mode as frontend_route_conversation_mode,
     )
+    from frontend.frontdesk_state_machine import (
+        derive_frontdesk_state as frontend_derive_frontdesk_state,
+        normalize_frontdesk_state as frontend_normalize_frontdesk_state,
+        prompt_context_from_frontdesk_state as frontend_prompt_context_from_frontdesk_state,
+        reply_strategy_from_frontdesk_state as frontend_reply_strategy_from_frontdesk_state,
+    )
     from frontend.response_composer import render_frontend_output
 except ModuleNotFoundError:
     if str(ROOT) not in sys.path:
@@ -269,6 +275,12 @@ except ModuleNotFoundError:
         is_status_query as frontend_is_status_query,
         route_conversation_mode as frontend_route_conversation_mode,
     )
+    from frontend.frontdesk_state_machine import (
+        derive_frontdesk_state as frontend_derive_frontdesk_state,
+        normalize_frontdesk_state as frontend_normalize_frontdesk_state,
+        prompt_context_from_frontdesk_state as frontend_prompt_context_from_frontdesk_state,
+        reply_strategy_from_frontdesk_state as frontend_reply_strategy_from_frontdesk_state,
+    )
     from frontend.response_composer import render_frontend_output
 except Exception:
     frontend_has_sufficient_task_signal = None  # type: ignore[assignment]
@@ -276,6 +288,10 @@ except Exception:
     frontend_is_greeting_only = None  # type: ignore[assignment]
     frontend_is_status_query = None  # type: ignore[assignment]
     frontend_route_conversation_mode = None  # type: ignore[assignment]
+    frontend_derive_frontdesk_state = None  # type: ignore[assignment]
+    frontend_normalize_frontdesk_state = None  # type: ignore[assignment]
+    frontend_prompt_context_from_frontdesk_state = None  # type: ignore[assignment]
+    frontend_reply_strategy_from_frontdesk_state = None  # type: ignore[assignment]
     render_frontend_output = None  # type: ignore[assignment]
 
 
@@ -499,47 +515,25 @@ def support_provider_candidates(config: dict[str, Any], override: str = "") -> l
 
 
 def model_unavailable_reply_doc(result: dict[str, Any], *, lang_hint: str = "zh") -> dict[str, Any]:
-    reason = sanitize_inline_text(str(result.get("reason", "")), max_chars=180)
-    lang = str(lang_hint or "").strip().lower() or "zh"
-    had_local = bool(str(result.get("local_provider", "")).strip())
-    reason_kind = sanitize_inline_text(str(result.get("api_failure_kind", "")), max_chars=40).lower() or "unavailable"
-    if lang == "en":
-        if reason_kind == "invalid_reply":
-            reply_text = "The API path did not produce a usable reply for this turn."
-            if had_local:
-                reply_text = "The API path did not produce a usable reply for this turn, and the local fallback is not reachable either."
-        else:
-            reply_text = "The API reply path is unavailable right now."
-            if had_local:
-                reply_text = "The API reply path is unavailable right now, and the local fallback is not reachable either."
-        next_question = "Reply with \"continue\" and I will retry, or send me the error you are seeing."
-    else:
-        if reason_kind == "invalid_reply":
-            reply_text = "这轮 API 没给到可直接发出的回复。"
-            if had_local:
-                reply_text = "这轮 API 没给到可直接发出的回复，本地回复也没接上。"
-        else:
-            reply_text = "现在 API 回复链路没连上。"
-            if had_local:
-                reply_text = "现在 API 回复链路没连上，本地回复也没接上。"
-        next_question = "你回我“继续”我再重试一次，或者把你现在看到的报错发我。"
+    """Return empty reply when API is unavailable - no internal debug messages to user."""
     return {
-        "reply_text": reply_text,
-        "next_question": next_question,
-        "actions": [{"type": "request_file", "hint": "如有错误日志，可直接上传帮助定位"}],
-        "debug_notes": reason or "model_unavailable",
+        "reply_text": "",
+        "next_question": "",
+        "actions": [],
+        "debug_notes": sanitize_inline_text(str(result.get("reason", "")), max_chars=180) or "model_unavailable",
     }
 
 
 def deferred_support_reply_doc(provider: str, result: dict[str, Any]) -> dict[str, Any]:
+    """Return empty reply when deferred - no internal debug messages to user."""
     path_hint = sanitize_inline_text(str(result.get("path", "")), max_chars=180)
     notes = f"deferred:{provider}"
     if path_hint:
         notes += f" path={path_hint}"
     return {
-        "reply_text": "这个回复通道现在还没给出可直接发出的结果，我先把你这轮内容挂上继续处理。",
+        "reply_text": "",
         "next_question": "",
-        "actions": [{"type": "request_file", "hint": "如果你手上有现成素材、日志或参考样例，可以直接发我"}],
+        "actions": [],
         "debug_notes": notes,
     }
 
@@ -570,8 +564,14 @@ def load_inbox_history(run_dir: Path, limit: int = 8) -> list[dict[str, str]]:
 
 
 def default_support_session_state(chat_id: str) -> dict[str, Any]:
+    frontdesk_state: dict[str, Any] = {}
+    if frontend_normalize_frontdesk_state is not None:
+        try:
+            frontdesk_state = frontend_normalize_frontdesk_state({}, "")
+        except Exception:
+            frontdesk_state = {}
     return {
-        "schema_version": "ctcp-support-session-state-v4",
+        "schema_version": "ctcp-support-session-state-v5",
         "chat_id": chat_id,
         "bound_run_id": "",
         "bound_run_dir": "",
@@ -579,6 +579,7 @@ def default_support_session_state(chat_id: str) -> dict[str, Any]:
         "latest_conversation_mode": "",
         "last_bridge_sync_ts": "",
         "latest_support_context": {},
+        "frontdesk_state": frontdesk_state,
         "session_profile": {
             "lang_hint": "",
             "last_source": "",
@@ -665,6 +666,24 @@ def latest_resume_state(session_state: dict[str, Any]) -> dict[str, Any]:
     return _state_zone(session_state, "resume_state")
 
 
+def current_frontdesk_state(session_state: dict[str, Any]) -> dict[str, Any]:
+    raw = session_state.get("frontdesk_state")
+    if not isinstance(raw, dict):
+        raw = {}
+    if frontend_normalize_frontdesk_state is not None:
+        try:
+            normalized = frontend_normalize_frontdesk_state(
+                raw,
+                sanitize_inline_text(str(_state_zone(session_state, "session_profile").get("lang_hint", "")), max_chars=12).lower(),
+            )
+            session_state["frontdesk_state"] = normalized
+            return normalized
+        except Exception:
+            pass
+    session_state["frontdesk_state"] = raw
+    return raw
+
+
 def normalize_support_session_state(doc: dict[str, Any] | None, chat_id: str) -> dict[str, Any]:
     state = default_support_session_state(chat_id)
     if isinstance(doc, dict):
@@ -679,6 +698,7 @@ def normalize_support_session_state(doc: dict[str, Any] | None, chat_id: str) ->
                 "notification_state",
                 "resume_state",
                 "latest_support_context",
+                "frontdesk_state",
             }:
                 if isinstance(value, dict):
                     _state_zone(state, key).update(value)
@@ -694,6 +714,10 @@ def normalize_support_session_state(doc: dict[str, Any] | None, chat_id: str) ->
     provider_runtime = _state_zone(state, "provider_runtime_buffer")
     notification_state = _state_zone(state, "notification_state")
     resume_state = _state_zone(state, "resume_state")
+    frontdesk_state = state.get("frontdesk_state")
+    if not isinstance(frontdesk_state, dict):
+        frontdesk_state = {}
+    state["frontdesk_state"] = frontdesk_state
     latest_support_context = state.get("latest_support_context")
     if not isinstance(latest_support_context, dict):
         latest_support_context = {}
@@ -767,6 +791,15 @@ def normalize_support_session_state(doc: dict[str, Any] | None, chat_id: str) ->
     resume_state["last_resume_brief"] = sanitize_inline_text(str(resume_state.get("last_resume_brief", "")), max_chars=280)
     resume_state["superseded_run_id"] = sanitize_inline_text(str(resume_state.get("superseded_run_id", "")), max_chars=80)
 
+    if frontend_normalize_frontdesk_state is not None:
+        try:
+            state["frontdesk_state"] = frontend_normalize_frontdesk_state(
+                frontdesk_state,
+                sanitize_inline_text(str(session_profile.get("lang_hint", "")), max_chars=12).lower(),
+            )
+        except Exception:
+            state["frontdesk_state"] = frontdesk_state
+
     state["task_summary"] = current_project_brief(state)
     state["latest_conversation_mode"] = sanitize_inline_text(
         str(turn_memory.get("latest_conversation_mode", state.get("latest_conversation_mode", ""))), max_chars=40
@@ -833,7 +866,11 @@ def record_provider_runtime(
 
 
 def support_active_task_state(session_state: dict[str, Any]) -> dict[str, Any]:
-    summary = current_project_brief(session_state)
+    frontdesk_state = current_frontdesk_state(session_state)
+    summary = sanitize_inline_text(
+        str(frontdesk_state.get("current_goal", "")).strip() or current_project_brief(session_state),
+        max_chars=280,
+    )
     project_constraints = _state_zone(session_state, "project_constraints_memory")
     execution_memory = _state_zone(session_state, "execution_memory")
     return {
@@ -841,6 +878,8 @@ def support_active_task_state(session_state: dict[str, Any]) -> dict[str, Any]:
         "user_goal": summary,
         "run_id": sanitize_inline_text(str(session_state.get("bound_run_id", "")), max_chars=80),
         "has_bound_run": bool(str(session_state.get("bound_run_id", "")).strip()),
+        "current_scope": sanitize_inline_text(str(frontdesk_state.get("current_scope", "")), max_chars=280),
+        "waiting_for": sanitize_inline_text(str(frontdesk_state.get("waiting_for", "")), max_chars=220),
         "project_constraints": sanitize_inline_text(str(project_constraints.get("constraint_brief", "")), max_chars=280),
         "execution_directive": sanitize_inline_text(str(execution_memory.get("latest_user_directive", "")), max_chars=280),
     }
@@ -1572,6 +1611,32 @@ def sync_project_context(
     return project_context, session_state
 
 
+def sync_frontdesk_state(
+    session_state: dict[str, Any],
+    *,
+    user_text: str,
+    conversation_mode: str,
+    project_context: dict[str, Any] | None = None,
+    delivery_state: dict[str, Any] | None = None,
+    provider_result: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    if frontend_derive_frontdesk_state is None:
+        return current_frontdesk_state(session_state)
+    try:
+        derived = frontend_derive_frontdesk_state(
+            user_text=user_text,
+            conversation_mode=conversation_mode,
+            session_state=session_state,
+            project_context=project_context,
+            delivery_state=delivery_state,
+            provider_result=provider_result,
+        )
+        session_state["frontdesk_state"] = derived
+        return current_frontdesk_state(session_state)
+    except Exception:
+        return current_frontdesk_state(session_state)
+
+
 def _existing_path(raw: str) -> Path | None:
     text = str(raw or "").strip()
     if not text:
@@ -1879,7 +1944,17 @@ def build_support_prompt(
 ) -> str:
     history = load_inbox_history(run_dir)
     mode = str(conversation_mode or "").strip().upper()
-    expose_project_context = should_expose_existing_project_context(mode, user_text)
+    frontdesk_state = current_frontdesk_state(session_state or {}) if isinstance(session_state, dict) else {}
+    frontdesk_strategy: dict[str, Any] = {}
+    if frontend_reply_strategy_from_frontdesk_state is not None:
+        try:
+            frontdesk_strategy = frontend_reply_strategy_from_frontdesk_state(
+                frontdesk_state,
+                conversation_mode=mode,
+            )
+        except Exception:
+            frontdesk_strategy = {}
+    expose_project_context = bool(frontdesk_strategy.get("allow_existing_project_reference", False)) or should_expose_existing_project_context(mode, user_text)
     expose_delivery_context = should_expose_delivery_context(mode, user_text)
     if not expose_project_context and history:
         history = history[-1:]
@@ -1891,10 +1966,16 @@ def build_support_prompt(
         "latest_user_message": user_text,
         "source": sanitize_inline_text(source, max_chars=24),
         "conversation_mode": mode,
+        "frontdesk_reply_strategy": {
+            "allow_existing_project_reference": bool(frontdesk_strategy.get("allow_existing_project_reference", False)),
+            "latest_turn_only": bool(frontdesk_strategy.get("latest_turn_only", (not expose_project_context))),
+            "prefer_frontend_render": bool(frontdesk_strategy.get("prefer_frontend_render", False)),
+            "prefer_progress_binding": bool(frontdesk_strategy.get("prefer_progress_binding", False)),
+        },
         "reply_guard": {
             "preset_customer_reply_allowed": False,
             "allow_existing_project_reference": expose_project_context,
-            "latest_turn_only": not expose_project_context,
+            "latest_turn_only": bool(frontdesk_strategy.get("latest_turn_only", (not expose_project_context))),
         },
     }
     if isinstance(session_state, dict):
@@ -1920,6 +2001,14 @@ def build_support_prompt(
             "lang_hint": sanitize_inline_text(str(session_profile.get("lang_hint", "")), max_chars=12),
             "last_bridge_sync_ts": sanitize_inline_text(str(session_state.get("last_bridge_sync_ts", "")), max_chars=40),
         }
+        if frontend_prompt_context_from_frontdesk_state is not None:
+            try:
+                context["frontdesk_state"] = frontend_prompt_context_from_frontdesk_state(
+                    frontdesk_state,
+                    include_task_context=expose_project_context,
+                )
+            except Exception:
+                pass
     project_prompt = _project_prompt_context(project_context)
     if expose_project_context and project_prompt:
         context["project_run"] = project_prompt
@@ -2031,22 +2120,8 @@ def failover_notice_text(*, lang: str, local_unavailable: bool = False) -> str:
 
 
 def failover_notice_text_with_kind(*, lang: str, reason_kind: str = "unavailable", local_unavailable: bool = False) -> str:
-    kind = str(reason_kind or "").strip().lower() or "unavailable"
-    if str(lang or "").strip().lower() == "en":
-        if kind == "invalid_reply":
-            if local_unavailable:
-                return "The API path did not yield a usable reply for this turn, and the local fallback is not reachable either."
-            return "The API path did not yield a usable reply for this turn, so I'm continuing from the local fallback path."
-        if local_unavailable:
-            return "The API reply path is unavailable right now, and the local fallback is not reachable either."
-        return "The API reply path is unavailable right now, so I'm continuing from the local fallback path."
-    if kind == "invalid_reply":
-        if local_unavailable:
-            return "这轮 API 没给到可直接发出的回复，本地回复也没接上。"
-        return "这轮 API 没给到可直接发出的回复，我先切到本地继续接住你这轮。"
-    if local_unavailable:
-        return "现在 API 回复链路没连上，本地回复也没接上。"
-    return "现在 API 回复链路没连上，我先切到本地继续接住你这轮。"
+    """Return empty string - no failover notices to user."""
+    return ""
 
 
 def reply_mentions_failover(reply_text: str) -> bool:
@@ -2598,6 +2673,7 @@ def build_final_reply_doc(
     task_summary_hint: str = "",
     lang_hint: str = "",
     delivery_state: dict[str, Any] | None = None,
+    frontdesk_state: dict[str, Any] | None = None,
     latest_user_message_override: str = "",
 ) -> dict[str, Any]:
     raw_doc = provider_doc if isinstance(provider_doc, dict) else fallback_reply_doc(provider_result)
@@ -2621,7 +2697,18 @@ def build_final_reply_doc(
     latest_user_message_for_render = sanitize_inline_text(latest_user_message_override, max_chars=280)
     if not latest_user_message_for_render:
         latest_user_message_for_render = user_msgs[-1] if user_msgs else task_summary_hint
-    if render_frontend_output is not None and not is_non_project_support_mode(conversation_mode):
+    frontdesk_strategy: dict[str, Any] = {}
+    has_frontdesk_state = isinstance(frontdesk_state, dict) and bool(frontdesk_state)
+    if frontend_reply_strategy_from_frontdesk_state is not None and has_frontdesk_state:
+        try:
+            frontdesk_strategy = frontend_reply_strategy_from_frontdesk_state(
+                frontdesk_state or {},
+                conversation_mode=conversation_mode,
+            )
+        except Exception:
+            frontdesk_strategy = {}
+    use_frontend_render = bool(frontdesk_strategy.get("prefer_frontend_render", not is_non_project_support_mode(conversation_mode)))
+    if render_frontend_output is not None and use_frontend_render:
         try:
             summary_text = task_summary_hint.strip() or (user_msgs[-1] if user_msgs else raw_reply_text)
             backend_state = build_frontend_backend_state(
@@ -2646,6 +2733,8 @@ def build_final_reply_doc(
                         "task_summary": summary_text,
                         "run_id": str(project_context.get("run_id", "")).strip() if isinstance(project_context, dict) else "",
                     },
+                    "frontdesk_state": frontdesk_state or {},
+                    "frontdesk_reply_strategy": frontdesk_strategy,
                 },
             )
             reply_text = str(getattr(rendered, "reply_text", "")).strip()
@@ -2715,6 +2804,13 @@ def build_final_reply_doc(
             debug_combined += f"; selected_requirement={selected}"
         if visible:
             debug_combined += f"; visible_state={visible}"
+    if isinstance(frontdesk_state, dict):
+        frontdesk_name = sanitize_inline_text(str(frontdesk_state.get("state", "")), max_chars=40)
+        interrupt_kind = sanitize_inline_text(str(frontdesk_state.get("interrupt_kind", "")), max_chars=40)
+        if frontdesk_name:
+            debug_combined += f"; frontdesk_state={frontdesk_name}"
+        if interrupt_kind:
+            debug_combined += f"; interrupt_kind={interrupt_kind}"
     if isinstance(project_context, dict):
         run_id = sanitize_inline_text(str(project_context.get("run_id", "")), max_chars=80)
         if run_id:
@@ -2773,8 +2869,15 @@ def process_message(
         conversation_mode=conversation_mode,
         session_state=session_state,
     )
-    save_support_session_state(run_dir, session_state)
     delivery_state = collect_public_delivery_state(session_state=session_state, project_context=project_context, source=source)
+    frontdesk_state = sync_frontdesk_state(
+        session_state,
+        user_text=user_text,
+        conversation_mode=conversation_mode,
+        project_context=project_context,
+        delivery_state=delivery_state,
+    )
+    save_support_session_state(run_dir, session_state)
 
     prompt_text = build_support_prompt(
         run_dir,
@@ -2974,8 +3077,17 @@ def process_message(
         task_summary_hint=current_project_brief(session_state),
         lang_hint=str(_state_zone(session_state, "session_profile").get("lang_hint", "")),
         delivery_state=delivery_state,
+        frontdesk_state=frontdesk_state,
     )
     write_json(run_dir / SUPPORT_REPLY_REL_PATH, final_doc)
+    frontdesk_state = sync_frontdesk_state(
+        session_state,
+        user_text=user_text,
+        conversation_mode=conversation_mode,
+        project_context=project_context,
+        delivery_state=delivery_state,
+        provider_result=result,
+    )
     remember_progress_notification(
         session_state,
         project_context=project_context,
@@ -2985,6 +3097,8 @@ def process_message(
         "run_id": str(project_context.get("run_id", "")) if isinstance(project_context, dict) else "",
         "provider_status": str(final_doc.get("provider_status", "")),
         "conversation_mode": conversation_mode,
+        "frontdesk_state": str(frontdesk_state.get("state", "")),
+        "interrupt_kind": str(frontdesk_state.get("interrupt_kind", "")),
         "package_ready": bool(delivery_state.get("package_ready", False)),
         "package_delivery_mode": str(delivery_state.get("package_delivery_mode", "")).strip(),
         "package_structure_hint": list(delivery_state.get("package_structure_hint", [])),
@@ -3352,20 +3466,40 @@ def build_grounded_status_reply_doc(
     session_state: dict[str, Any],
     project_context: dict[str, Any] | None,
 ) -> dict[str, Any]:
+    """Build status reply doc for proactive progress updates - calls API to generate content."""
     delivery_state = collect_public_delivery_state(session_state=session_state, project_context=project_context, source="telegram")
     lang_hint = str(_state_zone(session_state, "session_profile").get("lang_hint", "")).strip().lower()
     synthetic_status_turn = "what's the latest progress?" if lang_hint.startswith("en") else "现在做到什么程度了"
+
+    # Call support_lead to generate actual progress content via API
+    result, provider_doc = call_support_lead(
+        run_dir=run_dir,
+        user_text=synthetic_status_turn,
+        session_state=session_state,
+        project_context=project_context,
+        conversation_mode="STATUS_QUERY",
+        provider_override="",
+    )
+
+    frontdesk_state = sync_frontdesk_state(
+        session_state,
+        user_text=synthetic_status_turn,
+        conversation_mode="STATUS_QUERY",
+        project_context=project_context,
+        delivery_state=delivery_state,
+    )
     doc = build_final_reply_doc(
         run_dir=run_dir,
-        provider="support_runtime",
-        provider_result={"status": "executed", "reason": "proactive_progress"},
-        provider_doc={"reply_text": "", "next_question": "", "actions": [], "debug_notes": "proactive_progress"},
+        provider=str(result.get("provider", "api_agent")),
+        provider_result=result,
+        provider_doc=provider_doc,
         project_context=project_context,
         source_hint="telegram",
         conversation_mode="STATUS_QUERY",
         task_summary_hint=current_project_brief(session_state),
         lang_hint=lang_hint,
         delivery_state=delivery_state,
+        frontdesk_state=frontdesk_state,
         latest_user_message_override=synthetic_status_turn,
     )
     return doc
@@ -3418,6 +3552,7 @@ def run_proactive_support_cycle(tg: TelegramClient, allowlist: set[int] | None) 
             continue
 
         doc = build_grounded_status_reply_doc(run_dir=run_dir, session_state=session_state, project_context=project_context)
+        frontdesk_state = current_frontdesk_state(session_state)
         reply_text = str(doc.get("reply_text", "")).strip()
         if not reply_text:
             continue
@@ -3427,6 +3562,8 @@ def run_proactive_support_cycle(tg: TelegramClient, allowlist: set[int] | None) 
             "run_id": str(project_context.get("run_id", "")),
             "provider_status": str(doc.get("provider_status", "")),
             "conversation_mode": "STATUS_QUERY",
+            "frontdesk_state": str(frontdesk_state.get("state", "")),
+            "interrupt_kind": str(frontdesk_state.get("interrupt_kind", "")),
             "package_ready": False,
             "package_delivery_mode": "",
             "package_structure_hint": [],
@@ -3461,6 +3598,11 @@ def resolve_telegram_token(raw: str) -> str:
 
 
 def run_stdin_mode(chat_id: str, provider_override: str = "") -> int:
+    # 修复Windows编码问题：确保stdin使用UTF-8编码
+    if sys.stdin.encoding != 'utf-8':
+        import io
+        sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
+
     user_text = utf8_clean(sys.stdin.read()).strip()
     if not user_text:
         print("[ctcp_support_bot] stdin message is empty", file=sys.stderr)
