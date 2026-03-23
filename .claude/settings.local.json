@@ -19,7 +19,9 @@
       "Bash(find D:/.c_projects/adc/ctcp/runtime -type f -name *.json*)",
       "Bash(python:*)",
       "Bash(find C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/support_sessions/6092527664 -name *review* -o -name *contract*)",
-      "Bash(CTCP_TG_TOKEN=\"$CTCP_TG_BOT_TOKEN\" python scripts/ctcp_support_bot.py telegram)"
+      "Bash(CTCP_TG_TOKEN=\"$CTCP_TG_BOT_TOKEN\" python scripts/ctcp_support_bot.py telegram)",
+      "Bash(unzip -l failure_bundle.zip)",
+      "Bash(unzip -p failure_bundle.zip artifacts/diff.patch)"
     ]
   }
 }
