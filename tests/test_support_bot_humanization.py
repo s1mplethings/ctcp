@@ -1059,6 +1059,113 @@ class SupportBotHumanizationTests(unittest.TestCase):
             )
         )
 
+    def test_model_mode_router_can_reclassify_ambiguous_turn_to_status_query(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_mode_router_apply_") as td:
+            run_dir = Path(td)
+            support_bot.ensure_layout(run_dir)
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "我想做一个 VN 项目",
+                },
+            )
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "为什么我刚让你做，你就可以直接给我一个包",
+                },
+            )
+            session_state = support_bot.default_support_session_state("mode-router-demo")
+            session_state["bound_run_id"] = "r-mode"
+            session_state["project_memory"]["project_brief"] = "我想做一个 VN 项目"
+            captured_roles: list[str] = []
+
+            def _fake_execute(*, provider, run_dir, request, config):  # type: ignore[no-untyped-def]
+                del provider, config
+                captured_roles.append(str(request.get("role", "")))
+                target = run_dir / support_bot.SUPPORT_MODE_ROUTER_PROVIDER_REL_PATH
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(
+                    json.dumps(
+                        {
+                            "mode": "STATUS_QUERY",
+                            "confidence": 0.94,
+                            "reason": "询问为什么能直接交付，属于进展/状态解释类",
+                        },
+                        ensure_ascii=False,
+                    ),
+                    encoding="utf-8",
+                )
+                return {"status": "executed", "reason": "ok", "target_path": str(request.get("target_path", ""))}
+
+            with mock.patch.object(support_bot, "execute_provider", side_effect=_fake_execute):
+                mode = support_bot.maybe_override_conversation_mode_with_model(
+                    run_dir=run_dir,
+                    chat_id="mode-router-demo",
+                    user_text="为什么我刚让你做，你就可以直接给我一个包",
+                    source="telegram",
+                    detected_mode="PROJECT_DETAIL",
+                    session_state=session_state,
+                    config=support_bot.default_support_dispatch_config(),
+                )
+
+            self.assertEqual(mode, "STATUS_QUERY")
+            self.assertIn("support_mode_router", captured_roles)
+            events = (run_dir / "events.jsonl").read_text(encoding="utf-8", errors="replace")
+            self.assertIn("SUPPORT_MODE_ROUTER_APPLIED", events)
+
+    def test_model_mode_router_falls_back_to_detected_mode_on_low_confidence(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_mode_router_fallback_") as td:
+            run_dir = Path(td)
+            support_bot.ensure_layout(run_dir)
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "为什么我刚让你做，你就可以直接给我一个包",
+                },
+            )
+            session_state = support_bot.default_support_session_state("mode-router-fallback-demo")
+            session_state["bound_run_id"] = "r-mode"
+            session_state["project_memory"]["project_brief"] = "我想做一个 VN 项目"
+
+            def _fake_execute(*, provider, run_dir, request, config):  # type: ignore[no-untyped-def]
+                del provider, config
+                target = run_dir / support_bot.SUPPORT_MODE_ROUTER_PROVIDER_REL_PATH
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(
+                    json.dumps(
+                        {
+                            "mode": "STATUS_QUERY",
+                            "confidence": 0.31,
+                            "reason": "confidence too low",
+                        },
+                        ensure_ascii=False,
+                    ),
+                    encoding="utf-8",
+                )
+                return {"status": "executed", "reason": "ok", "target_path": str(request.get("target_path", ""))}
+
+            with mock.patch.object(support_bot, "execute_provider", side_effect=_fake_execute):
+                mode = support_bot.maybe_override_conversation_mode_with_model(
+                    run_dir=run_dir,
+                    chat_id="mode-router-fallback-demo",
+                    user_text="为什么我刚让你做，你就可以直接给我一个包",
+                    source="telegram",
+                    detected_mode="PROJECT_DETAIL",
+                    session_state=session_state,
+                    config=support_bot.default_support_dispatch_config(),
+                )
+
+            self.assertEqual(mode, "PROJECT_DETAIL")
+            events = (run_dir / "events.jsonl").read_text(encoding="utf-8", errors="replace")
+            self.assertIn("SUPPORT_MODE_ROUTER_SKIPPED", events)
+
     def test_build_final_reply_doc_grounds_previous_project_status_followup(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_previous_project_status_") as td:
             run_dir = Path(td)
@@ -1489,3 +1596,14 @@ class SupportBotHumanizationTests(unittest.TestCase):
             manifest = json.loads((support_run_dir / support_bot.SUPPORT_PUBLIC_DELIVERY_REL_PATH).read_text(encoding="utf-8"))
             self.assertEqual(len(list(manifest.get("sent", []))), 1)
             self.assertEqual(len(list(plan.get("sent", []))), 1)
+
+    def test_t2p_fast_path_trigger_is_disabled_for_project_create_turn(self) -> None:
+        session_state = support_bot.default_support_session_state("single-mainline")
+        self.assertFalse(
+            support_bot.should_trigger_t2p_state_machine(
+                session_state=session_state,
+                user_text="我想要你帮我创建一个项目，是一个工具来帮我制作vn游戏",
+                source="telegram",
+                conversation_mode="PROJECT_DETAIL",
+            )
+        )

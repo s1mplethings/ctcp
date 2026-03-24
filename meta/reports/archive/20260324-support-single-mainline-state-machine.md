@@ -1,4 +1,4 @@
-# Demo Report - LAST
+# Report - support-single-mainline-state-machine
 
 > **用法**：本文件保留最近一次报告指针，同时内嵌 workflow gate 所需的最新报告摘要。
 > 历史报告正文在 `meta/reports/archive/`。

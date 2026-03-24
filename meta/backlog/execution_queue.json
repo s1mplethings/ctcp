@@ -1871,6 +1871,110 @@
       },
       "status": "done",
       "notes": "Completed on 2026-03-21: extracted graph view projection logic from `src/Bridge.cpp` into `include/GraphViewProjector.h` + `src/GraphViewProjector.cpp`, removed duplicate file-open/read API surface from `Bridge` so file operations remain in `SddaiBridge`, switched `MainWindow` file-tree double click to `SddaiBridge::openPath`, and passed canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` after the minimal first-failure repair (`patch_check` Scope-Allow update in `artifacts/PLAN.md`). Final closure lite replay run_dir: C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260321-113846."
+    },
+    {
+      "id": "ADHOC-20260324-support-mode-router-model-assist",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Use model-assisted mode arbitration for ambiguous support turns",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260317-support-frontdesk-state-machine"
+      ],
+      "dod": [
+        "support runtime keeps deterministic conversation-mode routing as first pass and adds an optional model-assisted second-pass arbitration for ambiguous turns",
+        "mode arbitration uses api-first provider with local fallback and never widens mode set beyond existing support contract modes",
+        "focused regressions plus canonical verify prove ambiguous turns can be reclassified without breaking existing support routing behavior"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "docs/10_team_mode.md",
+          "tests/test_support_bot_humanization.py",
+          "tests/test_runtime_wiring_contract.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260324-support-mode-router-model-assist.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260324-support-mode-router-model-assist.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "blocked",
+      "notes": "Implementation and focused regressions are done for model-assisted mode arbitration. Canonical verify is currently blocked at patch_check by unrelated preexisting out-of-scope path `test_final.py` in the worktree."
+    },
+    {
+      "id": "ADHOC-20260324-support-single-mainline-state-machine",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Enforce single mainline support flow and remove fast scaffold path",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260317-support-frontdesk-state-machine"
+      ],
+      "dod": [
+        "support runtime no longer triggers support-side Telegram ingress scaffold fast path; project turns only enter the bridge-backed mainline run flow",
+        "auto-advance and delivery behavior are strictly gated by bound-run status/gate state machine instead of standalone fast-path pass signals",
+        "docs and local operator notes explicitly codify single-mainline policy and focused regressions prove fast-path trigger is disabled"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "docs/10_team_mode.md",
+          ".agent_private/NOTES.md",
+          "tests/test_support_bot_humanization.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260324-support-single-mainline-state-machine.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260324-support-single-mainline-state-machine.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "blocked",
+      "notes": "Single-mainline enforcement landed: disabled support fast scaffold trigger, added strict single-flow contract text in docs/local notes, and added focused regression for disabled trigger. Canonical verify is currently blocked at patch_check by unrelated preexisting out-of-scope path `test_final.py` in worktree."
+    },
+    {
+      "id": "ADHOC-20260324-support-package-final-stage-gate",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Gate support package delivery on tested final-stage run status",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260324-support-single-mainline-state-machine"
+      ],
+      "dod": [
+        "send_project_package is blocked unless bound run status is final and verify_result is PASS",
+        "provider-requested and auto-synthesized package actions are both filtered out before public delivery when gate conditions are not met",
+        "support contract docs and focused regression tests explicitly cover the final-stage tested gate for package delivery"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "docs/10_team_mode.md",
+          "tests/test_support_bot_humanization.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260324-support-package-final-stage-gate.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260324-support-package-final-stage-gate.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "doing",
+      "notes": "User clarified package should not be sent before tested/final stage; enforce strict runtime gate in support delivery path."
     }
   ]
 }

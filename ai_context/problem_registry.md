@@ -670,3 +670,32 @@ When to add:
   任何声称“前台已经任务型化”的能力，都必须同时证明 `state` 已连接到 session persistence、prompt context、reply strategy 和 runtime tests；状态类关键词规则要避免误伤 `状态机` 这类工程名词。
 - Tags:
   support, frontend, state-machine, interrupt-recovery, style-profile, routing
+
+## Example 26
+
+- Symptom:
+  用户发项目创建需求后，support bot 几秒内回复“项目已准备好并可发包”，但主 run 仍停在 `gate=blocked`，后续并未按同一主流程继续推进。
+- Repro:
+  1. 在 Telegram support session 发送项目创建句（如“帮我创建一个 VN 工具项目”）。
+  2. 观察 `support_session_state.json`、`support_t2p_state_machine_report.json` 与绑定 run 的 `RUN.json/status.gate`。
+  3. 可见 support 侧先出现 `SUPPORT_T2P_STATE_MACHINE_REPORTED=PASS`，同时 bound run 仍 `status.gate.state=blocked`（例如等待 `artifacts/PLAN_draft.md`）。
+- Root cause:
+  support runtime 同时存在两条路径：bridge 主流程（bind/record/advance）与 `run_t2p_state_machine` 快速脚手架旁路。快通道先生成 package-ready 语义并进入用户回复，导致“看起来完成了”但主流程还在阻塞。
+- Affected entrypoint:
+  `scripts/ctcp_support_bot.py::process_message`
+- Affected modules:
+  `scripts/ctcp_support_bot.py`, `docs/10_team_mode.md`
+- Observed fallback behavior:
+  用户看到“已准备好项目包”，随后又发现项目并未沿主 run 状态机继续推进。
+- Expected correct behavior:
+  项目型 turn 只允许单主流程：统一走 bridge 绑定 run、记录 turn、advance、消费 gate/status；`gate=blocked` 时只回 grounded 状态与下一步，不给“已交付”语义。
+- Fix:
+  禁用 support 侧 t2p 快速触发门（`should_trigger_t2p_state_machine`），并在合同文档里写死“禁止快速旁路、只保留主流程状态机”。
+- Fix attempt status:
+  2026-03-24 scoped fix bound under `ADHOC-20260324-support-single-mainline-state-machine`.
+- Regression test status:
+  Covered by `tests/test_support_bot_humanization.py` (`test_t2p_fast_path_trigger_is_disabled_for_project_create_turn`).
+- Prevention:
+  任何用户可见“已生成/可交付”语义都必须绑定主 run gate/status；禁止在 support 层再引入并行快通道状态源。
+- Tags:
+  support, telegram, dual-path, state-machine, gate, delivery, runtime-wiring

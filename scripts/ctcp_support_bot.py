@@ -2,16 +2,19 @@
 from __future__ import annotations
 
 import argparse
+import atexit
 import datetime as dt
 import hashlib
 import json
 import mimetypes
 import os
 import re
+import socket
 import shutil
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
@@ -26,6 +29,7 @@ PROMPT_TEMPLATE_PATH = ROOT / "agents" / "prompts" / "support_lead_reply.md"
 SUPPORT_INBOX_REL_PATH = Path("artifacts") / "support_inbox.jsonl"
 SUPPORT_PROMPT_REL_PATH = Path("artifacts") / "support_prompt_input.md"
 SUPPORT_REPLY_PROVIDER_REL_PATH = Path("artifacts") / "support_reply.provider.json"
+SUPPORT_MODE_ROUTER_PROVIDER_REL_PATH = Path("artifacts") / "support_mode_router.provider.json"
 SUPPORT_REPLY_REL_PATH = Path("artifacts") / "support_reply.json"
 SUPPORT_SESSION_STATE_REL_PATH = Path("artifacts") / "support_session_state.json"
 SUPPORT_PUBLIC_DELIVERY_REL_PATH = Path("artifacts") / "support_public_delivery.json"
@@ -34,6 +38,7 @@ SUPPORT_EXPORTS_REL_DIR = Path("artifacts") / "support_exports"
 DISPATCH_CONFIG_REL_PATH = Path("artifacts") / "dispatch_config.json"
 SUPPORT_SCAFFOLD_STDOUT_REL_PATH = Path("logs") / "support_scaffold.stdout.log"
 SUPPORT_SCAFFOLD_STDERR_REL_PATH = Path("logs") / "support_scaffold.stderr.log"
+SUPPORT_T2P_STATE_MACHINE_REPORT_REL_PATH = Path("artifacts") / "support_t2p_state_machine_report.json"
 SUPPORT_SCAFFOLD_PROFILE = "standard"
 SUPPORT_SCAFFOLD_SOURCE_MODE = "live-reference"
 CTCP_SCAFFOLD_STRUCTURE_HINT = [
@@ -161,7 +166,52 @@ PROJECT_EXECUTION_FOLLOWUP_HINTS_EN = (
     "i will adjust later",
     "keep building",
 )
+PROJECT_CREATE_INTENT_HINTS_ZH = (
+    "创建项目",
+    "创建一个项目",
+    "帮我创建",
+    "帮我做一个项目",
+    "搭建项目",
+    "生成项目",
+    "做一个工具",
+    "做个工具",
+    "开发一个工具",
+)
+PROJECT_CREATE_INTENT_HINTS_EN = (
+    "create a project",
+    "build a project",
+    "generate a project",
+    "start the project",
+    "make a tool",
+    "build a tool",
+)
 NON_PROJECT_SUPPORT_REPLY_MODES = {"GREETING", "SMALLTALK", "CAPABILITY_QUERY", "PROJECT_INTAKE"}
+SUPPORTED_CONVERSATION_MODES = {
+    "GREETING",
+    "SMALLTALK",
+    "CAPABILITY_QUERY",
+    "PROJECT_INTAKE",
+    "PROJECT_DETAIL",
+    "PROJECT_DECISION_REPLY",
+    "STATUS_QUERY",
+}
+MODE_ROUTER_HINTS_ZH = (
+    "为什么",
+    "为何",
+    "为啥",
+    "怎么会",
+    "凭什么",
+    "依据",
+    "刚让你做",
+)
+MODE_ROUTER_HINTS_EN = (
+    "why",
+    "how come",
+    "how is it that",
+    "why did",
+    "reason",
+    "basis",
+)
 PROJECT_CONTEXT_LEAK_TOKENS_ZH = (
     "项目",
     "开发",
@@ -400,6 +450,72 @@ def session_run_dir(chat_id: str | int) -> Path:
     return run_dir
 
 
+def _telegram_lock_path(token: str) -> Path:
+    token_hash = hashlib.sha1(str(token or "").encode("utf-8", errors="ignore")).hexdigest()[:16]
+    return (get_runs_root() / get_repo_slug(ROOT) / "support_bot_locks" / f"telegram_poll_{token_hash}.lock").resolve()
+
+
+def acquire_telegram_poll_lock(token: str) -> tuple[Path, Any]:
+    lock_path = _telegram_lock_path(token)
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    fh = lock_path.open("a+", encoding="utf-8")
+    try:
+        fh.seek(0)
+        if os.name == "nt":
+            import msvcrt  # type: ignore
+
+            msvcrt.locking(fh.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl  # type: ignore
+
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except Exception:
+        owner = ""
+        try:
+            fh.seek(0)
+            owner = fh.read().strip()
+        except Exception:
+            owner = ""
+        try:
+            fh.close()
+        except Exception:
+            pass
+        hint = f" (owner={owner})" if owner else ""
+        raise RuntimeError(f"telegram poll lock busy: {lock_path}{hint}")
+
+    try:
+        fh.seek(0)
+        fh.truncate(0)
+        fh.write(f"pid={os.getpid()} ts={now_iso()}\n")
+        fh.flush()
+    except Exception:
+        pass
+    return lock_path, fh
+
+
+def release_telegram_poll_lock(lock_path: Path, fh: Any) -> None:
+    try:
+        fh.seek(0)
+        if os.name == "nt":
+            import msvcrt  # type: ignore
+
+            msvcrt.locking(fh.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl  # type: ignore
+
+            fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+    except Exception:
+        pass
+    try:
+        fh.close()
+    except Exception:
+        pass
+    try:
+        lock_path.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
 def ensure_layout(run_dir: Path) -> None:
     (run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
     (run_dir / "logs").mkdir(parents=True, exist_ok=True)
@@ -434,6 +550,11 @@ def default_support_dispatch_config() -> dict[str, Any]:
                 "start_timeout_sec": 20,
                 "start_cmd": "ollama serve",
             },
+        },
+        "support_mode_router": {
+            "enabled": True,
+            "min_confidence": 0.62,
+            "max_history": 8,
         },
     }
 
@@ -514,6 +635,206 @@ def support_provider_candidates(config: dict[str, Any], override: str = "") -> l
     return ordered or [PRIMARY_SUPPORT_PROVIDER, local_fallback]
 
 
+def _normalize_mode_name(raw: str) -> str:
+    mode = sanitize_inline_text(str(raw or ""), max_chars=40).upper().strip()
+    return mode if mode in SUPPORTED_CONVERSATION_MODES else ""
+
+
+def _to_float(raw: Any, default: float) -> float:
+    try:
+        return float(raw)
+    except Exception:
+        return default
+
+
+def _mode_router_config(config: dict[str, Any]) -> dict[str, Any]:
+    raw = config.get("support_mode_router", {})
+    if not isinstance(raw, dict):
+        raw = {}
+    enabled = bool(raw.get("enabled", True))
+    min_confidence = _to_float(raw.get("min_confidence", 0.62), 0.62)
+    min_confidence = max(0.0, min(min_confidence, 1.0))
+    max_history = int(raw.get("max_history", 8) or 8)
+    max_history = max(2, min(max_history, 16))
+    return {
+        "enabled": enabled,
+        "min_confidence": min_confidence,
+        "max_history": max_history,
+    }
+
+
+def mode_router_provider_candidates(config: dict[str, Any], override: str = "") -> list[str]:
+    ordered: list[str] = []
+    for provider in support_provider_candidates(config, override=override):
+        if provider in SUPPORT_REPLY_PROVIDERS and provider not in ordered:
+            ordered.append(provider)
+    if not ordered:
+        ordered = [PRIMARY_SUPPORT_PROVIDER, LOCAL_SUPPORT_REPLY_PROVIDERS[0]]
+    return ordered
+
+
+def should_try_model_mode_router(*, user_text: str, detected_mode: str, session_state: dict[str, Any]) -> bool:
+    mode = str(detected_mode or "").strip().upper()
+    if mode not in {"PROJECT_INTAKE", "PROJECT_DETAIL"}:
+        return False
+    if not bool(str(session_state.get("bound_run_id", "")).strip()):
+        return False
+    raw = sanitize_inline_text(user_text, max_chars=280)
+    if not raw:
+        return False
+    if user_requests_project_package(raw) or user_requests_project_screenshot(raw):
+        return False
+    low = raw.lower()
+    hint_hit = any(token in raw for token in MODE_ROUTER_HINTS_ZH) or any(token in low for token in MODE_ROUTER_HINTS_EN)
+    question_like = raw.endswith(("?", "？")) or ("?" in raw) or ("？" in raw)
+    if not (hint_hit or question_like):
+        return False
+    if is_project_create_intent(raw, mode):
+        return False
+    return True
+
+
+def build_mode_router_prompt(
+    *,
+    run_dir: Path,
+    user_text: str,
+    detected_mode: str,
+    session_state: dict[str, Any],
+    source: str,
+    max_history: int,
+) -> str:
+    history = load_inbox_history(run_dir, limit=max(2, max_history))
+    allowed_modes = sorted(SUPPORTED_CONVERSATION_MODES)
+    context = {
+        "schema_version": "ctcp-support-mode-router-context-v1",
+        "ts": now_iso(),
+        "source": sanitize_inline_text(source, max_chars=24),
+        "detected_mode": _normalize_mode_name(detected_mode) or "SMALLTALK",
+        "latest_user_message": sanitize_inline_text(user_text, max_chars=280),
+        "has_bound_run": bool(str(session_state.get("bound_run_id", "")).strip()),
+        "bound_run_id": sanitize_inline_text(str(session_state.get("bound_run_id", "")), max_chars=80),
+        "project_brief": sanitize_inline_text(current_project_brief(session_state), max_chars=280),
+        "history": history,
+        "allowed_modes": allowed_modes,
+    }
+    instruction = {
+        "schema_version": "ctcp-support-mode-router-request-v1",
+        "task": "classify the latest user turn into one allowed conversation mode",
+        "hard_rules": [
+            "Return exactly one JSON object only.",
+            "Mode must be one of allowed_modes.",
+            "If user asks progress/status/explanation of existing run or delivery, prefer STATUS_QUERY.",
+            "Do not invent new mode labels.",
+        ],
+        "output_schema": {
+            "mode": "one_of_allowed_modes",
+            "confidence": "0.0~1.0",
+            "reason": "short string",
+        },
+    }
+    return (
+        "# Support Mode Router\n\n"
+        + json.dumps(instruction, ensure_ascii=False, indent=2)
+        + "\n\n# Context\n"
+        + json.dumps(context, ensure_ascii=False, indent=2)
+        + "\n"
+    )
+
+
+def make_mode_router_request(chat_id: str, user_text: str, prompt_text: str) -> dict[str, Any]:
+    reason = prompt_text[-20000:] if len(prompt_text) > 20000 else prompt_text
+    return {
+        "role": "support_mode_router",
+        "action": "classify_mode",
+        "target_path": SUPPORT_MODE_ROUTER_PROVIDER_REL_PATH.as_posix(),
+        "missing_paths": [SUPPORT_INBOX_REL_PATH.as_posix()],
+        "reason": reason,
+        "goal": f"support mode routing {chat_id}",
+        "input_text": user_text,
+    }
+
+
+def parse_mode_router_doc(path: Path, *, min_confidence: float) -> tuple[str, str]:
+    doc = read_json_doc(path)
+    if not isinstance(doc, dict):
+        return "", "mode router output missing/invalid json"
+    mode = _normalize_mode_name(str(doc.get("mode", "")))
+    if not mode:
+        return "", "mode router output missing valid mode"
+    confidence = _to_float(doc.get("confidence", 0.0), 0.0)
+    if confidence < min_confidence:
+        return "", f"mode router confidence too low: {confidence:.2f} < {min_confidence:.2f}"
+    return mode, ""
+
+
+def maybe_override_conversation_mode_with_model(
+    *,
+    run_dir: Path,
+    chat_id: str,
+    user_text: str,
+    source: str,
+    detected_mode: str,
+    session_state: dict[str, Any],
+    config: dict[str, Any],
+    provider_override: str = "",
+) -> str:
+    fallback_mode = _normalize_mode_name(detected_mode) or "SMALLTALK"
+    router_cfg = _mode_router_config(config)
+    if not bool(router_cfg.get("enabled", True)):
+        return fallback_mode
+    if not should_try_model_mode_router(user_text=user_text, detected_mode=fallback_mode, session_state=session_state):
+        return fallback_mode
+
+    prompt_text = build_mode_router_prompt(
+        run_dir=run_dir,
+        user_text=user_text,
+        detected_mode=fallback_mode,
+        session_state=session_state,
+        source=source,
+        max_history=int(router_cfg.get("max_history", 8)),
+    )
+    request = make_mode_router_request(chat_id, user_text, prompt_text)
+    output_path = run_dir / SUPPORT_MODE_ROUTER_PROVIDER_REL_PATH
+    try:
+        output_path.unlink(missing_ok=True)
+    except Exception:
+        pass
+    errors: list[str] = []
+
+    for idx, provider in enumerate(mode_router_provider_candidates(config, override=provider_override), start=1):
+        result = execute_provider(provider=provider, run_dir=run_dir, request=request, config=config)
+        log_provider_result(run_dir, provider, result, f"mode_router_attempt_{idx}")
+        if str(result.get("status", "")).strip().lower() != "executed":
+            errors.append(f"{provider}:{sanitize_inline_text(str(result.get('reason', '')), max_chars=120)}")
+            continue
+        mode, reason = parse_mode_router_doc(
+            output_path,
+            min_confidence=float(router_cfg.get("min_confidence", 0.62)),
+        )
+        if not mode:
+            errors.append(f"{provider}:{reason}")
+            continue
+        if mode != fallback_mode:
+            append_event(
+                run_dir,
+                "SUPPORT_MODE_ROUTER_APPLIED",
+                SUPPORT_MODE_ROUTER_PROVIDER_REL_PATH.as_posix(),
+                from_mode=fallback_mode,
+                to_mode=mode,
+                provider=provider,
+            )
+        return mode
+
+    append_event(
+        run_dir,
+        "SUPPORT_MODE_ROUTER_SKIPPED",
+        SUPPORT_MODE_ROUTER_PROVIDER_REL_PATH.as_posix(),
+        from_mode=fallback_mode,
+        reason=" | ".join(errors[-3:]) if errors else "no provider accepted mode arbitration",
+    )
+    return fallback_mode
+
+
 def model_unavailable_reply_doc(result: dict[str, Any], *, lang_hint: str = "zh") -> dict[str, Any]:
     """Return empty reply when API is unavailable - no internal debug messages to user."""
     return {
@@ -571,7 +892,7 @@ def default_support_session_state(chat_id: str) -> dict[str, Any]:
         except Exception:
             frontdesk_state = {}
     return {
-        "schema_version": "ctcp-support-session-state-v5",
+        "schema_version": "ctcp-support-session-state-v6",
         "chat_id": chat_id,
         "bound_run_id": "",
         "bound_run_dir": "",
@@ -624,6 +945,23 @@ def default_support_session_state(chat_id: str) -> dict[str, Any]:
             "last_resume_brief": "",
             "superseded_run_id": "",
         },
+        "generation_state": {
+            "current_state": "T0_PLAN",
+            "last_trigger_text": "",
+            "last_trigger_ts": "",
+            "last_mode": "",
+            "last_test_mode": "",
+            "last_pass_fail": "",
+            "last_failure_stage": "",
+            "last_concise_reason": "",
+            "last_command_or_entry": "",
+            "last_out_dir": "",
+            "last_run_dir": "",
+            "last_generated_project_dir": "",
+            "last_report_ts": "",
+            "last_report_path": SUPPORT_T2P_STATE_MACHINE_REPORT_REL_PATH.as_posix(),
+            "state_history": [],
+        },
     }
 
 
@@ -666,6 +1004,10 @@ def latest_resume_state(session_state: dict[str, Any]) -> dict[str, Any]:
     return _state_zone(session_state, "resume_state")
 
 
+def latest_generation_state(session_state: dict[str, Any]) -> dict[str, Any]:
+    return _state_zone(session_state, "generation_state")
+
+
 def current_frontdesk_state(session_state: dict[str, Any]) -> dict[str, Any]:
     raw = session_state.get("frontdesk_state")
     if not isinstance(raw, dict):
@@ -697,6 +1039,7 @@ def normalize_support_session_state(doc: dict[str, Any] | None, chat_id: str) ->
                 "provider_runtime_buffer",
                 "notification_state",
                 "resume_state",
+                "generation_state",
                 "latest_support_context",
                 "frontdesk_state",
             }:
@@ -714,6 +1057,7 @@ def normalize_support_session_state(doc: dict[str, Any] | None, chat_id: str) ->
     provider_runtime = _state_zone(state, "provider_runtime_buffer")
     notification_state = _state_zone(state, "notification_state")
     resume_state = _state_zone(state, "resume_state")
+    generation_state = _state_zone(state, "generation_state")
     frontdesk_state = state.get("frontdesk_state")
     if not isinstance(frontdesk_state, dict):
         frontdesk_state = {}
@@ -790,6 +1134,48 @@ def normalize_support_session_state(doc: dict[str, Any] | None, chat_id: str) ->
     )
     resume_state["last_resume_brief"] = sanitize_inline_text(str(resume_state.get("last_resume_brief", "")), max_chars=280)
     resume_state["superseded_run_id"] = sanitize_inline_text(str(resume_state.get("superseded_run_id", "")), max_chars=80)
+    generation_state["current_state"] = sanitize_inline_text(str(generation_state.get("current_state", "T0_PLAN")), max_chars=32) or "T0_PLAN"
+    generation_state["last_trigger_text"] = sanitize_inline_text(
+        str(generation_state.get("last_trigger_text", "")), max_chars=280
+    )
+    generation_state["last_trigger_ts"] = sanitize_inline_text(str(generation_state.get("last_trigger_ts", "")), max_chars=40)
+    generation_state["last_mode"] = sanitize_inline_text(str(generation_state.get("last_mode", "")), max_chars=40)
+    generation_state["last_test_mode"] = sanitize_inline_text(str(generation_state.get("last_test_mode", "")), max_chars=40)
+    generation_state["last_pass_fail"] = sanitize_inline_text(str(generation_state.get("last_pass_fail", "")), max_chars=12)
+    generation_state["last_failure_stage"] = sanitize_inline_text(
+        str(generation_state.get("last_failure_stage", "")), max_chars=40
+    )
+    generation_state["last_concise_reason"] = sanitize_inline_text(
+        str(generation_state.get("last_concise_reason", "")), max_chars=220
+    )
+    generation_state["last_command_or_entry"] = sanitize_inline_text(
+        str(generation_state.get("last_command_or_entry", "")), max_chars=120
+    )
+    generation_state["last_out_dir"] = sanitize_inline_text(str(generation_state.get("last_out_dir", "")), max_chars=320)
+    generation_state["last_run_dir"] = sanitize_inline_text(str(generation_state.get("last_run_dir", "")), max_chars=320)
+    generation_state["last_generated_project_dir"] = sanitize_inline_text(
+        str(generation_state.get("last_generated_project_dir", "")), max_chars=320
+    )
+    generation_state["last_report_ts"] = sanitize_inline_text(str(generation_state.get("last_report_ts", "")), max_chars=40)
+    generation_state["last_report_path"] = sanitize_inline_text(
+        str(generation_state.get("last_report_path", SUPPORT_T2P_STATE_MACHINE_REPORT_REL_PATH.as_posix())),
+        max_chars=220,
+    )
+    state_history = generation_state.get("state_history", [])
+    if not isinstance(state_history, list):
+        state_history = []
+    normalized_history: list[dict[str, Any]] = []
+    for item in state_history[-24:]:
+        if not isinstance(item, dict):
+            continue
+        normalized_history.append(
+            {
+                "state": sanitize_inline_text(str(item.get("state", "")), max_chars=32),
+                "ts": sanitize_inline_text(str(item.get("ts", "")), max_chars=40),
+                "note": sanitize_inline_text(str(item.get("note", "")), max_chars=220),
+            }
+        )
+    generation_state["state_history"] = normalized_history
 
     if frontend_normalize_frontdesk_state is not None:
         try:
@@ -1090,6 +1476,287 @@ def should_force_project_detail(user_text: str, session_state: dict[str, Any]) -
     if not raw or is_greeting_only_message(raw) or is_smalltalk_only_message(raw):
         return False
     return is_project_execution_followup(raw)
+
+
+def is_project_create_intent(user_text: str, conversation_mode: str) -> bool:
+    mode = str(conversation_mode or "").strip().upper()
+    if mode not in {"PROJECT_INTAKE", "PROJECT_DETAIL", "PROJECT_DECISION_REPLY"}:
+        return False
+    raw = sanitize_inline_text(user_text, max_chars=280)
+    if not raw:
+        return False
+    low = raw.lower()
+    if any(token in raw for token in PROJECT_CREATE_INTENT_HINTS_ZH):
+        return True
+    if any(token in low for token in PROJECT_CREATE_INTENT_HINTS_EN):
+        return True
+    if has_project_goal_markers(raw) and (
+        ("创建" in raw)
+        or ("搭建" in raw)
+        or ("生成" in raw)
+        or ("做一个" in raw)
+        or ("create" in low)
+        or ("build" in low)
+        or ("generate" in low)
+        or ("make a" in low)
+    ):
+        return True
+    return False
+
+
+def should_trigger_t2p_state_machine(
+    *,
+    session_state: dict[str, Any],
+    user_text: str,
+    source: str,
+    conversation_mode: str,
+) -> bool:
+    # Single-mainline policy:
+    # project turns must only progress through bridge-backed CTCP run state,
+    # and must not trigger the support-side fast scaffold path.
+    _ = (session_state, user_text, source, conversation_mode)
+    return False
+
+
+def _record_generation_state(
+    generation_state: dict[str, Any],
+    *,
+    state_code: str,
+    note: str = "",
+) -> None:
+    generation_state["current_state"] = sanitize_inline_text(state_code, max_chars=32) or "T0_PLAN"
+    history = generation_state.get("state_history", [])
+    if not isinstance(history, list):
+        history = []
+    history.append(
+        {
+            "state": sanitize_inline_text(state_code, max_chars=32),
+            "ts": now_iso(),
+            "note": sanitize_inline_text(note, max_chars=220),
+        }
+    )
+    generation_state["state_history"] = history[-24:]
+
+
+def _locate_latest_scaffold_report(run_dir: Path, scaffold_run_dir: Path | None) -> Path | None:
+    candidates: list[Path] = []
+    if scaffold_run_dir is not None:
+        for name in ("scaffold_report.json", "scaffold_pointcloud_report.json"):
+            path = scaffold_run_dir / "artifacts" / name
+            if path.exists() and path.is_file():
+                candidates.append(path.resolve())
+    root = run_dir / "artifacts" / "support_scaffold_runs"
+    if root.exists():
+        for name in ("scaffold_report.json", "scaffold_pointcloud_report.json"):
+            for path in root.rglob(name):
+                if path.is_file():
+                    candidates.append(path.resolve())
+    if not candidates:
+        return None
+    return sorted(candidates, key=lambda item: item.stat().st_mtime, reverse=True)[0]
+
+
+def _verify_t2p_chain_artifacts(
+    *,
+    support_run_dir: Path,
+    out_dir: Path,
+    scaffold_run_dir: Path | None,
+    source: str,
+) -> tuple[list[dict[str, str]], str, str, str]:
+    checked: list[dict[str, str]] = []
+    first_failure_stage = "none"
+    first_failure_reason = ""
+
+    def record(path_label: str, ok: bool, *, stage_on_fail: str, na: bool = False, reason: str = "") -> None:
+        nonlocal first_failure_stage, first_failure_reason
+        status = "N/A" if na else ("PASS" if ok else "FAIL")
+        row: dict[str, str] = {"path": path_label, "status": status}
+        if reason:
+            row["reason"] = sanitize_inline_text(reason, max_chars=220)
+        checked.append(row)
+        if (not na) and (not ok) and first_failure_stage == "none":
+            first_failure_stage = stage_on_fail
+            first_failure_reason = sanitize_inline_text(reason or f"missing {path_label}", max_chars=220)
+
+    record(str(out_dir), out_dir.exists() and out_dir.is_dir(), stage_on_fail="scaffold failure", reason="output project directory")
+
+    manifest_root = out_dir / "manifest.json"
+    manifest_meta = out_dir / "meta" / "manifest.json"
+    manifest_ok = manifest_root.exists() or manifest_meta.exists()
+    record(
+        "manifest.json|meta/manifest.json",
+        manifest_ok,
+        stage_on_fail="artifact missing",
+        reason="project manifest",
+    )
+
+    if SUPPORT_SCAFFOLD_SOURCE_MODE == "live-reference":
+        ref_src = out_dir / "meta" / "reference_source.json"
+        record(
+            "meta/reference_source.json",
+            ref_src.exists(),
+            stage_on_fail="artifact missing",
+            reason="reference source metadata",
+        )
+    else:
+        record("meta/reference_source.json", ok=True, stage_on_fail="artifact missing", na=True)
+
+    record(str(support_run_dir), support_run_dir.exists() and support_run_dir.is_dir(), stage_on_fail="orchestration failure")
+    record("TRACE.md", (support_run_dir / "TRACE.md").exists(), stage_on_fail="artifact missing")
+    record("events.jsonl", (support_run_dir / "events.jsonl").exists(), stage_on_fail="artifact missing")
+
+    dialogue_enabled = str(source or "").strip().lower() in {"telegram", "stdin", "selftest"}
+    inbox_path = support_run_dir / SUPPORT_INBOX_REL_PATH
+    if dialogue_enabled:
+        record(
+            SUPPORT_INBOX_REL_PATH.as_posix(),
+            inbox_path.exists(),
+            stage_on_fail="artifact missing",
+            reason="dialogue capture artifact",
+        )
+    else:
+        record(SUPPORT_INBOX_REL_PATH.as_posix(), ok=True, stage_on_fail="artifact missing", na=True)
+
+    scaffold_report = _locate_latest_scaffold_report(support_run_dir, scaffold_run_dir)
+    report_label = (
+        str(scaffold_report)
+        if scaffold_report is not None
+        else "artifacts/scaffold_report.json|artifacts/scaffold_pointcloud_report.json"
+    )
+    record(
+        report_label,
+        scaffold_report is not None,
+        stage_on_fail="artifact missing",
+        reason="scaffold report artifact",
+    )
+
+    core_exists = (
+        (out_dir / "README.md").exists()
+        or (out_dir / "src").exists()
+        or (out_dir / "main.py").exists()
+        or (out_dir / "main.ts").exists()
+        or (out_dir / "index.js").exists()
+    )
+    record(
+        "README.md|src/|main entry",
+        core_exists,
+        stage_on_fail="invalid output",
+        reason="core generated file",
+    )
+
+    pass_fail = "PASS" if first_failure_stage == "none" else "FAIL"
+    concise_reason = "Ingress accepted and scaffold artifacts are complete." if pass_fail == "PASS" else first_failure_reason
+    return checked, pass_fail, first_failure_stage, concise_reason
+
+
+def run_t2p_state_machine(
+    *,
+    run_dir: Path,
+    session_state: dict[str, Any],
+    user_text: str,
+    source: str,
+    conversation_mode: str,
+    delivery_state: dict[str, Any] | None,
+) -> dict[str, Any]:
+    generation_state = latest_generation_state(session_state)
+    trigger_text = sanitize_inline_text(user_text, max_chars=280)
+    generation_state["last_trigger_text"] = trigger_text
+    generation_state["last_trigger_ts"] = now_iso()
+    generation_state["last_mode"] = sanitize_inline_text(conversation_mode, max_chars=40)
+
+    _record_generation_state(generation_state, state_code="T0_PLAN", note="bind sanity task + out_dir")
+    project_name_hint = _delivery_project_slug(
+        str((delivery_state or {}).get("project_name_hint", "")).strip() or current_project_brief(session_state)
+    )
+    out_dir = (run_dir / SUPPORT_EXPORTS_REL_DIR / f"{project_name_hint}_ctcp_project").resolve()
+    input_message = trigger_text or "Generate a minimal runnable project scaffold."
+
+    _record_generation_state(generation_state, state_code="T1_INPUT", note="capture one minimal input")
+    mode = "telegram_ingress_sanity" if str(source or "").strip().lower() == "telegram" else "fallback_generation"
+    command_or_entry = "telegram_message_ingress" if mode == "telegram_ingress_sanity" else "ctcp_orchestrate scaffold entry"
+    generation_state["last_test_mode"] = mode
+    generation_state["last_command_or_entry"] = sanitize_inline_text(command_or_entry, max_chars=120)
+    generation_state["last_out_dir"] = str(out_dir)
+
+    _record_generation_state(generation_state, state_code="T2_ROUTE", note=mode)
+    _record_generation_state(generation_state, state_code="T3_EXECUTE", note="trigger scaffold generation")
+
+    execute_error = ""
+    scaffold_dir: Path | None = None
+    try:
+        exec_delivery_state = dict(delivery_state) if isinstance(delivery_state, dict) else {}
+        exec_delivery_state["project_name_hint"] = project_name_hint
+        scaffold_dir = _materialize_support_scaffold_project(run_dir=run_dir, delivery_state=exec_delivery_state)
+    except Exception as exc:
+        execute_error = sanitize_inline_text(str(exc), max_chars=220) or "state machine execute failed"
+        scaffold_dir = None
+
+    materialization_doc = read_json_doc(run_dir / SUPPORT_SCAFFOLD_MATERIALIZATION_REL_PATH) or {}
+    scaffold_run_dir_text = str(materialization_doc.get("run_dir", "")).strip()
+    scaffold_run_dir = _existing_path(scaffold_run_dir_text) if scaffold_run_dir_text else None
+    generation_state["last_run_dir"] = scaffold_run_dir_text or str(run_dir)
+
+    _record_generation_state(generation_state, state_code="T4_VERIFY", note="verify required artifacts")
+    checked_artifacts: list[dict[str, str]] = []
+    pass_fail = "FAIL"
+    failure_stage = "scaffold failure"
+    concise_reason = execute_error or sanitize_inline_text(str(materialization_doc.get("error", "")), max_chars=220)
+    target_out_dir = scaffold_dir if isinstance(scaffold_dir, Path) else out_dir
+    if scaffold_dir is not None and scaffold_dir.exists():
+        checked_artifacts, pass_fail, failure_stage, concise_reason = _verify_t2p_chain_artifacts(
+            support_run_dir=run_dir,
+            out_dir=target_out_dir,
+            scaffold_run_dir=scaffold_run_dir,
+            source=source,
+        )
+    elif not concise_reason:
+        concise_reason = "scaffold output directory missing"
+
+    _record_generation_state(generation_state, state_code="T5_REPORT", note=f"{pass_fail}:{failure_stage}")
+    report = {
+        "schema_version": "ctcp-support-t2p-state-machine-report-v1",
+        "ts": now_iso(),
+        "test_name": "Low-token Telegram-to-Project Sanity Test",
+        "state_machine": "T0->T1->T2->T3->T4->T5",
+        "mode": mode,
+        "input_message": input_message,
+        "command_or_entry": command_or_entry,
+        "out_dir": str(target_out_dir),
+        "run_dir": scaffold_run_dir_text or str(run_dir),
+        "checked_artifacts": checked_artifacts,
+        "pass_fail": pass_fail,
+        "failure_stage": failure_stage if pass_fail == "FAIL" else "none",
+        "concise_reason": concise_reason or ("Ingress accepted and scaffold artifacts are complete." if pass_fail == "PASS" else ""),
+        "trigger": {
+            "source": sanitize_inline_text(source, max_chars=20),
+            "conversation_mode": sanitize_inline_text(conversation_mode, max_chars=40),
+            "user_text": trigger_text,
+        },
+        "materialization": {
+            "out_dir": sanitize_inline_text(str(materialization_doc.get("out_dir", "")), max_chars=320),
+            "run_dir": sanitize_inline_text(scaffold_run_dir_text, max_chars=320),
+            "reused_existing": bool(materialization_doc.get("reused_existing", False)),
+            "exit_code": int(materialization_doc.get("exit_code", 0) or 0),
+            "error": sanitize_inline_text(str(materialization_doc.get("error", "")), max_chars=220),
+        },
+        "state_history": list(generation_state.get("state_history", [])),
+    }
+    write_json(run_dir / SUPPORT_T2P_STATE_MACHINE_REPORT_REL_PATH, report)
+    append_event(
+        run_dir,
+        "SUPPORT_T2P_STATE_MACHINE_REPORTED",
+        SUPPORT_T2P_STATE_MACHINE_REPORT_REL_PATH.as_posix(),
+        pass_fail=pass_fail,
+        failure_stage=str(report.get("failure_stage", "")),
+    )
+
+    generation_state["last_report_ts"] = now_iso()
+    generation_state["last_report_path"] = SUPPORT_T2P_STATE_MACHINE_REPORT_REL_PATH.as_posix()
+    generation_state["last_pass_fail"] = pass_fail
+    generation_state["last_failure_stage"] = str(report.get("failure_stage", ""))
+    generation_state["last_concise_reason"] = sanitize_inline_text(str(report.get("concise_reason", "")), max_chars=220)
+    generation_state["last_generated_project_dir"] = str(target_out_dir if target_out_dir.exists() else "")
+    return report
 
 
 def detect_conversation_mode(run_dir: Path, user_text: str, session_state: dict[str, Any]) -> str:
@@ -1408,6 +2075,32 @@ def should_auto_advance_project_context(session_state: dict[str, Any], project_c
     if elapsed is not None and elapsed < SUPPORT_AUTO_ADVANCE_INTERVAL_SEC:
         return False
     return run_status in {"running", "in_progress", "working"} or gate_state in {"", "open", "ready"}
+
+
+def evaluate_package_delivery_gate(project_context: dict[str, Any] | None) -> tuple[bool, str]:
+    if not isinstance(project_context, dict):
+        return False, "missing project context"
+    status = project_context.get("status", {})
+    if not isinstance(status, dict):
+        return False, "missing run status"
+    gate = status.get("gate", {})
+    if not isinstance(gate, dict):
+        gate = {}
+    run_status = str(status.get("run_status", "")).strip().lower()
+    verify_result = str(status.get("verify_result", "")).strip().upper()
+    gate_state = str(gate.get("state", "")).strip().lower()
+    needs_user_decision = bool(status.get("needs_user_decision", False))
+    decisions_needed_count = int(status.get("decisions_needed_count", 0) or 0)
+
+    if verify_result != "PASS":
+        return False, "verify_result is not PASS"
+    if run_status not in {"pass", "done", "completed", "success"}:
+        return False, f"run_status not final: {run_status or 'unknown'}"
+    if gate_state in {"blocked", "error", "failed"}:
+        return False, f"gate_state not deliverable: {gate_state}"
+    if needs_user_decision or decisions_needed_count > 0:
+        return False, "pending user decision"
+    return True, ""
 
 
 def remember_resume_recovery(
@@ -1770,6 +2463,7 @@ def collect_public_delivery_state(
     session_state: dict[str, Any] | None,
     project_context: dict[str, Any] | None,
     source: str,
+    support_run_dir: Path | None = None,
 ) -> dict[str, Any]:
     state: dict[str, Any] = {
         "channel": str(source or "").strip().lower(),
@@ -1787,7 +2481,11 @@ def collect_public_delivery_state(
         "package_ready": False,
         "screenshot_ready": False,
     }
+    package_source_dirs: list[Path] = []
+    existing_package_files: list[Path] = []
+    screenshot_files: list[Path] = []
     bound_run_dir: Path | None = None
+    artifacts_dir: Path | None = None
     bound_run_id = ""
     if isinstance(project_context, dict):
         bound_run_id = str(project_context.get("run_id", "")).strip()
@@ -1795,35 +2493,49 @@ def collect_public_delivery_state(
     if bound_run_dir is None and isinstance(session_state, dict):
         bound_run_id = bound_run_id or str(session_state.get("bound_run_id", "")).strip()
         bound_run_dir = _existing_path(str(session_state.get("bound_run_dir", "")).strip())
-    if bound_run_dir is None or (not bound_run_dir.is_dir()):
-        return state
+    if bound_run_dir is not None and bound_run_dir.is_dir():
+        state["bound_run_id"] = bound_run_id
+        state["bound_run_dir"] = str(bound_run_dir)
+        for candidate in _generated_project_roots_from_patch_apply(bound_run_dir):
+            _append_unique_path(package_source_dirs, candidate if candidate.is_dir() else None)
+        for candidate in _parse_scope_allow_roots(bound_run_dir / "artifacts" / "PLAN.md"):
+            if candidate.is_dir():
+                _append_unique_path(package_source_dirs, candidate)
+        artifacts_dir = bound_run_dir / "artifacts"
 
-    state["bound_run_id"] = bound_run_id
-    state["bound_run_dir"] = str(bound_run_dir)
+    exports_root: Path | None = None
+    if isinstance(support_run_dir, Path):
+        exports_root = (support_run_dir / SUPPORT_EXPORTS_REL_DIR).resolve()
+    elif bound_run_dir is not None and bound_run_dir.is_dir():
+        candidate = bound_run_dir / SUPPORT_EXPORTS_REL_DIR
+        if candidate.exists():
+            exports_root = candidate.resolve()
 
-    package_source_dirs: list[Path] = []
-    for candidate in _generated_project_roots_from_patch_apply(bound_run_dir):
-        _append_unique_path(package_source_dirs, candidate if candidate.is_dir() else None)
-    for candidate in _parse_scope_allow_roots(bound_run_dir / "artifacts" / "PLAN.md"):
-        if candidate.is_dir():
-            _append_unique_path(package_source_dirs, candidate)
-    ctcp_package_source_dirs = [path for path in package_source_dirs if _looks_like_ctcp_project_dir(path)]
-    placeholder_package_source_dirs = [path for path in package_source_dirs if _looks_like_placeholder_project_dir(path)]
+    if exports_root is not None and exports_root.exists() and exports_root.is_dir():
+        for node in sorted(exports_root.iterdir()):
+            if node.is_dir():
+                _append_unique_path(package_source_dirs, node)
+        for candidate in sorted(exports_root.rglob("*.zip")):
+            if candidate.name.lower() == "failure_bundle.zip":
+                continue
+            _append_unique_path(existing_package_files, candidate)
+        for candidate in sorted(exports_root.rglob("*")):
+            if not candidate.is_file():
+                continue
+            if candidate.suffix.lower() not in SCREENSHOT_SUFFIXES:
+                continue
+            _append_unique_path(screenshot_files, candidate)
 
-    existing_package_files: list[Path] = []
     search_roots = list(package_source_dirs)
-    artifacts_dir = bound_run_dir / "artifacts"
-    if artifacts_dir.exists():
+    if artifacts_dir is not None and artifacts_dir.exists():
         search_roots.append(artifacts_dir)
     for root in search_roots:
         for candidate in sorted(root.rglob("*.zip")):
             if candidate.name.lower() == "failure_bundle.zip":
                 continue
             _append_unique_path(existing_package_files, candidate)
-
-    screenshot_files: list[Path] = []
     screenshot_roots = list(package_source_dirs)
-    if artifacts_dir.exists():
+    if artifacts_dir is not None and artifacts_dir.exists():
         screenshot_roots.append(artifacts_dir)
     for root in screenshot_roots:
         for candidate in sorted(root.rglob("*")):
@@ -1832,6 +2544,9 @@ def collect_public_delivery_state(
             if candidate.suffix.lower() not in SCREENSHOT_SUFFIXES:
                 continue
             _append_unique_path(screenshot_files, candidate)
+
+    ctcp_package_source_dirs = [path for path in package_source_dirs if _looks_like_ctcp_project_dir(path)]
+    placeholder_package_source_dirs = [path for path in package_source_dirs if _looks_like_placeholder_project_dir(path)]
 
     state["package_source_dirs"] = [str(path) for path in package_source_dirs]
     state["ctcp_package_source_dirs"] = [str(path) for path in ctcp_package_source_dirs]
@@ -2858,7 +3573,20 @@ def process_message(
     )
     append_event(run_dir, "SUPPORT_MESSAGE_RECEIVED", SUPPORT_INBOX_REL_PATH.as_posix(), source=source)
 
-    conversation_mode = detect_conversation_mode(run_dir, user_text, session_state)
+    config, cfg_msg = load_dispatch_config(run_dir)
+    append_log(run_dir / "logs" / "support_bot.dispatch.log", f"[{now_iso()}] load_dispatch_config: {cfg_msg}\n")
+
+    detected_mode = detect_conversation_mode(run_dir, user_text, session_state)
+    conversation_mode = maybe_override_conversation_mode_with_model(
+        run_dir=run_dir,
+        chat_id=chat_id,
+        user_text=user_text,
+        source=source,
+        detected_mode=detected_mode,
+        session_state=session_state,
+        config=config,
+        provider_override=provider_override,
+    )
     record_turn_memory(session_state, user_text=user_text, source=source, conversation_mode=conversation_mode)
 
     project_context, session_state = sync_project_context(
@@ -2869,7 +3597,33 @@ def process_message(
         conversation_mode=conversation_mode,
         session_state=session_state,
     )
-    delivery_state = collect_public_delivery_state(session_state=session_state, project_context=project_context, source=source)
+    delivery_state = collect_public_delivery_state(
+        session_state=session_state,
+        project_context=project_context,
+        source=source,
+        support_run_dir=run_dir,
+    )
+    t2p_report: dict[str, Any] = {}
+    if should_trigger_t2p_state_machine(
+        session_state=session_state,
+        user_text=user_text,
+        source=source,
+        conversation_mode=conversation_mode,
+    ):
+        t2p_report = run_t2p_state_machine(
+            run_dir=run_dir,
+            session_state=session_state,
+            user_text=user_text,
+            source=source,
+            conversation_mode=conversation_mode,
+            delivery_state=delivery_state,
+        )
+        delivery_state = collect_public_delivery_state(
+            session_state=session_state,
+            project_context=project_context,
+            source=source,
+            support_run_dir=run_dir,
+        )
     frontdesk_state = sync_frontdesk_state(
         session_state,
         user_text=user_text,
@@ -2889,9 +3643,6 @@ def process_message(
         project_context=project_context,
         delivery_state=delivery_state,
     )
-    config, cfg_msg = load_dispatch_config(run_dir)
-    append_log(run_dir / "logs" / "support_bot.dispatch.log", f"[{now_iso()}] load_dispatch_config: {cfg_msg}\n")
-
     candidates = support_provider_candidates(config, override=provider_override)
     record_provider_runtime(session_state, preferred_provider=(candidates[0] if candidates else PRIMARY_SUPPORT_PROVIDER))
     request = make_support_request(chat_id, user_text, prompt_text, project_context=project_context)
@@ -3079,6 +3830,26 @@ def process_message(
         delivery_state=delivery_state,
         frontdesk_state=frontdesk_state,
     )
+    if (
+        isinstance(t2p_report, dict)
+        and str(t2p_report.get("pass_fail", "")).strip().upper() == "PASS"
+        and str(source or "").strip().lower() == "telegram"
+        and bool(delivery_state.get("package_ready", False))
+    ):
+        action_types = {
+            str(item.get("type", "")).strip().lower()
+            for item in (final_doc.get("actions", []) if isinstance(final_doc.get("actions", []), list) else [])
+            if isinstance(item, dict)
+        }
+        if "send_project_package" not in action_types:
+            actions = list(final_doc.get("actions", [])) if isinstance(final_doc.get("actions", []), list) else []
+            actions.append({"type": "send_project_package", "format": "zip"})
+            final_doc["actions"] = actions
+            append_event(
+                run_dir,
+                "SUPPORT_T2P_PACKAGE_ACTION_INJECTED",
+                SUPPORT_T2P_STATE_MACHINE_REPORT_REL_PATH.as_posix(),
+            )
     write_json(run_dir / SUPPORT_REPLY_REL_PATH, final_doc)
     frontdesk_state = sync_frontdesk_state(
         session_state,
@@ -3103,6 +3874,16 @@ def process_message(
         "package_delivery_mode": str(delivery_state.get("package_delivery_mode", "")).strip(),
         "package_structure_hint": list(delivery_state.get("package_structure_hint", [])),
         "screenshot_ready": bool(delivery_state.get("screenshot_ready", False)),
+        "t2p_state": sanitize_inline_text(str(latest_generation_state(session_state).get("current_state", "")), max_chars=32),
+        "t2p_pass_fail": sanitize_inline_text(str(latest_generation_state(session_state).get("last_pass_fail", "")), max_chars=12),
+        "t2p_failure_stage": sanitize_inline_text(
+            str(latest_generation_state(session_state).get("last_failure_stage", "")),
+            max_chars=40,
+        ),
+        "t2p_report_path": sanitize_inline_text(
+            str(latest_generation_state(session_state).get("last_report_path", "")),
+            max_chars=220,
+        ),
     }
     save_support_session_state(run_dir, session_state)
     append_event(run_dir, "SUPPORT_REPLY_WRITTEN", SUPPORT_REPLY_REL_PATH.as_posix(), provider=provider)
@@ -3339,8 +4120,17 @@ class TelegramClient:
         url = f"{self.base}/{method}"
         data = urllib.parse.urlencode({k: str(v) for k, v in params.items()}).encode("utf-8")
         req = urllib.request.Request(url, data=data, method="POST")
-        with urllib.request.urlopen(req, timeout=self.timeout_sec + 15) as resp:
-            payload = resp.read().decode("utf-8", errors="replace")
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout_sec + 15) as resp:
+                payload = resp.read().decode("utf-8", errors="replace")
+        except urllib.error.HTTPError as exc:
+            body = ""
+            try:
+                body = exc.read().decode("utf-8", errors="replace")
+            except Exception:
+                body = ""
+            detail = body or str(exc)
+            raise RuntimeError(f"telegram api http {exc.code}: {detail}") from exc
         doc = json.loads(payload)
         if not isinstance(doc, dict) or not bool(doc.get("ok")):
             raise RuntimeError(f"telegram api error: {payload}")
@@ -3366,8 +4156,17 @@ class TelegramClient:
         body.extend(f"--{boundary}--\r\n".encode("utf-8"))
         req = urllib.request.Request(url, data=bytes(body), method="POST")
         req.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
-        with urllib.request.urlopen(req, timeout=self.timeout_sec + 30) as resp:
-            payload = resp.read().decode("utf-8", errors="replace")
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout_sec + 30) as resp:
+                payload = resp.read().decode("utf-8", errors="replace")
+        except urllib.error.HTTPError as exc:
+            body = ""
+            try:
+                body = exc.read().decode("utf-8", errors="replace")
+            except Exception:
+                body = ""
+            detail = body or str(exc)
+            raise RuntimeError(f"telegram api http {exc.code}: {detail}") from exc
         doc = json.loads(payload)
         if not isinstance(doc, dict) or not bool(doc.get("ok")):
             raise RuntimeError(f"telegram api error: {payload}")
@@ -3383,6 +4182,14 @@ class TelegramClient:
             },
         )
         return result if isinstance(result, list) else []
+
+    def clear_webhook(self, drop_pending_updates: bool = False) -> None:
+        self._post(
+            "deleteWebhook",
+            {
+                "drop_pending_updates": "true" if drop_pending_updates else "false",
+            },
+        )
 
     def send_message(self, chat_id: int, text: str) -> None:
         self._post("sendMessage", {"chat_id": chat_id, "text": text[:3800]})
@@ -3467,7 +4274,12 @@ def build_grounded_status_reply_doc(
     project_context: dict[str, Any] | None,
 ) -> dict[str, Any]:
     """Build status reply doc for proactive progress updates - calls API to generate content."""
-    delivery_state = collect_public_delivery_state(session_state=session_state, project_context=project_context, source="telegram")
+    delivery_state = collect_public_delivery_state(
+        session_state=session_state,
+        project_context=project_context,
+        source="telegram",
+        support_run_dir=run_dir,
+    )
     lang_hint = str(_state_zone(session_state, "session_profile").get("lang_hint", "")).strip().lower()
     synthetic_status_turn = "what's the latest progress?" if lang_hint.startswith("en") else "现在做到什么程度了"
 
@@ -3613,16 +4425,57 @@ def run_stdin_mode(chat_id: str, provider_override: str = "") -> int:
 
 
 def run_telegram_mode(token: str, poll_seconds: int, allowlist_raw: str, provider_override: str = "") -> int:
+    try:
+        lock_path, lock_fh = acquire_telegram_poll_lock(token)
+    except Exception as exc:
+        print(f"[ctcp_support_bot] {exc}", file=sys.stderr)
+        return 2
+    atexit.register(release_telegram_poll_lock, lock_path, lock_fh)
+
     tg = TelegramClient(token=token, timeout_sec=poll_seconds)
     allowlist = parse_allowlist(allowlist_raw)
+    try:
+        tg.clear_webhook(drop_pending_updates=False)
+    except Exception as exc:
+        print(f"[ctcp_support_bot] telegram deleteWebhook warning: {exc}", file=sys.stderr)
 
     offset = 0
+    get_updates_error_streak = 0
+    last_get_updates_error = ""
     while True:
         try:
             updates = tg.get_updates(offset)
+            get_updates_error_streak = 0
+            last_get_updates_error = ""
         except Exception as exc:
-            print(f"[ctcp_support_bot] telegram getUpdates error: {exc}", file=sys.stderr)
-            time.sleep(1.0)
+            error_text = sanitize_inline_text(str(exc), max_chars=320)
+            get_updates_error_streak += 1
+            should_log = (
+                (error_text != last_get_updates_error)
+                or get_updates_error_streak in {1, 2, 3, 5, 10}
+                or (get_updates_error_streak % 20 == 0)
+            )
+            if should_log:
+                print(
+                    f"[ctcp_support_bot] telegram getUpdates error (streak={get_updates_error_streak}): {error_text}",
+                    file=sys.stderr,
+                )
+            last_get_updates_error = error_text
+            low = error_text.lower()
+            if "409" in low and "conflict" in low:
+                try:
+                    tg.clear_webhook(drop_pending_updates=False)
+                except Exception:
+                    pass
+                if get_updates_error_streak >= 3:
+                    print(
+                        "[ctcp_support_bot] persistent 409 conflict: another polling client may still be using this token.",
+                        file=sys.stderr,
+                    )
+            if ("timed out" in low) or isinstance(exc, (TimeoutError, socket.timeout)):
+                time.sleep(min(2.0, 0.3 + 0.1 * get_updates_error_streak))
+            else:
+                time.sleep(min(8.0, 1.0 + 0.3 * get_updates_error_streak))
             continue
 
         if not updates:
@@ -3674,6 +4527,7 @@ def run_telegram_mode(token: str, poll_seconds: int, allowlist_raw: str, provide
                     session_state=session_state,
                     project_context=None,
                     source="telegram",
+                    support_run_dir=support_run_dir,
                 )
                 emit_public_delivery(
                     tg,

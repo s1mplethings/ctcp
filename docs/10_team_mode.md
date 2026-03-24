@@ -70,11 +70,13 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
     - `artifacts/support_reply.json`
   - provider 调试日志统一写入 `logs/support_bot.*.log`，并追加 `TRACE.md`。
 - 项目型消息接线：
-  - support bot 先做 conversation-mode classification。
+  - 单主流程硬规则：support runtime 禁止触发 `run_t2p_state_machine()` 的快速脚手架旁路（含 `telegram_ingress_sanity` / `fallback_generation`）；项目型 turn 只能进入 bridge 主流程状态机。
+  - support bot 先做规则型 conversation-mode 首判；若命中歧义/解释型 turn（例如已绑定 run 下的“为什么会这样”），runtime 可触发 model-assisted 二段仲裁（api-first，失败降级到本地），再决定最终 mode。
   - 在任何 prompt/reply 生成前，runtime 还必须基于 latest turn、active run、session slots 解析一层显式 frontdesk state machine；权威结构见 `contracts/frontend_session_contract.md`。
   - 这层 frontdesk state machine 至少要覆盖 `Idle / IntentDetect / Collect / Clarify / Confirm / Execute / AwaitDecision / ReturnResult / InterruptRecover / StyleAdjust / Error`，并持久化 `current_goal / current_scope / active_task_id / waiting_for / user_style_profile / decision_points / artifacts / blocked_reason / resumable_state`。
   - 处理顺序必须是：先判断 frontdesk state，再决定回复策略，再生成回复内容；`visible_state` 只是用户可见执行态折叠，不能替代 frontdesk state。
   - `PROJECT_INTAKE / PROJECT_DETAIL / STATUS_QUERY` 等项目型 turn 只能通过 `scripts/ctcp_front_bridge.py` 创建/绑定/查询/推进 CTCP run。
+  - 当 bound run 的 `status.gate.state=blocked` 时，runtime 只允许输出 grounded 状态与下一步，不允许注入“已完成生成/已可交付包”的快通道语义。
   - 绑定 run 后，support bot 通过 bridge 读取真实 `RUN.json` / `verify_report.json` 摘要与 `artifacts/support_whiteboard.json` 快照，不直接在客服层发明工程状态。
   - 在发出 `support_reply.json.reply_text` 前，reply builder 必须绑定 `task_goal / current_phase / last_confirmed_items / current_blocker / message_purpose / question_needed / next_action`。
   - `style_change` 必须只更新持久 `user_style_profile`，不得覆盖当前任务主线；`clarify / redirect / override / sidequest / status_query / result_query` 等中断分类必须显式写入 frontdesk state，并保留 `resumable_state`。
