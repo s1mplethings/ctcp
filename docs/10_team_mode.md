@@ -99,7 +99,7 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
   - proactive progress push 不得直接复用 inbox 里的最新 greeting/smalltalk 作为 latest-turn 语义；它必须显式以 status/progress 语义渲染，避免“用户问候一次，系统主动再问候一次”的重复输出。
   - greeting / capability / smalltalk 这类 non-project turn 在 active bound run 上不得重置 `notification_state` 里的真实 progress baseline；若 run digest 本身没有变化，后续 idle cycle 不应把同一状态再主动推一次。
   - fallback / capability 兜底也必须保持任务推进型口吻，不得退回“项目经理方式推进”“API 和本地模型都不可用”这类机械系统句。
-  - Telegram 当前对话支持直接发送文件时，客服不得再问邮箱；`send_project_package` 只允许在绑定 run 满足“`verify_result=PASS` 且 `run_status` 已到最终态（`pass/done/completed/success`）且无待用户决策”时触发；即使存在 artifact，未到最终通过态也必须禁止发包。截图交付仍按实际截图 artifact 可用性决定。
+  - Telegram 当前对话支持直接发送文件时，客服不得再问邮箱；`send_project_package` 只允许在绑定 run 满足“`verify_result=PASS` 且 `run_status` 已到最终态（`pass/done/completed/success`）且无待用户决策”时触发；另外必须通过 package 质量门禁（至少满足最小质量分和核心展示证据），否则即使有 artifact 也禁止发包。截图交付仍按实际截图 artifact 可用性决定。
   - 若绑定项目目录只是 `main.py + README.md` 这类薄壳占位实现，support package runtime 必须先在 support session 外部 materialize 一份 CTCP-style scaffold，再打包发送；客服回复也必须按 scaffold 如实描述，不得把它说成完整功能已经做完的项目。
   - 若 turn 涉及测试、演示、截图、回放或交付说明，reply 必须优先引用 `artifacts/test_plan.json`、`artifacts/test_cases.json`、`artifacts/test_summary.md`、`artifacts/demo_trace.md`、`artifacts/screenshots/` 等真实展示产物；没有截图时必须如实说明没有。
 - 安全建议：

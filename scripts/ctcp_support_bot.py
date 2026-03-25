@@ -344,6 +344,7 @@ PREVIOUS_PROJECT_STATUS_PATTERNS_EN = (
     ),
 )
 SCREENSHOT_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
+SUPPORT_PACKAGE_MIN_QUALITY_SCORE = 70
 _WHITEBOARD_DISPATCH_RESULT_RE = re.compile(
     r"^(?P<role>[^/\s]+)/(?P<action>[^\s]+)\s+via\s+(?P<provider>[^\s]+)\s+=>\s+(?P<status>[^\s]+)\s+\((?P<target>[^)]+)\)(?:;\s*(?P<reason>.*))?$"
 )
@@ -3110,6 +3111,97 @@ def _looks_like_placeholder_project_dir(root: Path) -> bool:
     return total_files <= 4 and bool({"main.py", "app.py", "readme.md"} & top_files)
 
 
+def _has_any_file(root: Path, pattern: str) -> bool:
+    if not root.exists() or not root.is_dir():
+        return False
+    for path in root.rglob(pattern):
+        if path.is_file():
+            return True
+    return False
+
+
+def _has_screenshot_or_reason(artifacts_dir: Path) -> bool:
+    screenshots_dir = artifacts_dir / "screenshots"
+    if screenshots_dir.exists() and screenshots_dir.is_dir():
+        for path in screenshots_dir.rglob("*"):
+            if path.is_file() and path.suffix.lower() in SCREENSHOT_SUFFIXES:
+                return True
+    reason_file = artifacts_dir / "screenshots_not_available_reason.txt"
+    if reason_file.exists() and reason_file.is_file():
+        return True
+    demo_trace = artifacts_dir / "demo_trace.md"
+    if demo_trace.exists() and demo_trace.is_file():
+        low = demo_trace.read_text(encoding="utf-8", errors="replace").lower()
+        if "screenshots_not_available_reason" in low:
+            return True
+    return False
+
+
+def _score_delivery_project_quality(root: Path) -> dict[str, Any]:
+    artifacts_dir = root / "artifacts"
+    checks = [
+        ("readme", (root / "README.md").exists(), 10),
+        ("manifest", (root / "manifest.json").exists() or (root / "meta" / "manifest.json").exists(), 10),
+        ("docs_dir", (root / "docs").is_dir(), 8),
+        ("meta_dir", (root / "meta").is_dir(), 8),
+        ("scripts_dir", (root / "scripts").is_dir(), 8),
+        ("verify_entry", (root / "scripts" / "verify_repo.ps1").exists() or (root / "scripts" / "verify_repo.sh").exists(), 8),
+        ("tests_dir", (root / "tests").is_dir(), 10),
+        ("test_case_file", _has_any_file(root / "tests", "test_*.py"), 8),
+        (
+            "showcase_core",
+            (artifacts_dir / "test_plan.json").exists()
+            and (artifacts_dir / "test_cases.json").exists()
+            and (artifacts_dir / "test_summary.md").exists()
+            and (artifacts_dir / "demo_trace.md").exists(),
+            15,
+        ),
+        ("showcase_visual", _has_screenshot_or_reason(artifacts_dir), 15),
+    ]
+    score = sum(weight for _, ok, weight in checks if ok)
+    tier = "low"
+    if score >= 85:
+        tier = "high"
+    elif score >= SUPPORT_PACKAGE_MIN_QUALITY_SCORE:
+        tier = "medium"
+    elif score >= 50:
+        tier = "scaffold"
+    missing = [check_id for check_id, ok, _ in checks if not ok]
+    return {
+        "root": str(root),
+        "score": int(score),
+        "tier": tier,
+        "missing_checks": missing,
+    }
+
+
+def _evaluate_delivery_quality_gate(
+    *,
+    package_source_dirs: list[Path],
+    existing_package_files: list[Path],
+) -> tuple[bool, str, int, str, str]:
+    if existing_package_files and (not package_source_dirs):
+        return True, "", 100, "trusted_existing_package", ""
+    if not package_source_dirs:
+        return False, "package source missing", 0, "unknown", ""
+    reports = [_score_delivery_project_quality(path) for path in package_source_dirs if path.exists() and path.is_dir()]
+    if not reports:
+        return False, "package source missing", 0, "unknown", ""
+    best = max(reports, key=lambda item: int(item.get("score", 0)))
+    score = int(best.get("score", 0))
+    tier = str(best.get("tier", "unknown"))
+    subject = str(best.get("root", ""))
+    if score < SUPPORT_PACKAGE_MIN_QUALITY_SCORE:
+        return (
+            False,
+            f"package quality score {score} < {SUPPORT_PACKAGE_MIN_QUALITY_SCORE}; need fuller implementation evidence",
+            score,
+            tier,
+            subject,
+        )
+    return True, "", score, tier, subject
+
+
 def _delivery_project_name_hint(
     *,
     session_state: dict[str, Any] | None,
@@ -3162,6 +3254,11 @@ def collect_public_delivery_state(
         "package_ready": False,
         "package_delivery_allowed": False,
         "package_blocked_reason": "",
+        "package_quality_ready": False,
+        "package_quality_score": 0,
+        "package_quality_tier": "unknown",
+        "package_quality_subject": "",
+        "package_quality_reason": "",
         "screenshot_ready": False,
     }
     package_source_dirs: list[Path] = []
@@ -3259,11 +3356,22 @@ def collect_public_delivery_state(
         state["package_structure_hint"] = _top_level_structure_hint(package_source_dirs[0])
     package_artifact_ready = bool(package_source_dirs or existing_package_files)
     gate_allowed, gate_block_reason = evaluate_package_delivery_gate(project_context)
-    state["package_delivery_allowed"] = bool(package_artifact_ready and gate_allowed)
+    quality_ready, quality_reason, quality_score, quality_tier, quality_subject = _evaluate_delivery_quality_gate(
+        package_source_dirs=package_source_dirs,
+        existing_package_files=existing_package_files,
+    )
+    state["package_quality_ready"] = bool(quality_ready)
+    state["package_quality_score"] = int(quality_score)
+    state["package_quality_tier"] = sanitize_inline_text(quality_tier, max_chars=24) or "unknown"
+    state["package_quality_subject"] = sanitize_inline_text(quality_subject, max_chars=320)
+    state["package_quality_reason"] = sanitize_inline_text(quality_reason, max_chars=180)
+    state["package_delivery_allowed"] = bool(package_artifact_ready and gate_allowed and quality_ready)
     if not package_artifact_ready:
         state["package_blocked_reason"] = "package artifact not ready"
     elif not gate_allowed:
         state["package_blocked_reason"] = sanitize_inline_text(gate_block_reason, max_chars=120)
+    elif not quality_ready:
+        state["package_blocked_reason"] = sanitize_inline_text(quality_reason, max_chars=120)
     state["package_ready"] = bool(state["package_delivery_allowed"])
     state["screenshot_ready"] = bool(screenshot_files)
     return state
@@ -3281,6 +3389,9 @@ def public_delivery_prompt_context(delivery_state: dict[str, Any] | None) -> dic
         "package_ready": bool(delivery_state.get("package_ready", False)),
         "package_delivery_allowed": bool(delivery_state.get("package_delivery_allowed", False)),
         "package_blocked_reason": sanitize_inline_text(str(delivery_state.get("package_blocked_reason", "")), max_chars=120),
+        "package_quality_ready": bool(delivery_state.get("package_quality_ready", False)),
+        "package_quality_score": int(delivery_state.get("package_quality_score", 0) or 0),
+        "package_quality_tier": sanitize_inline_text(str(delivery_state.get("package_quality_tier", "")), max_chars=24),
         "package_sources": package_source_dirs[:3],
         "existing_package_files": existing_packages[:3],
         "project_name_hint": sanitize_inline_text(str(delivery_state.get("project_name_hint", "")), max_chars=64),
@@ -3316,6 +3427,7 @@ def default_prompt_template() -> str:
         "Ask at most one high-leverage follow-up question when route-changing details are missing.\n"
         "If package/screenshot delivery should happen now, use actions only: send_project_package(format=zip) and send_project_screenshot(count=1-3).\n"
         "send_project_package is allowed only when public_delivery.package_delivery_allowed is true.\n"
+        "If public_delivery.package_quality_ready is false, do not ask for package confirmation; explain that quality evidence is not complete yet.\n"
     )
 
 

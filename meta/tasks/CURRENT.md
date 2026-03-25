@@ -1,151 +1,99 @@
-# Current Task
-
-> **用法**：本文件保留当前活跃任务指针，同时内嵌 workflow gate 所需的最新任务摘要。
-> 历史任务正文在 `meta/tasks/archive/`。
-
-## Base Task
-
-- Queue Item: `L0-PLAN-001`
-- Topic: `markdown-contract-drift-fix`
-- Status: `done` (base scope completed; subsequent updates archived)
-
-## Active Task (latest)
-
-- File: [`meta/tasks/archive/20260324-support-package-final-stage-gate.md`](archive/20260324-support-package-final-stage-gate.md)
-- Date: 2026-03-24
-- Topic: Support 发包动作只允许“测试通过 + 最终阶段”触发
-- Status: `doing`
+# Task - support-delivery-quality-gate
 
 ## Queue Binding
 
-- Queue Item: `ADHOC-20260324-support-package-final-stage-gate`
+- Queue Item: `ADHOC-20260325-support-delivery-quality-gate`
 - Layer/Priority: `L2 / P0`
 - Source Queue File: `meta/backlog/execution_queue.json`
 
 ## Context
 
-- Why this item now: 用户明确要求“未测试功能且未到最终阶段时，不允许直接发包”。
-- Dependency check: `ADHOC-20260324-support-single-mainline-state-machine` = `blocked` (code landed, canonical verify blocked by unrelated `test_final.py`).
-- Scope boundary: 仅修 support 包交付动作门禁与文档/回归；不改 orchestrator/bridge 主实现。
+- Why this item now: 用户反馈最终生成项目“细节不足、质量低”，需要在客服发包前加硬门禁，避免低质量结果被当成最终交付。
+- Dependency check: `ADHOC-20260325-backend-test-default-output-and-support-trigger` = `done`
+- Scope boundary: 仅改 support package delivery gate、对应测试和合同文档；不改 orchestrator 主流程与 backend create_job 业务逻辑。
 
 ## Task Truth Source (single source for current task)
 
-- task_purpose: 强制 `send_project_package` 只能在 bound run 已通过测试且处于最终可交付状态时触发。
-- allowed_behavior_change: 可更新 `scripts/ctcp_support_bot.py`、`docs/10_team_mode.md`、`tests/test_support_bot_humanization.py`、`meta/backlog/execution_queue.json`、`meta/tasks/CURRENT.md`、`meta/tasks/archive/20260324-support-package-final-stage-gate.md`、`meta/reports/LAST.md`、`meta/reports/archive/20260324-support-package-final-stage-gate.md`。
-- forbidden_goal_shift: 不得恢复快通道；不得绕过主流程状态机；不得跳过 canonical verify。
-- in_scope_modules:
+- task_purpose: 为 support zip 交付增加可执行质量门禁，阻断低质量项目包。
+- allowed_behavior_change:
   - `scripts/ctcp_support_bot.py`
-  - `docs/10_team_mode.md`
   - `tests/test_support_bot_humanization.py`
+  - `tests/test_runtime_wiring_contract.py`
+  - `docs/10_team_mode.md`
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/CURRENT.md`
-  - `meta/tasks/archive/20260324-support-package-final-stage-gate.md`
   - `meta/reports/LAST.md`
-  - `meta/reports/archive/20260324-support-package-final-stage-gate.md`
+- forbidden_goal_shift: 不修改 `scripts/ctcp_orchestrate.py` 状态机；不修改 `apps/project_backend/*` 生成编排；不引入新的外部依赖。
+- in_scope_modules:
+  - `scripts/`
+  - `tests/`
+  - `docs/`
 - out_of_scope_modules:
-  - `scripts/ctcp_orchestrate.py`
-  - `scripts/ctcp_front_bridge.py`
-  - `frontend/frontdesk_state_machine.py`
-  - `src/`
-  - `include/`
-- completion_evidence: 未达 final+PASS 时，provider/自动动作里的 `send_project_package` 都被拦截；达到 final+PASS 才允许发包。
+  - `apps/`
+  - `contracts/`
+  - `shared/`
+  - `frontend/`
+- completion_evidence: 低质量目录在 final-pass 状态下也会被阻断发包；高质量目录可继续发送 zip。
 
 ## Analysis / Find (before plan)
 
-- Entrypoint analysis: `build_final_reply_doc()` 会消费 provider actions；`synthesize_delivery_actions()` 可自动补 `send_project_package`；`resolve_public_delivery_plan()` 负责实际 zip/document 发送。
-- Downstream consumer analysis: 如果不在动作归一化与实际发送两层都设门禁，仍可能出现“文案或动作提前发包”。
-- Source of truth: `project_context.status` (`run_status`, `verify_result`, `gate`, `needs_user_decision`) + `docs/10_team_mode.md`。
-- Current break point / missing wiring: 包交付当前只看 `package_ready`，缺少“测试通过+最终阶段”硬条件。
+- Entrypoint analysis: `collect_public_delivery_state` 目前只基于 `verify_result/run_status` + artifact 是否存在来决定 `package_delivery_allowed`。
+- Downstream consumer analysis: `build_final_reply_doc` 和 `emit_public_delivery` 直接消费 `package_delivery_allowed/package_ready`，因此 gate 需要在 state 层完成。
+- Source of truth: `scripts/ctcp_support_bot.py`、`tests/test_support_bot_humanization.py`、`tests/test_runtime_wiring_contract.py`。
+- Current break point / missing wiring: 缺少“结构完整度 + 测试/展示证据”质量门禁，导致薄壳项目也可能触发发包。
 - Repo-local search sufficient: `yes`
-- If no, external research artifact: `N/A`
 
 ## Integration Check (before implementation)
 
-- upstream: `process_message()` -> `build_final_reply_doc()` -> `synthesize_delivery_actions()`。
-- current_module: delivery action gate + public delivery plan gate。
-- downstream: `emit_public_delivery()` 的 Telegram document/photo 发送。
-- source_of_truth: `project_context.status` from `ctcp_front_bridge`。
-- fallback: gate 未满足时仅保留状态回复/下一步，不发包。
+- upstream: `process_message` -> `collect_public_delivery_state`
+- current_module: `scripts/ctcp_support_bot.py`
+- downstream: `build_final_reply_doc` action filter + `emit_public_delivery`
+- source_of_truth: delivery_state 中的 `package_delivery_allowed` 与新增 quality 字段
+- fallback: 质量不足时保持状态说明/截图路径，不发送 package
 - acceptance_test:
   - `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v`
   - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
-  - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
-  - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
   - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
 - forbidden_bypass:
-  - 不得仅靠文案提示规避（必须 runtime gate）
-  - 不得只拦自动动作而放行 provider 主动动作
-  - 不得只拦动作列表而放行实际发送层
-- user_visible_effect: 只有“测试通过且最终阶段”才会触发发包，其余阶段只汇报进度与下一步。
-
-## DoD Mapping (from execution_queue.json)
-
-- [ ] DoD-1: send_project_package is blocked unless bound run status is final and verify_result is PASS
-- [ ] DoD-2: provider-requested and auto-synthesized package actions are both filtered out before public delivery when gate conditions are not met
-- [ ] DoD-3: support contract docs and focused regression tests explicitly cover the final-stage tested gate for package delivery
+  - 不得删除既有 `verify_result=PASS` 最终态 gate
+  - 不得绕过 `collect_public_delivery_state` 直接发包
+  - 不得把低质量阻断改成仅提示不阻断
+- user_visible_effect: 用户索要 zip 时，低质量项目会收到明确阻断说明；高质量项目可正常收到 zip。
 
 ## Acceptance (must be checkable)
 
 - [x] DoD written (this file complete)
-- [x] Research logged (repo-local runtime/code scan only)
-- [x] Code changes allowed (`Scoped package-delivery runtime gate`) 
-- [ ] Patch applies cleanly
-- [ ] `scripts/verify_repo.*` passes (or first failure + minimal fix recorded)
-- [ ] Demo report updated: `meta/reports/LAST.md`
+- [x] Research logged (repo-local scan complete)
+- [x] Code changes allowed
+- [x] Patch applies cleanly
+- [x] `scripts/verify_repo.*` passes (or first failure + minimal fix recorded)
+- [x] Demo report updated: `meta/reports/LAST.md`
 
 ## Plan
 
-1) Bind queue item + task card.
-2) Add package delivery gate helper bound to `project_context.status` final+PASS conditions.
-3) Filter `send_project_package` in both action synthesis and delivery execution layers when gate unmet.
-4) Keep screenshot delivery unaffected.
-5) Update support contract wording to hard-require tested final stage before package delivery.
-6) Add focused regression for package gate.
-7) Run focused tests + canonical verify; record first failure + minimal fix.
+1. 在 support delivery state 中增加 quality score/tier/ready/reason 计算与阈值常量。
+2. 将 `package_delivery_allowed` 升级为“artifact + run final-pass + quality gate”联合判定。
+3. 更新回归测试覆盖“低质量阻断、高质量放行、telegram 发包路径仍可发送”。
+4. 更新 `docs/10_team_mode.md` 合同条款并记录 verify 证据。
 
 ## Check / Contrast / Fix Loop Evidence
 
-- check / contrast / fix loop:
-  - check-1: production log showed package action emitted immediately after project-create turn despite run gate still blocked.
-  - contrast-1: expected behavior requires tested final-stage gate, but runtime only checked package artifact readiness.
-  - fix-1: add strict status-based package gate and apply at action + delivery layers.
-  - check-2: add focused regression and rerun verify.
+- check-1: 当前 gate 只看 run 最终态，无法区分薄壳目录与高质量目录。
+- contrast-1: 用户要求“更细节、更高质量”，低质量输出不应继续作为最终交付。
+- fix-1: 在 `collect_public_delivery_state` 引入质量评分与阈值门禁，未达标直接阻断 `send_project_package`。
 
 ## Completion Criteria Evidence
 
-- connected + accumulated + consumed:
-  - connected: status gate from bridge flows into delivery gating.
-  - accumulated: package gate decision persisted in delivery context for prompt/runtime consumption.
-  - consumed: user-visible actions and actual Telegram delivery both obey the same gate.
+- completion criteria: connected + accumulated + consumed
+- connected: `collect_public_delivery_state` 产出质量字段并接入 delivery allow 判定。
+- accumulated: 质量分、tier、reason 被写入 delivery_state 并进入 prompt context。
+- consumed: `build_final_reply_doc/emit_public_delivery` 通过 `package_delivery_allowed` 消费门禁结果，低质量场景不再发包。
 
-## Notes / Decisions
+## Issue Memory Decision
 
-- Default choices made: “不能发包”默认优先，只有 final+PASS 才放行。
-- Alternatives considered: 仅在文案上改“稍后发包”；不采纳（仍可能实际发包）。
-- Any contract exception reference (must also log in `ai_context/decision_log.md`): none.
-- Issue memory decision: this is a user-visible premature-delivery class; keep tracked in issue memory.
-- Skill decision (`skillized: yes` or `skillized: no, because ...`): skillized: no, because this is a scoped runtime gate correction.
-- persona_lab_impact: none.
+- decision: 新增 issue memory（用户可见交付质量误报类问题）。
+- rationale: 属于重复风险类缺陷，必须进入 failure memory。
 
-## Results
+## Skill Decision
 
-- Files changed: pending
-- Verification summary: pending
-- Queue status update suggestion (`todo/doing/done/blocked`): doing
-
-## Archive Index (recent 10)
-
-| Date | Topic | File |
-|------|-------|------|
-| 2026-03-24 | Support 发包动作只允许“测试通过 + 最终阶段”触发 | [→](archive/20260324-support-package-final-stage-gate.md) |
-| 2026-03-24 | Support 单主流程状态机（禁用 Telegram 快速脚手架旁路） | [→](archive/20260324-support-single-mainline-state-machine.md) |
-| 2026-03-24 | 支持对话模式二段判定（规则首判 + 模型仲裁） | [→](archive/20260324-support-mode-router-model-assist.md) |
-| 2026-03-21 | src 功能边界拆分（Bridge 瘦身 + 单一文件操作适配层） | [→](archive/20260321-src-functional-boundary-refactor.md) |
-| 2026-03-17 | Support frontdesk 显式状态机与任务槽位接线 | [→](archive/20260317-support-frontdesk-state-machine.md) |
-| 2026-03-17 | Support 旧项目进度追问绑定真实 run 状态 | [→](archive/20260317-support-previous-project-status-grounding.md) |
-| 2026-03-17 | Support greeting turn 保留主动进度基线 | [→](archive/20260317-support-proactive-baseline-preserve-on-greeting.md) |
-| 2026-03-17 | Support 主动推送误复用寒暄修复 | [→](archive/20260317-support-proactive-push-greeting-dup-guard.md) |
-| 2026-03-16 | Support 主动进度推送与旧大纲恢复 | [→](archive/20260316-support-proactive-progress-and-resume.md) |
-| 2026-03-16 | Support 状态/进度回复绑定真实 run 进展 | [→](archive/20260316-support-status-progress-grounding.md) |
-
-Full archive: `meta/tasks/archive/`
+- skillized: no, because 这是 support delivery runtime 的局部质量策略收敛，不是独立可复用 workflow。

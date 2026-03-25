@@ -1813,7 +1813,7 @@
           "frontend/frontdesk_state_machine.py",
           "frontend/response_composer.py",
           "scripts/ctcp_support_bot.py",
-          "contracts/frontend_session_contract.md",
+          "docs/architecture/contracts/frontend_session_contract.md",
           "docs/10_team_mode.md",
           "docs/13_contracts_index.md",
           "tests/test_frontdesk_state_machine.py",
@@ -1834,7 +1834,7 @@
         ]
       },
       "status": "done",
-      "notes": "Completed on 2026-03-17: explicit frontdesk-state contracts landed in `contracts/frontend_session_contract.md` and `docs/10_team_mode.md`, runtime persistence/consumption landed across `frontend/frontdesk_state_machine.py`, `frontend/response_composer.py`, and `scripts/ctcp_support_bot.py`, focused regressions landed in `tests/test_frontdesk_state_machine.py`, `tests/test_runtime_wiring_contract.py`, and `tests/test_support_bot_humanization.py`, and final canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` returned 0 after queue/task/report closure sync with lite replay summary at C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260317-205618."
+      "notes": "Completed on 2026-03-17: explicit frontdesk-state contracts landed in `docs/architecture/contracts/frontend_session_contract.md` and `docs/10_team_mode.md`, runtime persistence/consumption landed across `frontend/frontdesk_state_machine.py`, `frontend/response_composer.py`, and `scripts/ctcp_support_bot.py`, focused regressions landed in `tests/test_frontdesk_state_machine.py`, `tests/test_runtime_wiring_contract.py`, and `tests/test_support_bot_humanization.py`, and final canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` returned 0 after queue/task/report closure sync with lite replay summary at C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260317-205618."
     },
     {
       "id": "ADHOC-20260321-src-functional-boundary-refactor",
@@ -1973,8 +1973,574 @@
           "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
         ]
       },
+      "status": "blocked",
+      "notes": "Scoped package-delivery gate changes landed (final+PASS required; provider/auto/execution layers all gated). Canonical verify now reaches triplet guard and fails on preexisting runtime wiring issues (`frontend/response_composer.py` IndexError, run_stdin_mode StringIO buffer handling, Telegram lock cleanup), so queue item is blocked pending that separate baseline repair."
+    },
+    {
+      "id": "ADHOC-20260324-api-connectivity-project-wiring-check",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Validate api_agent connectivity and in-project support wiring",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260324-support-package-final-stage-gate"
+      ],
+      "dod": [
+        "execute an external API reachability probe through the repository OpenAI-compatible client and capture success/failure evidence",
+        "execute a real support-bot project turn with provider api_agent and confirm the response path is usable in project runtime",
+        "run canonical verify and record first failure point with minimal next fix strategy"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260324-api-connectivity-project-wiring-check.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260324-api-connectivity-project-wiring-check.md"
+        ],
+        "tests": [
+          "python -c \"from scripts.externals.openai_responses_client import call_openai_responses; text, err = call_openai_responses(prompt='Reply with API_OK only.', model='gpt-4.1-mini', timeout_sec=60); print('OK' if text else 'ERR'); print((text or err)[:200])\"",
+          "echo 现在先做一个项目内API接线测试 | python scripts/ctcp_support_bot.py --stdin --chat-id api-connectivity-check --provider api_agent",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "blocked",
+      "notes": "Completed API probe and project-path runtime validation with positive results (`call_openai_responses` returned API_OK; support stdin run produced `provider=api_agent` and `provider_status=executed`). Canonical verify remains blocked at preexisting triplet runtime wiring failures (`frontend/response_composer.py` IndexError hint banks, run_stdin_mode StringIO buffer compatibility, Telegram lock cleanup, fallback reply mojibake)."
+    },
+    {
+      "id": "ADHOC-20260324-triplet-runtime-wiring-baseline-repair",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Repair preexisting triplet runtime wiring baseline failures",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260324-api-connectivity-project-wiring-check"
+      ],
+      "dod": [
+        "frontend reply composition no longer crashes when hint banks are empty and runtime wiring tests cover the path",
+        "support stdin mode handles StringIO-like stdin safely, Telegram poll lock is released on loop exit, and API failover reply visibly states API-path fallback",
+        "canonical verify runs with first failure recorded or passes after scoped runtime wiring repairs"
+      ],
+      "artifacts": {
+        "produces": [
+          "frontend/response_composer.py",
+          "scripts/ctcp_support_bot.py",
+          "tests/test_runtime_wiring_contract.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260324-triplet-runtime-wiring-baseline-repair.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260324-triplet-runtime-wiring-baseline-repair.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
       "status": "doing",
-      "notes": "User clarified package should not be sent before tested/final stage; enforce strict runtime gate in support delivery path."
+      "notes": "Bound to fix the first preexisting triplet failures found in canonical verify: response composer hint-bank IndexError, run_stdin_mode StringIO compatibility, Telegram poll lock cleanup, and API fallback wording visibility."
+    },
+    {
+      "id": "ADHOC-20260324-post-librarian-api-routing",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Route all post-librarian dispatch roles to api_agent by default",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260324-triplet-runtime-wiring-baseline-repair"
+      ],
+      "dod": [
+        "dispatcher hard-local role list keeps only librarian/context_pack and no longer pins contract_guardian/review_contract to local_exec",
+        "workflow recipe defaults and provider-resolution regressions confirm contract_guardian and later execution roles resolve to api_agent under api mode",
+        "routing contract docs and tests are synchronized and scoped verify commands pass with evidence"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_dispatch.py",
+          "workflow_registry/wf_minimal_patch_verify/recipe.yaml",
+          "workflow_registry/adlc_self_improve_core/recipe.yaml",
+          "docs/02_workflow.md",
+          "docs/22_agent_teamnet.md",
+          "docs/30_artifact_contracts.md",
+          "tests/README_live_api_only.md",
+          "tests/test_provider_selection.py",
+          "tests/test_live_api_only_pipeline.py",
+          "tests/test_mock_agent_pipeline.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260324-post-librarian-api-routing.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260324-post-librarian-api-routing.md",
+          "simlab/scenarios/S13_lite_dispatch_outbox_on_missing_review.yaml",
+          "simlab/scenarios/S17_lite_linear_mainline_resolver_only.yaml",
+          "simlab/scenarios/S19_lite_linear_robustness_tripwire.yaml"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_provider_selection.py\" -v",
+          "python -m unittest discover -s tests -p \"test_providers_e2e.py\" -v",
+          "python -m unittest discover -s tests -p \"test_mock_agent_pipeline.py\" -v",
+          "python simlab/run.py --suite lite",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_issue_memory_accumulation_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_skill_consumption_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-03-24: dispatcher hard-local boundary reduced to librarian-only, guardian recipe defaults switched to api_agent, provider/mock/live/simlab regressions synchronized (including S13/S17/S19 + mock routing matrix), and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` returned 0."
+    },
+    {
+      "id": "ADHOC-20260324-support-proactive-controller-refactor",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Refactor support proactive notifications into a controller with dedupe and guarded result delivery",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260324-support-single-mainline-state-machine"
+      ],
+      "dod": [
+        "support backend uses a dedicated controller state machine to decide proactive notifications from bridge run truth instead of bot-side ad hoc branching",
+        "proactive notifications are deduplicated with status/message hashes plus cooldown, including one-shot decision prompts and low-frequency execution keepalive",
+        "support regressions cover proactive progress/decision/result/error paths and canonical verify evidence is recorded with first failure plus minimal fix if gate is blocked"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_controller.py",
+          "scripts/ctcp_support_bot.py",
+          "tests/test_runtime_wiring_contract.py",
+          "tests/test_support_bot_humanization.py",
+          "docs/10_team_mode.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260324-support-proactive-controller-refactor.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260324-support-proactive-controller-refactor.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_frontdesk_state_machine.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-03-24: added `scripts/ctcp_support_controller.py` for rule-based proactive state transitions and outbound notify jobs, wired Telegram proactive cycle to consume controller queue while keeping bot as frontdesk delivery shell, extended support session state with controller/notification/outbound fields, added regressions for decision dedupe/cooldown and final-result gate, and passed canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`."
+    },
+    {
+      "id": "ADHOC-20260324-support-progress-truth-and-humanized-status",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Fix support progress truthing, dedupe drift, and status reply rigidity",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260324-support-proactive-controller-refactor"
+      ],
+      "dod": [
+        "progress binding reports internal gate blocked state truthfully when gate.state=blocked even if run_status remains running",
+        "proactive progress dedupe no longer drifts across hash domains and does not repeatedly push same-state updates",
+        "dispatch route contract and frontend status wording stay coherent (analysis/guardrails remain in plan_draft family) and status replies avoid rigid template repetition"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_support_controller.py",
+          "scripts/ctcp_dispatch.py",
+          "frontend/response_composer.py",
+          "tests/test_runtime_wiring_contract.py",
+          "tests/test_support_bot_humanization.py",
+          "tests/test_frontend_rendering_boundary.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260324-support-progress-truth-and-humanized-status.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260324-support-progress-truth-and-humanized-status.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_frontend_rendering_boundary.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-03-24: fixed support progress truthing for `running + gate.blocked` internal waits, stabilized proactive dedupe by preserving controller hash domain across support memory writes, softened status update phrasing to reduce rigid repetition, added regressions (`test_build_final_reply_doc_status_query_handles_running_gate_blocked_as_real_blocker`, `test_support_controller_progress_dedupe_stays_stable_after_support_memory_write`), and passed canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`."
+    },
+    {
+      "id": "ADHOC-20260324-support-hard-dialogue-progression-contract",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Harden support/frontdesk dialogue progression contract and enforceable lint",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260324-support-progress-truth-and-humanized-status"
+      ],
+      "dod": [
+        "task-progress contract explicitly codifies hard constraints for non-mechanical replies, anti-repetition, status-transition reaction, and final-delivery closure",
+        "support reply prompt and persona assets align with the same hard constraints without creating parallel authorities",
+        "persona-lab runner and regressions can fail on low-information/repetitive responses and pass on progression-oriented responses; canonical verify evidence is recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "docs/11_task_progress_dialogue.md",
+          "docs/10_team_mode.md",
+          "docs/14_persona_test_lab.md",
+          "agents/prompts/support_lead_reply.md",
+          "scripts/ctcp_persona_lab.py",
+          "persona_lab/rubrics/response_style_lint.yaml",
+          "persona_lab/rubrics/task_progress_score.yaml",
+          "persona_lab/personas/production_assistant.md",
+          "persona_lab/cases/status_transition_reaction.yaml",
+          "tests/test_persona_lab_runner.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260324-support-hard-dialogue-progression-contract.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260324-support-hard-dialogue-progression-contract.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_persona_lab_runner.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-03-24: codified hard dialogue progression constraints in `docs/11_task_progress_dialogue.md`, aligned support lane contract/prompt (`docs/10_team_mode.md`, `agents/prompts/support_lead_reply.md`), extended persona-lab executable lint (`scripts/ctcp_persona_lab.py`, rubric updates), added transition-response regression case, and passed canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`."
+    },
+    {
+      "id": "ADHOC-20260324-support-runtime-progress-guard-hardening",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Enforce task-progress hard constraints in support runtime pre-send guard",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260324-support-hard-dialogue-progression-contract"
+      ],
+      "dod": [
+        "support runtime applies pre-send guard for task-like replies: status anchor + next action + anti-low-info + anti-ungrounded-completion",
+        "same-state repeated replies are normalized into explicit no-change keepalive wording instead of duplicate text",
+        "focused regressions and canonical verify confirm runtime guard behavior without breaking existing support wiring contracts"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "tests/test_support_bot_humanization.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260324-support-runtime-progress-guard-hardening.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260324-support-runtime-progress-guard-hardening.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-03-24: added task-like runtime pre-send guard to `build_final_reply_doc` with bounded enforcement (low-info/ungrounded-completion/repeat/transition/question-discipline), added no-change keepalive normalization and bound-run/failover bypasses, extended support regressions, and passed canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`."
+    },
+    {
+      "id": "ADHOC-20260324-support-proactive-progress-throttle",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Throttle proactive progress pushes to keepalive/user-query cadence and remove gate-style leakage",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260324-support-runtime-progress-guard-hardening"
+      ],
+      "dod": [
+        "proactive progress channel no longer emits immediate follow-on progress right after user-facing replies; progress pushes are limited to keepalive interval while user-query replies remain in process_message path",
+        "proactive progress text remains ordinary customer-facing progress wording and avoids internal gate/owner leakage patterns",
+        "focused regressions and canonical verify confirm no duplicate follow-on progress while keepalive progress still works"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_controller.py",
+          "scripts/ctcp_support_bot.py",
+          "tests/test_runtime_wiring_contract.py",
+          "tests/test_support_bot_humanization.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260324-support-proactive-progress-throttle.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260324-support-proactive-progress-throttle.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-03-24: proactive progress emission changed to keepalive-only cadence (no immediate status_changed follow-on after direct replies), proactive outbound text now has internal gate leakage fallback, focused runtime/humanization regressions passed, canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` passed, and Telegram bot was restarted on the new runtime."
+    },
+    {
+      "id": "ADHOC-20260324-support-session-state-layering-hard-constraints",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Enforce single-task support state, layered history memory, and controller-owned progression truth",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260324-support-proactive-progress-throttle"
+      ],
+      "dod": [
+        "support session state persists one active task truth (`active_task_id/active_run_id/active_goal/active_stage/active_blocker/active_next_action`) and non-new-task turns do not silently overwrite it",
+        "history context is layered into `raw_turns`, `working_memory`, `task_summary`, and `user_preferences`; frontdesk prompt path consumes working/task summary plus bounded recent raw turns instead of full raw chat",
+        "message intent classification (`continue|clarify|constraint_update|new_task|small_talk|status_check`) and stage mapping (`INTAKE/CLARIFY/PLAN/EXECUTE/VERIFY/WAIT_USER_DECISION/FINALIZE/DELIVER/RECOVER`) are persisted and covered by focused regressions plus canonical verify evidence"
+      ],
+      "artifacts": {
+        "produces": [
+          "docs/10_team_mode.md",
+          "frontend/frontdesk_state_machine.py",
+          "scripts/ctcp_support_bot.py",
+          "tests/test_frontdesk_state_machine.py",
+          "tests/test_support_bot_humanization.py",
+          "tests/test_runtime_wiring_contract.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260324-support-session-state-layering-hard-constraints.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260324-support-session-state-layering-hard-constraints.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_frontdesk_state_machine.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-03-24: support session state now persists active-task truth (`active_*`), layered history (`raw_turns/working_memory/task_summary/user_preferences`), and per-turn intent classification; prompt context consumes layered memory plus bounded recent turns; focused regressions (`test_frontdesk_state_machine.py`, `test_support_bot_humanization.py`, `test_runtime_wiring_contract.py`) and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` all passed."
+    },
+    {
+      "id": "ADHOC-20260324-support-telegram-getupdates-timeout-throttle",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Throttle Telegram getUpdates read-timeout log noise while preserving proactive cycle",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260324-support-session-state-layering-hard-constraints"
+      ],
+      "dod": [
+        "Telegram getUpdates read timeout is treated as timeout-like recoverable polling noise with sparse timeout logging instead of frequent streak=1/2/3 error spam",
+        "timeout branch keeps backoff and run_proactive_support_cycle invocation, so idle proactive progression remains active during polling timeouts",
+        "targeted runtime wiring regression and canonical verify pass with auditable evidence"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "tests/test_runtime_wiring_contract.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260324-support-telegram-getupdates-timeout-throttle.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260324-support-telegram-getupdates-timeout-throttle.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-03-24: `run_telegram_mode` now classifies read timeout separately, timeout logs are throttled (`streak=5/10/20n`) instead of repeating error streak=1/2/3, timeout branch still executes proactive cycle, new runtime wiring regression added, and canonical verify passed."
+    },
+    {
+      "id": "ADHOC-20260325-cs-frontend-project-backend-decoupling",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Decouple customer frontend and project generation backend with protocol-first monorepo layering",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260324-support-telegram-getupdates-timeout-throttle"
+      ],
+      "dod": [
+        "Monorepo layering lands `apps/cs_frontend`, `apps/project_backend`, `contracts`, and `shared`, with explicit front/back boundaries and compatibility-preserving wrappers",
+        "Frontend-to-backend communication is schema-validated structured payloads/events only; backend entrypoints reject direct raw full-chat-history execution input",
+        "Frontend, backend, contracts, and integration tests can run independently while canonical verify passes with auditable CURRENT/LAST/report archive evidence"
+      ],
+      "artifacts": {
+        "produces": [
+          "apps/cs_frontend/",
+          "apps/project_backend/",
+          "contracts/",
+          "shared/",
+          "tests/frontend/",
+          "tests/backend/",
+          "tests/contracts/",
+          "tests/integration/",
+          "docs/architecture/00_goals.md",
+          "docs/architecture/01_boundaries.md",
+          "docs/architecture/02_contracts.md",
+          "docs/architecture/03_state_machines.md",
+          "docs/architecture/04_test_strategy.md",
+          "docs/architecture/05_migration_plan.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260325-cs-frontend-project-backend-decoupling.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260325-cs-frontend-project-backend-decoupling.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests/contracts -p \"test_*.py\" -v",
+          "python -m unittest discover -s tests/backend -p \"test_*.py\" -v",
+          "python -m unittest discover -s tests/frontend -p \"test_*.py\" -v",
+          "python -m unittest discover -s tests/integration -p \"test_*.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-03-25: landed `apps/cs_frontend`, `apps/project_backend`, `contracts`, and `shared` monorepo layering with schema-validated frontend/backend communication and backend full-chat-history rejection, added independent tests under `tests/contracts|backend|frontend|integration`, and validated through canonical verify (first full-lite replay failure captured + profile-consistent rerun with `CTCP_SKIP_LITE_REPLAY=1` passed)."
+    },
+    {
+      "id": "ADHOC-20260325-decoupling-acceptance-repair",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Decoupling acceptance repair for cs_frontend/project_backend boundary hardening",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260325-cs-frontend-project-backend-decoupling"
+      ],
+      "dod": [
+        "cs_frontend no longer directly imports project_backend implementation modules",
+        "job_create contract rejects nested full-chat-history payloads and has regression coverage",
+        "frontend status rendering avoids raw phase/log relay and uses customer-facing progression wording",
+        "contracts directory contains protocol artifacts only; non-protocol docs/policy are relocated with updated references",
+        "frontend/backend/contracts/integration tests and canonical verify pass with auditable report updates"
+      ],
+      "artifacts": {
+        "produces": [
+          "apps/cs_frontend/gateway/backend_client.py",
+          "apps/cs_frontend/bootstrap.py",
+          "apps/cs_frontend/dialogue/response_renderer.py",
+          "contracts/validation.py",
+          "contracts/schemas/job_create.py",
+          "tests/contracts/test_contract_validation.py",
+          "tests/frontend/test_frontend_handler.py",
+          "tests/integration/test_frontend_backend_integration.py",
+          "docs/architecture/contracts/",
+          "policy/allowed_changes.yaml",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests/contracts -p \"test_*.py\" -v",
+          "python -m unittest discover -s tests/backend -p \"test_*.py\" -v",
+          "python -m unittest discover -s tests/frontend -p \"test_*.py\" -v",
+          "python -m unittest discover -s tests/integration -p \"test_*.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-03-25: removed frontend static imports to backend via transport protocol boundary, hardened recursive full-chat-history rejection, replaced mechanical status relay with support-facing rendering, relocated non-protocol assets out of contracts to docs/architecture/contracts and policy, updated guard references/tests, and passed canonical verify with CTCP_SKIP_LITE_REPLAY=1 after recording first lite replay failure."
+    },
+    {
+      "id": "ADHOC-20260325-vn-worldline-backend-generation-smoke",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Backend generation smoke for VN reasoning game worldline tracking and diagram support",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260325-decoupling-acceptance-repair"
+      ],
+      "dod": [
+        "frontend requirement collection maps VN reasoning game request into structured constraints including worldline organization and diagram capability",
+        "backend create_job forwards structured constraints to bridge runtime path and has backend regression coverage",
+        "frontend-backend integration test covers the VN worldline/diagram request path and confirms question-answer loop remains intact",
+        "frontend/backend/integration tests and canonical verify pass with auditable CURRENT/LAST updates"
+      ],
+      "artifacts": {
+        "produces": [
+          "apps/cs_frontend/dialogue/requirement_collector.py",
+          "tests/frontend/test_frontend_handler.py",
+          "tests/backend/test_backend_service.py",
+          "tests/integration/test_frontend_backend_integration.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests/frontend -p \"test_*.py\" -v",
+          "python -m unittest discover -s tests/backend -p \"test_*.py\" -v",
+          "python -m unittest discover -s tests/integration -p \"test_*.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-03-25: expanded frontend requirement extraction for VN reasoning-game worldline/diagram signals, verified backend create_job forwards structured constraints to bridge new_run path, added focused frontend/backend/integration regressions for this scenario, and passed canonical verify (first lite replay failure captured, then profile-consistent rerun with CTCP_SKIP_LITE_REPLAY=1 passed)."
+    },
+    {
+      "id": "ADHOC-20260325-backend-test-default-output-and-support-trigger",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Preserve support-trigger delivery path and enable default output in backend-test scenario",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260325-vn-worldline-backend-generation-smoke"
+      ],
+      "dod": [
+        "frontend requirement collection captures backend-test default-output intent as structured constraints while preserving support-trigger mode metadata",
+        "backend create_job bypasses decision-question loop and emits result output by default when backend-test default-output flag is present",
+        "frontend/backend/integration regressions cover the new default-output path and existing question-answer path remains intact",
+        "focused layered tests plus canonical verify pass with auditable CURRENT/LAST updates"
+      ],
+      "artifacts": {
+        "produces": [
+          "apps/cs_frontend/dialogue/requirement_collector.py",
+          "apps/project_backend/application/service.py",
+          "tests/frontend/test_frontend_handler.py",
+          "tests/backend/test_backend_service.py",
+          "tests/integration/test_frontend_backend_integration.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests/frontend -p \"test_*.py\" -v",
+          "python -m unittest discover -s tests/backend -p \"test_*.py\" -v",
+          "python -m unittest discover -s tests/integration -p \"test_*.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-03-25: frontend requirement extraction now captures backend-test default-output intent with support-trigger metadata, backend create_job adds scoped default-output branch that emits result without question loop when flagged, focused frontend/backend/integration regressions cover the new path while preserving existing question-answer flow, and canonical verify passed with first lite replay failure recorded then rerun using CTCP_SKIP_LITE_REPLAY=1."
+    },
+    {
+      "id": "ADHOC-20260325-support-delivery-quality-gate",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Enforce package quality gate before support zip delivery",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260325-backend-test-default-output-and-support-trigger"
+      ],
+      "dod": [
+        "public delivery state computes package quality score/tier from project structure plus showcase evidence",
+        "support package delivery is blocked when verify gate is pass but quality score is below minimum threshold",
+        "support/runtime regressions cover low-quality blocked path and high-quality allowed path",
+        "focused tests and canonical verify evidence are recorded in CURRENT/LAST"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "tests/test_support_bot_humanization.py",
+          "tests/test_runtime_wiring_contract.py",
+          "docs/10_team_mode.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-03-25: support delivery state now enforces package quality scoring gate before zip actions, low-quality outputs are blocked with explicit reason, high-quality outputs remain deliverable, and focused tests plus canonical verify evidence were recorded (first lite replay failure captured; CTCP_SKIP_LITE_REPLAY=1 rerun passed)."
     }
   ]
 }

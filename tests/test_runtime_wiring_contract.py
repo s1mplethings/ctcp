@@ -607,18 +607,22 @@ class RuntimeWiringContractTests(unittest.TestCase):
             bound_run_dir = root / "runs" / "bound-vn"
             (bound_run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
             project_dir = root / "generated_projects" / "vn_story_organizer"
-            project_dir.mkdir(parents=True, exist_ok=True)
-            (project_dir / "main.py").write_text("print('vn')\n", encoding="utf-8")
-            scaffold_dir = root / "exports" / "vn_story_organizer_ctcp_project"
-            (scaffold_dir / "docs").mkdir(parents=True, exist_ok=True)
-            (scaffold_dir / "meta").mkdir(parents=True, exist_ok=True)
-            (scaffold_dir / "scripts").mkdir(parents=True, exist_ok=True)
-            (scaffold_dir / "workflow_registry").mkdir(parents=True, exist_ok=True)
-            (scaffold_dir / "simlab").mkdir(parents=True, exist_ok=True)
-            (scaffold_dir / "README.md").write_text("# vn_story_organizer\n", encoding="utf-8")
-            (scaffold_dir / "docs" / "00_CORE.md").write_text("# core\n", encoding="utf-8")
-            (scaffold_dir / "scripts" / "verify_repo.ps1").write_text("Write-Host ok\n", encoding="utf-8")
-            (scaffold_dir / "manifest.json").write_text("{}", encoding="utf-8")
+            (project_dir / "docs").mkdir(parents=True, exist_ok=True)
+            (project_dir / "meta" / "tasks").mkdir(parents=True, exist_ok=True)
+            (project_dir / "scripts").mkdir(parents=True, exist_ok=True)
+            (project_dir / "tests").mkdir(parents=True, exist_ok=True)
+            (project_dir / "artifacts" / "screenshots").mkdir(parents=True, exist_ok=True)
+            (project_dir / "README.md").write_text("# vn_story_organizer\n", encoding="utf-8")
+            (project_dir / "manifest.json").write_text("{}", encoding="utf-8")
+            (project_dir / "docs" / "00_CORE.md").write_text("# core\n", encoding="utf-8")
+            (project_dir / "meta" / "tasks" / "CURRENT.md").write_text("# current\n", encoding="utf-8")
+            (project_dir / "scripts" / "verify_repo.ps1").write_text("Write-Host ok\n", encoding="utf-8")
+            (project_dir / "tests" / "test_smoke.py").write_text("def test_smoke():\n    assert True\n", encoding="utf-8")
+            (project_dir / "artifacts" / "test_plan.json").write_text("{}", encoding="utf-8")
+            (project_dir / "artifacts" / "test_cases.json").write_text("{}", encoding="utf-8")
+            (project_dir / "artifacts" / "test_summary.md").write_text("# summary\n", encoding="utf-8")
+            (project_dir / "artifacts" / "demo_trace.md").write_text("# demo\n", encoding="utf-8")
+            (project_dir / "artifacts" / "screenshots" / "step01.png").write_bytes(b"\x89PNG\r\n")
 
             state = support_bot.default_support_session_state("123")
             state["bound_run_id"] = "r-vn"
@@ -628,7 +632,7 @@ class RuntimeWiringContractTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (bound_run_dir / "artifacts" / "patch_apply.json").write_text(
-                json.dumps({"touched_files": ["generated_projects/vn_story_organizer/main.py"]}, ensure_ascii=False),
+                json.dumps({"touched_files": ["generated_projects/vn_story_organizer/README.md"]}, ensure_ascii=False),
                 encoding="utf-8",
             )
             (bound_run_dir / "artifacts" / "PLAN.md").write_text(
@@ -686,10 +690,6 @@ class RuntimeWiringContractTests(unittest.TestCase):
                         "gate": {"state": "closed", "owner": "", "reason": ""},
                     },
                 },
-            ), mock.patch.object(
-                support_bot,
-                "_materialize_support_scaffold_project",
-                return_value=scaffold_dir,
             ):
                 with self.assertRaises(KeyboardInterrupt):
                     support_bot.run_telegram_mode(token="fake", poll_seconds=1, allowlist_raw="")
@@ -698,7 +698,7 @@ class RuntimeWiringContractTests(unittest.TestCase):
             self.assertEqual(fake.sent_messages, [(123, "项目包我直接发到当前对话。")])
             self.assertEqual(len(fake.sent_documents), 1)
             self.assertTrue(fake.sent_documents[0][1].exists(), msg=str(fake.sent_documents[0][1]))
-            self.assertEqual(fake.sent_documents[0][1].name, "vn_story_organizer_ctcp_project.zip")
+            self.assertEqual(fake.sent_documents[0][1].name, "vn_story_organizer.zip")
             process_spy.assert_called_once_with(chat_id="123", user_text="zip就行", source="telegram", provider_override="")
             manifest = json.loads((support_run_dir / support_bot.SUPPORT_PUBLIC_DELIVERY_REL_PATH).read_text(encoding="utf-8"))
             self.assertEqual(len(list(manifest.get("sent", []))), 1)
