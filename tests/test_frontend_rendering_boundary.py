@@ -212,6 +212,7 @@ class FrontendRenderingBoundaryTests(unittest.TestCase):
         )
         state = dict(result.pipeline_state or {})
         self.assertEqual(str(state.get("conversation_mode", "")), "STATUS_QUERY")
+        self.assertIn("我这边已经完成：", result.reply_text)
         self.assertIn("项目已接到后台流程", result.reply_text)
         self.assertNotIn("规划文档", result.reply_text)
 
@@ -245,10 +246,11 @@ class FrontendRenderingBoundaryTests(unittest.TestCase):
         )
         state = dict(result.pipeline_state or {})
         self.assertEqual(str(state.get("conversation_mode", "")), "PROJECT_DETAIL")
+        self.assertIn("我这边已经完成：", result.reply_text)
         self.assertIn("项目已接到后台流程", result.reply_text)
         self.assertIn("成本评审已跑过一轮", result.reply_text)
-        self.assertIn("当前阶段在合同评审", result.reply_text)
-        self.assertIn("下一步我会先处理合同评审卡住的点", result.reply_text)
+        self.assertIn("目前在合同评审这个阶段", result.reply_text)
+        self.assertIn("我会继续处理：先处理合同评审卡住的点", result.reply_text)
         self.assertNotEqual(result.reply_text.strip(), "这边已经进入处理阶段。")
 
     def test_summary_selection_prefers_detailed_recent_message(self) -> None:

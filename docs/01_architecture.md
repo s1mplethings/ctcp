@@ -65,5 +65,6 @@
   - 会话记忆与工程事实分离：工程事实必须回读 run artifacts。
 
 契约见：
-- `contracts/frontend_bridge_contract.md`
-- `contracts/frontend_session_contract.md`
+- `docs/architecture/contracts/frontend_bridge_contract.md`
+- `docs/architecture/contracts/frontend_session_contract.md`
+

@@ -43,7 +43,7 @@
 | Task card template | `meta/tasks/TEMPLATE.md` |
 | Reusable skills (index) | `.agents/skills/INDEX.md` |
 | Support whiteboard (runtime) | `${run_dir}/artifacts/support_whiteboard.json` |
-| Support whiteboard contract | `contracts/support_whiteboard_contract.md` |
+| Support whiteboard contract | `docs/architecture/contracts/support_whiteboard_contract.md` |
 
 ## Agent Minimal Startup
 
@@ -54,3 +54,4 @@
 3. **任务相关文件** — 按 CURRENT.md `in_scope_modules` 定位
 
 本文件只是速查，不替代根合同。
+

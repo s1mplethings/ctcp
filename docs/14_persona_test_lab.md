@@ -269,6 +269,8 @@ The minimum built-in regression pack MUST include at least these cases:
 6. overcontrolling or angry pressure must not collapse into apology loops
 7. vague input must still receive partial judgment before the missing gap is named
 8. long conversation must not reset into `你好呀 / 我在 / 我来帮你` style reopening
+9. state-transition updates must include state + trigger reason + next owner/action
+10. no-change turns must avoid repetitive low-information progress wording
 
 Repo-local case specs under `persona_lab/cases/` are the minimum regression baseline for this pack.
 

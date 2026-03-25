@@ -55,6 +55,41 @@ class PersonaLabRunnerTests(unittest.TestCase):
             fail_md = (run_dir / "cases" / "no_mechanical_greeting" / "fail_reasons.md").read_text(encoding="utf-8")
             self.assertIn("banned_phrase_hit", fail_md)
 
+    def test_run_fixture_suite_fails_on_low_information_ack_reply(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_persona_lab_low_info_fail_") as td:
+            run_dir = Path(td) / "persona-low-info-fail"
+            with mock.patch.object(persona_lab.reference_export, "current_source_commit", return_value="deadbeef"):
+                _, manifest = persona_lab.run_fixture_suite(
+                    case_fixtures={"no_mechanical_greeting": ["好的，我在处理。"]},
+                    case_ids=["no_mechanical_greeting"],
+                    raw_run_dir=str(run_dir),
+                )
+
+            self.assertEqual(manifest["fail_count"], 1)
+            score_doc = json.loads((run_dir / "cases" / "no_mechanical_greeting" / "score.json").read_text(encoding="utf-8"))
+            self.assertEqual(score_doc["verdict"], "fail")
+            self.assertIn("response_style_lint.first_sentence_direct", score_doc["fail_reason_ids"])
+            self.assertIn("response_style_lint.status_anchor_present", score_doc["fail_reason_ids"])
+
+    def test_run_fixture_suite_passes_status_transition_reaction_case(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_persona_lab_transition_pass_") as td:
+            run_dir = Path(td) / "persona-transition-pass"
+            with mock.patch.object(persona_lab.reference_export, "current_source_commit", return_value="deadbeef"):
+                _, manifest = persona_lab.run_fixture_suite(
+                    case_fixtures={
+                        "status_transition_reaction": [
+                            "当前判断是流程已从澄清阶段进入执行阶段，原因是需求确认完成。我现在先落地规则补丁，下一步由我跑验证并回传结果。"
+                        ]
+                    },
+                    case_ids=["status_transition_reaction"],
+                    raw_run_dir=str(run_dir),
+                )
+
+            self.assertEqual(manifest["fail_count"], 0)
+            score_doc = json.loads((run_dir / "cases" / "status_transition_reaction" / "score.json").read_text(encoding="utf-8"))
+            self.assertEqual(score_doc["verdict"], "pass")
+            self.assertNotIn("response_style_lint.transition_response_complete", score_doc["fail_reason_ids"])
+
     def test_run_fixture_suite_uses_fresh_session_per_case(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_persona_lab_isolation_") as td:
             run_dir = Path(td) / "persona-isolation"

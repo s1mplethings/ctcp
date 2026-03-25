@@ -36,8 +36,8 @@ Execution starts only after signed `artifacts/PLAN.md`, required adversarial rev
 
 - Orchestrator/dispatcher MUST block plan signing and execution until `artifacts/context_pack.json` exists.
 - If context_pack is missing, dispatcher MUST route to deterministic local Librarian execution by default (`scripts/ctcp_librarian.py`).
-- `librarian/context_pack` and `contract_guardian/review_contract` are hard-local roles.
-- Manual outbox, API providers, and `CTCP_FORCE_PROVIDER` MUST NOT bypass those hard-local roles (except explicit `mock_agent` test mode).
+- `librarian/context_pack` is the only hard-local role.
+- Manual outbox, API providers, and `CTCP_FORCE_PROVIDER` MUST NOT bypass that hard-local role (except explicit `mock_agent` test mode).
 
 ## Standard Artifact Paths
 

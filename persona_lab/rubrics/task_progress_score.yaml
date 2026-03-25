@@ -19,7 +19,7 @@ dimensions:
   - id: next_action_clarity
     weight: 15
     pass_score: 12
-    description: Next action is concrete and immediately actionable.
+    description: Next action is concrete, immediately actionable, and anchored to current status.
   - id: question_discipline
     weight: 10
     pass_score: 8
@@ -31,7 +31,7 @@ dimensions:
   - id: task_advancement
     weight: 15
     pass_score: 12
-    description: The reply moves the task forward by one useful unit.
+    description: The reply moves the task forward by one useful unit, including transition reporting when state changes.
   - id: pressure_stability
     weight: 10
     pass_score: 8

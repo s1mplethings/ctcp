@@ -223,7 +223,7 @@ def _write_context(
 
 
 def _write_constraints(out_path: Path, repo_root: Path) -> None:
-    policy_path = repo_root / "contracts" / "allowed_changes.yaml"
+    policy_path = repo_root / "policy" / "allowed_changes.yaml"
     policy = contract_guard.load_policy(policy_path)
     allowed_paths = [str(x) for x in policy.get("allowed_paths", []) if str(x).strip()]
     blocked_paths = [str(x) for x in policy.get("blocked_paths", []) if str(x).strip()]
@@ -734,7 +734,7 @@ def run_workflow(
         _trace(run_dir, f"round={current_round} phase=build")
         pre_review = contract_guard.evaluate(
             repo_root,
-            policy_path=repo_root / "contracts" / "allowed_changes.yaml",
+            policy_path=repo_root / "policy" / "allowed_changes.yaml",
             out_path=reviews_dir / "contract_review.json",
         )
         if not bool(pre_review.get("contract_guard", {}).get("pass", False)):
@@ -822,7 +822,7 @@ def run_workflow(
 
         post_review = contract_guard.evaluate(
             repo_root,
-            policy_path=repo_root / "contracts" / "allowed_changes.yaml",
+            policy_path=repo_root / "policy" / "allowed_changes.yaml",
             out_path=reviews_dir / "contract_review.json",
         )
         if not bool(post_review.get("contract_guard", {}).get("pass", False)):

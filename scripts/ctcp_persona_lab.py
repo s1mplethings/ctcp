@@ -43,6 +43,10 @@ GREETINGS = (
     "hello",
     "hi",
     "hey",
+    "我在",
+    "好的",
+    "明白了",
+    "稍等",
 )
 TEMPLATE_SUPPORT_PHRASES = (
     "为了更好地帮助您",
@@ -56,6 +60,10 @@ TEMPLATE_SUPPORT_PHRASES = (
     "glad to assist",
     "please let me know",
     "i'm here to help",
+    "我在",
+    "好的",
+    "明白了",
+    "稍等",
 )
 JUDGMENT_MARKERS = (
     "问题是",
@@ -126,6 +134,82 @@ RECEPTIONIST_MARKERS = (
     "glad to assist",
     "i'm here to help",
     "thanks for reaching out",
+)
+STATUS_MARKERS = (
+    "当前",
+    "现在",
+    "阶段",
+    "状态",
+    "进展",
+    "判断",
+    "结论",
+    "问题是",
+    "已完成",
+    "当前阻塞",
+    "卡在",
+    "running",
+    "blocked",
+    "completed",
+    "done",
+)
+LOW_INFO_ACKS = (
+    "我在",
+    "好的",
+    "明白了",
+    "稍等",
+    "收到",
+    "继续处理中",
+    "got it",
+    "okay",
+    "understood",
+)
+TRANSITION_MARKERS = (
+    "进入",
+    "从",
+    "切到",
+    "切换到",
+    "transition",
+    "moved to",
+    "state changed",
+)
+REASON_MARKERS = (
+    "原因",
+    "因为",
+    "触发",
+    "based on",
+    "due to",
+)
+OWNER_MARKERS = (
+    "我会",
+    "我先",
+    "接下来我",
+    "你确认",
+    "你只需要",
+    "由我",
+    "由你",
+    "系统会",
+    "我们会",
+)
+COMPLETION_CLAIM_MARKERS = (
+    "已完成",
+    "已经完成",
+    "准备好了",
+    "可交付",
+    "完成了",
+    "done",
+    "ready to deliver",
+    "delivery ready",
+)
+TRUTH_EVIDENCE_MARKERS = (
+    "验证",
+    "verify",
+    "pass",
+    "status",
+    "gate",
+    "run",
+    "证据",
+    "依据",
+    "artifact",
 )
 
 
@@ -283,6 +367,10 @@ def next_action_pass(text: str) -> bool:
     return find_marker_position(text, ACTION_MARKERS) is not None
 
 
+def status_anchor_pass(text: str) -> bool:
+    return contains_any(text, STATUS_MARKERS)
+
+
 def goal_echo_pass(reply_text: str, user_task: str) -> bool:
     reply = normalize_text(reply_text)
     task = normalize_text(user_task)
@@ -308,6 +396,41 @@ def unnecessary_question_pass(text: str) -> bool:
 
 def task_advancement_pass(text: str) -> bool:
     return explicit_judgment_pass(text) or next_action_pass(text) or contains_any(text, ("已完成", "当前进展", "deliver", "result is"))
+
+
+def _is_low_information_ack(text: str) -> bool:
+    low = normalize_text(text)
+    if not low:
+        return True
+    if not contains_any(text, LOW_INFO_ACKS):
+        return False
+    if next_action_pass(text) or status_anchor_pass(text):
+        return False
+    return len(low) <= 48
+
+
+def no_redundant_progress_pass(at: list[dict[str, Any]]) -> bool:
+    if not at:
+        return False
+    if any(_is_low_information_ack(str(turn.get("text", ""))) for turn in at):
+        return False
+    first_sentences = [normalize_text(first_sentence(str(turn.get("text", "")))) for turn in at]
+    for idx in range(1, len(first_sentences)):
+        if first_sentences[idx] and first_sentences[idx] == first_sentences[idx - 1]:
+            return False
+    return True
+
+
+def transition_response_complete_pass(text: str) -> bool:
+    if not contains_any(text, TRANSITION_MARKERS):
+        return True
+    return status_anchor_pass(text) and contains_any(text, REASON_MARKERS) and next_action_pass(text) and contains_any(text, OWNER_MARKERS)
+
+
+def truth_grounded_completion_pass(text: str) -> bool:
+    if not contains_any(text, COMPLETION_CLAIM_MARKERS):
+        return True
+    return contains_any(text, TRUTH_EVIDENCE_MARKERS)
 
 
 def receptionist_fallback_pass(text: str) -> bool:
@@ -394,11 +517,15 @@ def response_lint_results(
         "banned_phrase": {"passed": not contains_any(all_text, banned), "turn_index": first_idx, "evidence": all_text},
         "explicit_judgment": {"passed": explicit_judgment_pass(first_text), "turn_index": first_idx, "evidence": first_text},
         "next_action_present": {"passed": next_action_pass(first_text), "turn_index": first_idx, "evidence": first_text},
+        "status_anchor_present": {"passed": status_anchor_pass(first_text), "turn_index": first_idx, "evidence": first_text},
         "no_goal_echo": {"passed": goal_echo_pass(first_text, str(case_doc.get("initial_task", ""))), "turn_index": first_idx, "evidence": first_text},
         "no_unnecessary_question": {"passed": unnecessary_question_pass(first_text), "turn_index": first_idx, "evidence": first_text},
         "task_advancement": {"passed": task_advancement_pass(first_text), "turn_index": first_idx, "evidence": first_text},
         "no_receptionist_fallback": {"passed": all(receptionist_fallback_pass(str(turn.get("text", ""))) for turn in at), "turn_index": first_idx, "evidence": all_text},
         "bilingual_stability": {"passed": True if not bilingual_needed else explicit_judgment_pass(first_text) and next_action_pass(first_text) and template_english_fallback_pass(all_text), "turn_index": first_idx, "evidence": all_text},
+        "no_redundant_progress": {"passed": no_redundant_progress_pass(at), "turn_index": first_idx, "evidence": all_text},
+        "transition_response_complete": {"passed": transition_response_complete_pass(first_text), "turn_index": first_idx, "evidence": first_text},
+        "truth_grounded_completion": {"passed": truth_grounded_completion_pass(first_text), "turn_index": first_idx, "evidence": first_text},
         "no_context_reset": {"passed": context_reset_pass(at), "turn_index": int(at[1]["turn_index"]) if len(at) > 1 else first_idx, "evidence": "\n".join(first_sentence(str(turn.get("text", ""))) for turn in at[1:]) if len(at) > 1 else ""},
     }
 

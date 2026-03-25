@@ -59,6 +59,7 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
 - 目标：让机械层决定任务推进边界与展示链，让 agent 在这些边界内输出任务推进型回复；用户通道只看 grounded reply，运维通道把 provider 执行细节落到 run_dir 日志。
 - 风格合同：
   - `docs/11_task_progress_dialogue.md` 是任务推进型回复与 response lint 的单一权威来源。
+  - 客服/前台/support 的“硬约束”也统一收敛到 `docs/11_task_progress_dialogue.md`，包含：反机械寒暄、反重复无增量、状态切换必回应、无状态变化默认少说、完成声明必须绑定 run truth、最终交付闭环字段。
   - `docs/14_persona_test_lab.md` 是隔离式人格测试、评分和回归 case 的单一权威来源。
   - 本文以及历史报告中关于“自然客服口吻 / CEO 口径 / 不要机械”之类的软描述继续保留为设计意图；若与 `docs/11_task_progress_dialogue.md` 冲突，视为 superseded。
 - 会话 run_dir：
@@ -72,8 +73,11 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
 - 项目型消息接线：
   - 单主流程硬规则：support runtime 禁止触发 `run_t2p_state_machine()` 的快速脚手架旁路（含 `telegram_ingress_sanity` / `fallback_generation`）；项目型 turn 只能进入 bridge 主流程状态机。
   - support bot 先做规则型 conversation-mode 首判；若命中歧义/解释型 turn（例如已绑定 run 下的“为什么会这样”），runtime 可触发 model-assisted 二段仲裁（api-first，失败降级到本地），再决定最终 mode。
-  - 在任何 prompt/reply 生成前，runtime 还必须基于 latest turn、active run、session slots 解析一层显式 frontdesk state machine；权威结构见 `contracts/frontend_session_contract.md`。
+  - 在任何 prompt/reply 生成前，runtime 还必须基于 latest turn、active run、session slots 解析一层显式 frontdesk state machine；权威结构见 `docs/architecture/contracts/frontend_session_contract.md`。
   - 这层 frontdesk state machine 至少要覆盖 `Idle / IntentDetect / Collect / Clarify / Confirm / Execute / AwaitDecision / ReturnResult / InterruptRecover / StyleAdjust / Error`，并持久化 `current_goal / current_scope / active_task_id / waiting_for / user_style_profile / decision_points / artifacts / blocked_reason / resumable_state`。
+  - support session state 必须额外持久化单主任务真值：`active_task_id / active_run_id / active_goal / active_stage / active_blocker / active_next_action`；除 `new_task` 之外的 turn 不得无标记覆盖该主线。
+  - 会话历史必须分层为 `raw_turns / working_memory / task_summary / user_preferences`；前台 prompt 默认消费 `working_memory + task_summary + 最近少量 raw_turns`，禁止把全量 raw 对话直接当唯一上下文。
+  - 每条新消息必须先写入 `message_intent` 分类（`continue|clarify|constraint_update|new_task|small_talk|status_check`），再决定是否继续当前主线或显式切换任务。
   - 处理顺序必须是：先判断 frontdesk state，再决定回复策略，再生成回复内容；`visible_state` 只是用户可见执行态折叠，不能替代 frontdesk state。
   - `PROJECT_INTAKE / PROJECT_DETAIL / STATUS_QUERY` 等项目型 turn 只能通过 `scripts/ctcp_front_bridge.py` 创建/绑定/查询/推进 CTCP run。
   - 当 bound run 的 `status.gate.state=blocked` 时，runtime 只允许输出 grounded 状态与下一步，不允许注入“已完成生成/已可交付包”的快通道语义。
@@ -83,6 +87,7 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
   - 对 `STATUS_QUERY` 以及“继续按这个做 / 现在做到什么程度了”这类 status-like progress follow-up，runtime 必须消费 bound run 的 gate/status 与 whiteboard tail，自动总结已完成事项、当前阶段、当前阻塞或 clear path、以及下一步；不得退回 `EXECUTING` 固定壳文案。
   - 对“之前那个项目现在做成什么样了 / 之前的项目现在怎么样”这类旧项目状态追问，只要 support session 已绑定 active run，runtime 必须优先走 `STATUS_QUERY`/grounded progress path；不得把这类句子写回长期 `project_brief`，也不得因此触发新的 planning/file-request 轮次。
   - Telegram long-poll 在空闲轮询周期里必须检查 active bound run：若 run 仍可推进且不需要用户决策，runtime 可自动 `advance`；一旦 grounded progress digest 发生变化，必须主动发送一条新的 progress update，而不是等用户追问。
+  - 后台主动通知判定必须由独立 support controller 负责（规则优先，基于 bridge/run truth），support bot 只负责 Telegram 收发与 outbound job 发送，不得再把“该不该通知/该发哪类通知”分散在文案层分支里。
   - 若用户显式要求“按之前的大纲 / 之前的项目继续”，而当前会话只有 generic previous-project 占位语，runtime 必须优先恢复 archived support session 里的 concrete project brief，再创建或重绑 run；不得把这类句子直接当成一个新的空泛 goal。
 - 双通道约束：
   - 用户可见只输出 `support_reply.json.reply_text`。
@@ -94,7 +99,7 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
   - proactive progress push 不得直接复用 inbox 里的最新 greeting/smalltalk 作为 latest-turn 语义；它必须显式以 status/progress 语义渲染，避免“用户问候一次，系统主动再问候一次”的重复输出。
   - greeting / capability / smalltalk 这类 non-project turn 在 active bound run 上不得重置 `notification_state` 里的真实 progress baseline；若 run digest 本身没有变化，后续 idle cycle 不应把同一状态再主动推一次。
   - fallback / capability 兜底也必须保持任务推进型口吻，不得退回“项目经理方式推进”“API 和本地模型都不可用”这类机械系统句。
-  - Telegram 当前对话支持直接发送文件时，客服不得再问邮箱；只有当绑定 run 里存在真实 package/screenshot artifact 时，runtime 才允许直发 `zip/photo`。
+  - Telegram 当前对话支持直接发送文件时，客服不得再问邮箱；`send_project_package` 只允许在绑定 run 满足“`verify_result=PASS` 且 `run_status` 已到最终态（`pass/done/completed/success`）且无待用户决策”时触发；即使存在 artifact，未到最终通过态也必须禁止发包。截图交付仍按实际截图 artifact 可用性决定。
   - 若绑定项目目录只是 `main.py + README.md` 这类薄壳占位实现，support package runtime 必须先在 support session 外部 materialize 一份 CTCP-style scaffold，再打包发送；客服回复也必须按 scaffold 如实描述，不得把它说成完整功能已经做完的项目。
   - 若 turn 涉及测试、演示、截图、回放或交付说明，reply 必须优先引用 `artifacts/test_plan.json`、`artifacts/test_cases.json`、`artifacts/test_summary.md`、`artifacts/demo_trace.md`、`artifacts/screenshots/` 等真实展示产物；没有截图时必须如实说明没有。
 - 安全建议：
@@ -137,3 +142,4 @@ python scripts\ctcp_support_bot.py --selftest
 - 实际 transcript / score / fail reasons / summary 只能写到 repo 外的 `CTCP_RUNS_ROOT/<repo_slug>/persona_lab/<lab_run_id>/...`。
 - judge 层不得回写 `support_session_state.json`、`RUN.json` 或其他 production run artifacts；它只能写 persona-lab 自己的结果产物。
 - 若本轮 patch 影响 task-progress dialogue、support style contract、response lint 或 multilingual style acceptance，必须同步更新 `docs/14_persona_test_lab.md` 和相关 `persona_lab/` 资产，或者在任务卡里明确 `persona_lab_impact: none`。
+

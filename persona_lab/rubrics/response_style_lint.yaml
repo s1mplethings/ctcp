@@ -33,6 +33,9 @@ checks:
   - id: next_action_present
     kind: required
     description: Reply states one concrete next action.
+  - id: status_anchor_present
+    kind: required
+    description: Reply includes an explicit status/progress anchor, not only acknowledgement wording.
   - id: no_goal_echo
     kind: required
     description: Reply does not simply restate the user's already-known goal.
@@ -48,6 +51,15 @@ checks:
   - id: bilingual_stability
     kind: required
     description: Mixed-language turns keep the same task-progress stance.
+  - id: no_redundant_progress
+    kind: required
+    description: Reply avoids low-information repetition when no state change exists.
+  - id: transition_response_complete
+    kind: required
+    description: When state transition is reported, reply includes state, reason, and next owner/action.
+  - id: truth_grounded_completion
+    kind: required
+    description: Completion/delivery claims are grounded in explicit runtime truth evidence.
   - id: no_context_reset
     kind: required
     description: Later turns do not reopen with a greeting once context is established.
@@ -59,9 +71,13 @@ fail_reason_templates:
   banned_phrase: "[{case_id}] banned_phrase_hit at turn {turn_index}: forbidden receptionist wording detected."
   explicit_judgment: "[{case_id}] missing_judgment at turn {turn_index}: no clear judgment appears before details."
   next_action_present: "[{case_id}] missing_next_action at turn {turn_index}: status is stated without a concrete next move."
+  status_anchor_present: "[{case_id}] missing_status_anchor at turn {turn_index}: reply lacks current status/progress anchor."
   no_goal_echo: "[{case_id}] goal_echo at turn {turn_index}: the reply repeats the user goal instead of progressing it."
   no_unnecessary_question: "[{case_id}] unnecessary_question at turn {turn_index}: a non-blocking question was asked."
   task_advancement: "[{case_id}] no_task_advancement at turn {turn_index}: the reply leaves the task in the same state."
   no_receptionist_fallback: "[{case_id}] receptionist_fallback at turn {turn_index}: pressure triggered apology or service-desk tone."
   bilingual_stability: "[{case_id}] bilingual_drift at turn {turn_index}: language switching degraded style stability."
+  no_redundant_progress: "[{case_id}] redundant_progress at turn {turn_index}: repeated low-information progress wording detected."
+  transition_response_complete: "[{case_id}] transition_missing_fields at turn {turn_index}: transition reply must include state + reason + next owner/action."
+  truth_grounded_completion: "[{case_id}] ungrounded_completion_claim at turn {turn_index}: completion claim lacks runtime truth evidence."
   no_context_reset: "[{case_id}] context_reset at turn {turn_index}: the reply restarted the conversation instead of continuing the task."

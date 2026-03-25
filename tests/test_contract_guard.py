@@ -57,7 +57,7 @@ class ContractGuardTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td)
             _init_repo(repo)
-            policy = repo / "contracts" / "allowed_changes.yaml"
+            policy = repo / "policy" / "allowed_changes.yaml"
             _write_policy(policy)
 
             target = repo / "scripts" / "x.py"
@@ -76,7 +76,7 @@ class ContractGuardTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td)
             _init_repo(repo)
-            policy = repo / "contracts" / "allowed_changes.yaml"
+            policy = repo / "policy" / "allowed_changes.yaml"
             _write_policy(policy)
 
             target = repo / ".github" / "workflows" / "ci.yml"

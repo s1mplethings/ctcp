@@ -40,6 +40,52 @@ def _write_provider_doc(
 
 
 class SupportBotHumanizationTests(unittest.TestCase):
+    def test_default_support_session_state_contains_active_truth_and_history_layers(self) -> None:
+        state = support_bot.default_support_session_state("schema-demo")
+        self.assertEqual(str(state.get("active_stage", "")), "INTAKE")
+        self.assertEqual(str(state.get("latest_message_intent", "")), "continue")
+        self.assertIn("history_layers", state)
+        layers = dict(state.get("history_layers", {}))
+        self.assertIn("raw_turns", layers)
+        self.assertIn("working_memory", layers)
+        self.assertIn("task_summary", layers)
+        self.assertIn("user_preferences", layers)
+
+    def test_sync_active_task_truth_keeps_mainline_on_smalltalk_interrupt(self) -> None:
+        session_state = support_bot.default_support_session_state("mainline-demo")
+        session_state["active_task_id"] = "run-vn"
+        session_state["active_run_id"] = "run-vn"
+        session_state["active_goal"] = "继续优化 VN 前台"
+        session_state["bound_run_id"] = "run-vn"
+        session_state["bound_run_dir"] = "D:/tmp/run-vn"
+        support_bot.sync_active_task_truth(
+            session_state,
+            user_text="你好",
+            source="telegram",
+            conversation_mode="GREETING",
+            frontdesk_state={
+                "state": "InterruptRecover",
+                "interrupt_kind": "",
+                "current_goal": "继续优化 VN 前台",
+                "active_task_id": "run-vn",
+            },
+            project_context={
+                "run_id": "run-vn",
+                "status": {
+                    "run_status": "running",
+                    "verify_result": "",
+                    "needs_user_decision": False,
+                    "decisions_needed_count": 0,
+                    "gate": {"state": "open", "reason": ""},
+                },
+                "whiteboard": {},
+            },
+            delivery_state={},
+        )
+        self.assertEqual(str(session_state.get("latest_message_intent", "")), "small_talk")
+        self.assertEqual(str(session_state.get("active_goal", "")), "继续优化 VN 前台")
+        self.assertEqual(str(session_state.get("active_task_id", "")), "run-vn")
+
     def test_process_message_greeting_routes_through_provider(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_greeting_fast_path_") as td:
             runs_root = Path(td) / "runs"
@@ -194,6 +240,8 @@ class SupportBotHumanizationTests(unittest.TestCase):
         self.assertIn('"verbosity": "brief"', prompt)
         self.assertIn('"tone": "natural"', prompt)
         self.assertIn('"current_goal": ""', prompt)
+        self.assertIn('"history_layers": {', prompt)
+        self.assertIn('"recent_raw_turns": [', prompt)
 
     def test_default_support_dispatch_config_prefers_api_with_local_fallback(self) -> None:
         cfg = support_bot.default_support_dispatch_config()
@@ -243,6 +291,156 @@ class SupportBotHumanizationTests(unittest.TestCase):
             self.assertEqual(doc["reply_text"], "收到，我先按你这轮补充的输入整理成客户可见答复。")
             self.assertEqual(doc["next_question"], "")
             self.assertIn("selected_requirement=latest_user_message", str(doc["debug_notes"]))
+
+    def test_build_final_reply_doc_runtime_guard_rewrites_low_info_task_reply(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_runtime_guard_low_info_") as td:
+            run_dir = Path(td)
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "继续推进这个项目",
+                },
+            )
+            with mock.patch.object(support_bot, "render_frontend_output", None):
+                doc = support_bot.build_final_reply_doc(
+                    run_dir=run_dir,
+                    provider="api_agent",
+                    provider_result={"status": "executed", "reason": "ok"},
+                    provider_doc={
+                        "reply_text": "好的，我在处理。",
+                        "next_question": "",
+                        "actions": [],
+                        "debug_notes": "",
+                    },
+                    conversation_mode="PROJECT_DETAIL",
+                    task_summary_hint="VN 项目推进",
+                    project_context={
+                        "run_id": "run-guard-low-info",
+                        "status": {
+                            "run_status": "running",
+                            "verify_result": "",
+                            "needs_user_decision": False,
+                            "decisions_needed_count": 0,
+                            "gate": {"state": "open", "owner": "", "reason": ""},
+                        },
+                        "decisions": {"count": 0, "decisions": []},
+                        "whiteboard": {},
+                    },
+                )
+
+            reply = str(doc.get("reply_text", ""))
+            self.assertIn("目前在", reply)
+            self.assertIn("下一步", reply)
+            guard = dict(doc.get("runtime_progress_guard", {}))
+            self.assertTrue(bool(guard.get("applied", False)))
+            self.assertIn("low_information_reply", list(guard.get("reasons", [])))
+
+    def test_build_final_reply_doc_runtime_guard_blocks_ungrounded_completion_claim(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_runtime_guard_completion_") as td:
+            run_dir = Path(td)
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "现在到哪了",
+                },
+            )
+            with mock.patch.object(support_bot, "render_frontend_output", None):
+                doc = support_bot.build_final_reply_doc(
+                    run_dir=run_dir,
+                    provider="api_agent",
+                    provider_result={"status": "executed", "reason": "ok"},
+                    provider_doc={
+                        "reply_text": "已经完成并可交付了。",
+                        "next_question": "",
+                        "actions": [],
+                        "debug_notes": "",
+                    },
+                    conversation_mode="STATUS_QUERY",
+                    task_summary_hint="VN 项目推进",
+                    project_context={
+                        "run_id": "run-guard-completion",
+                        "status": {
+                            "run_status": "running",
+                            "verify_result": "",
+                            "needs_user_decision": False,
+                            "decisions_needed_count": 0,
+                            "gate": {"state": "open", "owner": "", "reason": ""},
+                        },
+                        "decisions": {"count": 0, "decisions": []},
+                        "whiteboard": {},
+                    },
+                )
+
+            reply = str(doc.get("reply_text", ""))
+            self.assertIn("目前在", reply)
+            self.assertNotIn("可交付", reply)
+            guard = dict(doc.get("runtime_progress_guard", {}))
+            self.assertTrue(bool(guard.get("applied", False)))
+            self.assertIn("ungrounded_completion_claim", list(guard.get("reasons", [])))
+
+    def test_build_final_reply_doc_runtime_guard_normalizes_same_state_repeat(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_runtime_guard_repeat_") as td:
+            run_dir = Path(td)
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "继续汇报进度",
+                },
+            )
+            context = {
+                "run_id": "run-guard-repeat",
+                "status": {
+                    "run_status": "running",
+                    "verify_result": "",
+                    "needs_user_decision": False,
+                    "decisions_needed_count": 0,
+                    "gate": {"state": "open", "owner": "", "reason": ""},
+                },
+                "decisions": {"count": 0, "decisions": []},
+                "whiteboard": {},
+            }
+            with mock.patch.object(support_bot, "render_frontend_output", None):
+                first_doc = support_bot.build_final_reply_doc(
+                    run_dir=run_dir,
+                    provider="api_agent",
+                    provider_result={"status": "executed", "reason": "ok"},
+                    provider_doc={
+                        "reply_text": "继续处理中。",
+                        "next_question": "",
+                        "actions": [],
+                        "debug_notes": "",
+                    },
+                    conversation_mode="STATUS_QUERY",
+                    task_summary_hint="VN 项目推进",
+                    project_context=context,
+                )
+                support_bot.write_json(run_dir / support_bot.SUPPORT_REPLY_REL_PATH, first_doc)
+                second_doc = support_bot.build_final_reply_doc(
+                    run_dir=run_dir,
+                    provider="api_agent",
+                    provider_result={"status": "executed", "reason": "ok"},
+                    provider_doc={
+                        "reply_text": str(first_doc.get("reply_text", "")),
+                        "next_question": "",
+                        "actions": [],
+                        "debug_notes": "",
+                    },
+                    conversation_mode="STATUS_QUERY",
+                    task_summary_hint="VN 项目推进",
+                    project_context=context,
+                )
+
+            reply = str(second_doc.get("reply_text", ""))
+            self.assertIn("当前状态和上一条一致", reply)
+            guard = dict(second_doc.get("runtime_progress_guard", {}))
+            self.assertTrue(bool(guard.get("applied", False)))
+            self.assertIn("repeat_same_state", list(guard.get("reasons", [])))
 
     def test_build_final_reply_doc_suppresses_garbled_greeting_reply(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_garbled_greeting_") as td:
@@ -1034,10 +1232,10 @@ class SupportBotHumanizationTests(unittest.TestCase):
             )
 
             reply = str(doc.get("reply_text", ""))
-            self.assertIn("项目已接到后台流程", reply)
-            self.assertIn("成本评审已跑过一轮", reply)
-            self.assertIn("当前阶段在合同评审", reply)
-            self.assertIn("下一步我会先处理合同评审卡住的点", reply)
+            self.assertIn("我这边已经接手到后台流程", reply)
+            self.assertIn("成本评审已完成", reply)
+            self.assertIn("目前在合同评审这个阶段", reply)
+            self.assertIn("先把合同评审卡点处理掉", reply)
             self.assertNotEqual(reply.strip(), "现在就在往下做。")
 
     def test_detect_conversation_mode_treats_previous_project_progress_followup_as_status_query(self) -> None:
@@ -1238,10 +1436,62 @@ class SupportBotHumanizationTests(unittest.TestCase):
             )
 
             reply = str(doc.get("reply_text", ""))
-            self.assertIn("项目已接到后台流程", reply)
-            self.assertIn("当前阶段在方案整理", reply)
-            self.assertIn("下一步我会先处理方案整理卡住的点", reply)
+            self.assertIn("我这边已经接手到后台流程", reply)
+            self.assertIn("目前在方案整理这个阶段", reply)
+            self.assertIn("先把方案整理卡点处理掉", reply)
             self.assertNotIn("规划文档", reply)
+
+    def test_build_final_reply_doc_status_query_handles_running_gate_blocked_as_real_blocker(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_running_gate_blocked_") as td:
+            run_dir = Path(td)
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "现在是什么情况？",
+                },
+            )
+            provider_doc = {
+                "reply_text": "我继续推进中。",
+                "next_question": "",
+                "actions": [],
+                "debug_notes": "",
+            }
+            project_context = {
+                "run_id": "r-running-blocked",
+                "goal": "我想要你继续优化我的vn项目",
+                "status": {
+                    "run_status": "running",
+                    "verify_result": "",
+                    "needs_user_decision": False,
+                    "decisions_needed_count": 0,
+                    "gate": {
+                        "state": "blocked",
+                        "owner": "Chair/Planner",
+                        "path": "artifacts/PLAN_draft.md",
+                        "reason": "waiting for PLAN_draft.md",
+                    },
+                },
+                "decisions": {"count": 0, "decisions": []},
+                "whiteboard": {"path": "artifacts/support_whiteboard.json", "hits": [], "snapshot": {}},
+            }
+
+            doc = support_bot.build_final_reply_doc(
+                run_dir=run_dir,
+                provider="api_agent",
+                provider_result={"status": "executed", "reason": "ok"},
+                provider_doc=provider_doc,
+                project_context=project_context,
+                conversation_mode="STATUS_QUERY",
+                task_summary_hint="我想要你继续优化我的vn项目",
+                lang_hint="zh",
+            )
+
+            reply = str(doc.get("reply_text", ""))
+            self.assertIn("目前在方案整理这个阶段", reply)
+            self.assertIn("先把方案整理卡点处理掉", reply)
+            self.assertNotIn("暂时没有新增阻塞", reply)
 
     def test_sync_project_context_recovers_archived_previous_outline_brief(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_resume_outline_") as td:
@@ -1314,6 +1564,73 @@ class SupportBotHumanizationTests(unittest.TestCase):
             self.assertEqual(str(updated_state.get("resume_state", {}).get("last_resume_source_run_id", "")), "old-vn-run")
             self.assertEqual(str(project_context.get("goal", "")), "我想要你继续优化我的vn项目")
 
+    def test_sync_project_context_zip_request_triggers_delivery_unblock_advance(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_zip_unblock_advance_") as td:
+            run_dir = Path(td)
+            support_bot.ensure_layout(run_dir)
+            session_state = support_bot.default_support_session_state("zip-demo")
+            session_state["bound_run_id"] = "run-zip"
+            session_state["bound_run_dir"] = "D:/tmp/run-zip"
+            session_state["project_memory"]["project_brief"] = "继续推进 VN 项目"
+
+            blocked_context = {
+                "run_id": "run-zip",
+                "run_dir": "D:/tmp/run-zip",
+                "goal": "继续推进 VN 项目",
+                "status": {
+                    "run_status": "running",
+                    "verify_result": "",
+                    "needs_user_decision": False,
+                    "decisions_needed_count": 0,
+                    "gate": {"state": "blocked", "owner": "PatchMaker", "reason": "waiting for diff.patch"},
+                },
+                "decisions": {"count": 0, "decisions": []},
+                "whiteboard": {},
+            }
+            final_context = {
+                "run_id": "run-zip",
+                "run_dir": "D:/tmp/run-zip",
+                "goal": "继续推进 VN 项目",
+                "status": {
+                    "run_status": "completed",
+                    "verify_result": "PASS",
+                    "needs_user_decision": False,
+                    "decisions_needed_count": 0,
+                    "gate": {"state": "closed", "owner": "", "reason": ""},
+                },
+                "decisions": {"count": 0, "decisions": []},
+                "whiteboard": {},
+            }
+
+            with mock.patch.object(
+                support_bot.ctcp_front_bridge,
+                "ctcp_get_support_context",
+                side_effect=[blocked_context, blocked_context, final_context],
+            ), mock.patch.object(
+                support_bot.ctcp_front_bridge,
+                "ctcp_record_support_turn",
+                return_value={"ok": True},
+            ), mock.patch.object(
+                support_bot.ctcp_front_bridge,
+                "ctcp_advance",
+                return_value={"status": "advanced"},
+            ) as advance_spy:
+                project_context, updated_state = support_bot.sync_project_context(
+                    run_dir=run_dir,
+                    chat_id="zip-demo",
+                    user_text="把项目 zip 发我",
+                    source="telegram",
+                    conversation_mode="STATUS_QUERY",
+                    session_state=session_state,
+                )
+
+            advance_spy.assert_called_once_with("run-zip", max_steps=6)
+            self.assertEqual(str(project_context.get("status", {}).get("verify_result", "")), "PASS")
+            self.assertEqual(str(project_context.get("status", {}).get("run_status", "")), "completed")
+            self.assertEqual(str(updated_state.get("bound_run_id", "")), "run-zip")
+            events = (run_dir / "events.jsonl").read_text(encoding="utf-8", errors="replace")
+            self.assertIn("SUPPORT_DELIVERY_UNBLOCK_ADVANCE", events)
+
     def test_build_grounded_status_reply_doc_does_not_repeat_latest_greeting(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_proactive_greeting_guard_") as td:
             run_dir = Path(td)
@@ -1363,10 +1680,11 @@ class SupportBotHumanizationTests(unittest.TestCase):
             )
 
             reply = str(doc.get("reply_text", ""))
-            self.assertIn("当前阶段在", reply)
-            self.assertIn("下一步我会", reply)
+            self.assertIn("目前在", reply)
+            self.assertIn("我会继续处理：", reply)
             self.assertNotIn("你好，随时可以开始", reply)
             self.assertNotEqual(reply.strip(), "你好，随时可以开始。你说说看要做什么？")
+            self.assertEqual(str(session_state.get("frontdesk_state", {}).get("state", "")), "Idle")
 
     def test_process_message_greeting_does_not_reset_real_progress_digest(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_progress_baseline_guard_") as td:
@@ -1409,6 +1727,237 @@ class SupportBotHumanizationTests(unittest.TestCase):
             notification_state = dict(saved.get("notification_state", {}))
             self.assertEqual(str(notification_state.get("last_progress_hash", "")), "existing-real-hash")
             self.assertEqual(str(notification_state.get("last_notified_run_id", "")), "")
+
+    def test_support_controller_decision_prompt_dedup_and_cooldown(self) -> None:
+        session_state = support_bot.default_support_session_state("controller-decision")
+        session_state["bound_run_id"] = "run-decision"
+        project_context = {
+            "run_id": "run-decision",
+            "status": {
+                "run_status": "blocked",
+                "verify_result": "",
+                "needs_user_decision": True,
+                "decisions_needed_count": 1,
+                "gate": {"state": "blocked", "owner": "chair", "reason": "请选择交付格式"},
+            },
+            "decisions": {
+                "count": 1,
+                "decisions": [{"decision_id": "outbox:1", "question_hint": "你要先要 zip 包，还是先看截图？"}],
+            },
+            "whiteboard": {},
+        }
+
+        binding = support_bot.build_progress_binding(project_context=project_context, task_summary_hint="VN项目")
+        self.assertEqual(str(binding.get("active_stage", "")), "WAIT_USER_DECISION")
+        self.assertEqual(str(binding.get("stage_exit_condition", "")), "required_user_decision_received")
+        report = support_bot.ctcp_support_controller.decide_and_queue(
+            session_state,
+            project_context=project_context,
+            progress_binding=binding,
+            now_ts="2026-03-24T10:00:00Z",
+            keepalive_interval_sec=600,
+        )
+        self.assertEqual(str(report.get("controller_state", "")), "WAIT_USER_DECISION")
+        jobs = support_bot.ctcp_support_controller.pop_outbound_jobs(session_state)
+        self.assertEqual(len(jobs), 1)
+        self.assertEqual(str(jobs[0].get("kind", "")), "decision")
+        support_bot.ctcp_support_controller.mark_job_sent(
+            session_state,
+            jobs[0],
+            now_ts="2026-03-24T10:00:00Z",
+            cooldown_sec=60,
+        )
+
+        support_bot.ctcp_support_controller.decide_and_queue(
+            session_state,
+            project_context=project_context,
+            progress_binding=binding,
+            now_ts="2026-03-24T10:00:10Z",
+            keepalive_interval_sec=600,
+        )
+        self.assertEqual(support_bot.ctcp_support_controller.pop_outbound_jobs(session_state), [])
+
+        support_bot.ctcp_support_controller.decide_and_queue(
+            session_state,
+            project_context=project_context,
+            progress_binding=binding,
+            now_ts="2026-03-24T10:02:00Z",
+            keepalive_interval_sec=600,
+        )
+        self.assertEqual(support_bot.ctcp_support_controller.pop_outbound_jobs(session_state), [])
+
+        changed_context = dict(project_context)
+        changed_context["decisions"] = {
+            "count": 1,
+            "decisions": [{"decision_id": "outbox:2", "question_hint": "你要先做剧情主线，还是先做UI框架？"}],
+        }
+        changed_binding = support_bot.build_progress_binding(project_context=changed_context, task_summary_hint="VN项目")
+        support_bot.ctcp_support_controller.decide_and_queue(
+            session_state,
+            project_context=changed_context,
+            progress_binding=changed_binding,
+            now_ts="2026-03-24T10:03:30Z",
+            keepalive_interval_sec=600,
+        )
+        changed_jobs = support_bot.ctcp_support_controller.pop_outbound_jobs(session_state)
+        self.assertEqual(len(changed_jobs), 1)
+        self.assertEqual(str(changed_jobs[0].get("kind", "")), "decision")
+
+    def test_support_controller_result_notify_requires_final_ready_status(self) -> None:
+        session_state = support_bot.default_support_session_state("controller-result")
+        session_state["bound_run_id"] = "run-result"
+        not_ready_context = {
+            "run_id": "run-result",
+            "status": {
+                "run_status": "running",
+                "verify_result": "PASS",
+                "needs_user_decision": False,
+                "decisions_needed_count": 0,
+                "gate": {"state": "open", "owner": "", "reason": ""},
+            },
+            "decisions": {"count": 0, "decisions": []},
+            "whiteboard": {},
+        }
+        binding = support_bot.build_progress_binding(project_context=not_ready_context, task_summary_hint="VN项目")
+        self.assertEqual(str(binding.get("active_stage", "")), "EXECUTE")
+        support_bot.ctcp_support_controller.decide_and_queue(
+            session_state,
+            project_context=not_ready_context,
+            progress_binding=binding,
+            now_ts="2026-03-24T11:00:00Z",
+            keepalive_interval_sec=600,
+        )
+        jobs = support_bot.ctcp_support_controller.pop_outbound_jobs(session_state)
+        self.assertTrue(all(str(item.get("kind", "")) != "result" for item in jobs))
+
+        ready_context = {
+            "run_id": "run-result",
+            "status": {
+                "run_status": "completed",
+                "verify_result": "PASS",
+                "needs_user_decision": False,
+                "decisions_needed_count": 0,
+                "gate": {"state": "closed", "owner": "", "reason": ""},
+            },
+            "decisions": {"count": 0, "decisions": []},
+            "whiteboard": {},
+        }
+        ready_binding = support_bot.build_progress_binding(project_context=ready_context, task_summary_hint="VN项目")
+        self.assertEqual(str(ready_binding.get("active_stage", "")), "FINALIZE")
+        support_bot.ctcp_support_controller.decide_and_queue(
+            session_state,
+            project_context=ready_context,
+            progress_binding=ready_binding,
+            now_ts="2026-03-24T11:20:00Z",
+            keepalive_interval_sec=600,
+        )
+        ready_jobs = support_bot.ctcp_support_controller.pop_outbound_jobs(session_state)
+        self.assertTrue(any(str(item.get("kind", "")) == "result" for item in ready_jobs))
+
+    def test_support_controller_progress_dedupe_stays_stable_after_support_memory_write(self) -> None:
+        session_state = support_bot.default_support_session_state("controller-progress-dedupe")
+        session_state["bound_run_id"] = "run-progress"
+        session_state["notification_state"]["last_progress_ts"] = "2026-03-24T09:00:00Z"
+        session_state["notification_state"]["last_progress_hash"] = "legacy-progress-hash"
+        project_context = {
+            "run_id": "run-progress",
+            "status": {
+                "run_status": "running",
+                "verify_result": "",
+                "needs_user_decision": False,
+                "decisions_needed_count": 0,
+                "gate": {"state": "open", "owner": "chair", "reason": "working"},
+            },
+            "decisions": {"count": 0, "decisions": []},
+            "whiteboard": {},
+        }
+        binding = support_bot.build_progress_binding(project_context=project_context, task_summary_hint="VN项目")
+        support_bot.ctcp_support_controller.decide_and_queue(
+            session_state,
+            project_context=project_context,
+            progress_binding=binding,
+            now_ts="2026-03-24T12:00:00Z",
+            keepalive_interval_sec=7200,
+        )
+        jobs = support_bot.ctcp_support_controller.pop_outbound_jobs(session_state)
+        self.assertEqual(len(jobs), 1)
+        self.assertEqual(str(jobs[0].get("kind", "")), "progress")
+        support_bot.ctcp_support_controller.mark_job_sent(
+            session_state,
+            jobs[0],
+            now_ts="2026-03-24T12:00:00Z",
+            cooldown_sec=30,
+        )
+        support_bot.remember_progress_notification(
+            session_state,
+            project_context=project_context,
+            task_summary_hint="VN项目",
+            ts="2026-03-24T12:00:00Z",
+            status_hash=str(jobs[0].get("status_hash", "")),
+        )
+
+        support_bot.ctcp_support_controller.decide_and_queue(
+            session_state,
+            project_context=project_context,
+            progress_binding=binding,
+            now_ts="2026-03-24T12:10:00Z",
+            keepalive_interval_sec=7200,
+        )
+        self.assertEqual(support_bot.ctcp_support_controller.pop_outbound_jobs(session_state), [])
+
+    def test_support_controller_does_not_push_progress_immediately_on_status_changed(self) -> None:
+        session_state = support_bot.default_support_session_state("controller-progress-throttle")
+        session_state["bound_run_id"] = "run-progress"
+        session_state["notification_state"]["last_progress_ts"] = "2026-03-24T12:00:00Z"
+        session_state["notification_state"]["last_progress_hash"] = "old-hash"
+        project_context = {
+            "run_id": "run-progress",
+            "status": {
+                "run_status": "blocked",
+                "verify_result": "",
+                "needs_user_decision": False,
+                "decisions_needed_count": 0,
+                "gate": {"state": "blocked", "owner": "contract_guard", "reason": "waiting for guard clearance"},
+            },
+            "decisions": {"count": 0, "decisions": []},
+            "whiteboard": {},
+        }
+        binding = support_bot.build_progress_binding(project_context=project_context, task_summary_hint="VN项目")
+        support_bot.ctcp_support_controller.decide_and_queue(
+            session_state,
+            project_context=project_context,
+            progress_binding=binding,
+            now_ts="2026-03-24T12:00:30Z",
+            keepalive_interval_sec=900,
+        )
+        self.assertEqual(support_bot.ctcp_support_controller.pop_outbound_jobs(session_state), [])
+
+    def test_support_controller_keepalive_disabled_stays_silent(self) -> None:
+        session_state = support_bot.default_support_session_state("controller-keepalive-disabled")
+        session_state["bound_run_id"] = "run-progress"
+        session_state["notification_state"]["last_progress_ts"] = "2026-03-24T09:00:00Z"
+        session_state["notification_state"]["last_progress_hash"] = "legacy-progress-hash"
+        project_context = {
+            "run_id": "run-progress",
+            "status": {
+                "run_status": "running",
+                "verify_result": "",
+                "needs_user_decision": False,
+                "decisions_needed_count": 0,
+                "gate": {"state": "open", "owner": "", "reason": ""},
+            },
+            "decisions": {"count": 0, "decisions": []},
+            "whiteboard": {},
+        }
+        binding = support_bot.build_progress_binding(project_context=project_context, task_summary_hint="VN项目")
+        support_bot.ctcp_support_controller.decide_and_queue(
+            session_state,
+            project_context=project_context,
+            progress_binding=binding,
+            now_ts="2026-03-24T12:10:00Z",
+            keepalive_interval_sec=0,
+        )
+        self.assertEqual(support_bot.ctcp_support_controller.pop_outbound_jobs(session_state), [])
 
     def test_run_stdin_mode_emits_reply_text_only(self) -> None:
         with mock.patch.object(
@@ -1459,16 +2008,70 @@ class SupportBotHumanizationTests(unittest.TestCase):
             with mock.patch.object(support_bot, "ROOT", repo_root):
                 delivery = support_bot.collect_public_delivery_state(
                     session_state=state,
-                    project_context=None,
+                    project_context={
+                        "run_id": "r-vn",
+                        "run_dir": str(bound_run),
+                        "status": {
+                            "run_status": "completed",
+                            "verify_result": "PASS",
+                            "needs_user_decision": False,
+                            "decisions_needed_count": 0,
+                            "gate": {"state": "closed", "owner": "", "reason": ""},
+                        },
+                    },
                     source="telegram",
                 )
 
             self.assertTrue(bool(delivery.get("package_ready", False)))
+            self.assertTrue(bool(delivery.get("package_delivery_allowed", False)))
+            self.assertEqual(str(delivery.get("package_blocked_reason", "")), "")
             self.assertFalse(bool(delivery.get("screenshot_ready", False)))
             self.assertIn(str(generated_project.resolve()), list(delivery.get("package_source_dirs", [])))
             self.assertEqual(str(delivery.get("package_delivery_mode", "")), "materialize_ctcp_scaffold")
             self.assertEqual(str(delivery.get("project_name_hint", "")), "vn_story_organizer")
             self.assertIn("docs/", list(delivery.get("package_structure_hint", [])))
+
+    def test_collect_public_delivery_state_blocks_package_until_final_pass(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_gate_") as td:
+            repo_root = Path(td)
+            generated_project = repo_root / "generated_projects" / "vn_story_organizer"
+            generated_project.mkdir(parents=True, exist_ok=True)
+            (generated_project / "main.py").write_text("print('vn')\n", encoding="utf-8")
+
+            bound_run = repo_root / "runs" / "bound-vn"
+            (bound_run / "artifacts").mkdir(parents=True, exist_ok=True)
+            (bound_run / "artifacts" / "patch_apply.json").write_text(
+                json.dumps({"touched_files": ["generated_projects/vn_story_organizer/main.py"]}, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            (bound_run / "artifacts" / "PLAN.md").write_text(
+                "Status: SIGNED\nScope-Allow: generated_projects/vn_story_organizer/\n",
+                encoding="utf-8",
+            )
+
+            state = support_bot.default_support_session_state("delivery-demo")
+            state["bound_run_id"] = "r-vn"
+            state["bound_run_dir"] = str(bound_run)
+            with mock.patch.object(support_bot, "ROOT", repo_root):
+                delivery = support_bot.collect_public_delivery_state(
+                    session_state=state,
+                    project_context={
+                        "run_id": "r-vn",
+                        "run_dir": str(bound_run),
+                        "status": {
+                            "run_status": "running",
+                            "verify_result": "",
+                            "needs_user_decision": False,
+                            "decisions_needed_count": 0,
+                            "gate": {"state": "open", "owner": "", "reason": ""},
+                        },
+                    },
+                    source="telegram",
+                )
+
+            self.assertFalse(bool(delivery.get("package_ready", False)))
+            self.assertFalse(bool(delivery.get("package_delivery_allowed", False)))
+            self.assertIn("verify_result is not PASS", str(delivery.get("package_blocked_reason", "")))
 
     def test_build_final_reply_doc_synthesizes_zip_action_and_rewrites_email_handoff(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_action_") as td:
@@ -1496,6 +2099,8 @@ class SupportBotHumanizationTests(unittest.TestCase):
                 delivery_state={
                     "channel_can_send_files": True,
                     "package_ready": True,
+                    "package_delivery_allowed": True,
+                    "package_blocked_reason": "",
                     "screenshot_ready": False,
                     "package_source_dirs": ["D:/tmp/vn_story_organizer"],
                     "existing_package_files": [],
@@ -1506,12 +2111,99 @@ class SupportBotHumanizationTests(unittest.TestCase):
             self.assertTrue(any(str(item.get("type", "")) == "send_project_package" for item in list(doc.get("actions", []))))
             self.assertIn("不用再留邮箱", str(doc.get("reply_text", "")))
 
+    def test_build_final_reply_doc_zip_request_blocked_sends_preview_and_confirmation_note(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_preview_") as td:
+            run_dir = Path(td)
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "把项目 zip 发我",
+                },
+            )
+            doc = support_bot.build_final_reply_doc(
+                run_dir=run_dir,
+                provider="api_agent",
+                provider_result={"status": "executed", "reason": "ok"},
+                provider_doc={
+                    "reply_text": "我先同步当前进度。",
+                    "next_question": "",
+                    "actions": [],
+                    "debug_notes": "",
+                },
+                source_hint="telegram",
+                conversation_mode="PROJECT_DETAIL",
+                delivery_state={
+                    "channel_can_send_files": True,
+                    "package_ready": False,
+                    "package_delivery_allowed": False,
+                    "package_blocked_reason": "verify_result is not PASS",
+                    "screenshot_ready": True,
+                    "package_source_dirs": ["D:/tmp/vn_story_organizer"],
+                    "existing_package_files": [],
+                    "screenshot_files": ["D:/tmp/vn_story_organizer/artifacts/progress.png"],
+                },
+            )
+
+            action_types = {str(item.get("type", "")).strip().lower() for item in list(doc.get("actions", []))}
+            self.assertNotIn("send_project_package", action_types)
+            self.assertIn("send_project_screenshot", action_types)
+            self.assertIn("确认“可以发包”", str(doc.get("reply_text", "")))
+
+    def test_build_final_reply_doc_zip_confirmation_after_preview_sends_package(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_confirm_") as td:
+            run_dir = Path(td)
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "把项目 zip 发我",
+                },
+            )
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "可以，发吧",
+                },
+            )
+            doc = support_bot.build_final_reply_doc(
+                run_dir=run_dir,
+                provider="api_agent",
+                provider_result={"status": "executed", "reason": "ok"},
+                provider_doc={
+                    "reply_text": "收到，我继续推进。",
+                    "next_question": "",
+                    "actions": [],
+                    "debug_notes": "",
+                },
+                source_hint="telegram",
+                conversation_mode="STATUS_QUERY",
+                delivery_state={
+                    "channel_can_send_files": True,
+                    "package_ready": True,
+                    "package_delivery_allowed": True,
+                    "package_blocked_reason": "",
+                    "screenshot_ready": True,
+                    "package_source_dirs": ["D:/tmp/vn_story_organizer"],
+                    "existing_package_files": ["D:/tmp/vn_story_organizer.zip"],
+                    "screenshot_files": ["D:/tmp/vn_story_organizer/artifacts/progress.png"],
+                },
+            )
+
+            self.assertTrue(any(str(item.get("type", "")) == "send_project_package" for item in list(doc.get("actions", []))))
+
     def test_public_delivery_prompt_context_exposes_ctcp_scaffold_shape(self) -> None:
         ctx = support_bot.public_delivery_prompt_context(
             {
                 "channel": "telegram",
                 "channel_can_send_files": True,
                 "package_ready": True,
+                "package_delivery_allowed": True,
+                "package_blocked_reason": "",
                 "package_source_dirs": ["D:/tmp/vn_story_organizer"],
                 "existing_package_files": [],
                 "project_name_hint": "vn_story_organizer",
@@ -1524,7 +2216,45 @@ class SupportBotHumanizationTests(unittest.TestCase):
 
         self.assertEqual(str(ctx.get("package_delivery_mode", "")), "materialize_ctcp_scaffold")
         self.assertEqual(str(ctx.get("project_name_hint", "")), "vn_story_organizer")
+        self.assertTrue(bool(ctx.get("package_delivery_allowed", False)))
         self.assertIn("docs/", list(ctx.get("package_structure_hint", [])))
+
+    def test_build_final_reply_doc_filters_provider_package_action_when_gate_blocked(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_gate_doc_") as td:
+            run_dir = Path(td)
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "把zip发给我",
+                },
+            )
+            doc = support_bot.build_final_reply_doc(
+                run_dir=run_dir,
+                provider="api_agent",
+                provider_result={"status": "executed", "reason": "ok"},
+                provider_doc={
+                    "reply_text": "我现在发你zip。",
+                    "next_question": "",
+                    "actions": [{"type": "send_project_package", "format": "zip"}],
+                    "debug_notes": "",
+                },
+                source_hint="telegram",
+                conversation_mode="PROJECT_DETAIL",
+                delivery_state={
+                    "channel_can_send_files": True,
+                    "package_ready": False,
+                    "package_delivery_allowed": False,
+                    "package_blocked_reason": "verify_result is not PASS",
+                    "screenshot_ready": False,
+                    "package_source_dirs": ["D:/tmp/vn_story_organizer"],
+                    "existing_package_files": [],
+                    "screenshot_files": [],
+                },
+            )
+
+            self.assertFalse(any(str(item.get("type", "")) == "send_project_package" for item in list(doc.get("actions", []))))
 
     def test_emit_public_delivery_materializes_zip_and_sends_document(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_emit_delivery_") as td:
@@ -1569,6 +2299,8 @@ class SupportBotHumanizationTests(unittest.TestCase):
                     delivery_state={
                         "channel_can_send_files": True,
                         "package_ready": True,
+                        "package_delivery_allowed": True,
+                        "package_blocked_reason": "",
                         "screenshot_ready": False,
                         "package_source_dirs": [str(project_dir)],
                         "ctcp_package_source_dirs": [],

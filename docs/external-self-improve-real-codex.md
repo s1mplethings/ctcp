@@ -11,7 +11,7 @@
 Create the smallest auditable bootstrap update so this goal is explicitly tracked and discoverable, with no runtime/code-path behavior changes.
 
 ## Constraints Snapshot
-- policy: `D:/.c_projects/adc/ctcp/contracts/allowed_changes.yaml`
+- policy: `D:/.c_projects/adc/ctcp/policy/allowed_changes.yaml`
 - max_files: `10`
 - max_added_lines: `800`
 - max_deleted_lines: `800`
@@ -30,3 +30,4 @@ Create the smallest auditable bootstrap update so this goal is explicitly tracke
 - [ ] Re-run path-scope and diff-budget checks before merge.
 - [ ] Set `verify_rc` to a concrete value when verification becomes applicable.
 diff --git a/workflow_registry/external-self-improve-real-codex.round1.yaml b/workflow_registry/external-self-improve-real-codex.round1.yaml
+

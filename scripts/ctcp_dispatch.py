@@ -29,7 +29,6 @@ KNOWN_PROVIDERS = {"manual_outbox", "ollama_agent", "api_agent", "codex_agent", 
 STEP_META_PATH = Path("step_meta.jsonl")
 HARD_ROLE_PROVIDERS = {
     "librarian": "local_exec",
-    "contract_guardian": "local_exec",
 }
 
 # BEHAVIOR_ID: B017
@@ -948,23 +947,15 @@ def _resolve_provider(config: dict[str, Any], role: str, action: str) -> tuple[s
     if not isinstance(role_providers, dict):
         role_providers = {}
     provider = _normalize_provider(str(role_providers.get(role, config.get("mode", "manual_outbox"))))
-    if provider == "local_exec" and (role, action) not in {
-        ("librarian", "context_pack"),
-        ("contract_guardian", "review_contract"),
-    }:
+    if provider == "local_exec" and (role, action) != ("librarian", "context_pack"):
         return (
-            "manual_outbox",
-            "local_exec restricted to librarian/context_pack and contract_guardian/review_contract; fallback to manual_outbox",
+            "api_agent",
+            "local_exec restricted to librarian/context_pack; fallback to api_agent",
         )
-    if provider == "ollama_agent" and role not in {"librarian", "contract_guardian"}:
-        if role in {"patchmaker", "fixer"}:
-            return (
-                "api_agent",
-                "ollama_agent restricted to librarian/contract_guardian; fallback to api_agent",
-            )
+    if provider == "ollama_agent" and role != "librarian":
         return (
-            "manual_outbox",
-            "ollama_agent restricted to librarian/contract_guardian; fallback to manual_outbox",
+            "api_agent",
+            "ollama_agent restricted to librarian/context_pack; fallback to api_agent",
         )
     return provider, ""
 

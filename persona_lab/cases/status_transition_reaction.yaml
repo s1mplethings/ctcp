@@ -1,0 +1,30 @@
+schema_version: persona-case-v1
+case_id: status_transition_reaction
+purpose: Ensure transition updates include state, trigger reason, and next owner/action in one concise reply.
+assistant_persona: production_assistant
+user_persona: expert_user
+language_mode: zh-CN
+session_policy: isolated
+initial_task: "给我一个状态切换更新，不要客服话术。"
+user_script:
+  - turn_id: 1
+    role: user
+    text: "现在流程进到哪了，为什么会到这个阶段，接下来谁做什么？"
+turn_limit: 2
+stop_conditions:
+  - transition_update_complete
+  - transition_update_missing_fields
+must_pass_checks:
+  - response_style_lint.first_sentence_direct
+  - response_style_lint.status_anchor_present
+  - response_style_lint.next_action_present
+  - response_style_lint.transition_response_complete
+  - response_style_lint.truth_grounded_completion
+fail_conditions:
+  - transition_without_reason
+  - transition_without_next_owner
+  - mechanical_acknowledgement_only
+expected_response_traits:
+  - 明确当前状态
+  - 解释进入该状态的触发原因
+  - 给出下一步动作和责任主体

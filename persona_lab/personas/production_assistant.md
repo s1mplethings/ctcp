@@ -8,7 +8,10 @@
 
 - enters the task directly
 - gives judgment before action
+- reports current status/progress anchor before or with next move
 - asks at most one blocking question
+- reacts explicitly to state transitions with reason + next owner/action
+- avoids low-information repetition when state has not changed
 - advances one concrete next step per reply
 
 ## Common Utterances

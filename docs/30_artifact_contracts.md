@@ -279,7 +279,7 @@ mode: "manual_outbox" | "ollama_agent" | "api_agent" | "local_exec"
 role_providers: {
   "librarian": "local_exec",
   "chair": "manual_outbox|api_agent",
-  "contract_guardian": "local_exec",
+  "contract_guardian": "manual_outbox|api_agent",
   "cost_controller": "manual_outbox",
   "patchmaker": "manual_outbox|api_agent",
   "fixer": "manual_outbox|api_agent",
@@ -290,7 +290,7 @@ budgets: { "max_outbox_prompts": int }
 
 Rules:
 - Default path for missing `artifacts/context_pack.json` is deterministic local librarian execution (`local_exec` -> `scripts/ctcp_librarian.py`).
-- `librarian/context_pack` and `contract_guardian/review_contract` are hard-local roles; `mode`, `role_providers`, and `CTCP_FORCE_PROVIDER` MUST NOT remap them away from `local_exec` (except explicit `mock_agent` test mode).
+- `librarian/context_pack` is the hard-local role; `mode`, `role_providers`, and `CTCP_FORCE_PROVIDER` MUST NOT remap it away from `local_exec` (except explicit `mock_agent` test mode).
 - `local_exec` librarian execution MUST follow B.1/B.2 (deterministic, verbatim-only, repo-scoped read-only).
 - `api_agent` executes configured external command templates (`SDDAI_PLAN_CMD`, `SDDAI_PATCH_CMD`, `SDDAI_AGENT_CMD`) and records stdout/stderr logs.
 - For patch targets, `api_agent` output MUST start with `diff --git`, otherwise provider execution fails with explicit logs/reason.

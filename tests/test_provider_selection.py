@@ -41,8 +41,8 @@ class ProviderSelectionTests(unittest.TestCase):
             cfg, msg = ctcp_dispatch.load_dispatch_config(run_dir)
             self.assertIsNotNone(cfg, msg)
             role_providers = cfg.get("role_providers", {})
-            self.assertEqual(role_providers.get("contract_guardian"), "local_exec")
             self.assertEqual(role_providers.get("librarian"), "local_exec")
+            self.assertNotEqual(role_providers.get("contract_guardian"), "local_exec")
             self.assertEqual(role_providers.get("patchmaker"), "api_agent")
             self.assertEqual(role_providers.get("fixer"), "api_agent")
 
@@ -84,10 +84,10 @@ class ProviderSelectionTests(unittest.TestCase):
             self.assertIsNotNone(cfg, msg)
             role_providers = cfg.get("role_providers", {})
             self.assertEqual(role_providers.get("patchmaker"), "manual_outbox")
-            self.assertEqual(role_providers.get("contract_guardian"), "local_exec")
             self.assertEqual(role_providers.get("librarian"), "local_exec")
+            self.assertNotEqual(role_providers.get("contract_guardian"), "local_exec")
 
-    def test_local_exec_provider_is_preserved(self) -> None:
+    def test_non_librarian_local_exec_provider_falls_back_to_api(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             run_dir = Path(td)
             artifacts = run_dir / "artifacts"
@@ -110,9 +110,9 @@ class ProviderSelectionTests(unittest.TestCase):
             )
             cfg, msg = ctcp_dispatch.load_dispatch_config(run_dir)
             self.assertIsNotNone(cfg, msg)
-            role_providers = cfg.get("role_providers", {})
-            self.assertEqual(role_providers.get("librarian"), "local_exec")
-            self.assertEqual(role_providers.get("contract_guardian"), "local_exec")
+            provider, note = ctcp_dispatch._resolve_provider(cfg, "contract_guardian", "review_contract")
+            self.assertEqual(provider, "api_agent")
+            self.assertIn("local_exec restricted to librarian/context_pack", note)
 
     def test_librarian_manual_outbox_override_is_ignored(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -273,6 +273,34 @@ class ProviderSelectionTests(unittest.TestCase):
             self.assertEqual(last.get("provider"), "api_agent")
             self.assertEqual(last.get("role"), "chair")
             self.assertEqual(last.get("action"), "plan_draft")
+
+    def test_derive_request_routes_analysis_and_guardrails_through_plan_draft_family(self) -> None:
+        run_doc = {"goal": "analysis routing"}
+        analysis_gate = {
+            "state": "blocked",
+            "owner": "Chair/Planner",
+            "path": "artifacts/analysis.md",
+            "reason": "waiting for analysis.md",
+        }
+        guardrails_gate = {
+            "state": "blocked",
+            "owner": "Chair/Planner",
+            "path": "artifacts/guardrails.md",
+            "reason": "waiting for guardrails.md",
+        }
+
+        analysis_req = ctcp_dispatch.derive_request(analysis_gate, run_doc)
+        guardrails_req = ctcp_dispatch.derive_request(guardrails_gate, run_doc)
+
+        self.assertIsInstance(analysis_req, dict)
+        self.assertEqual(str(analysis_req.get("role", "")), "chair")
+        self.assertEqual(str(analysis_req.get("action", "")), "plan_draft")
+        self.assertEqual(str(analysis_req.get("target_path", "")), "artifacts/analysis.md")
+
+        self.assertIsInstance(guardrails_req, dict)
+        self.assertEqual(str(guardrails_req.get("role", "")), "chair")
+        self.assertEqual(str(guardrails_req.get("action", "")), "plan_draft")
+        self.assertEqual(str(guardrails_req.get("target_path", "")), "artifacts/guardrails.md")
 
     def test_dispatch_once_injects_shared_whiteboard_context_for_api_provider(self) -> None:
         with tempfile.TemporaryDirectory() as td:

@@ -133,6 +133,37 @@ def _is_progress_update_request(text: str) -> bool:
     return any(p.search(raw) for p in _PROGRESS_UPDATE_PATTERNS_ZH) or any(p.search(low) for p in _PROGRESS_UPDATE_PATTERNS_EN)
 
 
+def _looks_like_progress_grounded_reply(text: str, *, lang: str) -> bool:
+    raw = re.sub(r"\s+", " ", str(text or "").strip())
+    if not raw:
+        return False
+    low = raw.lower()
+    if str(lang or "").strip().lower().startswith("en"):
+        markers = (
+            "current",
+            "status",
+            "phase",
+            "progress",
+            "blocked",
+            "completed",
+            "next step",
+            "next action",
+        )
+        return any(marker in low for marker in markers)
+    markers = (
+        "当前",
+        "目前",
+        "状态",
+        "阶段",
+        "进展",
+        "卡点",
+        "阻塞",
+        "已完成",
+        "下一步",
+    )
+    return any(marker in raw for marker in markers)
+
+
 def _normalize_progress_binding(raw: Any) -> dict[str, Any]:
     if not isinstance(raw, Mapping):
         return {}
@@ -209,19 +240,19 @@ def _compose_progress_update_reply(
         return "\n\n".join([row for row in rows if row]).strip(), questions
 
     if done_items:
-        rows.append("，".join(done_items) + "。")
+        rows.append("我这边已经完成：" + "、".join(done_items) + "。")
     if blocker and blocker.lower() != "none":
         if phase:
-            rows.append(f"当前阶段在{phase}，当前卡点是{blocker}。")
+            rows.append(f"目前在{phase}这个阶段，当前卡点是：{blocker}。")
         else:
-            rows.append(f"当前卡点是{blocker}。")
+            rows.append(f"当前卡点是：{blocker}。")
     else:
         phase_text = phase or ("结果整理/交付" if visible_state == "DONE" else "执行推进")
-        rows.append(f"当前阶段在{phase_text}，目前没有额外阻塞。")
+        rows.append(f"目前在{phase_text}这个阶段，主流程还在推进，暂时没有新增阻塞。")
     if next_action:
-        rows.append(f"下一步我会{next_action}。")
+        rows.append(f"下一步我会继续处理：{next_action}。")
     if question_needed and blocking_question:
-        rows.append(f"继续前需要你先拍板这个点：{blocking_question}")
+        rows.append(f"继续前我这边还差你拍板这个点：{blocking_question}")
         questions = [blocking_question]
     return "\n\n".join([row for row in rows if row]).strip(), questions
 
@@ -1028,9 +1059,21 @@ def run_internal_reply_pipeline(
             lang=lang,
             fallback_question=frontdesk_question or raw_next_question,
         )
-        state.review_flags.append("progress_binding_consumed")
-        state.candidate_questions = progress_questions
-        state.draft_reply = progress_reply
+        raw_progress = sanitize_internal_text(raw_reply_text).text.strip()
+        prefer_raw_progress = (
+            bool(raw_progress)
+            and (not _raw_project_reply_has_internal_marker(raw_progress))
+            and (not _is_low_signal_project_reply(raw_progress))
+            and _looks_like_progress_grounded_reply(raw_progress, lang=lang)
+        )
+        if prefer_raw_progress:
+            state.review_flags.append("progress_binding_agent_reply_preferred")
+            state.draft_reply = raw_progress
+            state.candidate_questions = progress_questions[:1] if progress_questions else []
+        else:
+            state.review_flags.append("progress_binding_consumed")
+            state.candidate_questions = progress_questions
+            state.draft_reply = progress_reply
         state = _stage_consistency_review(state, notes=note, lang=lang)
         state = _stage_safety_sanitization(state, lang=lang)
         state = _stage_final_emission(state)
@@ -1181,6 +1224,30 @@ def _user_reply_hint_bank(lang: str) -> dict[str, list[str]]:
     }
 
 
+def _user_reply_hint_defaults(lang: str) -> dict[str, str]:
+    if str(lang or "").strip().lower() == "en":
+        return {
+            "done": "Done. I can move to the next step whenever you are ready.",
+            "waiting_decision": "I need one decision from you before I continue.",
+            "blocked_input": "I need one key detail to continue this task.",
+            "blocked_internal": "I hit an internal blocker. I can continue as soon as this input is confirmed.",
+            "blocked_temp_fail": "The processing path had a temporary issue. I can continue from your latest direction.",
+            "executing": "I am continuing this task and keeping it aligned with your latest requirement.",
+            "understood": "Understood.",
+            "needs_details": "I need one or two key details before I proceed.",
+        }
+    return {
+        "done": "已完成当前步骤，你确认后我继续下一步。",
+        "waiting_decision": "我这边需要你确认一个决策点再继续。",
+        "blocked_input": "我还缺一个关键信息，补上后我就继续推进。",
+        "blocked_internal": "当前遇到内部阻塞，确认这条输入后我可以继续。",
+        "blocked_temp_fail": "处理链路刚才出现临时波动，我会按你最新方向继续推进。",
+        "executing": "我正在继续推进这项任务，会保持和你当前要求一致。",
+        "understood": "收到。",
+        "needs_details": "我还需要一到两个关键细节再往下走。",
+    }
+
+
 def compose_user_reply(
     visible_state: VisibleState,
     task_summary: str,
@@ -1199,35 +1266,36 @@ def compose_user_reply(
     allow_internal_error_rewrite = bool(note.get("allow_internal_error_rewrite", True))
 
     bank = _user_reply_hint_bank(lang)
+    defaults = _user_reply_hint_defaults(lang)
     seed = f"{visible_state}|{lang}|{summary}"
 
     if visible_state == "DONE":
-        return _pick_hint(bank["done"], seed, bank["done"][0])
+        return _pick_hint(bank["done"], seed, defaults["done"])
     if visible_state == "WAITING_FOR_DECISION":
-        head = _pick_hint(bank["waiting_decision"], seed, bank["waiting_decision"][0])
+        head = _pick_hint(bank["waiting_decision"], seed, defaults["waiting_decision"])
         if joined_q:
             return f"{head}\n\n{joined_q}"
         return head
     if visible_state == "BLOCKED_NEEDS_INPUT":
         if not allow_internal_error_rewrite:
-            head = _pick_hint(bank["blocked_input"], seed, bank["blocked_input"][0])
+            head = _pick_hint(bank["blocked_input"], seed, defaults["blocked_input"])
             if joined_q:
                 return f"{head}\n\n{joined_q}"
             return head
         if temporary_failure:
-            head = _pick_hint(bank["blocked_temp_fail"], seed, bank["blocked_temp_fail"][0])
+            head = _pick_hint(bank["blocked_temp_fail"], seed, defaults["blocked_temp_fail"])
         else:
-            head = _pick_hint(bank["blocked_internal"], seed, bank["blocked_internal"][0])
+            head = _pick_hint(bank["blocked_internal"], seed, defaults["blocked_internal"])
         if joined_q:
             return f"{head}\n\n{joined_q}"
         return head
     if visible_state == "EXECUTING":
-        body = _pick_hint(bank["executing"], seed, bank["executing"][0])
+        body = _pick_hint(bank["executing"], seed, defaults["executing"])
         if joined_q:
             return f"{body}\n\n{joined_q}"
         return body
     if visible_state == "UNDERSTOOD":
-        head = _pick_hint(bank["understood"], seed, bank["understood"][0])
+        head = _pick_hint(bank["understood"], seed, defaults["understood"])
         rows = [head]
         if summary:
             if lang == "en":
@@ -1247,7 +1315,7 @@ def compose_user_reply(
                 rows.append(f"有两个点会影响方案方向，先确认一下：\n{questions_block}")
         return "\n\n".join(rows)
     # NEEDS_ONE_OR_TWO_DETAILS
-    head = _pick_hint(bank["needs_details"], seed, bank["needs_details"][0])
+    head = _pick_hint(bank["needs_details"], seed, defaults["needs_details"])
     if joined_q:
         return f"{head}\n\n{joined_q}"
     return head

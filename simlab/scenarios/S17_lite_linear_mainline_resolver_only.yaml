@@ -134,16 +134,18 @@
     },
     {
       "run": {
-        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); p=Path(rd)/'reviews'/'review_contract.md'; assert p.exists(), str(p); shutil.copy2(p, 'artifacts/_s17_review_contract.md')\"",
+        "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='contract_guardian'; action='review_contract'; target='reviews/review_contract.md'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s17_outbox_review_contract.md')\"",
         "expect_exit": 0
       }
     },
     {
       "expect_text": {
-        "path": "artifacts/_s17_review_contract.md",
+        "path": "artifacts/_s17_outbox_review_contract.md",
         "includes": [
-          "Verdict:",
-          "Required Fix/Artifacts:"
+          "Role: contract_guardian",
+          "Action: review_contract",
+          "Target-Path: reviews/review_contract.md",
+          "write to: reviews/review_contract.md"
         ]
       }
     },

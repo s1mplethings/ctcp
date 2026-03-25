@@ -486,7 +486,7 @@ def _render_constraints_md(
     guardrails_budgets: dict[str, str],
     max_outbox_prompts: int,
 ) -> str:
-    policy_path = repo_root / "contracts" / "allowed_changes.yaml"
+    policy_path = repo_root / "policy" / "allowed_changes.yaml"
     policy = contract_guard.load_policy(policy_path)
     allowed_paths = [str(x) for x in policy.get("allowed_paths", []) if str(x).strip()]
     blocked_paths = [str(x) for x in policy.get("blocked_paths", []) if str(x).strip()]

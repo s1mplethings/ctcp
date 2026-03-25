@@ -450,7 +450,7 @@ class MockAgentPipelineTests(unittest.TestCase):
             rows.append(
                 {
                     "case": "recipe_guardian",
-                    "expected": "local_exec",
+                    "expected": "api_agent",
                     "actual": str(preview_guardian.get("provider", "")),
                 }
             )

@@ -47,7 +47,8 @@ def _init_repo(repo: Path) -> None:
     (repo / "docs").mkdir(parents=True, exist_ok=True)
     (repo / "docs" / "target.txt").write_text("hello\n", encoding="utf-8")
     (repo / "contracts").mkdir(parents=True, exist_ok=True)
-    (repo / "contracts" / "allowed_changes.yaml").write_text(
+    (repo / "policy").mkdir(parents=True, exist_ok=True)
+    (repo / "policy" / "allowed_changes.yaml").write_text(
         "\n".join(
             [
                 "allowed_paths:",
@@ -65,7 +66,7 @@ def _init_repo(repo: Path) -> None:
         ),
         encoding="utf-8",
     )
-    _run(["git", "add", "docs/target.txt", "contracts/allowed_changes.yaml"], repo)
+    _run(["git", "add", "docs/target.txt", "policy/allowed_changes.yaml"], repo)
     _run(["git", "commit", "-m", "init"], repo)
 
 
@@ -188,3 +189,4 @@ class ProviderE2ETests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -15,8 +15,8 @@
 
 | Contract | Schema | Producer / Consumer |
 |---|---|---|
-| [frontend_bridge_contract.md](../contracts/frontend_bridge_contract.md) | Markdown contract | Frontend bridge → CTCP orchestrator + run artifacts |
-| [frontend_session_contract.md](../contracts/frontend_session_contract.md) | Markdown contract | Frontdesk state machine / session manager → frontend gateway adapters |
+| [frontend_bridge_contract.md](architecture/contracts/frontend_bridge_contract.md) | Markdown contract | Frontend bridge → CTCP orchestrator + run artifacts |
+| [frontend_session_contract.md](architecture/contracts/frontend_session_contract.md) | Markdown contract | Frontdesk state machine / session manager → frontend gateway adapters |
 
 ## Runtime Markdown Contracts
 
@@ -35,3 +35,4 @@
 | [persona_lab/personas/production_assistant.md](../persona_lab/personas/production_assistant.md) | Persona definition | Production assistant contract consumer |
 | [persona_lab/rubrics/response_style_lint.yaml](../persona_lab/rubrics/response_style_lint.yaml) | Lint rubric | Judge layer → transcript scorer |
 | [persona_lab/cases/no_mechanical_greeting.yaml](../persona_lab/cases/no_mechanical_greeting.yaml) | Regression case spec | Persona-lab runner → isolated test session |
+

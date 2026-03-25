@@ -307,9 +307,18 @@ class RuntimeWiringContractTests(unittest.TestCase):
             session_state = json.loads((run_dir / support_bot.SUPPORT_SESSION_STATE_REL_PATH).read_text(encoding="utf-8"))
             frontdesk_state = dict(session_state.get("frontdesk_state", {}))
             latest_support_context = dict(session_state.get("latest_support_context", {}))
+            history_layers = dict(session_state.get("history_layers", {}))
+            working_memory = dict(history_layers.get("working_memory", {}))
+            raw_turns = list(history_layers.get("raw_turns", []))
             self.assertEqual(str(frontdesk_state.get("state", "")), "Execute")
             self.assertEqual(str(frontdesk_state.get("active_task_id", "")), "r-frontdesk")
             self.assertEqual(str(latest_support_context.get("frontdesk_state", "")), "Execute")
+            self.assertEqual(str(session_state.get("active_task_id", "")), "r-frontdesk")
+            self.assertEqual(str(session_state.get("active_run_id", "")), "r-frontdesk")
+            self.assertEqual(str(session_state.get("active_stage", "")), "EXECUTE")
+            self.assertEqual(str(session_state.get("latest_message_intent", "")), "continue")
+            self.assertEqual(str(working_memory.get("current_stage", "")), "EXECUTE")
+            self.assertGreaterEqual(len(raw_turns), 2)
 
     def test_support_bot_greeting_turn_still_uses_provider_path(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_runtime_support_greeting_") as td:
@@ -664,6 +673,20 @@ class RuntimeWiringContractTests(unittest.TestCase):
             ) as process_spy, mock.patch.object(
                 support_bot, "ROOT", root
             ), mock.patch.object(
+                support_bot.ctcp_front_bridge,
+                "ctcp_get_support_context",
+                return_value={
+                    "run_id": "r-vn",
+                    "run_dir": str(bound_run_dir),
+                    "status": {
+                        "run_status": "completed",
+                        "verify_result": "PASS",
+                        "needs_user_decision": False,
+                        "decisions_needed_count": 0,
+                        "gate": {"state": "closed", "owner": "", "reason": ""},
+                    },
+                },
+            ), mock.patch.object(
                 support_bot,
                 "_materialize_support_scaffold_project",
                 return_value=scaffold_dir,
@@ -680,7 +703,7 @@ class RuntimeWiringContractTests(unittest.TestCase):
             manifest = json.loads((support_run_dir / support_bot.SUPPORT_PUBLIC_DELIVERY_REL_PATH).read_text(encoding="utf-8"))
             self.assertEqual(len(list(manifest.get("sent", []))), 1)
 
-    def test_run_telegram_mode_pushes_proactive_progress_update_when_idle(self) -> None:
+    def test_run_telegram_mode_does_not_push_no_change_proactive_progress_when_idle(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_telegram_proactive_") as td:
             root = Path(td)
             runs_root = root / "runs"
@@ -689,6 +712,8 @@ class RuntimeWiringContractTests(unittest.TestCase):
             state = support_bot.default_support_session_state("123")
             state["bound_run_id"] = "run-proactive"
             state["bound_run_dir"] = "D:/tmp/run-proactive"
+            state["notification_state"]["last_progress_ts"] = "2026-03-24T00:00:00Z"
+            state["notification_state"]["last_progress_hash"] = "legacy-progress-hash"
             (support_run_dir / support_bot.SUPPORT_SESSION_STATE_REL_PATH).write_text(
                 json.dumps(state, ensure_ascii=False, indent=2),
                 encoding="utf-8",
@@ -779,12 +804,129 @@ class RuntimeWiringContractTests(unittest.TestCase):
                     support_bot.run_telegram_mode(token="fake", poll_seconds=1, allowlist_raw="123")
 
             fake = fake_holder["tg"]
-            self.assertEqual(fake.sent_messages, [(123, "合同评审有新进展，我已经同步到当前阶段。")])
+            self.assertEqual(fake.sent_messages, [])
             advance_spy.assert_called_once_with("run-proactive", max_steps=2)
             updated_state = json.loads((support_run_dir / support_bot.SUPPORT_SESSION_STATE_REL_PATH).read_text(encoding="utf-8"))
             notification_state = dict(updated_state.get("notification_state", {}))
-            self.assertTrue(str(notification_state.get("last_progress_hash", "")))
+            self.assertEqual(str(notification_state.get("last_progress_hash", "")), "legacy-progress-hash")
             self.assertTrue(str(notification_state.get("last_auto_advance_ts", "")))
+
+    def test_run_telegram_mode_read_timeout_logs_are_throttled(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_telegram_timeout_") as td:
+            root = Path(td)
+            runs_root = root / "runs"
+
+            class _FakeTelegram:
+                def __init__(self, token: str, timeout_sec: int) -> None:
+                    del token, timeout_sec
+                    self.calls = 0
+
+                def clear_webhook(self, drop_pending_updates: bool = False) -> None:
+                    del drop_pending_updates
+
+                def get_updates(self, offset: int) -> list[dict[str, object]]:
+                    del offset
+                    self.calls += 1
+                    if self.calls <= 5:
+                        raise TimeoutError("The read operation timed out")
+                    raise KeyboardInterrupt()
+
+            fake_holder: dict[str, _FakeTelegram] = {}
+
+            def _fake_tg_factory(token: str, timeout_sec: int) -> _FakeTelegram:
+                fake_holder["tg"] = _FakeTelegram(token, timeout_sec)
+                return fake_holder["tg"]
+
+            stderr_buffer = io.StringIO()
+            with mock.patch.object(support_bot, "TelegramClient", side_effect=_fake_tg_factory), mock.patch.object(
+                support_bot, "get_runs_root", return_value=runs_root
+            ), mock.patch.object(
+                support_bot, "get_repo_slug", return_value="ctcp"
+            ), mock.patch.object(
+                support_bot.time,
+                "sleep",
+                return_value=None,
+            ), mock.patch.object(
+                support_bot,
+                "run_proactive_support_cycle",
+                return_value=None,
+            ) as proactive_spy, mock.patch("sys.stderr", new=stderr_buffer):
+                with self.assertRaises(KeyboardInterrupt):
+                    support_bot.run_telegram_mode(token="fake", poll_seconds=1, allowlist_raw="123")
+
+            self.assertEqual(fake_holder["tg"].calls, 6)
+            self.assertEqual(proactive_spy.call_count, 5)
+            logs = stderr_buffer.getvalue()
+            self.assertNotIn("telegram getUpdates error (streak=1)", logs)
+            self.assertNotIn("telegram getUpdates error (streak=2)", logs)
+            self.assertNotIn("telegram getUpdates error (streak=3)", logs)
+            self.assertIn("telegram getUpdates timeout (streak=5)", logs)
+
+    def test_run_proactive_support_cycle_asks_decision_once_for_same_prompt(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_proactive_decision_") as td:
+            root = Path(td)
+            runs_root = root / "runs"
+            support_run_dir = runs_root / "ctcp" / "support_sessions" / "123"
+            (support_run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+            state = support_bot.default_support_session_state("123")
+            state["bound_run_id"] = "run-decision"
+            state["bound_run_dir"] = "D:/tmp/run-decision"
+            (support_run_dir / support_bot.SUPPORT_SESSION_STATE_REL_PATH).write_text(
+                json.dumps(state, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            decision_context = {
+                "run_id": "run-decision",
+                "run_dir": "D:/tmp/run-decision",
+                "goal": "继续优化 VN 项目",
+                "status": {
+                    "run_status": "blocked",
+                    "verify_result": "",
+                    "gate": {"state": "blocked", "owner": "chair", "reason": "waiting for one decision"},
+                    "needs_user_decision": True,
+                    "decisions_needed_count": 1,
+                },
+                "decisions": {
+                    "count": 1,
+                    "decisions": [
+                        {"decision_id": "outbox:1", "question_hint": "这轮你要先保速度，还是先保质量？"},
+                    ],
+                },
+                "whiteboard": {},
+            }
+
+            class _FakeTelegram:
+                def __init__(self) -> None:
+                    self.sent_messages: list[tuple[int, str]] = []
+
+                def send_message(self, chat_id: int, text: str) -> None:
+                    self.sent_messages.append((chat_id, text))
+
+            fake = _FakeTelegram()
+            with mock.patch.object(support_bot, "get_runs_root", return_value=runs_root), mock.patch.object(
+                support_bot, "get_repo_slug", return_value="ctcp"
+            ), mock.patch.object(
+                support_bot.ctcp_front_bridge,
+                "ctcp_get_support_context",
+                return_value=decision_context,
+            ), mock.patch.object(
+                support_bot.ctcp_front_bridge,
+                "ctcp_advance",
+                return_value={"status": "skipped"},
+            ) as advance_spy:
+                support_bot.run_proactive_support_cycle(fake, allowlist={123})
+                support_bot.run_proactive_support_cycle(fake, allowlist={123})
+
+            self.assertEqual(len(fake.sent_messages), 1)
+            self.assertEqual(fake.sent_messages[0][0], 123)
+            self.assertIn("先拍一个板", fake.sent_messages[0][1])
+            self.assertIn("先保速度", fake.sent_messages[0][1])
+            advance_spy.assert_not_called()
+            updated_state = json.loads((support_run_dir / support_bot.SUPPORT_SESSION_STATE_REL_PATH).read_text(encoding="utf-8"))
+            notification_state = dict(updated_state.get("notification_state", {}))
+            self.assertTrue(str(notification_state.get("last_decision_prompt_hash", "")))
+            self.assertEqual(str(notification_state.get("last_sent_kind", "")), "decision")
 
     def test_support_bot_rejects_in_repo_run_dir(self) -> None:
         with mock.patch.object(support_bot, "get_runs_root", return_value=ROOT), mock.patch.object(

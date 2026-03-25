@@ -8,7 +8,7 @@ Contract precedence remains `docs/00_CORE.md`.
 | Module | Purpose | Inputs / Outputs | Dependencies | Spec |
 |---|---|---|---|---|
 | Orchestrator | Drive artifact-state progression and gates. | In: run artifacts + reviews; Out: `RUN.json`, `events.jsonl`, verify/failure transitions. | Core contract, run-path contract. | [specs/modules/orchestrator.md](../specs/modules/orchestrator.md) |
-| Front Bridge API | Narrow frontend-safe wrapper for orchestrator and run-artifact reads. | In: user goal/decision/upload metadata; Out: orchestrator calls + bridge status payloads. | `scripts/ctcp_orchestrate.py`, run_dir artifacts. | [contracts/frontend_bridge_contract.md](../contracts/frontend_bridge_contract.md) |
+| Front Bridge API | Narrow frontend-safe wrapper for orchestrator and run-artifact reads. | In: user goal/decision/upload metadata; Out: orchestrator calls + bridge status payloads. | `scripts/ctcp_orchestrate.py`, run_dir artifacts. | [frontend_bridge_contract.md](architecture/contracts/frontend_bridge_contract.md) |
 | Dispatcher / Providers | Route blocked artifacts to local/manual role actions. | In: gate state + `dispatch_config`; Out: outbox prompts, local execution events. | Orchestrator, role contracts. | [specs/modules/dispatcher_providers.md](../specs/modules/dispatcher_providers.md) |
 | Librarian / Context Pack | Convert `file_request` into budgeted `context_pack`. | In: `artifacts/file_request.json`; Out: `artifacts/context_pack.json`. | Chair file_request and budget policy. | [specs/modules/librarian_context_pack.md](../specs/modules/librarian_context_pack.md) |
 | SimLab | Replay scenarios as deterministic regression evidence. | In: scenario docs; Out: trace, scenario summary, bundles on failure. | Verify entrypoint and scenario contracts. | [specs/modules/simlab.md](../specs/modules/simlab.md) |
@@ -26,8 +26,9 @@ Contract precedence remains `docs/00_CORE.md`.
 | RunLoader | Load and normalize run/event artifacts. | In: run directories + JSONL events; Out: run view model. | External run-dir contract. | [specs/modules/run_loader/spec.md](../specs/modules/run_loader/spec.md) |
 | QWebChannel Bridge | Bridge native/runtime data to web view layer. | In: native model events; Out: bridged web channel payloads. | Web renderer. | [specs/modules/qwebchannel_bridge/spec.md](../specs/modules/qwebchannel_bridge/spec.md) |
 | Web Renderer | Render graph and run views. | In: graph/meta/run data; Out: UI/web representation. | Bridge + frontend assets. | [specs/modules/web_renderer/spec.md](../specs/modules/web_renderer/spec.md) |
-| Frontend Gateway (Session/Adapter/Progress/Decision) | Conversation UX shell around CTCP artifacts. | In: inbound chat + bridge status; Out: user-friendly progress and decision prompts. | Front Bridge API; non-authoritative session cache. | [contracts/frontend_session_contract.md](../contracts/frontend_session_contract.md) |
+| Frontend Gateway (Session/Adapter/Progress/Decision) | Conversation UX shell around CTCP artifacts. | In: inbound chat + bridge status; Out: user-friendly progress and decision prompts. | Front Bridge API; non-authoritative session cache. | [frontend_session_contract.md](architecture/contracts/frontend_session_contract.md) |
 
 ## Authoring Template
 
 - Module analysis template: [specs/modules/_template.md](../specs/modules/_template.md)
+

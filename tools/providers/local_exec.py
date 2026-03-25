@@ -84,7 +84,7 @@ def _render_contract_review_md(review: dict[str, Any]) -> str:
     if passed:
         lines.append("- none")
     else:
-        lines.append("- Keep changes inside contracts/allowed_changes.yaml scope.")
+        lines.append("- Keep changes inside policy/allowed_changes.yaml scope.")
         lines.append("- Re-generate patch and rerun contract review.")
 
     lines += [
@@ -107,7 +107,7 @@ def _run_contract_guardian(repo_root: Path, run_dir: Path, target_path: str) -> 
     stdout_log = logs_dir / "dispatch_local_exec_contract_guardian.stdout.log"
     stderr_log = logs_dir / "dispatch_local_exec_contract_guardian.stderr.log"
 
-    policy_path = repo_root / "contracts" / "allowed_changes.yaml"
+    policy_path = repo_root / "policy" / "allowed_changes.yaml"
     review_json = run_dir / "reviews" / "contract_review.json"
     review_md = run_dir / target_path
     review_json.parent.mkdir(parents=True, exist_ok=True)
@@ -189,3 +189,4 @@ def execute(*, repo_root: Path, run_dir: Path, request: dict[str, Any]) -> dict[
             "or role=contract_guardian action=review_contract"
         ),
     }
+

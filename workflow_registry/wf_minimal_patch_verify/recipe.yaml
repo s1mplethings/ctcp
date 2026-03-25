@@ -49,7 +49,7 @@ roles:
   librarian:
     provider: local_exec
   contract_guardian:
-    provider: local_exec
+    provider: api_agent
   chair:
     provider: api_agent
   cost_controller:

@@ -213,6 +213,7 @@ Regression tests:
 
 ## Related Contracts
 
-- `contracts/frontend_session_contract.md` — support session state
+- `docs/architecture/contracts/frontend_session_contract.md` — support session state
 - `docs/10_team_mode.md` — support bot behavior
 - `ai_context/problem_registry.md` Example 7 — whiteboard wiring fix history
+

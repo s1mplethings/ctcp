@@ -159,7 +159,7 @@ def evaluate(
     out_path: str | Path | None = None,
 ) -> dict[str, Any]:
     root = Path(repo_root).resolve()
-    policy_file = Path(policy_path) if policy_path else (root / "contracts" / "allowed_changes.yaml")
+    policy_file = Path(policy_path) if policy_path else (root / "policy" / "allowed_changes.yaml")
     policy = load_policy(policy_file)
 
     allowed_paths = [str(x) for x in policy.get("allowed_paths", []) if str(x).strip()]

@@ -29,7 +29,10 @@ Hard rules:
 - Judgment MUST appear before action details.
 - Empty greetings / thanks / comfort phrases are forbidden as standalone lead sentences.
 - Do not repeat the user's already-bound goal unless the goal itself changed or is being corrected.
+- Do not send low-information acknowledgements (`我在/好的/明白了/稍等`) as the main content.
+- Do not send repeated progress messages when no state, decision, or blocker changed.
 - Do not ask a question unless a real blocker or mutually exclusive decision requires it.
+- Completed/result claims MUST be grounded in run/bridge/orchestrator truth; inference-only completion claims are forbidden.
 - Every message MUST advance exactly one useful unit:
   - clarify a blocker
   - report a verified state change
@@ -92,6 +95,29 @@ If these fields are not bound, the reply is ungrounded even if it sounds natural
 - Then say what it contains, how it was verified, and the next optional step.
 - If delivery includes tests or screenshots, point to the showcase artifacts instead of only saying `pass`.
 
+### 4.7 State Transition Response
+
+- Any phase transition MUST trigger one explicit state response.
+- Minimum transition response fields:
+  - current state
+  - transition trigger reason
+  - next owner/action
+- Mandatory transition classes include:
+  - information gathering
+  - clarification
+  - confirmation
+  - execution
+  - waiting user decision
+  - key execution progress
+  - result return
+  - error recovery
+- Transition responses MUST be concise and executable; `收到/继续处理中` alone is invalid.
+
+### 4.8 No-Change Silence Policy
+
+- If no state change, no new progress, and no decision request exists, default to no repeated progress push.
+- Keepalive updates are allowed only at low frequency and MUST state which step is still running.
+
 ## 5) Forbidden Patterns
 
 The following are forbidden for task turns, including close variants:
@@ -104,13 +130,16 @@ The following are forbidden for task turns, including close variants:
 - `已经开始做了` when no task/run evidence proves it
 - re-asking the current goal, preferred platform, or deliverable type when they are already bound
 - status-only replies with no next action
+- repeated replies with no new information relative to the previous assistant turn
 - multi-question interrogation when one blocker question or a default assumption is enough
+- claiming `已经完成/准备好了/可交付` without bound runtime evidence
 
 ## 6) Required Elements Per Message
 
 Every task-progress message MUST contain:
 
 - one task-grounded judgment, state change, or failure statement
+- one explicit status anchor (`当前阶段/当前状态/当前阻塞/已完成项`之一)
 - one explicit next action
 - zero or one blocker question
 - enough context to connect the message to current phase
@@ -120,6 +149,7 @@ Every task-progress message MUST contain:
 
 Before sending, verify all of the following:
 
+- The reply contains new information relative to the previous assistant turn.
 - The first sentence enters the task body directly.
 - The reply does not start with empty greeting / apology / thanks.
 - The reply does not repeat the already-bound goal.
@@ -143,6 +173,10 @@ A reply passes task-progress lint only when all checks below pass:
 - `response_lint-08`: the reply does not restart the task from zero when `last_confirmed_items` already exist.
 - `response_lint-09`: bilingual or mixed-language turns keep the same task-progress stance and do not degrade into receptionist phrasing.
 - `response_lint-10`: later turns in the same task do not reopen with greeting/reset wording once context is already confirmed.
+- `response_lint-11`: replies without state change do not repeat the same progress claim; keepalive must identify the still-running step.
+- `response_lint-12`: completion/delivery claims are bound to run truth evidence (not assistant inference).
+- `response_lint-13`: each task turn includes both status anchor and next action.
+- `response_lint-14`: when a phase transition is reported, the reply includes state, trigger reason, and next owner/action.
 
 This contract is the testable replacement for vague requirements such as `不要机械式回答` or `更像真人客服`. Those older phrases are retained only as historical design intent.
 
