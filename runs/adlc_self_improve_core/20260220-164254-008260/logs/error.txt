@@ -1,1 +1,0 @@
-contract guard failed before apply

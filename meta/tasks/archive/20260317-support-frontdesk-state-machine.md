@@ -15,10 +15,10 @@
 ## Task Truth Source (single source for current task)
 
 - task_purpose: 让 support 前台在现有 `conversation_mode -> bridge -> render` 主链上增加显式 frontdesk state machine，持久化主线任务槽位、风格槽位和中断恢复信息，并让回复策略消费这份结构。
-- allowed_behavior_change: 可更新 `contracts/frontend_session_contract.md`、`docs/10_team_mode.md`、`docs/13_contracts_index.md`、`frontend/conversation_mode_router.py`、`frontend/frontdesk_state_machine.py`、`frontend/response_composer.py`、`scripts/ctcp_support_bot.py`、`tests/test_frontdesk_state_machine.py`、`tests/test_runtime_wiring_contract.py`、`tests/test_support_bot_humanization.py`、`ai_context/problem_registry.md`、`meta/backlog/execution_queue.json`、`meta/tasks/CURRENT.md`、`meta/tasks/archive/20260317-support-frontdesk-state-machine.md`、`meta/reports/LAST.md`、`meta/reports/archive/20260317-support-frontdesk-state-machine.md`。
+- allowed_behavior_change: 可更新 `docs/architecture/contracts/frontend_session_contract.md`、`docs/10_team_mode.md`、`docs/13_contracts_index.md`、`frontend/conversation_mode_router.py`、`frontend/frontdesk_state_machine.py`、`frontend/response_composer.py`、`scripts/ctcp_support_bot.py`、`tests/test_frontdesk_state_machine.py`、`tests/test_runtime_wiring_contract.py`、`tests/test_support_bot_humanization.py`、`ai_context/problem_registry.md`、`meta/backlog/execution_queue.json`、`meta/tasks/CURRENT.md`、`meta/tasks/archive/20260317-support-frontdesk-state-machine.md`、`meta/reports/LAST.md`、`meta/reports/archive/20260317-support-frontdesk-state-machine.md`。
 - forbidden_goal_shift: 不得新增第二套平行 prompt/workflow authority；不得只改 prompt 文案而不落状态结构；不得绕开 `scripts/ctcp_front_bridge.py`；不得把 support state 伪装成工程真源。
 - in_scope_modules:
-  - `contracts/frontend_session_contract.md`
+  - `docs/architecture/contracts/frontend_session_contract.md`
   - `docs/10_team_mode.md`
   - `docs/13_contracts_index.md`
   - `frontend/conversation_mode_router.py`
@@ -45,7 +45,7 @@
 
 - Entrypoint analysis: 当前入口仍是 `scripts/ctcp_support_bot.py::process_message()`，它先算 `conversation_mode`、再做 bridge sync、再构造 prompt 和 reply，但缺少统一的 frontdesk state object。
 - Downstream consumer analysis: 当前 downstream 主要是 `build_support_prompt()`、`build_final_reply_doc()` 和 `frontend/response_composer.py`；它们各自消费局部字段，没有共享的状态机快照。
-- Source of truth: `contracts/frontend_session_contract.md`、`docs/10_team_mode.md`、`frontend/conversation_mode_router.py`、`frontend/response_composer.py`、`scripts/ctcp_support_bot.py`、`tests/test_runtime_wiring_contract.py`、`tests/test_support_bot_humanization.py`。
+- Source of truth: `docs/architecture/contracts/frontend_session_contract.md`、`docs/10_team_mode.md`、`frontend/conversation_mode_router.py`、`frontend/response_composer.py`、`scripts/ctcp_support_bot.py`、`tests/test_runtime_wiring_contract.py`、`tests/test_support_bot_humanization.py`。
 - Current break point / missing wiring: support session 虽有 memory zones 与 `conversation_mode`，但没有显式 state / slots / interrupt / resumable_state，所以任务主线、风格调整和中断恢复只能散落在条件分支里。
 - Repo-local search sufficient: `yes`
 - If no, external research artifact: `N/A`
@@ -108,7 +108,7 @@
 
 - Files changed:
   - `ai_context/problem_registry.md`
-  - `contracts/frontend_session_contract.md`
+  - `docs/architecture/contracts/frontend_session_contract.md`
   - `docs/10_team_mode.md`
   - `docs/13_contracts_index.md`
   - `frontend/conversation_mode_router.py`
@@ -125,3 +125,4 @@
   - `meta/reports/archive/20260317-support-frontdesk-state-machine.md`
 - Verification summary: focused py_compile + `test_frontdesk_state_machine.py` + `test_runtime_wiring_contract.py` + `test_support_bot_humanization.py` + `test_issue_memory_accumulation_contract.py` + `test_skill_consumption_contract.py` passed; final canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` returned `0` after queue/task/report closure sync, with lite replay summary at `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260317-205618`.
 - Queue status update suggestion (`todo/doing/done/blocked`): done
+

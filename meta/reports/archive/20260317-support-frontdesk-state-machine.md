@@ -8,8 +8,8 @@
 - `docs/03_quality_gates.md`
 - `docs/10_team_mode.md`
 - `docs/11_task_progress_dialogue.md`
-- `contracts/frontend_session_contract.md`
-- `contracts/frontend_bridge_contract.md`
+- `docs/architecture/contracts/frontend_session_contract.md`
+- `docs/architecture/contracts/frontend_bridge_contract.md`
 - `PATCH_README.md`
 - `ai_context/problem_registry.md`
 - `ai_context/decision_log.md`
@@ -38,7 +38,7 @@
 ## Changes
 
 - `ai_context/problem_registry.md`
-- `contracts/frontend_session_contract.md`
+- `docs/architecture/contracts/frontend_session_contract.md`
 - `docs/10_team_mode.md`
 - `docs/13_contracts_index.md`
 - `frontend/conversation_mode_router.py`
@@ -79,7 +79,7 @@
 ## Demo
 
 - state-machine contract landed:
-  - `contracts/frontend_session_contract.md` now defines the minimum state set, required slots, style profile, interrupt classes, persistence rules, and frontdesk behavior order
+  - `docs/architecture/contracts/frontend_session_contract.md` now defines the minimum state set, required slots, style profile, interrupt classes, persistence rules, and frontdesk behavior order
   - `docs/10_team_mode.md` now routes support reply generation through explicit frontdesk-state resolution before reply strategy
 - runtime wiring landed:
   - `scripts/ctcp_support_bot.py` now persists `frontdesk_state` into `support_session_state.json`, injects it into prompt context, and records state/interrupt metadata in `latest_support_context`
@@ -110,3 +110,4 @@
   - do not create a parallel workflow authority outside current docs/contracts
   - do not treat session slots as run truth
 - user_visible_effect: support/frontdesk now keeps the main task line through interruptions, style changes, progress/result queries, and explicit decision gates instead of behaving like a latest-turn shell.
+

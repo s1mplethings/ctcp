@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ctcp/shared_state/task_state.schema.json",
+  "title": "CTCP Shared Task Current State",
+  "type": "object",
+  "required": [
+    "task_id",
+    "authoritative_stage",
+    "visible_state",
+    "conversation_mode",
+    "current_task_goal",
+    "known_facts",
+    "missing_fields",
+    "last_confirmed_items",
+    "current_blocker",
+    "blocking_question",
+    "next_action",
+    "proof_refs",
+    "verify_result"
+  ],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authoritative_stage": {
+      "type": "string",
+      "enum": [
+        "NEW",
+        "INTAKE",
+        "PLANNING",
+        "WAITING_DECISION",
+        "EXECUTING",
+        "VERIFYING",
+        "BLOCKED",
+        "DONE",
+        "FAILED"
+      ]
+    },
+    "visible_state": {
+      "type": "string",
+      "enum": [
+        "UNDERSTOOD",
+        "NEEDS_ONE_OR_TWO_DETAILS",
+        "EXECUTING",
+        "WAITING_FOR_DECISION",
+        "BLOCKED_NEEDS_INPUT",
+        "DONE"
+      ]
+    },
+    "conversation_mode": {
+      "type": "string"
+    },
+    "current_task_goal": {
+      "type": "string"
+    },
+    "known_facts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "missing_fields": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "last_confirmed_items": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "current_blocker": {
+      "type": "string"
+    },
+    "blocking_question": {
+      "type": "string"
+    },
+    "next_action": {
+      "type": "string"
+    },
+    "proof_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "verify_result": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": true
+}
+

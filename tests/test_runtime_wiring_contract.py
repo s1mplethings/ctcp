@@ -320,6 +320,83 @@ class RuntimeWiringContractTests(unittest.TestCase):
             self.assertEqual(str(working_memory.get("current_stage", "")), "EXECUTE")
             self.assertGreaterEqual(len(raw_turns), 2)
 
+    def test_support_bot_process_message_writes_shared_state_current_and_render(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_runtime_shared_state_sync_") as td:
+            root = Path(td)
+            runs_root = root / "runs"
+            shared_root = root / "shared_state_workspace"
+
+            def _fake_sync_project_context(**kwargs):  # type: ignore[no-untyped-def]
+                session_state = kwargs["session_state"]
+                session_state["bound_run_id"] = "r-shared"
+                session_state["bound_run_dir"] = "D:/tmp/r-shared"
+                session_state["project_memory"]["project_brief"] = "把共享状态接到前端回复"
+                session_state["task_summary"] = "把共享状态接到前端回复"
+                return (
+                    {
+                        "run_id": "r-shared",
+                        "run_dir": "D:/tmp/r-shared",
+                        "goal": "把共享状态接到前端回复",
+                        "status": {
+                            "run_status": "running",
+                            "verify_result": "",
+                            "needs_user_decision": False,
+                            "decisions_needed_count": 0,
+                            "gate": {"state": "open", "owner": "", "reason": ""},
+                        },
+                        "whiteboard": {},
+                    },
+                    session_state,
+                )
+
+            def _fake_execute(*, provider, run_dir, request, config):  # type: ignore[no-untyped-def]
+                del provider, request, config
+                target = run_dir / support_bot.SUPPORT_REPLY_PROVIDER_REL_PATH
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(
+                    json.dumps(
+                        {
+                            "reply_text": "我先继续推进共享状态接线。",
+                            "next_question": "",
+                            "actions": [],
+                            "debug_notes": "",
+                        },
+                        ensure_ascii=False,
+                    ),
+                    encoding="utf-8",
+                )
+                return {"status": "executed", "reason": "ok"}
+
+            with mock.patch.dict("os.environ", {"CTCP_SHARED_STATE_ROOT": str(shared_root)}), mock.patch.object(
+                support_bot, "get_runs_root", return_value=runs_root
+            ), mock.patch.object(
+                support_bot, "get_repo_slug", return_value="ctcp"
+            ), mock.patch.object(
+                support_bot, "frontend_route_conversation_mode", return_value="PROJECT_DETAIL"
+            ), mock.patch.object(
+                support_bot, "sync_project_context", side_effect=_fake_sync_project_context
+            ), mock.patch.object(
+                support_bot, "execute_provider", side_effect=_fake_execute
+            ), mock.patch.object(
+                support_bot, "render_frontend_output", None
+            ):
+                _doc, _run_dir = support_bot.process_message(
+                    chat_id="runtime-shared-demo",
+                    user_text="把共享状态接到前端回复",
+                    source="stdin",
+                )
+
+            current_path = shared_root / "tasks" / "r-shared" / "current.json"
+            render_path = shared_root / "tasks" / "r-shared" / "render.json"
+            self.assertTrue(current_path.exists(), msg=str(current_path))
+            self.assertTrue(render_path.exists(), msg=str(render_path))
+            current = json.loads(current_path.read_text(encoding="utf-8"))
+            render = json.loads(render_path.read_text(encoding="utf-8"))
+            self.assertEqual(str(current.get("task_id", "")), "r-shared")
+            self.assertEqual(str(current.get("authoritative_stage", "")), "EXECUTING")
+            self.assertIn(str(render.get("visible_state", "")), {"EXECUTING", "UNDERSTOOD"})
+            self.assertIn("shared_state_workspace", str(current_path))
+
     def test_support_bot_greeting_turn_still_uses_provider_path(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_runtime_support_greeting_") as td:
             runs_root = Path(td) / "runs"

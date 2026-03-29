@@ -26,7 +26,12 @@ from .project_manager_mode import (
     requirement_information_score,
     select_best_requirement_source,
 )
-from .state_resolver import VisibleState, resolve_visible_state
+from .state_resolver import VISIBLE_STATES, VisibleState, resolve_visible_state
+
+try:
+    from bridge.render_adapter import to_frontend_binding as shared_state_to_frontend_binding
+except Exception:
+    shared_state_to_frontend_binding = None  # type: ignore[assignment]
 
 
 @dataclass
@@ -1008,6 +1013,30 @@ def run_internal_reply_pipeline(
         raw_backend["needs_input"] = bool(frontdesk_question or str(raw_next_question or "").strip())
     elif frontdesk_name == "ReturnResult":
         raw_backend["stage"] = str(raw_backend.get("stage", "")).strip() or "done"
+
+    shared_binding: dict[str, Any] = {}
+    if shared_state_to_frontend_binding is not None:
+        try:
+            shared_binding = shared_state_to_frontend_binding(
+                note.get("shared_state_current", {}),
+                note.get("shared_state_render", {}),
+            )
+        except Exception:
+            shared_binding = {}
+    shared_backend = shared_binding.get("backend_state", {})
+    if isinstance(shared_backend, Mapping):
+        raw_backend.update(dict(shared_backend))
+    shared_followups = shared_binding.get("followup_questions", [])
+    if not str(raw_next_question or "").strip() and isinstance(shared_followups, list) and shared_followups:
+        raw_next_question = str(shared_followups[0]).strip()
+    shared_summary = re.sub(r"\s+", " ", str(shared_binding.get("task_summary", "")).strip())
+    if shared_summary and not re.sub(r"\s+", " ", str(task_summary or "").strip()):
+        task_summary = shared_summary
+        active_task_state.setdefault("task_summary", shared_summary)
+    preferred_visible_state = re.sub(r"\s+", " ", str(shared_binding.get("visible_state", "")).strip()).upper()
+    if preferred_visible_state and (preferred_visible_state not in VISIBLE_STATES):
+        preferred_visible_state = ""
+
     mode = route_conversation_mode(
         user_messages,
         latest_user_message,
@@ -1037,6 +1066,9 @@ def run_internal_reply_pipeline(
     state.conversation_context["frontdesk_state"] = dict(frontdesk_state)
     state.conversation_context["task_signal_score"] = float(signal_score)
     state.conversation_context["has_sufficient_task_signal"] = bool(has_signal)
+    if shared_binding:
+        state.conversation_context["shared_state_consumed"] = True
+        state.review_flags.append("shared_state_binding_consumed")
     progress_binding = _normalize_progress_binding(raw_backend.get("progress_binding", {}))
     progress_requested = bool(progress_binding) and (
         mode == "STATUS_QUERY"
@@ -1050,7 +1082,10 @@ def run_internal_reply_pipeline(
             raw_backend.get("has_actionable_goal", False) or state.task_summary or progress_binding.get("current_task_goal")
         )
         raw_state["first_pass_understood"] = bool(raw_backend.get("first_pass_understood", False) or progress_binding)
-        state.visible_state = resolve_visible_state(raw_state)
+        if preferred_visible_state in VISIBLE_STATES:
+            state.visible_state = preferred_visible_state  # type: ignore[assignment]
+        else:
+            state.visible_state = resolve_visible_state(raw_state)
         if state.visible_state == "NEEDS_ONE_OR_TWO_DETAILS":
             state.visible_state = "EXECUTING"
         progress_reply, progress_questions = _compose_progress_update_reply(
@@ -1098,7 +1133,10 @@ def run_internal_reply_pipeline(
     non_project_modes = {"GREETING", "SMALLTALK", "CAPABILITY_QUERY", "STATUS_QUERY", "PROJECT_INTAKE"}
     if mode in non_project_modes:
         if mode == "STATUS_QUERY" and has_active_task:
-            resolved_visible_state = resolve_visible_state(raw_backend)
+            if preferred_visible_state in VISIBLE_STATES:
+                resolved_visible_state = preferred_visible_state
+            else:
+                resolved_visible_state = resolve_visible_state(raw_backend)
             if resolved_visible_state in {"WAITING_FOR_DECISION", "BLOCKED_NEEDS_INPUT", "DONE", "EXECUTING"}:
                 state.visible_state = resolved_visible_state
             else:

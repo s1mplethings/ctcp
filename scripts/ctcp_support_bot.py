@@ -20,7 +20,7 @@ import urllib.request
 import uuid
 import zipfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = Path(__file__).resolve().parent
@@ -428,6 +428,18 @@ except Exception:
     frontend_prompt_context_from_frontdesk_state = None  # type: ignore[assignment]
     frontend_reply_strategy_from_frontdesk_state = None  # type: ignore[assignment]
     render_frontend_output = None  # type: ignore[assignment]
+
+try:
+    from bridge.state_store import SharedStateStore
+except ModuleNotFoundError:
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    try:
+        from bridge.state_store import SharedStateStore
+    except Exception:
+        SharedStateStore = None  # type: ignore[assignment]
+except Exception:
+    SharedStateStore = None  # type: ignore[assignment]
 
 
 def now_iso() -> str:
@@ -1445,6 +1457,182 @@ def sync_active_task_truth(
             conversation_mode=conversation_mode,
             message_intent=message_intent,
         )
+
+
+def _shared_task_id(
+    *,
+    chat_id: str,
+    session_state: dict[str, Any],
+    project_context: dict[str, Any] | None,
+) -> str:
+    run_id = sanitize_inline_text(str((project_context or {}).get("run_id", "")), max_chars=80)
+    if run_id:
+        return run_id
+    active_task_id = sanitize_inline_text(str(session_state.get("active_task_id", "")), max_chars=80)
+    if active_task_id:
+        return active_task_id
+    safe_chat = sanitize_inline_text(chat_id, max_chars=80)
+    if safe_chat:
+        return f"support-{safe_chat}"
+    return ""
+
+
+def _to_authoritative_stage(
+    *,
+    session_stage: str,
+    run_status: str,
+    verify_result: str,
+    needs_user_decision: bool,
+) -> str:
+    if verify_result == "PASS" and run_status in _FINAL_READY_RUN_STATUSES:
+        return "DONE"
+    if needs_user_decision:
+        return "WAITING_DECISION"
+    if run_status in {"blocked"}:
+        return "BLOCKED"
+    if run_status in {"fail", "failed", "error"}:
+        return "FAILED"
+    stage = sanitize_inline_text(session_stage, max_chars=24).upper()
+    mapping = {
+        "INTAKE": "INTAKE",
+        "CLARIFY": "PLANNING",
+        "PLAN": "PLANNING",
+        "EXECUTE": "EXECUTING",
+        "VERIFY": "VERIFYING",
+        "WAIT_USER_DECISION": "WAITING_DECISION",
+        "FINALIZE": "VERIFYING",
+        "DELIVER": "DONE",
+        "DELIVERED": "DONE",
+        "RECOVER": "BLOCKED",
+        "ERROR": "FAILED",
+    }
+    if stage in mapping:
+        return mapping[stage]
+    if run_status in {"running", "in_progress", "working"}:
+        return "EXECUTING"
+    return "NEW"
+
+
+def sync_shared_state_workspace(
+    *,
+    chat_id: str,
+    user_text: str,
+    source: str,
+    conversation_mode: str,
+    session_state: dict[str, Any],
+    frontdesk_state: dict[str, Any] | None,
+    project_context: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if SharedStateStore is None:
+        return {}
+    try:
+        store = SharedStateStore()
+    except Exception:
+        return {}
+    task_id = _shared_task_id(chat_id=chat_id, session_state=session_state, project_context=project_context)
+    if not task_id:
+        return {}
+    status = (project_context or {}).get("status", {}) if isinstance(project_context, dict) else {}
+    if not isinstance(status, dict):
+        status = {}
+    run_status = sanitize_inline_text(str(status.get("run_status", "")), max_chars=24).lower()
+    verify_result = sanitize_inline_text(str(status.get("verify_result", "")), max_chars=16).upper()
+    needs_user_decision = bool(status.get("needs_user_decision", False)) or int(status.get("decisions_needed_count", 0) or 0) > 0
+    progress = build_progress_binding(
+        project_context=project_context if isinstance(project_context, dict) else None,
+        task_summary_hint=current_project_brief(session_state),
+    )
+    authoritative_stage = _to_authoritative_stage(
+        session_stage=str(session_state.get("active_stage", "")),
+        run_status=run_status,
+        verify_result=verify_result,
+        needs_user_decision=needs_user_decision,
+    )
+    frontend_source = "frontdesk" if str(source or "").strip().lower() in {"telegram", "stdin", "selftest"} else "frontend"
+    runtime_payload = {
+        "current_task_goal": sanitize_inline_text(str(progress.get("current_task_goal", "")), max_chars=260),
+        "last_confirmed_items": list(progress.get("last_confirmed_items", [])) if isinstance(progress.get("last_confirmed_items", []), list) else [],
+        "current_blocker": sanitize_inline_text(str(progress.get("current_blocker", "none")), max_chars=220),
+        "blocking_question": sanitize_inline_text(str(progress.get("blocking_question", "")), max_chars=220),
+        "next_action": sanitize_inline_text(str(progress.get("next_action", "")), max_chars=220),
+        "proof_refs": list(progress.get("proof_refs", [])) if isinstance(progress.get("proof_refs", []), list) else [],
+        "conversation_mode": sanitize_inline_text(conversation_mode, max_chars=40),
+    }
+    try:
+        store.append_event(
+            task_id=task_id,
+            event_type="user_message",
+            source=frontend_source,
+            payload={
+                "text": sanitize_inline_text(user_text, max_chars=600),
+                "current_task_goal": sanitize_inline_text(str(session_state.get("active_goal", "")), max_chars=260),
+            },
+        )
+        store.append_event(
+            task_id=task_id,
+            event_type="conversation_mode_detected",
+            source=frontend_source,
+            payload={"conversation_mode_guess": sanitize_inline_text(conversation_mode, max_chars=40)},
+        )
+        if str(conversation_mode or "").strip().upper() == "PROJECT_DECISION_REPLY":
+            store.append_event(
+                task_id=task_id,
+                event_type="user_decision_recorded",
+                source=frontend_source,
+                payload={"user_decision": sanitize_inline_text(user_text, max_chars=280)},
+            )
+        store.append_event(
+            task_id=task_id,
+            event_type="authoritative_stage_changed",
+            source="runtime",
+            payload={
+                "authoritative_stage": authoritative_stage,
+                "execution_status": run_status or sanitize_inline_text(str(status.get("gate", "")), max_chars=24),
+            },
+        )
+        store.append_event(
+            task_id=task_id,
+            event_type="runtime_progress_recorded",
+            source="runtime",
+            payload=runtime_payload,
+        )
+        store.append_event(
+            task_id=task_id,
+            event_type="blocker_changed",
+            source="runtime",
+            payload={
+                "current_blocker": runtime_payload["current_blocker"] or "none",
+                "blocking_question": runtime_payload["blocking_question"],
+            },
+        )
+        store.append_event(
+            task_id=task_id,
+            event_type="next_action_set",
+            source="runtime",
+            payload={"next_action": runtime_payload["next_action"] or "继续推进当前任务"},
+        )
+        if verify_result:
+            verify_payload = {
+                "verify_result": verify_result,
+                "proof_refs": runtime_payload["proof_refs"],
+            }
+            store.append_event(
+                task_id=task_id,
+                event_type="verification_result_recorded",
+                source="runtime",
+                payload=verify_payload,
+            )
+        current = store.rebuild_current(task_id)
+        render = store.refresh_render(task_id, source="runtime", emit_event=True)
+        return {
+            "task_id": task_id,
+            "current": current,
+            "render": render,
+            "workspace_root": str(store.workspace_root),
+        }
+    except Exception as exc:
+        append_log(session_run_dir(chat_id) / "logs" / "support_bot.debug.log", f"[{now_iso()}] shared state sync failed: {exc}\n")
+        return {}
 
 
 def current_frontdesk_state(session_state: dict[str, Any]) -> dict[str, Any]:
@@ -4585,6 +4773,7 @@ def build_final_reply_doc(
     delivery_state: dict[str, Any] | None = None,
     frontdesk_state: dict[str, Any] | None = None,
     latest_user_message_override: str = "",
+    shared_state_snapshots: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     raw_doc = provider_doc if isinstance(provider_doc, dict) else fallback_reply_doc(provider_result)
     raw_reply_text = str(raw_doc.get("reply_text", ""))
@@ -4609,6 +4798,15 @@ def build_final_reply_doc(
     if not latest_user_message_for_render:
         latest_user_message_for_render = user_msgs[-1] if user_msgs else task_summary_hint
     frontdesk_strategy: dict[str, Any] = {}
+    shared_current = {}
+    shared_render = {}
+    if isinstance(shared_state_snapshots, Mapping):
+        current_doc = shared_state_snapshots.get("current", {})
+        render_doc = shared_state_snapshots.get("render", {})
+        if isinstance(current_doc, Mapping):
+            shared_current = dict(current_doc)
+        if isinstance(render_doc, Mapping):
+            shared_render = dict(render_doc)
     has_frontdesk_state = isinstance(frontdesk_state, dict) and bool(frontdesk_state)
     if frontend_reply_strategy_from_frontdesk_state is not None and has_frontdesk_state:
         try:
@@ -4622,6 +4820,9 @@ def build_final_reply_doc(
     if render_frontend_output is not None and use_frontend_render:
         try:
             summary_text = task_summary_hint.strip() or (user_msgs[-1] if user_msgs else raw_reply_text)
+            shared_goal = sanitize_inline_text(str(shared_current.get("current_task_goal", "")), max_chars=260)
+            if shared_goal:
+                summary_text = shared_goal
             backend_state = build_frontend_backend_state(
                 provider_result=provider_result,
                 raw_doc=raw_doc,
@@ -4646,6 +4847,8 @@ def build_final_reply_doc(
                     },
                     "frontdesk_state": frontdesk_state or {},
                     "frontdesk_reply_strategy": frontdesk_strategy,
+                    "shared_state_current": shared_current,
+                    "shared_state_render": shared_render,
                 },
             )
             reply_text = str(getattr(rendered, "reply_text", "")).strip()
@@ -4863,6 +5066,15 @@ def process_message(
         project_context=project_context,
         delivery_state=delivery_state,
     )
+    shared_state_snapshots = sync_shared_state_workspace(
+        chat_id=chat_id,
+        user_text=user_text,
+        source=source,
+        conversation_mode=conversation_mode,
+        session_state=session_state,
+        frontdesk_state=frontdesk_state,
+        project_context=project_context,
+    )
     save_support_session_state(run_dir, session_state)
 
     prompt_text = build_support_prompt(
@@ -5061,6 +5273,7 @@ def process_message(
         lang_hint=str(_state_zone(session_state, "session_profile").get("lang_hint", "")),
         delivery_state=delivery_state,
         frontdesk_state=frontdesk_state,
+        shared_state_snapshots=shared_state_snapshots,
     )
     if (
         isinstance(t2p_report, dict)
@@ -5102,6 +5315,15 @@ def process_message(
         provider_result=result,
         assistant_reply_text=sanitize_inline_text(str(final_doc.get("reply_text", "")), max_chars=360),
     )
+    shared_state_snapshots = sync_shared_state_workspace(
+        chat_id=chat_id,
+        user_text=user_text,
+        source=source,
+        conversation_mode=conversation_mode,
+        session_state=session_state,
+        frontdesk_state=frontdesk_state,
+        project_context=project_context,
+    )
     remember_progress_notification(
         session_state,
         project_context=project_context,
@@ -5135,6 +5357,8 @@ def process_message(
             str(latest_generation_state(session_state).get("last_report_path", "")),
             max_chars=220,
         ),
+        "shared_state_task_id": sanitize_inline_text(str((shared_state_snapshots or {}).get("task_id", "")), max_chars=80),
+        "shared_state_workspace_root": sanitize_inline_text(str((shared_state_snapshots or {}).get("workspace_root", "")), max_chars=260),
     }
     save_support_session_state(run_dir, session_state)
     append_event(run_dir, "SUPPORT_REPLY_WRITTEN", SUPPORT_REPLY_REL_PATH.as_posix(), provider=provider)

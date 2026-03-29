@@ -1,6 +1,6 @@
 # Live API-Only Tests
 
-These tests validate CTCP multi-role contract linking with `api_agent` for API-capable roles while keeping hard-local roles on `local_exec`.
+These tests validate CTCP multi-role contract linking with `api_agent` for API-capable roles while keeping `librarian/context_pack` on hard-local `local_exec`.
 
 ## Preconditions
 
@@ -21,8 +21,8 @@ $env:OPENAI_API_KEY="<your_key>"
 python -m unittest tests.test_live_api_only_pipeline.LiveApiOnlyPipelineTests.test_api_linked_flow_smoke -v
 ```
 
-`CTCP_FORCE_PROVIDER=api_agent` still leaves `librarian/context_pack` and
-`contract_guardian/review_contract` on `local_exec`.
+`CTCP_FORCE_PROVIDER=api_agent` still leaves `librarian/context_pack` on
+`local_exec`.
 
 Routing matrix:
 

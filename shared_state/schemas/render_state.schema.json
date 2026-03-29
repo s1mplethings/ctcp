@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ctcp/shared_state/render_state.schema.json",
+  "title": "CTCP Shared Render State",
+  "type": "object",
+  "required": [
+    "task_id",
+    "ui_badge",
+    "reply_style",
+    "followup_questions",
+    "decision_cards",
+    "visible_state",
+    "progress_summary",
+    "proof_refs"
+  ],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ui_badge": {
+      "type": "string"
+    },
+    "reply_style": {
+      "type": "string"
+    },
+    "followup_questions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "decision_cards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "question"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "visible_state": {
+      "type": "string",
+      "enum": [
+        "UNDERSTOOD",
+        "NEEDS_ONE_OR_TWO_DETAILS",
+        "EXECUTING",
+        "WAITING_FOR_DECISION",
+        "BLOCKED_NEEDS_INPUT",
+        "DONE"
+      ]
+    },
+    "progress_summary": {
+      "type": "string"
+    },
+    "proof_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": true
+}
+

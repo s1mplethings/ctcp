@@ -1,1 +1,0 @@
-Rollback failed. Manual cleanup may be required.

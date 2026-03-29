@@ -14,7 +14,7 @@
 - File: [`meta/tasks/archive/20260324-support-package-final-stage-gate.md`](archive/20260324-support-package-final-stage-gate.md)
 - Date: 2026-03-24
 - Topic: Support 发包动作只允许“测试通过 + 最终阶段”触发
-- Status: `doing`
+- Status: `blocked`
 
 ## Queue Binding
 
@@ -31,12 +31,13 @@
 ## Task Truth Source (single source for current task)
 
 - task_purpose: 强制 `send_project_package` 只能在 bound run 已通过测试且处于最终可交付状态时触发。
-- allowed_behavior_change: 可更新 `scripts/ctcp_support_bot.py`、`docs/10_team_mode.md`、`tests/test_support_bot_humanization.py`、`meta/backlog/execution_queue.json`、`meta/tasks/CURRENT.md`、`meta/tasks/archive/20260324-support-package-final-stage-gate.md`、`meta/reports/LAST.md`、`meta/reports/archive/20260324-support-package-final-stage-gate.md`。
+- allowed_behavior_change: 可更新 `scripts/ctcp_support_bot.py`、`docs/10_team_mode.md`、`tests/test_support_bot_humanization.py`、`tests/test_runtime_wiring_contract.py`、`meta/backlog/execution_queue.json`、`meta/tasks/CURRENT.md`、`meta/tasks/archive/20260324-support-package-final-stage-gate.md`、`meta/reports/LAST.md`、`meta/reports/archive/20260324-support-package-final-stage-gate.md`。
 - forbidden_goal_shift: 不得恢复快通道；不得绕过主流程状态机；不得跳过 canonical verify。
 - in_scope_modules:
   - `scripts/ctcp_support_bot.py`
   - `docs/10_team_mode.md`
   - `tests/test_support_bot_humanization.py`
+  - `tests/test_runtime_wiring_contract.py`
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/CURRENT.md`
   - `meta/tasks/archive/20260324-support-package-final-stage-gate.md`
@@ -80,18 +81,18 @@
 
 ## DoD Mapping (from execution_queue.json)
 
-- [ ] DoD-1: send_project_package is blocked unless bound run status is final and verify_result is PASS
-- [ ] DoD-2: provider-requested and auto-synthesized package actions are both filtered out before public delivery when gate conditions are not met
-- [ ] DoD-3: support contract docs and focused regression tests explicitly cover the final-stage tested gate for package delivery
+- [x] DoD-1: send_project_package is blocked unless bound run status is final and verify_result is PASS
+- [x] DoD-2: provider-requested and auto-synthesized package actions are both filtered out before public delivery when gate conditions are not met
+- [x] DoD-3: support contract docs and focused regression tests explicitly cover the final-stage tested gate for package delivery
 
 ## Acceptance (must be checkable)
 
 - [x] DoD written (this file complete)
 - [x] Research logged (repo-local runtime/code scan only)
 - [x] Code changes allowed (`Scoped package-delivery runtime gate`) 
-- [ ] Patch applies cleanly
-- [ ] `scripts/verify_repo.*` passes (or first failure + minimal fix recorded)
-- [ ] Demo report updated: `meta/reports/LAST.md`
+- [x] Patch applies cleanly
+- [x] `scripts/verify_repo.*` passes (or first failure + minimal fix recorded)
+- [x] Demo report updated: `meta/reports/LAST.md`
 
 ## Plan
 
@@ -129,9 +130,24 @@
 
 ## Results
 
-- Files changed: pending
-- Verification summary: pending
-- Queue status update suggestion (`todo/doing/done/blocked`): doing
+- Files changed:
+  - `scripts/ctcp_support_bot.py`
+  - `tests/test_support_bot_humanization.py`
+  - `tests/test_runtime_wiring_contract.py`
+  - `docs/10_team_mode.md`
+  - `meta/reports/LAST.md`
+  - `meta/reports/archive/20260324-support-package-final-stage-gate.md`
+  - `meta/tasks/CURRENT.md`
+- Verification summary:
+  - `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v` -> `1`（存在与本任务无关的既有失败）
+  - `$env:PYTHONPATH='tests'; python -m unittest -v test_support_bot_humanization.SupportBotHumanizationTests.test_collect_public_delivery_state_finds_generated_project_package_source test_support_bot_humanization.SupportBotHumanizationTests.test_collect_public_delivery_state_blocks_package_until_final_pass test_support_bot_humanization.SupportBotHumanizationTests.test_build_final_reply_doc_synthesizes_zip_action_and_rewrites_email_handoff test_support_bot_humanization.SupportBotHumanizationTests.test_build_final_reply_doc_filters_provider_package_action_when_gate_blocked test_support_bot_humanization.SupportBotHumanizationTests.test_emit_public_delivery_materializes_zip_and_sends_document` -> `0`
+  - `$env:PYTHONPATH='tests'; python -m unittest -v test_runtime_wiring_contract.RuntimeWiringContractTests.test_telegram_mode_emits_project_package_document_from_support_actions` -> `0`
+  - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` -> `1`（首个失败：`frontend/response_composer.py` 既有 `IndexError`，并伴随 `run_stdin_mode` 与锁文件清理既有问题）
+  - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` -> `0`
+  - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` -> `0`
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` -> `1`（当前首失败：`triplet runtime wiring contract`）
+  - minimal fix strategy: 先在独立任务修复 `frontend/response_composer.py` 的空提示词池索引与 `run_stdin_mode` StringIO 兼容，再处理 Telegram lock 清理，再重跑 canonical verify。
+- Queue status update suggestion (`todo/doing/done/blocked`): blocked
 
 ## Archive Index (recent 10)
 

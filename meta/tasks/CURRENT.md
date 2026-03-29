@@ -1,99 +1,126 @@
-# Task - support-delivery-quality-gate
+# Task - shared-state-workspace-front-runtime-boundary
 
 ## Queue Binding
 
-- Queue Item: `ADHOC-20260325-support-delivery-quality-gate`
+- Queue Item: `ADHOC-20260329-shared-state-workspace-front-runtime-boundary`
 - Layer/Priority: `L2 / P0`
 - Source Queue File: `meta/backlog/execution_queue.json`
 
 ## Context
 
-- Why this item now: 用户反馈最终生成项目“细节不足、质量低”，需要在客服发包前加硬门禁，避免低质量结果被当成最终交付。
-- Dependency check: `ADHOC-20260325-backend-test-default-output-and-support-trigger` = `done`
-- Scope boundary: 仅改 support package delivery gate、对应测试和合同文档；不改 orchestrator 主流程与 backend create_job 业务逻辑。
+- Why this item now: 现有 frontend/frontdesk/bridge/runtime/support 状态事实分散，前端需要直接理解后端细节，缺少统一共享状态中枢。
+- Dependency check: `ADHOC-20260325-support-delivery-quality-gate = done`
+- Scope boundary: 以最小破坏方式新增 shared state 工作区与 adapter 接线，不重写聊天系统，不做大范围重命名。
 
 ## Task Truth Source (single source for current task)
 
-- task_purpose: 为 support zip 交付增加可执行质量门禁，阻断低质量项目包。
+- task_purpose: 在 contract-first/verify-gated 架构下引入 stateful shared workspace，统一跨层通信并锁定 authoritative runtime truth 与 visible render truth 边界。
 - allowed_behavior_change:
-  - `scripts/ctcp_support_bot.py`
-  - `tests/test_support_bot_humanization.py`
-  - `tests/test_runtime_wiring_contract.py`
-  - `docs/10_team_mode.md`
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/CURRENT.md`
   - `meta/reports/LAST.md`
-- forbidden_goal_shift: 不修改 `scripts/ctcp_orchestrate.py` 状态机；不修改 `apps/project_backend/*` 生成编排；不引入新的外部依赖。
+  - `meta/tasks/archive/20260329-shared-state-workspace-front-runtime-boundary.md`
+  - `meta/reports/archive/20260329-shared-state-workspace-front-runtime-boundary.md`
+  - `shared_state/schemas/*.json`
+  - `bridge/*.py`
+  - `frontend/response_composer.py`
+  - `scripts/ctcp_support_bot.py`
+  - `tests/test_shared_state_workspace.py`
+  - `tests/test_frontend_rendering_boundary.py`
+  - `tests/test_runtime_wiring_contract.py`
+  - `docs/shared_state_contract.md`
+  - `docs/frontend_runtime_boundary.md`
+  - `docs/01_north_star.md`
+- forbidden_goal_shift: 不改变仓库 north star；不把完成判定下放给 frontend/support；不移除 runtime/orchestrator/verifier 的权威来源。
 - in_scope_modules:
+  - `shared_state/`
+  - `bridge/`
+  - `frontend/`
   - `scripts/`
   - `tests/`
   - `docs/`
+  - `meta/`
 - out_of_scope_modules:
-  - `apps/`
-  - `contracts/`
-  - `shared/`
-  - `frontend/`
-- completion_evidence: 低质量目录在 final-pass 状态下也会被阻断发包；高质量目录可继续发送 zip。
+  - `apps/project_backend/`（不重构服务编排）
+  - `contracts/`（不改协议版本）
+  - `src/`, `include/`, `web/`（无关 C++/GUI 路径）
+- completion_evidence: 事件写入->快照重建->渲染快照导出->前端回复消费链可运行；DONE 仅在 verify+proof 条件满足时出现；event replay 可重建 current.json；canonical verify 证据写入报告。
 
 ## Analysis / Find (before plan)
 
-- Entrypoint analysis: `collect_public_delivery_state` 目前只基于 `verify_result/run_status` + artifact 是否存在来决定 `package_delivery_allowed`。
-- Downstream consumer analysis: `build_final_reply_doc` 和 `emit_public_delivery` 直接消费 `package_delivery_allowed/package_ready`，因此 gate 需要在 state 层完成。
-- Source of truth: `scripts/ctcp_support_bot.py`、`tests/test_support_bot_humanization.py`、`tests/test_runtime_wiring_contract.py`。
-- Current break point / missing wiring: 缺少“结构完整度 + 测试/展示证据”质量门禁，导致薄壳项目也可能触发发包。
+- Entrypoint analysis: `scripts/ctcp_support_bot.py::process_message` 是 support/frontend 真实入口，当前在本地拼装 `backend_state/progress_binding/frontdesk_state`。
+- Downstream consumer analysis: `frontend/response_composer.py::render_frontend_output` 消费状态并产出用户可见回复；`build_final_reply_doc` 进一步决定回复与动作。
+- Source of truth: runtime truth 仍是 run status/verify evidence；shared state 只做跨层通信中枢，不替代 runtime authority。
+- Current break point / missing wiring: 没有 append-only shared event log 与统一 current/render snapshot；多个模块直接读内部状态字段并自行裁定 visible/done 语义。
 - Repo-local search sufficient: `yes`
 
 ## Integration Check (before implementation)
 
-- upstream: `process_message` -> `collect_public_delivery_state`
-- current_module: `scripts/ctcp_support_bot.py`
-- downstream: `build_final_reply_doc` action filter + `emit_public_delivery`
-- source_of_truth: delivery_state 中的 `package_delivery_allowed` 与新增 quality 字段
-- fallback: 质量不足时保持状态说明/截图路径，不发送 package
+- upstream: `process_message` / `sync_active_task_truth` / runtime status pull
+- current_module: `bridge/state_store.py` + `bridge/snapshot_builder.py` + `bridge/render_adapter.py`
+- downstream: `frontend/response_composer.py` and support render/action shaping
+- source_of_truth: shared_state `events.jsonl -> current.json -> render.json` with runtime verify/proof constraints
+- fallback: shared state 不可用时保留现有 frontend 渲染链路，避免入口中断
 - acceptance_test:
-  - `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v`
+  - `python -m unittest discover -s tests -p "test_shared_state_workspace.py" -v`
+  - `python -m unittest discover -s tests -p "test_frontend_rendering_boundary.py" -v`
   - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
+  - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
+  - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
   - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
 - forbidden_bypass:
-  - 不得删除既有 `verify_result=PASS` 最终态 gate
-  - 不得绕过 `collect_public_delivery_state` 直接发包
-  - 不得把低质量阻断改成仅提示不阻断
-- user_visible_effect: 用户索要 zip 时，低质量项目会收到明确阻断说明；高质量项目可正常收到 zip。
+  - 不允许 UI/support shell 直接改 authoritative_stage/verify_result/done flags
+  - 不允许 response 层直接成为 runtime truth authority
+  - 不允许跳过 append-only event path 直接随意覆盖 current 快照
+- user_visible_effect: 用户看到的状态解释继续自然且 grounded，但完成/交付声明只能在 verify+proof 真值成立时出现。
+
+## DoD Mapping (from execution_queue.json)
+
+- [ ] DoD-1: Shared state workspace lands with append-only event log, current snapshot rebuild, and render snapshot export plus explicit source/event write permissions
+- [ ] DoD-2: Frontend/frontdesk/response paths consume shared current/render state via adapter without replacing runtime authority or bypassing verify/proof ownership
+- [ ] DoD-3: Runtime/support wiring emits authoritative stage/progress/verify events into shared state, regressions cover replay/visible-state mapping/done-proof gating, and canonical verify evidence is recorded
 
 ## Acceptance (must be checkable)
 
 - [x] DoD written (this file complete)
 - [x] Research logged (repo-local scan complete)
 - [x] Code changes allowed
-- [x] Patch applies cleanly
-- [x] `scripts/verify_repo.*` passes (or first failure + minimal fix recorded)
-- [x] Demo report updated: `meta/reports/LAST.md`
+- [ ] Patch applies cleanly
+- [ ] `scripts/verify_repo.*` passes (or first failure + minimal fix recorded)
+- [ ] Demo report updated: `meta/reports/LAST.md`
 
 ## Plan
 
-1. 在 support delivery state 中增加 quality score/tier/ready/reason 计算与阈值常量。
-2. 将 `package_delivery_allowed` 升级为“artifact + run final-pass + quality gate”联合判定。
-3. 更新回归测试覆盖“低质量阻断、高质量放行、telegram 发包路径仍可发送”。
-4. 更新 `docs/10_team_mode.md` 合同条款并记录 verify 证据。
+1) 新增 `shared_state` schema + `bridge` state store/event append/snapshot builder/render adapter。
+2) 先在文档里定义 authoritative state vs visible state、写权限、禁止事项，再接代码。
+3) 将 frontend `response_composer` 通过 adapter 优先消费 shared current/render，而非散装字段。
+4) 将 support/runtime 关键输出通过事件写入 shared state，重建 current/render 并给回复层消费。
+5) 增加共享状态专项测试，覆盖事件写入、快照重建、visible collapse、DONE-proof gating、replay。
+6) 更新/补充 frontend/runtime 边界测试，确保 UI/support shell 不能凭空宣告完成。
+7) `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
+8) `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
+9) `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
+10) Canonical verify gate: `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
+11) Completion criteria: prove `connected + accumulated + consumed`.
 
 ## Check / Contrast / Fix Loop Evidence
 
-- check-1: 当前 gate 只看 run 最终态，无法区分薄壳目录与高质量目录。
-- contrast-1: 用户要求“更细节、更高质量”，低质量输出不应继续作为最终交付。
-- fix-1: 在 `collect_public_delivery_state` 引入质量评分与阈值门禁，未达标直接阻断 `send_project_package`。
+- check-1: frontend/support 当前主要靠临时拼装 `raw_backend_state + progress_binding + frontdesk_state`，缺少跨层唯一共享真值盘。
+- contrast-1: 目标要求 authoritative runtime state 与 visible render state 分层，并由 append-only event 驱动快照重建。
+- fix-1: 引入 shared event -> current -> render 三段式中枢；用 adapter 维持兼容输入输出，最小范围接线现有 frontend/support。
 
-## Completion Criteria Evidence
+## Notes / Decisions
 
-- completion criteria: connected + accumulated + consumed
-- connected: `collect_public_delivery_state` 产出质量字段并接入 delivery allow 判定。
-- accumulated: 质量分、tier、reason 被写入 delivery_state 并进入 prompt context。
-- consumed: `build_final_reply_doc/emit_public_delivery` 通过 `package_delivery_allowed` 消费门禁结果，低质量场景不再发包。
+- Default choices made: shared state 采用 append-only jsonl + deterministic snapshot rebuild；默认 workspace 在 repo `shared_state/tasks/`，测试用临时目录隔离。
+- Alternatives considered: 直接重构全部 frontend/support 模块；拒绝该方案以避免破坏性迁移。
+- Any contract exception reference (must also log in `ai_context/decision_log.md`):
+  - None.
+- Issue memory decision: 记录“用户可见完成态误判风险”到实现与测试中，本次无需新增问题记忆条目（已有相邻条目覆盖同类风险）。
+- Skill decision (`skillized: yes` or `skillized: no, because ...`): `skillized: no, because` 本次为仓库当前 support/frontend runtime 局部架构收口，不是稳定可复用的独立 workflow 资产。
 
-## Issue Memory Decision
+## Results
 
-- decision: 新增 issue memory（用户可见交付质量误报类问题）。
-- rationale: 属于重复风险类缺陷，必须进入 failure memory。
-
-## Skill Decision
-
-- skillized: no, because 这是 support delivery runtime 的局部质量策略收敛，不是独立可复用 workflow。
+- Files changed:
+  - `pending`
+- Verification summary: `pending`
+- Queue status update suggestion (`todo/doing/done/blocked`): `doing`

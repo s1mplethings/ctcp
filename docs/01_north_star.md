@@ -42,6 +42,7 @@ Its core value is deterministic execution evidence. User-visible dialogue, tests
 
 - Core execution lane: orchestrator, verification gates, run artifact contracts.
 - Frontend interaction lane: conversation classification and user-facing rendering.
+- Shared state workspace lane: append-only cross-layer state hub (`events -> current -> render`) with runtime-authoritative ownership.
 - Frontend bridge lane: frontend-to-execution API boundary.
 - Support lane: user support interaction shell over runtime truth.
 - Optional GUI lane: visualization and operator convenience only.

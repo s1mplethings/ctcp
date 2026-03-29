@@ -2541,6 +2541,49 @@
       },
       "status": "done",
       "notes": "Completed on 2026-03-25: support delivery state now enforces package quality scoring gate before zip actions, low-quality outputs are blocked with explicit reason, high-quality outputs remain deliverable, and focused tests plus canonical verify evidence were recorded (first lite replay failure captured; CTCP_SKIP_LITE_REPLAY=1 rerun passed)."
+    },
+    {
+      "id": "ADHOC-20260329-shared-state-workspace-front-runtime-boundary",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Introduce shared state workspace for frontend/frontdesk/bridge/runtime communication boundaries",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260325-support-delivery-quality-gate"
+      ],
+      "dod": [
+        "Shared state workspace lands with append-only event log, current snapshot rebuild, and render snapshot export plus explicit source/event write permissions",
+        "Frontend/frontdesk/response paths consume shared current/render state via adapter without replacing runtime authority or bypassing verify/proof ownership",
+        "Runtime/support wiring emits authoritative stage/progress/verify events into shared state, regressions cover replay/visible-state mapping/done-proof gating, and canonical verify evidence is recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "shared_state/schemas/",
+          "bridge/state_store.py",
+          "bridge/event_append.py",
+          "bridge/snapshot_builder.py",
+          "bridge/render_adapter.py",
+          "frontend/response_composer.py",
+          "scripts/ctcp_support_bot.py",
+          "tests/test_shared_state_workspace.py",
+          "tests/test_frontend_rendering_boundary.py",
+          "tests/test_runtime_wiring_contract.py",
+          "docs/shared_state_contract.md",
+          "docs/frontend_runtime_boundary.md",
+          "docs/01_north_star.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_shared_state_workspace.py\" -v",
+          "python -m unittest discover -s tests -p \"test_frontend_rendering_boundary.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "doing",
+      "notes": "Bound on 2026-03-29 to introduce append-only shared state workspace with authoritative-vs-visible layering and adapter-based frontend/runtime integration under existing contract-first verify-gated architecture."
     }
   ]
 }

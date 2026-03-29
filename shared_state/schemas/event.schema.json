@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ctcp/shared_state/event.schema.json",
+  "title": "CTCP Shared State Event",
+  "type": "object",
+  "required": [
+    "ts",
+    "task_id",
+    "type",
+    "source",
+    "payload"
+  ],
+  "properties": {
+    "ts": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "user_message",
+        "conversation_mode_detected",
+        "user_decision_recorded",
+        "authoritative_stage_changed",
+        "blocker_changed",
+        "next_action_set",
+        "verification_result_recorded",
+        "runtime_progress_recorded",
+        "render_state_refreshed"
+      ]
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "payload": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}
+
