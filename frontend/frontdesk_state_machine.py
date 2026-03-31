@@ -279,6 +279,26 @@ def classify_interrupt_kind(
 
 
 def _decision_points_from_project_context(project_context: Mapping[str, Any]) -> list[dict[str, str]]:
+    runtime_state = _as_mapping(project_context.get("runtime_state", {}))
+    has_runtime_pending_field = "pending_decisions" in runtime_state
+    runtime_rows = runtime_state.get("pending_decisions", [])
+    if isinstance(runtime_rows, list):
+        out: list[dict[str, str]] = []
+        for item in runtime_rows:
+            row = _as_mapping(item)
+            question = _norm(row.get("question", "") or row.get("question_hint", ""))
+            if not question:
+                continue
+            out.append(
+                {
+                    "decision_id": _norm(row.get("decision_id", "")),
+                    "question": question,
+                    "status": _norm(row.get("status", "")) or "pending",
+                }
+            )
+        if out or has_runtime_pending_field:
+            return out[:4]
+
     decisions = _as_mapping(project_context.get("decisions", {}))
     rows = decisions.get("decisions", [])
     if not isinstance(rows, list):
@@ -347,6 +367,9 @@ def derive_frontdesk_state(
     profile_state = _as_mapping(session.get("session_profile", {}))
     default_language = _norm(profile_state.get("lang_hint", "")).lower()
     previous = normalize_frontdesk_state(session.get("frontdesk_state", {}), default_language)
+    runtime_state = _as_mapping(_as_mapping(project_context).get("runtime_state", {}))
+    runtime_latest = _as_mapping(runtime_state.get("latest_result", {}))
+    runtime_error = _as_mapping(runtime_state.get("error", {}))
     status = _as_mapping(_as_mapping(project_context).get("status", {}))
     gate = _as_mapping(status.get("gate", {}))
     project_memory = _as_mapping(session.get("project_memory", {}))
@@ -371,12 +394,26 @@ def derive_frontdesk_state(
         or _norm(previous.get("active_task_id", ""))
     )
     has_active_task = bool(active_task_id or current_goal)
-    run_status = _norm(status.get("run_status", "")).lower()
-    verify_result = _norm(status.get("verify_result", "")).upper()
-    done = verify_result == "PASS" or run_status in {"pass", "done", "completed"}
+    phase = _norm(runtime_state.get("phase", "")).upper()
+    run_status = (_norm(runtime_state.get("run_status", "")).lower() or _norm(status.get("run_status", "")).lower())
+    verify_result = (
+        _norm(runtime_state.get("verify_result", "")).upper()
+        or _norm(runtime_latest.get("verify_result", "")).upper()
+        or _norm(status.get("verify_result", "")).upper()
+    )
+    done = (
+        phase in {"FINALIZE", "DELIVER", "DELIVERED"}
+        or (verify_result == "PASS" and run_status in {"pass", "done", "completed", "success"})
+    )
     decision_points = _decision_points_from_project_context(_as_mapping(project_context))
-    needs_decision = bool(status.get("needs_user_decision", False)) or bool(decision_points)
-    blocked_reason = _norm(gate.get("reason", "")) or _norm(_as_mapping(project_context).get("error", ""))
+    pending_decision_points = [
+        row for row in decision_points if _norm(_as_mapping(row).get("status", "")).lower() in {"", "pending"}
+    ]
+    needs_decision = bool(runtime_state.get("needs_user_decision", False))
+    has_runtime_needs_field = "needs_user_decision" in runtime_state
+    if (not needs_decision) and (not has_runtime_needs_field):
+        needs_decision = bool(status.get("needs_user_decision", False)) or bool(pending_decision_points)
+    blocked_reason = _norm(runtime_state.get("blocking_reason", "")) or _norm(gate.get("reason", "")) or _norm(_as_mapping(project_context).get("error", ""))
     if not blocked_reason:
         blocked_reason = _norm(_as_mapping(provider_result).get("reason", ""))
 
@@ -404,7 +441,7 @@ def derive_frontdesk_state(
         resumable_state = "Execute"
 
     error_status = _norm(_as_mapping(provider_result).get("status", "")).lower()
-    has_error = bool(_as_mapping(project_context).get("error")) or error_status in {"exec_failed", "failed", "error"}
+    has_error = bool(runtime_error.get("has_error", False)) or bool(_as_mapping(project_context).get("error")) or error_status in {"exec_failed", "failed", "error"}
     mode = _norm(conversation_mode).upper()
     state: FrontdeskState = "IntentDetect"
     state_reason = ""
@@ -419,7 +456,9 @@ def derive_frontdesk_state(
     elif needs_decision or mode == "PROJECT_DECISION_REPLY":
         state = "AwaitDecision"
         state_reason = "user_decision_required"
-        if decision_points:
+        if pending_decision_points:
+            waiting_for = _norm(pending_decision_points[0].get("question", ""))
+        elif decision_points:
             waiting_for = _norm(decision_points[0].get("question", ""))
     elif interrupt_kind == "result_query" or (mode == "STATUS_QUERY" and done):
         state = "ReturnResult"
@@ -427,6 +466,15 @@ def derive_frontdesk_state(
     elif interrupt_kind in {"status_query", "clarify", "redirect", "override", "sidequest"} and has_active_task:
         state = "InterruptRecover"
         state_reason = f"interrupt:{interrupt_kind}"
+    elif phase in {"FINALIZE", "DELIVER", "DELIVERED"} and has_active_task:
+        state = "ReturnResult"
+        state_reason = "runtime_phase_finalized"
+    elif phase in {"EXECUTE", "VERIFY"} and has_active_task:
+        state = "Execute"
+        state_reason = "runtime_phase_execution"
+    elif phase == "RECOVER" and has_active_task:
+        state = "Error"
+        state_reason = "runtime_phase_recover"
     elif mode in {"GREETING", "SMALLTALK", "CAPABILITY_QUERY"} and has_active_task:
         state = "InterruptRecover"
         state_reason = "non_project_turn_preserves_active_task"

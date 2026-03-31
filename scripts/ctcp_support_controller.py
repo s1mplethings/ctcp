@@ -93,30 +93,78 @@ def _outbound_queue(session_state: dict[str, Any]) -> dict[str, Any]:
 def _status_view(project_context: dict[str, Any] | None) -> dict[str, Any]:
     if not isinstance(project_context, dict):
         return {}
+    runtime_state = project_context.get("runtime_state", {})
+    if not isinstance(runtime_state, dict):
+        runtime_state = {}
     status = project_context.get("status", {})
     if not isinstance(status, dict):
         status = {}
-    gate = status.get("gate", {})
+    gate = runtime_state.get("gate", {})
+    if (not isinstance(gate, dict)) or (not gate):
+        gate = status.get("gate", {})
     if not isinstance(gate, dict):
         gate = {}
-    decisions = project_context.get("decisions", {})
-    if not isinstance(decisions, dict):
-        decisions = {}
+    latest_result = runtime_state.get("latest_result", {})
+    if not isinstance(latest_result, dict):
+        latest_result = {}
+    runtime_error = runtime_state.get("error", {})
+    if not isinstance(runtime_error, dict):
+        runtime_error = {}
+    pending_rows = runtime_state.get("pending_decisions", [])
+    if not isinstance(pending_rows, list):
+        pending_rows = []
+    pending_count = sum(
+        1 for row in pending_rows if isinstance(row, dict) and str(row.get("status", "")).strip().lower() == "pending"
+    )
+    open_count = len([row for row in pending_rows if isinstance(row, dict)])
+    needs_user_decision = bool(runtime_state.get("needs_user_decision", False))
+    has_runtime_decision_fields = ("pending_decisions" in runtime_state) or ("needs_user_decision" in runtime_state)
+    if not needs_user_decision:
+        needs_user_decision = pending_count > 0
+    verify_result = str(runtime_state.get("verify_result", "")).strip().upper()
+    if not verify_result:
+        verify_result = str(latest_result.get("verify_result", "")).strip().upper()
+    if not verify_result:
+        verify_result = str(status.get("verify_result", "")).strip().upper()
+    run_status = str(runtime_state.get("run_status", "")).strip().lower()
+    if not run_status:
+        run_status = str(status.get("run_status", "")).strip().lower()
     return {
         "run_id": str(project_context.get("run_id", "")).strip(),
-        "run_status": str(status.get("run_status", "")).strip().lower(),
-        "verify_result": str(status.get("verify_result", "")).strip().upper(),
+        "phase": str(runtime_state.get("phase", "")).strip().upper(),
+        "run_status": run_status,
+        "verify_result": verify_result,
         "gate_state": str(gate.get("state", "")).strip().lower(),
         "gate_reason": str(gate.get("reason", "")).strip(),
         "gate_owner": str(gate.get("owner", "")).strip(),
-        "decisions_needed_count": int(status.get("decisions_needed_count", decisions.get("count", 0) or 0) or 0),
-        "needs_user_decision": bool(status.get("needs_user_decision", False)),
+        "blocking_reason": str(runtime_state.get("blocking_reason", "")).strip(),
+        "decisions_needed_count": int(
+            pending_count if has_runtime_decision_fields else (status.get("decisions_needed_count", pending_count) or pending_count)
+        ),
+        "open_decisions_count": int(runtime_state.get("open_decisions_count", open_count) or open_count),
+        "needs_user_decision": bool(needs_user_decision),
+        "has_error": bool(runtime_error.get("has_error", False)),
+        "pending_decisions": pending_rows,
     }
 
 
 def _decision_prompt(project_context: dict[str, Any] | None) -> tuple[str, str]:
     if not isinstance(project_context, dict):
         return "", ""
+    runtime_state = project_context.get("runtime_state", {})
+    if isinstance(runtime_state, dict):
+        rows = runtime_state.get("pending_decisions", [])
+        if isinstance(rows, list):
+            for item in rows:
+                if not isinstance(item, dict):
+                    continue
+                status = str(item.get("status", "")).strip().lower()
+                if status and status != "pending":
+                    continue
+                question = str(item.get("question", "") or item.get("question_hint", "")).strip()
+                if question:
+                    digest = hashlib.sha1(question.encode("utf-8", errors="replace")).hexdigest()
+                    return question, digest
     decisions = project_context.get("decisions", {})
     if not isinstance(decisions, dict):
         decisions = {}
@@ -146,12 +194,15 @@ def _decision_prompt(project_context: dict[str, Any] | None) -> tuple[str, str]:
 def _status_hash(view: dict[str, Any], *, progress_binding: dict[str, Any] | None = None) -> str:
     payload = {
         "run_id": str(view.get("run_id", "")).strip(),
+        "phase": str(view.get("phase", "")).strip(),
         "run_status": str(view.get("run_status", "")).strip(),
         "verify_result": str(view.get("verify_result", "")).strip(),
         "gate_state": str(view.get("gate_state", "")).strip(),
         "gate_reason": str(view.get("gate_reason", "")).strip(),
         "gate_owner": str(view.get("gate_owner", "")).strip(),
+        "blocking_reason": str(view.get("blocking_reason", "")).strip(),
         "decisions_needed_count": int(view.get("decisions_needed_count", 0) or 0),
+        "open_decisions_count": int(view.get("open_decisions_count", 0) or 0),
     }
     if isinstance(progress_binding, dict):
         payload["progress_binding"] = progress_binding
@@ -244,15 +295,23 @@ def decide_and_queue(
     run_status = str(view.get("run_status", "")).strip().lower()
     verify_result = str(view.get("verify_result", "")).strip().upper()
     gate_state = str(view.get("gate_state", "")).strip().lower()
+    phase = str(view.get("phase", "")).strip().upper()
     needs_decision = bool(view.get("needs_user_decision", False)) or int(view.get("decisions_needed_count", 0) or 0) > 0
-    final_ready = verify_result == "PASS" and run_status in _FINAL_RUN_STATUSES and (not needs_decision)
-    is_error = run_status in _ERROR_RUN_STATUSES or gate_state in _ERROR_GATE_STATES
+    final_ready = (
+        (phase in {"FINALIZE", "DELIVER", "DELIVERED"})
+        or (verify_result == "PASS" and run_status in _FINAL_RUN_STATUSES)
+    ) and (not needs_decision)
+    is_error = bool(view.get("has_error", False)) or run_status in _ERROR_RUN_STATUSES or gate_state in _ERROR_GATE_STATES
     can_auto_advance = (
         (not final_ready)
         and (not needs_decision)
         and (not is_error)
         and gate_state not in {"blocked"}
-        and (run_status in {"running", "in_progress", "working"} or gate_state in {"", "open", "ready"})
+        and (
+            phase in {"EXECUTE", "VERIFY", "PLAN"}
+            or run_status in {"running", "in_progress", "working"}
+            or gate_state in {"", "open", "ready"}
+        )
     )
 
     base_state = "WAIT_EXECUTION"

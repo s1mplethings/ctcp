@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VN 剧情树与背景梳理台（高质量探测）</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <img class="logo" alt="logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==" />
+      <div>
+        <h1>VN 剧情树与背景梳理台</h1>
+        <p>用于首稿阶段快速统一剧情树、人物背景、场景背景，并导出结构化草案。</p>
+      </div>
+    </section>
+    <section class="grid">
+      <article class="panel">
+        <h2>剧情树主干</h2>
+        <div class="kpi">
+          <div class="card"><div class="muted">节点数</div><strong id="kpiNodeCount">0</strong></div>
+          <div class="card"><div class="muted">分支节点</div><strong id="kpiBranchCount">0</strong></div>
+          <div class="card"><div class="muted">最近更新</div><strong id="kpiUpdated">-</strong></div>
+        </div>
+        <div id="branchRows"></div>
+      </article>
+      <article class="panel">
+        <h2>项目设定</h2>
+        <label>标题</label><input id="titleInput" value="雾港回声：分歧之夜" />
+        <label>主题</label><input id="themeInput" value="记忆、承诺与失语" />
+        <label>主冲突</label><textarea id="conflictInput">主角在揭露旧案真相与保护重要之人之间做选择。</textarea>
+      </article>
+      <article class="panel">
+        <h2>角色背景</h2>
+        <textarea id="roleInput">主角：返乡摄影师，回避型创伤应对。
+青梅：地方记者，行动果断。
+对立者：旧案相关利益方，掌控镇内舆论。 </textarea>
+      </article>
+      <article class="panel">
+        <h2>场景背景</h2>
+        <textarea id="sceneInput">旧校舍：潮湿、停电、回声重。
+海港堤岸：夜雾、远灯、铁锈味。
+咖啡馆：暖光、唱片、短暂安全区。 </textarea>
+      </article>
+      <article class="panel">
+        <h2>导出 JSON</h2>
+        <div class="toolbar"><button id="btnJson">生成 JSON 草案</button></div>
+        <pre id="jsonOut"></pre>
+      </article>
+      <article class="panel">
+        <h2>导出 Markdown</h2>
+        <div class="toolbar"><button id="btnMd" class="btn-alt">生成 Markdown 提纲</button></div>
+        <pre id="mdOut"></pre>
+      </article>
+    </section>
+  </div>
+  <script src="./app.js"></script>
+</body>
+</html>

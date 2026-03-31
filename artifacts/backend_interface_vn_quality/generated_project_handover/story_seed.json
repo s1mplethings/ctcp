@@ -1,0 +1,12 @@
+{
+  "title": "雾港回声：分歧之夜",
+  "theme": "记忆、承诺与失语",
+  "nodes": [
+    {"id": "N00_intro", "label": "归乡开场", "to": ["N10_archive", "N20_cafe"]},
+    {"id": "N10_archive", "label": "旧校舍档案室", "to": ["N30_confession"]},
+    {"id": "N20_cafe", "label": "夜间咖啡馆", "to": ["N30_confession"]},
+    {"id": "N30_confession", "label": "暴雨告白", "to": ["E01_truth", "E02_silence"]},
+    {"id": "E01_truth", "label": "真相结局", "to": []},
+    {"id": "E02_silence", "label": "沉默结局", "to": []}
+  ]
+}

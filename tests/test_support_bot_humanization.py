@@ -1803,6 +1803,89 @@ class SupportBotHumanizationTests(unittest.TestCase):
         self.assertEqual(len(changed_jobs), 1)
         self.assertEqual(str(changed_jobs[0].get("kind", "")), "decision")
 
+    def test_support_controller_prefers_canonical_runtime_state_over_legacy_status_guess(self) -> None:
+        session_state = support_bot.default_support_session_state("controller-canonical-execute")
+        session_state["bound_run_id"] = "run-canonical-execute"
+        project_context = {
+            "run_id": "run-canonical-execute",
+            "status": {
+                "run_status": "blocked",
+                "verify_result": "",
+                "needs_user_decision": True,
+                "decisions_needed_count": 1,
+                "gate": {"state": "blocked", "owner": "chair", "reason": "legacy decision guess"},
+            },
+            "runtime_state": {
+                "phase": "EXECUTE",
+                "run_status": "running",
+                "verify_result": "",
+                "needs_user_decision": False,
+                "blocking_reason": "none",
+                "pending_decisions": [],
+                "error": {"has_error": False},
+                "gate": {"state": "open", "owner": "patchmaker", "reason": "working"},
+            },
+            "decisions": {"count": 1, "decisions": [{"decision_id": "legacy", "question_hint": "legacy"}]},
+            "whiteboard": {},
+        }
+
+        binding = support_bot.build_progress_binding(project_context=project_context, task_summary_hint="VN项目")
+        report = support_bot.ctcp_support_controller.decide_and_queue(
+            session_state,
+            project_context=project_context,
+            progress_binding=binding,
+            now_ts="2026-03-30T09:00:00Z",
+            keepalive_interval_sec=0,
+        )
+        self.assertNotEqual(str(report.get("controller_state", "")), "WAIT_USER_DECISION")
+        jobs = support_bot.ctcp_support_controller.pop_outbound_jobs(session_state)
+        self.assertTrue(all(str(item.get("kind", "")) != "decision" for item in jobs))
+
+    def test_support_controller_waits_user_decision_when_canonical_pending_decision_exists(self) -> None:
+        session_state = support_bot.default_support_session_state("controller-canonical-decision")
+        session_state["bound_run_id"] = "run-canonical-decision"
+        project_context = {
+            "run_id": "run-canonical-decision",
+            "status": {
+                "run_status": "running",
+                "verify_result": "",
+                "needs_user_decision": False,
+                "decisions_needed_count": 0,
+                "gate": {"state": "open", "owner": "", "reason": ""},
+            },
+            "runtime_state": {
+                "phase": "WAIT_USER_DECISION",
+                "run_status": "blocked",
+                "verify_result": "",
+                "needs_user_decision": True,
+                "blocking_reason": "请确认交付格式",
+                "pending_decisions": [
+                    {
+                        "decision_id": "outbox:canonical",
+                        "question": "你要先看截图还是先收 zip 包？",
+                        "status": "pending",
+                    }
+                ],
+                "error": {"has_error": False},
+                "gate": {"state": "blocked", "owner": "chair", "reason": "decision required"},
+            },
+            "decisions": {"count": 0, "decisions": []},
+            "whiteboard": {},
+        }
+
+        binding = support_bot.build_progress_binding(project_context=project_context, task_summary_hint="VN项目")
+        report = support_bot.ctcp_support_controller.decide_and_queue(
+            session_state,
+            project_context=project_context,
+            progress_binding=binding,
+            now_ts="2026-03-30T09:10:00Z",
+            keepalive_interval_sec=0,
+        )
+        self.assertEqual(str(report.get("controller_state", "")), "WAIT_USER_DECISION")
+        jobs = support_bot.ctcp_support_controller.pop_outbound_jobs(session_state)
+        self.assertEqual(len(jobs), 1)
+        self.assertEqual(str(jobs[0].get("kind", "")), "decision")
+
     def test_support_controller_result_notify_requires_final_ready_status(self) -> None:
         session_state = support_bot.default_support_session_state("controller-result")
         session_state["bound_run_id"] = "run-result"

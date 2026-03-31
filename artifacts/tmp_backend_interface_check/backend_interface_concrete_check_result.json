@@ -1,0 +1,57 @@
+{
+  "run_id": "20260330-150038-967560-orchestrate",
+  "run_dir": "C:\\Users\\sunom\\AppData\\Local\\ctcp\\runs\\ctcp\\20260330-150038-967560-orchestrate",
+  "status_phase_before": "EXECUTE",
+  "status_phase_after_advance": "WAIT_USER_DECISION",
+  "status_phase_after_submit": "WAIT_USER_DECISION",
+  "needs_user_decision_before_submit": 6,
+  "submit_result": {
+    "run_id": "20260330-150038-967560-orchestrate",
+    "run_dir": "C:\\Users\\sunom\\AppData\\Local\\ctcp\\runs\\ctcp\\20260330-150038-967560-orchestrate",
+    "decision_id": "outbox:CONSTRAINTS",
+    "target_path": "artifacts/support_decisions/outbox_CONSTRAINTS.md",
+    "written": true,
+    "decision_status": "submitted",
+    "backend_acknowledged": false,
+    "remaining_decisions": 5,
+    "needs_user_decision": true,
+    "updated_at": "2026-03-30T07:00:51Z"
+  },
+  "submitted_not_consumed": true,
+  "report_exists": true,
+  "support_context_has_status": true,
+  "uploaded_files_exist": {
+    "frontend_uploads_text": true,
+    "frontend_uploads_image": true,
+    "decision_answer_written": false,
+    "runtime_state_exists": true
+  },
+  "recommended_interfaces_present": {
+    "list_output_artifacts": false,
+    "get_output_artifact_meta": false,
+    "read_output_artifact": false,
+    "get_current_state_snapshot": false,
+    "get_render_state_snapshot": false
+  },
+  "status_keys": [
+    "blocking_reason",
+    "decisions_needed_count",
+    "error",
+    "gate",
+    "iterations",
+    "latest_result",
+    "latest_status_raw",
+    "needs_user_decision",
+    "pending_decisions",
+    "phase",
+    "recovery",
+    "run_dir",
+    "run_id",
+    "run_status",
+    "runtime_state",
+    "runtime_state_path",
+    "updated_at",
+    "verify_gate",
+    "verify_result"
+  ]
+}

@@ -1,12 +1,6 @@
-# Demo Report - LAST
+# Report - support-canonical-runtime-state-fix
 
-## Latest Report
-
-- File: [`meta/reports/archive/20260330-support-canonical-runtime-state-fix.md`](archive/20260330-support-canonical-runtime-state-fix.md)
-- Date: 2026-03-30
-- Topic: support/frontdesk/bridge canonical runtime state + decision protocol fix
-
-### Readlist
+## Readlist
 
 - `AGENTS.md`
 - `meta/tasks/CURRENT.md`
@@ -19,7 +13,7 @@
 - `tests/test_support_bot_humanization.py`
 - `tests/test_frontdesk_state_machine.py`
 
-### Plan
+## Plan
 
 1. Introduce one canonical runtime snapshot for bridge reads (`artifacts/support_runtime_state.json`).
 2. Define explicit decision object protocol with lifecycle status (`pending/submitted/consumed/rejected/expired`).
@@ -28,7 +22,7 @@
 5. Add regressions for executing/no-decision, pending decision, submit-not-consumed, and completion/failure without stale decisions.
 6. Run focused tests + canonical verify and record first failure + minimal fix.
 
-### Changes
+## Changes
 
 - `scripts/ctcp_front_bridge.py`
   - Added canonical snapshot path: `artifacts/support_runtime_state.json`.
@@ -40,20 +34,22 @@
 - `scripts/ctcp_support_controller.py`
   - Switched state view to consume `project_context.runtime_state` first.
   - Decision prompting now reads canonical pending decisions only (`status=pending`).
+  - Controller keeps orchestration duties only (queue/throttle/notify), no independent runtime truth derivation.
 - `scripts/ctcp_support_bot.py`
+  - Added runtime-phase mapping helpers.
   - `active_stage` derivation and shared-state authoritative stage mapping now prefer canonical `runtime_state.phase`.
   - `build_progress_binding` now uses canonical state/decision status; supports `submitted` without treating it as consumed.
 - `frontend/frontdesk_state_machine.py`
   - Decision extraction and state derivation now consume `runtime_state` first.
-  - Avoids stale legacy decision fallback when canonical `pending_decisions` is explicitly empty.
+  - Avoids falling back to stale legacy decision hints when canonical `pending_decisions` is explicitly empty.
 - `docs/shared_state_contract.md`
   - Added support bridge canonical snapshot and decision lifecycle contract section.
 - Tests:
-  - `tests/test_support_to_production_path.py`
-  - `tests/test_support_bot_humanization.py`
-  - `tests/test_frontdesk_state_machine.py`
+  - `tests/test_support_to_production_path.py`: added canonical snapshot + decision consume confirmation + stale decision cleanup regressions.
+  - `tests/test_support_bot_humanization.py`: added canonical-consumption controller regressions.
+  - `tests/test_frontdesk_state_machine.py`: added canonical execute/finalize/recover mapping regressions.
 
-### Verify
+## Verify
 
 - `python -m unittest discover -s tests -p "test_support_to_production_path.py" -v` -> 0
 - `python -m unittest discover -s tests -p "test_frontdesk_state_machine.py" -v` -> 0
@@ -75,11 +71,11 @@
   - minimal fix strategy: keep all earlier passed gates unchanged and rerun canonical verify with repo-supported `CTCP_SKIP_LITE_REPLAY=1`.
 - `$env:CTCP_SKIP_LITE_REPLAY='1'; powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` -> 0
 
-### Questions
+## Questions
 
 - None.
 
-### Demo
+## Demo
 
 - Canonical status now has one stable snapshot for bridge/support/frontdesk:
   - `phase/run_status/blocking_reason/needs_user_decision/pending_decisions/latest_result/error/recovery/updated_at`

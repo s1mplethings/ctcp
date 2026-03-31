@@ -172,6 +172,118 @@ class FrontdeskStateMachineTests(unittest.TestCase):
         self.assertEqual(dict(context["user_style_profile"])["verbosity"], "brief")
         self.assertEqual(context["resumable_state"], "Execute")
 
+    def test_canonical_runtime_execute_state_does_not_regress_to_await_decision(self) -> None:
+        session_state = {
+            "task_summary": "继续推进 VN 前台",
+            "bound_run_id": "run-canonical",
+            "session_profile": {"lang_hint": "zh"},
+            "project_memory": {"project_brief": "继续推进 VN 前台"},
+            "project_constraints_memory": {},
+            "execution_memory": {},
+            "frontdesk_state": {},
+        }
+        project_context = {
+            "run_id": "run-canonical",
+            "status": {
+                "run_status": "blocked",
+                "verify_result": "",
+                "needs_user_decision": True,
+                "gate": {"reason": "legacy fallback says pending decision"},
+            },
+            "runtime_state": {
+                "phase": "EXECUTE",
+                "run_status": "running",
+                "verify_result": "",
+                "needs_user_decision": False,
+                "pending_decisions": [],
+                "blocking_reason": "none",
+                "error": {"has_error": False},
+            },
+        }
+
+        first = derive_frontdesk_state(
+            user_text="继续做这个项目",
+            conversation_mode="PROJECT_DETAIL",
+            session_state=session_state,
+            project_context=project_context,
+        )
+        self.assertEqual(first["state"], "Execute")
+        self.assertNotEqual(first["state"], "AwaitDecision")
+
+        session_state["frontdesk_state"] = dict(first)
+        second = derive_frontdesk_state(
+            user_text="继续做这个项目",
+            conversation_mode="PROJECT_DETAIL",
+            session_state=session_state,
+            project_context=project_context,
+        )
+        self.assertEqual(second["state"], "Execute")
+        self.assertEqual(second["state_reason"], first["state_reason"])
+
+    def test_canonical_runtime_finalize_clears_stale_legacy_decision_and_recover_maps_error(self) -> None:
+        session_state = {
+            "task_summary": "继续推进 VN 前台",
+            "bound_run_id": "run-final",
+            "session_profile": {"lang_hint": "zh"},
+            "project_memory": {"project_brief": "继续推进 VN 前台"},
+            "project_constraints_memory": {},
+            "execution_memory": {},
+            "frontdesk_state": {},
+        }
+        finalized_context = {
+            "run_id": "run-final",
+            "status": {
+                "run_status": "completed",
+                "verify_result": "PASS",
+                "needs_user_decision": False,
+                "gate": {"reason": ""},
+            },
+            "runtime_state": {
+                "phase": "FINALIZE",
+                "run_status": "completed",
+                "verify_result": "PASS",
+                "needs_user_decision": False,
+                "pending_decisions": [],
+                "blocking_reason": "none",
+                "error": {"has_error": False},
+            },
+            "decisions": {
+                "decisions": [
+                    {
+                        "decision_id": "legacy:1",
+                        "question_hint": "旧问题，不应再干扰",
+                        "status": "pending",
+                    }
+                ]
+            },
+        }
+        state = derive_frontdesk_state(
+            user_text="现在进度到哪了？",
+            conversation_mode="STATUS_QUERY",
+            session_state=session_state,
+            project_context=finalized_context,
+        )
+        self.assertEqual(state["state"], "ReturnResult")
+        self.assertEqual(len(list(state["decision_points"])), 0)
+
+        recover_context = dict(finalized_context)
+        recover_context["runtime_state"] = {
+            "phase": "RECOVER",
+            "run_status": "fail",
+            "verify_result": "FAIL",
+            "needs_user_decision": False,
+            "pending_decisions": [],
+            "blocking_reason": "verify failed",
+            "error": {"has_error": True, "message": "verify failed"},
+        }
+        recover = derive_frontdesk_state(
+            user_text="现在怎么样",
+            conversation_mode="STATUS_QUERY",
+            session_state=session_state,
+            project_context=recover_context,
+        )
+        self.assertEqual(recover["state"], "Error")
+
 
 if __name__ == "__main__":
     unittest.main()

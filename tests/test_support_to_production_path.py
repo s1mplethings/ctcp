@@ -349,6 +349,150 @@ class SupportToProductionPathTests(unittest.TestCase):
             self.assertEqual(len(turns), 2)
             self.assertEqual(str(doc.get("reply_text", "")), "当前项目还在继续推进。")
 
+    def test_bridge_canonical_runtime_state_and_decision_submission_requires_backend_consume(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_bridge_canonical_") as td:
+            run_dir = Path(td)
+            state, fake_run_cmd = _make_fake_orchestrate_runtime(run_dir, run_id="r-canonical", goal="决策链路验证")
+            state["run_status"] = "blocked"
+            state["gate_state"] = "blocked"
+            state["gate_owner"] = "chair"
+            state["gate_reason"] = "请确认交付格式"
+            outbox_prompt = run_dir / "outbox" / "decision_format.md"
+            outbox_prompt.parent.mkdir(parents=True, exist_ok=True)
+            outbox_prompt.write_text(
+                "\n".join(
+                    [
+                        "Role: chair/planner",
+                        "Action: decide",
+                        "Target-Path: artifacts/answers/delivery_format.md",
+                        "Reason: choose delivery format",
+                        "Question: 你这轮是先要 zip 包，还是先看截图？",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(ctcp_front_bridge, "_resolve_run_dir", return_value=run_dir), mock.patch.object(
+                ctcp_front_bridge, "_run_cmd", side_effect=fake_run_cmd
+            ):
+                status_before = ctcp_front_bridge.ctcp_get_status("r-canonical")
+                self.assertEqual(str(status_before.get("phase", "")), "WAIT_USER_DECISION")
+                self.assertTrue(bool(status_before.get("needs_user_decision", False)))
+
+                decisions = ctcp_front_bridge.ctcp_list_decisions_needed("r-canonical")
+                self.assertEqual(int(decisions.get("count", 0)), 1)
+                row = dict(list(decisions.get("decisions", []))[0])
+                self.assertEqual(str(row.get("status", "")), "pending")
+                self.assertTrue(bool(str(row.get("decision_id", ""))))
+                self.assertTrue(bool(str(row.get("question", ""))))
+                self.assertTrue(bool(str(row.get("target_path", ""))))
+                self.assertTrue(bool(str(row.get("expected_format", ""))))
+                self.assertIn("created_at", row)
+                self.assertIn("submitted_at", row)
+                self.assertIn("consumed_at", row)
+
+                submit = ctcp_front_bridge.ctcp_submit_decision(
+                    "r-canonical",
+                    {"decision_id": str(row.get("decision_id", "")), "content": "先给我 zip 包"},
+                )
+                self.assertTrue(bool(submit.get("written", False)))
+                self.assertEqual(str(submit.get("decision_status", "")), "submitted")
+                self.assertFalse(bool(submit.get("backend_acknowledged", False)))
+
+                status_submitted = ctcp_front_bridge.ctcp_get_status("r-canonical")
+                self.assertFalse(bool(status_submitted.get("needs_user_decision", False)))
+                pending_after_submit = list(
+                    dict(status_submitted.get("runtime_state", {})).get("pending_decisions", [])
+                )
+                self.assertTrue(any(str(dict(item).get("status", "")) == "submitted" for item in pending_after_submit))
+
+                state["run_status"] = "running"
+                state["gate_state"] = "open"
+                state["gate_owner"] = "patchmaker"
+                state["gate_reason"] = "continuing execution"
+                consumed_status = ctcp_front_bridge.ctcp_get_status("r-canonical")
+                decisions_after_consume = list(
+                    dict(consumed_status.get("runtime_state", {})).get("decisions", [])
+                )
+                decision_rows = [dict(item) for item in decisions_after_consume if str(dict(item).get("decision_id", "")) == str(row.get("decision_id", ""))]
+                self.assertTrue(decision_rows)
+                self.assertEqual(str(decision_rows[0].get("status", "")), "consumed")
+
+                state["run_status"] = "completed"
+                state["verify_result"] = "PASS"
+                state["gate_state"] = "closed"
+                state["gate_reason"] = "done"
+                final_status = ctcp_front_bridge.ctcp_get_status("r-canonical")
+                self.assertEqual(str(final_status.get("phase", "")), "FINALIZE")
+                self.assertEqual(int(final_status.get("decisions_needed_count", 0) or 0), 0)
+
+    def test_bridge_failure_state_does_not_reintroduce_previous_pending_decisions(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_bridge_failure_") as td:
+            run_dir = Path(td)
+            state, fake_run_cmd = _make_fake_orchestrate_runtime(run_dir, run_id="r-failed", goal="失败恢复验证")
+            state["run_status"] = "fail"
+            state["gate_state"] = "error"
+            state["gate_reason"] = "verify failed"
+            runtime_state_path = run_dir / "artifacts" / "support_runtime_state.json"
+            runtime_state_path.parent.mkdir(parents=True, exist_ok=True)
+            runtime_state_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "ctcp-support-runtime-state-v1",
+                        "run_id": "r-failed",
+                        "run_dir": str(run_dir),
+                        "phase": "EXECUTE",
+                        "run_status": "blocked",
+                        "blocking_reason": "decision_submitted_waiting_backend_consume",
+                        "needs_user_decision": False,
+                        "pending_decisions": [
+                            {
+                                "decision_id": "outbox:old",
+                                "kind": "outbox_prompt",
+                                "question": "旧决策",
+                                "target_path": "artifacts/answers/old.md",
+                                "expected_format": "text",
+                                "schema": {"type": "string"},
+                                "status": "submitted",
+                                "created_at": "2026-03-29T00:00:00Z",
+                                "submitted_at": "2026-03-29T00:01:00Z",
+                                "consumed_at": "",
+                                "submission_state_hash": "legacy-hash",
+                            }
+                        ],
+                        "decisions": [],
+                        "latest_result": {},
+                        "error": {"has_error": False, "code": "", "message": ""},
+                        "recovery": {"needed": False, "hint": "", "status": "none"},
+                        "gate": {"state": "blocked", "owner": "chair", "path": "", "reason": "legacy"},
+                        "iterations": {"current": 0, "max": 8, "source": "test"},
+                        "verify_result": "",
+                        "verify_gate": "",
+                        "decisions_needed_count": 0,
+                        "open_decisions_count": 1,
+                        "submitted_decisions_count": 1,
+                        "core_hash": "legacy-hash",
+                        "updated_at": "2026-03-29T00:01:00Z",
+                        "snapshot_source": "canonical_snapshot",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(ctcp_front_bridge, "_resolve_run_dir", return_value=run_dir), mock.patch.object(
+                ctcp_front_bridge, "_run_cmd", side_effect=fake_run_cmd
+            ):
+                status = ctcp_front_bridge.ctcp_get_status("r-failed")
+                self.assertEqual(str(status.get("phase", "")), "RECOVER")
+                self.assertTrue(bool(dict(status.get("error", {})).get("has_error", False)))
+                self.assertEqual(int(status.get("decisions_needed_count", 0) or 0), 0)
+                pending_rows = list(dict(status.get("runtime_state", {})).get("pending_decisions", []))
+                self.assertEqual(len(pending_rows), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

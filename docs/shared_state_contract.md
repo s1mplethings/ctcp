@@ -98,6 +98,45 @@ Minimum supported event types:
 - `progress_summary`
 - `proof_refs`
 
+## Support Bridge Canonical Snapshot
+
+For support/frontdesk/frontend bridge reads, runtime status MUST also be exposed as one stable run-local snapshot:
+
+- `${run_dir}/artifacts/support_runtime_state.json`
+
+This snapshot is the canonical bridge read model. `RUN.json`, `verify_report.json`, orchestrate status output, `outbox/`, and `QUESTIONS.md` may only be used as compatibility fallback inputs to refresh this snapshot.
+
+`support_runtime_state.json` minimum fields:
+
+- `phase`
+- `run_status`
+- `blocking_reason`
+- `needs_user_decision`
+- `pending_decisions`
+- `latest_result`
+- `error`
+- `recovery`
+- `updated_at`
+
+Decision object minimum fields:
+
+- `decision_id`
+- `kind`
+- `question`
+- `target_path`
+- `expected_format` or `schema`
+- `status` (`pending|submitted|consumed|rejected|expired`)
+- `created_at`
+- `submitted_at`
+- `consumed_at`
+
+Bridge rule:
+
+- Decision write success means `submitted`, not `consumed`.
+- Runtime progression confirmation requires either:
+  - decision status transitions to `consumed`, or
+  - canonical runtime snapshot core state advances after submission.
+
 ## Write Permissions
 
 Write permissions are strict and source-scoped:
@@ -132,3 +171,18 @@ Write permissions are strict and source-scoped:
 - Letting visible state overwrite authoritative stage.
 - Declaring completion when verify/proof evidence is missing.
 
+## Backend Interface Binding
+
+Shared-state snapshots are necessary but not sufficient.
+
+Beyond snapshot files, integration must use formal backend interfaces for:
+
+- run creation/advance/status
+- pending decision listing/submission
+- input artifact upload
+- output artifact/image enumeration and read
+- current/render snapshot reads
+
+See:
+
+- `docs/backend_interface_contract.md`

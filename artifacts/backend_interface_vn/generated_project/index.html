@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CTCP VN 剧情树梳理</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <img alt="logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==" />
+      <div>
+        <h1>VN 剧情树与背景梳理台</h1>
+        <p>用于整理主线/分支节点、角色背景与场景背景，便于你后续制作脚本和立绘流程。</p>
+      </div>
+    </section>
+    <section class="grid">
+      <article class="card">
+        <h2>剧情树节点</h2>
+        <textarea id="nodes">[开场]
+- 主角回乡
+- 与青梅重逢
+[分支A]
+- 调查旧校舍
+[分支B]
+- 留在咖啡馆</textarea>
+      </article>
+      <article class="card">
+        <h2>角色背景</h2>
+        <textarea id="chars">主角：返乡摄影师，创伤回避型。
+青梅：地方记者，目标导向强。 </textarea>
+      </article>
+      <article class="card">
+        <h2>场景背景</h2>
+        <textarea id="bg">旧校舍：潮湿、停电、回声重。
+咖啡馆：暖光、老唱片、避风港。 </textarea>
+      </article>
+      <article class="card">
+        <h2>导出草案（JSON）</h2>
+        <button id="export">生成草案</button>
+        <pre id="out"></pre>
+      </article>
+    </section>
+  </div>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    $("export").addEventListener("click", () => {
+      const payload = {
+        story_nodes: $("nodes").value.split("\n"),
+        character_background: $("chars").value.split("\n"),
+        scene_background: $("bg").value.split("\n"),
+      };
+      $("out").textContent = JSON.stringify(payload, null, 2);
+    });
+  </script>
+</body>
+</html>

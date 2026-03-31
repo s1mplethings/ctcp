@@ -47,3 +47,12 @@ Therefore:
 - runtime still owns authoritative state and verify evidence
 - support wording does not replace engineering truth
 
+## Backend Interface Binding
+
+Frontend/frontdesk/support must bind formal backend interfaces, not temporary file scans or ad-hoc state guessing.
+
+Required integration anchor:
+
+- `docs/backend_interface_contract.md`
+
+This includes stable backend reads/writes for run lifecycle, decisions, artifact I/O, and shared current/render snapshots.

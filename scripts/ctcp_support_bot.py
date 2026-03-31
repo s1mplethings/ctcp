@@ -1242,6 +1242,29 @@ def _classify_message_intent(
     return "continue"
 
 
+def _project_runtime_state(project_context: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(project_context, dict):
+        return {}
+    runtime_state = project_context.get("runtime_state", {})
+    return runtime_state if isinstance(runtime_state, dict) else {}
+
+
+def _runtime_phase_to_support_stage(phase: str) -> str:
+    mapping = {
+        "INTAKE": "INTAKE",
+        "CLARIFY": "CLARIFY",
+        "PLAN": "PLAN",
+        "EXECUTE": "EXECUTE",
+        "VERIFY": "VERIFY",
+        "WAIT_USER_DECISION": "WAIT_USER_DECISION",
+        "FINALIZE": "FINALIZE",
+        "DELIVER": "DELIVER",
+        "DELIVERED": "DELIVERED",
+        "RECOVER": "RECOVER",
+    }
+    return mapping.get(sanitize_inline_text(str(phase or ""), max_chars=40).upper(), "")
+
+
 def _derive_active_stage(
     *,
     conversation_mode: str,
@@ -1252,26 +1275,44 @@ def _derive_active_stage(
 ) -> tuple[str, str]:
     mode = sanitize_inline_text(conversation_mode, max_chars=40).upper()
     state_name = sanitize_inline_text(str((frontdesk_state or {}).get("state", "")), max_chars=40)
+    runtime_state = _project_runtime_state(project_context)
+    runtime_phase = sanitize_inline_text(str(runtime_state.get("phase", "")), max_chars=40).upper()
     status = (project_context or {}).get("status", {}) if isinstance(project_context, dict) else {}
     if not isinstance(status, dict):
         status = {}
     gate = status.get("gate", {})
     if not isinstance(gate, dict):
         gate = {}
-    run_status = sanitize_inline_text(str(status.get("run_status", "")), max_chars=40).lower()
-    verify_result = sanitize_inline_text(str(status.get("verify_result", "")), max_chars=20).upper()
+    run_status = sanitize_inline_text(
+        str(runtime_state.get("run_status", "")).strip() or str(status.get("run_status", "")).strip(),
+        max_chars=40,
+    ).lower()
+    verify_result = sanitize_inline_text(
+        str(runtime_state.get("verify_result", "")).strip() or str(status.get("verify_result", "")).strip(),
+        max_chars=20,
+    ).upper()
     gate_state = sanitize_inline_text(str(gate.get("state", "")), max_chars=40).lower()
     gate_owner = sanitize_inline_text(str(gate.get("owner", "")), max_chars=80).lower()
     gate_reason = sanitize_inline_text(str(gate.get("reason", "")), max_chars=220).lower()
-    needs_decision = bool(status.get("needs_user_decision", False)) or int(status.get("decisions_needed_count", 0) or 0) > 0
+    needs_decision = bool(runtime_state.get("needs_user_decision", False))
+    if not needs_decision:
+        needs_decision = bool(status.get("needs_user_decision", False)) or int(status.get("decisions_needed_count", 0) or 0) > 0
     provider_status = sanitize_inline_text(str((provider_result or {}).get("status", "")), max_chars=32).lower()
     provider_error = provider_status in {"exec_failed", "failed", "error"}
-    run_error = run_status in {"fail", "failed", "error", "aborted"} or gate_state in {"error", "failed"}
+    runtime_error = runtime_state.get("error", {})
+    if not isinstance(runtime_error, dict):
+        runtime_error = {}
+    run_error = bool(runtime_error.get("has_error", False)) or run_status in {"fail", "failed", "error", "aborted"} or gate_state in {"error", "failed"}
     final_ready = verify_result == "PASS" and run_status in _FINAL_READY_RUN_STATUSES and (not needs_decision)
     delivery_ready = bool((delivery_state or {}).get("package_ready", False) or (delivery_state or {}).get("screenshot_ready", False))
 
     if provider_error or run_error or bool((project_context or {}).get("error")):
         return "RECOVER", "runtime_or_provider_failure"
+    runtime_stage = _runtime_phase_to_support_stage(runtime_phase)
+    if runtime_stage:
+        if runtime_stage == "DELIVER" and (not delivery_ready) and state_name != "ReturnResult":
+            return "FINALIZE", f"canonical_phase:{runtime_phase.lower()}_pending_delivery"
+        return runtime_stage, f"canonical_phase:{runtime_phase.lower()}"
     if needs_decision or state_name == "AwaitDecision":
         return "WAIT_USER_DECISION", "decision_required"
     if final_ready and (delivery_ready or state_name == "ReturnResult"):
@@ -1479,11 +1520,27 @@ def _shared_task_id(
 
 def _to_authoritative_stage(
     *,
+    runtime_phase: str,
     session_stage: str,
     run_status: str,
     verify_result: str,
     needs_user_decision: bool,
 ) -> str:
+    phase = sanitize_inline_text(runtime_phase, max_chars=40).upper()
+    runtime_mapping = {
+        "INTAKE": "INTAKE",
+        "CLARIFY": "PLANNING",
+        "PLAN": "PLANNING",
+        "EXECUTE": "EXECUTING",
+        "VERIFY": "VERIFYING",
+        "WAIT_USER_DECISION": "WAITING_DECISION",
+        "FINALIZE": "VERIFYING",
+        "DELIVER": "DONE",
+        "DELIVERED": "DONE",
+        "RECOVER": "BLOCKED",
+    }
+    if phase in runtime_mapping:
+        return runtime_mapping[phase]
     if verify_result == "PASS" and run_status in _FINAL_READY_RUN_STATUSES:
         return "DONE"
     if needs_user_decision:
@@ -1535,14 +1592,23 @@ def sync_shared_state_workspace(
     status = (project_context or {}).get("status", {}) if isinstance(project_context, dict) else {}
     if not isinstance(status, dict):
         status = {}
+    runtime_state = _project_runtime_state(project_context)
+    runtime_phase = sanitize_inline_text(str(runtime_state.get("phase", "")), max_chars=40)
     run_status = sanitize_inline_text(str(status.get("run_status", "")), max_chars=24).lower()
     verify_result = sanitize_inline_text(str(status.get("verify_result", "")), max_chars=16).upper()
-    needs_user_decision = bool(status.get("needs_user_decision", False)) or int(status.get("decisions_needed_count", 0) or 0) > 0
+    if not run_status:
+        run_status = sanitize_inline_text(str(runtime_state.get("run_status", "")), max_chars=24).lower()
+    if not verify_result:
+        verify_result = sanitize_inline_text(str(runtime_state.get("verify_result", "")), max_chars=16).upper()
+    needs_user_decision = bool(runtime_state.get("needs_user_decision", False))
+    if not needs_user_decision:
+        needs_user_decision = bool(status.get("needs_user_decision", False)) or int(status.get("decisions_needed_count", 0) or 0) > 0
     progress = build_progress_binding(
         project_context=project_context if isinstance(project_context, dict) else None,
         task_summary_hint=current_project_brief(session_state),
     )
     authoritative_stage = _to_authoritative_stage(
+        runtime_phase=runtime_phase,
         session_stage=str(session_state.get("active_stage", "")),
         run_status=run_status,
         verify_result=verify_result,
@@ -2703,10 +2769,16 @@ def build_progress_binding(*, project_context: dict[str, Any] | None, task_summa
     if not isinstance(project_context, dict):
         return {}
 
+    runtime_state = _project_runtime_state(project_context)
+    runtime_latest = runtime_state.get("latest_result", {})
+    if not isinstance(runtime_latest, dict):
+        runtime_latest = {}
     status = project_context.get("status", {})
     if not isinstance(status, dict):
         status = {}
-    gate = status.get("gate", {})
+    gate = runtime_state.get("gate", {})
+    if (not isinstance(gate, dict)) or (not gate):
+        gate = status.get("gate", {})
     if not isinstance(gate, dict):
         gate = {}
     decisions = project_context.get("decisions", {})
@@ -2718,10 +2790,18 @@ def build_progress_binding(*, project_context: dict[str, Any] | None, task_summa
         str(task_summary_hint or project_context.get("goal", "")).strip(),
         max_chars=260,
     )
-    run_status = str(status.get("run_status", "")).strip().lower()
-    verify_result = str(status.get("verify_result", "")).strip().upper()
+    run_status = str(runtime_state.get("run_status", "")).strip().lower() or str(status.get("run_status", "")).strip().lower()
+    verify_result = (
+        str(runtime_state.get("verify_result", "")).strip().upper()
+        or str(runtime_latest.get("verify_result", "")).strip().upper()
+        or str(status.get("verify_result", "")).strip().upper()
+    )
+    runtime_phase = sanitize_inline_text(str(runtime_state.get("phase", "")), max_chars=40).upper()
     gate_state = str(gate.get("state", "")).strip().lower()
-    gate_reason = sanitize_inline_text(str(gate.get("reason", "")), max_chars=220)
+    gate_reason = sanitize_inline_text(
+        str(runtime_state.get("blocking_reason", "")).strip() or str(gate.get("reason", "")).strip(),
+        max_chars=220,
+    )
     gate_owner = sanitize_inline_text(str(gate.get("owner", "")), max_chars=120)
     gate_path = sanitize_inline_text(str(gate.get("path", "")), max_chars=180)
     gate_label = _progress_step_label(target_path=gate_path, role=gate_owner, reason=gate_reason)
@@ -2758,28 +2838,55 @@ def build_progress_binding(*, project_context: dict[str, Any] | None, task_summa
         else:
             _append_progress_item(done_items, f"{label}已完成")
 
-    decision_rows = decisions.get("decisions", [])
+    decision_rows = runtime_state.get("pending_decisions", [])
+    if not isinstance(decision_rows, list) or not decision_rows:
+        decision_rows = decisions.get("decisions", [])
     if not isinstance(decision_rows, list):
         decision_rows = []
     decision_question = ""
+    pending_count = 0
+    submitted_count = 0
     for item in decision_rows:
         if not isinstance(item, dict):
             continue
-        question_hint = sanitize_inline_text(str(item.get("question_hint", "")), max_chars=220)
-        if question_hint:
+        status_text = sanitize_inline_text(str(item.get("status", "")), max_chars=24).lower()
+        question_hint = sanitize_inline_text(str(item.get("question", "") or item.get("question_hint", "")), max_chars=220)
+        if status_text == "pending":
+            pending_count += 1
+            if question_hint and (not decision_question):
+                decision_question = question_hint
+        elif status_text == "submitted":
+            submitted_count += 1
+            if question_hint and (not decision_question):
+                decision_question = question_hint
+        elif question_hint and (not decision_question):
             decision_question = question_hint
-            break
 
-    decision_count = int(status.get("decisions_needed_count", decisions.get("count", 0) or 0) or 0)
-    waiting_for_decision = bool(status.get("needs_user_decision", False)) or decision_count > 0
+    decision_count = int(runtime_state.get("decisions_needed_count", pending_count) or pending_count)
+    waiting_for_decision = bool(runtime_state.get("needs_user_decision", False))
+    if not waiting_for_decision:
+        waiting_for_decision = bool(status.get("needs_user_decision", False)) or decision_count > 0
+    submitted_waiting = submitted_count > 0 and (not waiting_for_decision)
     gate_blocked_on_internal = gate_state == "blocked" and (not waiting_for_decision)
     current_phase = ""
     current_blocker = "none"
     next_action = "把当前任务继续往前推进，有进展或卡点我会第一时间同步你"
     question_needed = "no"
     message_purpose = "progress"
-    active_stage = "PLAN"
-    stage_reason = "default_from_status"
+    active_stage = _runtime_phase_to_support_stage(runtime_phase) or "PLAN"
+    stage_reason = f"canonical_phase:{runtime_phase.lower()}" if runtime_phase else "default_from_status"
+    phase_labels = {
+        "INTAKE": "需求确认",
+        "CLARIFY": "需求澄清",
+        "PLAN": "方案规划",
+        "EXECUTE": "执行推进",
+        "VERIFY": "验证收敛",
+        "WAIT_USER_DECISION": "等待你的决定",
+        "FINALIZE": "结果整理/交付",
+        "DELIVER": "结果整理/交付",
+        "DELIVERED": "结果已回传",
+        "RECOVER": "异常恢复",
+    }
 
     if verify_result == "PASS" and run_status in {"pass", "done", "completed", "success"}:
         current_phase = "结果整理/交付"
@@ -2789,32 +2896,54 @@ def build_progress_binding(*, project_context: dict[str, Any] | None, task_summa
         active_stage = "FINALIZE"
         stage_reason = "verify_pass_or_final_run_status"
     elif waiting_for_decision:
-        current_phase = gate_label or "等待关键决定"
+        current_phase = phase_labels.get("WAIT_USER_DECISION", "等待关键决定")
         current_blocker = "等你先确认一个关键决定"
         next_action = "等你拍板这个点，一收到答复我就马上继续推进"
         question_needed = "yes"
         active_stage = "WAIT_USER_DECISION"
         stage_reason = "decision_required"
+    elif submitted_waiting:
+        current_phase = phase_labels.get("EXECUTE", "执行推进")
+        current_blocker = "你的决策已提交，正在等待后端消费确认"
+        next_action = "我会继续轮询后端消费状态，一旦确认推进就马上同步你"
+        active_stage = "EXECUTE"
+        stage_reason = "decision_submitted_waiting_consume"
     elif run_status == "blocked" or gate_blocked_on_internal:
-        current_phase = gate_label or "当前评审"
+        current_phase = gate_label or phase_labels.get(active_stage, "") or "当前评审"
         if gate_label:
             current_blocker = f"{gate_label}这一步还卡着，后续推进要先等这个点处理掉"
             next_action = f"先把{gate_label}卡点处理掉，处理完马上继续推进"
         else:
-            current_blocker = "当前评审这一步还卡着，后续推进要先等这个点处理掉"
+            current_blocker = gate_reason or "当前评审这一步还卡着，后续推进要先等这个点处理掉"
             next_action = "先把当前卡点处理掉，处理完马上继续推进"
         active_stage = "VERIFY" if gate_blocked_on_internal else "RECOVER"
         stage_reason = "blocked_state_detected"
     elif run_status in {"running", "in_progress", "working"}:
-        current_phase = gate_label or "执行推进"
+        current_phase = phase_labels.get(active_stage, "") or gate_label or "执行推进"
         current_blocker = "none"
         active_stage = "EXECUTE"
         stage_reason = "run_status_running"
     else:
-        current_phase = gate_label or "处理中"
+        current_phase = phase_labels.get(active_stage, "") or gate_label or "处理中"
         current_blocker = "none"
-        active_stage = "PLAN"
-        stage_reason = "status_pending_execution"
+        if not runtime_phase:
+            active_stage = "PLAN"
+            stage_reason = "status_pending_execution"
+
+    if current_blocker == "none" and gate_reason and gate_reason.lower() not in {"none", "n/a"} and active_stage in {"RECOVER", "VERIFY"}:
+        current_blocker = gate_reason
+
+    proof_refs: list[str] = []
+    if run_id:
+        proof_refs.append(f"run_id={run_id}")
+    runtime_proof_refs = runtime_latest.get("proof_refs", [])
+    if isinstance(runtime_proof_refs, list):
+        for item in runtime_proof_refs:
+            ref = sanitize_inline_text(str(item), max_chars=180)
+            if ref and ref not in proof_refs:
+                proof_refs.append(ref)
+                if len(proof_refs) >= 4:
+                    break
 
     return {
         "current_task_goal": task_goal,
@@ -2828,7 +2957,7 @@ def build_progress_binding(*, project_context: dict[str, Any] | None, task_summa
         "question_needed": question_needed,
         "next_action": sanitize_inline_text(next_action, max_chars=220),
         "blocking_question": decision_question,
-        "proof_refs": [f"run_id={run_id}"] if run_id else [],
+        "proof_refs": proof_refs,
     }
 
 
@@ -2841,15 +2970,30 @@ def build_progress_digest(*, project_context: dict[str, Any] | None, task_summar
     status = project_context.get("status", {})
     if not isinstance(status, dict):
         status = {}
+    runtime_state = _project_runtime_state(project_context)
     gate = status.get("gate", {})
     if not isinstance(gate, dict):
         gate = {}
+    runtime_gate = runtime_state.get("gate", {})
+    if isinstance(runtime_gate, dict) and runtime_gate:
+        gate = runtime_gate
     payload = {
         "run_id": sanitize_inline_text(str(project_context.get("run_id", "")), max_chars=80),
-        "run_status": sanitize_inline_text(str(status.get("run_status", "")), max_chars=40),
-        "verify_result": sanitize_inline_text(str(status.get("verify_result", "")), max_chars=20),
+        "phase": sanitize_inline_text(str(runtime_state.get("phase", "")), max_chars=40),
+        "run_status": sanitize_inline_text(
+            str(runtime_state.get("run_status", "")).strip() or str(status.get("run_status", "")).strip(),
+            max_chars=40,
+        ),
+        "verify_result": sanitize_inline_text(
+            str(runtime_state.get("verify_result", "")).strip() or str(status.get("verify_result", "")).strip(),
+            max_chars=20,
+        ),
         "gate_state": sanitize_inline_text(str(gate.get("state", "")), max_chars=40),
-        "gate_reason": sanitize_inline_text(str(gate.get("reason", "")), max_chars=220),
+        "gate_reason": sanitize_inline_text(
+            str(runtime_state.get("blocking_reason", "")).strip() or str(gate.get("reason", "")).strip(),
+            max_chars=220,
+        ),
+        "needs_user_decision": bool(runtime_state.get("needs_user_decision", False) or status.get("needs_user_decision", False)),
         "progress_binding": binding,
     }
     raw = json.dumps(clean_json_value(payload), ensure_ascii=False, sort_keys=True)

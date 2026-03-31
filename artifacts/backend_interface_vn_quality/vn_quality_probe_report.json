@@ -1,0 +1,375 @@
+{
+  "run_id": "20260330-155307-057044-orchestrate",
+  "run_dir": "C:\\Users\\sunom\\AppData\\Local\\ctcp\\runs\\ctcp\\20260330-155307-057044-orchestrate",
+  "uploads": {
+    "brief": {
+      "run_id": "20260330-155307-057044-orchestrate",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\ctcp\\runs\\ctcp\\20260330-155307-057044-orchestrate",
+      "source_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\backend_interface_vn_quality\\inputs\\brief.txt",
+      "dest_path": "C:\\Users\\sunom\\AppData\\Local\\ctcp\\runs\\ctcp\\20260330-155307-057044-orchestrate\\artifacts\\frontend_uploads\\brief.txt",
+      "dest_rel": "artifacts/frontend_uploads/brief.txt",
+      "size_bytes": 149,
+      "mime_type": "text/plain",
+      "uploaded_at": "2026-03-30T07:53:07Z"
+    },
+    "logo": {
+      "run_id": "20260330-155307-057044-orchestrate",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\ctcp\\runs\\ctcp\\20260330-155307-057044-orchestrate",
+      "source_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\backend_interface_vn_quality\\inputs\\logo.png",
+      "dest_path": "C:\\Users\\sunom\\AppData\\Local\\ctcp\\runs\\ctcp\\20260330-155307-057044-orchestrate\\artifacts\\frontend_uploads\\logo.png",
+      "dest_rel": "artifacts/frontend_uploads/logo.png",
+      "size_bytes": 67,
+      "mime_type": "image/png",
+      "uploaded_at": "2026-03-30T07:53:07Z"
+    }
+  },
+  "decisions_count": 5,
+  "submitted": [
+    {
+      "run_id": "20260330-155307-057044-orchestrate",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\ctcp\\runs\\ctcp\\20260330-155307-057044-orchestrate",
+      "decision_id": "outbox:CONSTRAINTS",
+      "target_path": "artifacts/support_decisions/outbox_CONSTRAINTS.md",
+      "written": true,
+      "decision_status": "submitted",
+      "backend_acknowledged": false,
+      "remaining_decisions": 4,
+      "needs_user_decision": true,
+      "updated_at": "2026-03-30T07:53:27Z"
+    },
+    {
+      "run_id": "20260330-155307-057044-orchestrate",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\ctcp\\runs\\ctcp\\20260330-155307-057044-orchestrate",
+      "decision_id": "outbox:CONTEXT",
+      "target_path": "artifacts/support_decisions/outbox_CONTEXT.md",
+      "written": true,
+      "decision_status": "submitted",
+      "backend_acknowledged": false,
+      "remaining_decisions": 3,
+      "needs_user_decision": true,
+      "updated_at": "2026-03-30T07:53:28Z"
+    },
+    {
+      "run_id": "20260330-155307-057044-orchestrate",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\ctcp\\runs\\ctcp\\20260330-155307-057044-orchestrate",
+      "decision_id": "outbox:EXTERNALS",
+      "target_path": "artifacts/support_decisions/outbox_EXTERNALS.md",
+      "written": true,
+      "decision_status": "submitted",
+      "backend_acknowledged": false,
+      "remaining_decisions": 2,
+      "needs_user_decision": true,
+      "updated_at": "2026-03-30T07:53:28Z"
+    },
+    {
+      "run_id": "20260330-155307-057044-orchestrate",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\ctcp\\runs\\ctcp\\20260330-155307-057044-orchestrate",
+      "decision_id": "outbox:FIX_BRIEF",
+      "target_path": "artifacts/support_decisions/outbox_FIX_BRIEF.md",
+      "written": true,
+      "decision_status": "submitted",
+      "backend_acknowledged": false,
+      "remaining_decisions": 1,
+      "needs_user_decision": true,
+      "updated_at": "2026-03-30T07:53:29Z"
+    },
+    {
+      "run_id": "20260330-155307-057044-orchestrate",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\ctcp\\runs\\ctcp\\20260330-155307-057044-orchestrate",
+      "decision_id": "outbox:PLAN",
+      "target_path": "artifacts/support_decisions/outbox_PLAN.md",
+      "written": true,
+      "decision_status": "submitted",
+      "backend_acknowledged": false,
+      "remaining_decisions": 0,
+      "needs_user_decision": false,
+      "updated_at": "2026-03-30T07:53:29Z"
+    }
+  ],
+  "generated_files": {
+    "index_html": "artifacts/vn_story_tree_hq_project/index.html",
+    "styles_css": "artifacts/vn_story_tree_hq_project/styles.css",
+    "readme_md": "artifacts/vn_story_tree_hq_project/README.md",
+    "app_js": "artifacts/vn_story_tree_hq_project/app.js",
+    "seed_json": "artifacts/vn_story_tree_hq_project/story_seed.json",
+    "preview_png": "artifacts/vn_story_tree_hq_project/preview.png"
+  },
+  "outputs": {
+    "run_id": "20260330-155307-057044-orchestrate",
+    "run_dir": "C:\\Users\\sunom\\AppData\\Local\\ctcp\\runs\\ctcp\\20260330-155307-057044-orchestrate",
+    "artifacts": [
+      {
+        "artifact_id": "f3546758e878f923a5b725a32d48c34ca3e69c1e",
+        "rel_path": "api_calls.jsonl",
+        "kind": "other",
+        "mime_type": "application/octet-stream",
+        "size_bytes": 378,
+        "created_at": "2026-03-30T07:53:22Z"
+      },
+      {
+        "artifact_id": "59981be68c60b93c42bd1dd87e98c82a51b6a66e",
+        "rel_path": "artifacts/analysis.md",
+        "kind": "code",
+        "mime_type": "text/markdown",
+        "size_bytes": 1263,
+        "created_at": "2026-03-30T07:53:22Z"
+      },
+      {
+        "artifact_id": "1888c178ec80131bf7631b35a515eea58f62b8c1",
+        "rel_path": "artifacts/dispatch_config.json",
+        "kind": "code",
+        "mime_type": "application/json",
+        "size_bytes": 189,
+        "created_at": "2026-03-30T07:53:07Z"
+      },
+      {
+        "artifact_id": "fcf9ba594e9c48592f3570b8b8789f472dcfb9f8",
+        "rel_path": "artifacts/find_result.json",
+        "kind": "code",
+        "mime_type": "application/json",
+        "size_bytes": 1433,
+        "created_at": "2026-03-30T07:53:26Z"
+      },
+      {
+        "artifact_id": "916dd6937aa2c611957b9011254e436a8b4adeae",
+        "rel_path": "artifacts/frontend_request.json",
+        "kind": "code",
+        "mime_type": "application/json",
+        "size_bytes": 1548,
+        "created_at": "2026-03-30T07:53:07Z"
+      },
+      {
+        "artifact_id": "983fd9b3b805b47d7f609fdb05371787252804c6",
+        "rel_path": "artifacts/guardrails.md",
+        "kind": "code",
+        "mime_type": "text/markdown",
+        "size_bytes": 161,
+        "created_at": "2026-03-30T07:53:07Z"
+      },
+      {
+        "artifact_id": "b0ccb82fc720f33abaa0cc10207fa9c4cbc4b6dc",
+        "rel_path": "artifacts/guardrails.template.md",
+        "kind": "code",
+        "mime_type": "text/markdown",
+        "size_bytes": 161,
+        "created_at": "2026-03-30T07:53:07Z"
+      },
+      {
+        "artifact_id": "9341b89eef3751eb6f2651e39fce32aceb9d8684",
+        "rel_path": "artifacts/support_runtime_state.json",
+        "kind": "code",
+        "mime_type": "application/json",
+        "size_bytes": 8895,
+        "created_at": "2026-03-30T07:53:29Z"
+      },
+      {
+        "artifact_id": "2400e02414f4c7d71995a92721037d142116d041",
+        "rel_path": "artifacts/support_whiteboard.json",
+        "kind": "code",
+        "mime_type": "application/json",
+        "size_bytes": 769,
+        "created_at": "2026-03-30T07:53:22Z"
+      },
+      {
+        "artifact_id": "bd7acba2e0b87555a980a736f484278dd3b6d61a",
+        "rel_path": "artifacts/support_whiteboard.md",
+        "kind": "code",
+        "mime_type": "text/markdown",
+        "size_bytes": 238,
+        "created_at": "2026-03-30T07:53:22Z"
+      },
+      {
+        "artifact_id": "3896b3692332a565f0dc79bb7159b93eaa23fce3",
+        "rel_path": "artifacts/vn_story_tree_hq_project/app.js",
+        "kind": "code",
+        "mime_type": "text/javascript",
+        "size_bytes": 2125,
+        "created_at": "2026-03-30T07:53:29Z"
+      },
+      {
+        "artifact_id": "166334ba3c850abcbaf7906518cfc126c6f2b7fc",
+        "rel_path": "artifacts/vn_story_tree_hq_project/index.html",
+        "kind": "code",
+        "mime_type": "text/html",
+        "size_bytes": 2658,
+        "created_at": "2026-03-30T07:53:29Z"
+      },
+      {
+        "artifact_id": "77eb41d82a6d354fc9e93c6fc8128e487b44c455",
+        "rel_path": "artifacts/vn_story_tree_hq_project/preview.png",
+        "kind": "image",
+        "mime_type": "image/png",
+        "size_bytes": 67,
+        "created_at": "2026-03-30T07:53:29Z"
+      },
+      {
+        "artifact_id": "0dcabd57456df2d63550c8c927c5fdbae41bfd0a",
+        "rel_path": "artifacts/vn_story_tree_hq_project/README.md",
+        "kind": "code",
+        "mime_type": "text/markdown",
+        "size_bytes": 619,
+        "created_at": "2026-03-30T07:53:29Z"
+      },
+      {
+        "artifact_id": "d99d1f2afd8dfcca254bb474ac6fb3fc0357ae9d",
+        "rel_path": "artifacts/vn_story_tree_hq_project/story_seed.json",
+        "kind": "code",
+        "mime_type": "application/json",
+        "size_bytes": 848,
+        "created_at": "2026-03-30T07:53:29Z"
+      },
+      {
+        "artifact_id": "f6af9e5e3cb76dae2a2b0d13a99001cfdb8b6811",
+        "rel_path": "artifacts/vn_story_tree_hq_project/styles.css",
+        "kind": "code",
+        "mime_type": "text/css",
+        "size_bytes": 1936,
+        "created_at": "2026-03-30T07:53:29Z"
+      },
+      {
+        "artifact_id": "6d7f430162c7ca7e2ae98efed34401f51be269c6",
+        "rel_path": "logs/agent.stderr",
+        "kind": "other",
+        "mime_type": "application/octet-stream",
+        "size_bytes": 0,
+        "created_at": "2026-03-30T07:53:22Z"
+      },
+      {
+        "artifact_id": "8abc53701495da9686e464c3285b6e8d8d810fb0",
+        "rel_path": "logs/agent.stdout",
+        "kind": "other",
+        "mime_type": "application/octet-stream",
+        "size_bytes": 1264,
+        "created_at": "2026-03-30T07:53:22Z"
+      },
+      {
+        "artifact_id": "426444afe8c7bdf89af60da4b37b1e7b50b99547",
+        "rel_path": "logs/find.stderr.log",
+        "kind": "other",
+        "mime_type": "application/octet-stream",
+        "size_bytes": 0,
+        "created_at": "2026-03-30T07:53:26Z"
+      },
+      {
+        "artifact_id": "fa36938ac6b3cb285d6e783ece314889af81edad",
+        "rel_path": "logs/find.stdout.log",
+        "kind": "other",
+        "mime_type": "application/octet-stream",
+        "size_bytes": 180,
+        "created_at": "2026-03-30T07:53:26Z"
+      },
+      {
+        "artifact_id": "f8b2b1a1daf934708e3dcc9f0a48846f9bfa5c54",
+        "rel_path": "logs/plan_agent.stderr",
+        "kind": "other",
+        "mime_type": "application/octet-stream",
+        "size_bytes": 0,
+        "created_at": "2026-03-30T07:53:15Z"
+      },
+      {
+        "artifact_id": "ed5cd53b2ea2561444a4e324958223b0d8b0a51b",
+        "rel_path": "logs/plan_agent.stdout",
+        "kind": "other",
+        "mime_type": "application/octet-stream",
+        "size_bytes": 1234,
+        "created_at": "2026-03-30T07:53:15Z"
+      },
+      {
+        "artifact_id": "4f064441638afdab62597c61fb7d4408134a3d0b",
+        "rel_path": "repo_ref.json",
+        "kind": "code",
+        "mime_type": "application/json",
+        "size_bytes": 233,
+        "created_at": "2026-03-30T07:53:07Z"
+      },
+      {
+        "artifact_id": "88a5b2e8c6bfb14296c4611bcaa6f896c1fcbe32",
+        "rel_path": "step_meta.jsonl",
+        "kind": "other",
+        "mime_type": "application/octet-stream",
+        "size_bytes": 456,
+        "created_at": "2026-03-30T07:53:22Z"
+      },
+      {
+        "artifact_id": "765f381b7c5caa92ff4cf03d794234fef24d319d",
+        "rel_path": "TRACE.md",
+        "kind": "code",
+        "mime_type": "text/markdown",
+        "size_bytes": 496,
+        "created_at": "2026-03-30T07:53:26Z"
+      }
+    ],
+    "count": 25
+  },
+  "meta_index": {
+    "run_id": "20260330-155307-057044-orchestrate",
+    "run_dir": "C:\\Users\\sunom\\AppData\\Local\\ctcp\\runs\\ctcp\\20260330-155307-057044-orchestrate",
+    "artifact_id": "166334ba3c850abcbaf7906518cfc126c6f2b7fc",
+    "rel_path": "artifacts/vn_story_tree_hq_project/index.html",
+    "kind": "code",
+    "mime_type": "text/html",
+    "size_bytes": 2658,
+    "sha256": "fb03c8cdae76f1f6b7a6d688a3261e4eecee86c12e2c14e8f85711d1d79e83d6",
+    "created_at": "2026-03-30T07:53:29Z"
+  },
+  "read_index_preview": "<!doctype html>\n<html lang=\"zh-CN\">\n<head>\n  <meta charset=\"utf-8\" />\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\" />\n  <title>VN 剧情树与背景梳理台（高质量探测）</title>\n  <link rel=\"stylesheet\" href=\"./styles.css\" />\n</head>\n<body>\n  <div class=\"wrap\">\n    <section class=\"hero\">\n      <img class=\"logo\" alt=\"logo\" src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==\" />\n      <div>\n        <h1>VN 剧情树与背景梳理台</h1>\n        <p>用于首稿阶段快速统一剧情树、人物背景、场景背景，并导出结构化草案。</p>\n      </div>\n    </section>\n    <section class=\"grid\">\n     ",
+  "meta_preview": {
+    "run_id": "20260330-155307-057044-orchestrate",
+    "run_dir": "C:\\Users\\sunom\\AppData\\Local\\ctcp\\runs\\ctcp\\20260330-155307-057044-orchestrate",
+    "artifact_id": "77eb41d82a6d354fc9e93c6fc8128e487b44c455",
+    "rel_path": "artifacts/vn_story_tree_hq_project/preview.png",
+    "kind": "image",
+    "mime_type": "image/png",
+    "size_bytes": 67,
+    "sha256": "ebf4f635a17d10d6eb46ba680b70142419aa3220f228001a036d311a22ee9d2a",
+    "created_at": "2026-03-30T07:53:29Z"
+  },
+  "read_preview": {
+    "download_path": "C:\\Users\\sunom\\AppData\\Local\\ctcp\\runs\\ctcp\\20260330-155307-057044-orchestrate\\artifacts\\vn_story_tree_hq_project\\preview.png",
+    "size_bytes": 67
+  },
+  "current_snapshot": {
+    "task_id": "20260330-155307-057044-orchestrate",
+    "authoritative_stage": "EXECUTE",
+    "visible_state": "EXECUTING",
+    "conversation_mode": "",
+    "current_task_goal": "高质量首稿探测：VN剧情树与背景梳理台",
+    "known_facts": [],
+    "missing_fields": [],
+    "last_confirmed_items": [],
+    "current_blocker": "decision_submitted_waiting_backend_consume",
+    "blocking_question": "decision_submitted_waiting_backend_consume",
+    "next_action": "waiting for file_request.json",
+    "proof_refs": [
+      "TRACE.md"
+    ],
+    "verify_result": "",
+    "snapshot_source": "bridge_runtime_mapping",
+    "updated_at": "2026-03-30T07:53:30Z"
+  },
+  "render_snapshot": {
+    "task_id": "20260330-155307-057044-orchestrate",
+    "ui_badge": "in_progress",
+    "reply_style": "progressive",
+    "followup_questions": [],
+    "decision_cards": [],
+    "visible_state": "EXECUTING",
+    "progress_summary": "decision_submitted_waiting_backend_consume",
+    "proof_refs": [
+      "TRACE.md"
+    ],
+    "snapshot_source": "bridge_runtime_mapping",
+    "updated_at": "2026-03-30T07:53:30Z"
+  },
+  "quality": {
+    "score": 100,
+    "checks": {
+      "required_files": true,
+      "has_js_logic": true,
+      "index_rich_structure": true,
+      "css_non_trivial": true,
+      "readme_guidance": true,
+      "preview_exists": true
+    }
+  }
+}
