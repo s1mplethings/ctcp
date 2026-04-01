@@ -496,10 +496,11 @@ def _write_runtime_state(run_dir: Path, state: dict[str, Any]) -> None:
 
 
 def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
-    # Refresh orchestrator status first so RUN/verify artifacts are read at the newest point.
+    # Backend-interface-first refresh:
+    # - canonical runtime snapshot is primary truth
+    # - orchestrate status output is metadata only
+    # - no outbox/questions/RUN/verify file peeking for primary state synthesis
     status_cmd = _orchestrate_status(run_dir)
-    run_doc = _read_json(run_dir / "RUN.json")
-    verify_doc = _read_json(run_dir / "artifacts" / "verify_report.json")
     parsed = status_cmd.get("parsed", {}) if isinstance(status_cmd.get("parsed"), dict) else {}
     gate_state = str(parsed.get("next", "") or parsed.get("gate_state", "")).strip().lower()
     gate = {
@@ -508,49 +509,48 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
         "path": str(parsed.get("path", "")).strip(),
         "reason": str(parsed.get("reason", "") or parsed.get("blocked", "")).strip(),
     }
-    iterations = {
-        "current": int(run_doc.get("verify_iterations", 0) or 0),
-        "max": int(run_doc.get("max_iterations", 0) or 0),
-        "source": str(run_doc.get("max_iterations_source", "")).strip(),
-    }
     latest_status_raw = {
         "exit_code": int(status_cmd.get("exit_code", 0) or 0),
         "stdout": str(status_cmd.get("stdout", "")),
         "stderr": str(status_cmd.get("stderr", "")),
     }
-    run_status = str(run_doc.get("status", "")).strip().lower()
-    verify_result = str(verify_doc.get("result", "")).strip().upper()
-    verify_gate = str(verify_doc.get("gate", "")).strip().lower()
     now_ts = _now_utc_iso()
     previous_state = _read_runtime_state(run_dir)
 
-    core_hash = _runtime_core_hash(
-        {
-            "run_status": run_status,
-            "verify_result": verify_result,
-            "verify_gate": verify_gate,
-            "gate": gate,
-            "iterations": iterations,
-            "latest_status_raw": latest_status_raw,
-        }
-    )
-    decision_registry = _merge_decision_registry(
-        previous_state=previous_state,
-        pending_from_legacy=_scan_pending_decisions_from_legacy(run_dir),
-        core_hash=core_hash,
-        now_ts=now_ts,
-    )
-    pending_user_decisions = [
-        row for row in decision_registry if str(row.get("status", "")).strip().lower() == "pending"
-    ]
-    open_decisions = [
-        row for row in decision_registry if str(row.get("status", "")).strip().lower() in _USER_DECISION_STATUSES
-    ]
-    submitted_open = [
-        row for row in decision_registry if str(row.get("status", "")).strip().lower() == "submitted"
-    ]
+    previous_iterations = previous_state.get("iterations", {}) if isinstance(previous_state.get("iterations", {}), dict) else {}
+    iterations = {
+        "current": int(previous_iterations.get("current", 0) or 0),
+        "max": int(previous_iterations.get("max", 0) or 0),
+        "source": str(previous_iterations.get("source", "")).strip(),
+    }
+    run_status = str(parsed.get("run_status", "")).strip().lower()
+    if not run_status:
+        run_status = str(previous_state.get("run_status", "")).strip().lower()
+    verify_result = str(previous_state.get("verify_result", "")).strip().upper()
+    verify_gate = str(previous_state.get("verify_gate", "")).strip().lower()
+
+    raw_decisions = previous_state.get("decisions", [])
+    if not isinstance(raw_decisions, list):
+        raw_decisions = []
+    decision_registry: list[dict[str, Any]] = []
+    for item in raw_decisions:
+        if not isinstance(item, dict):
+            continue
+        normalized = _normalize_decision_row(item, now_ts=now_ts, status_fallback="pending")
+        if not str(normalized.get("decision_id", "")).strip():
+            continue
+        decision_registry.append(normalized)
+
+    pending_user_decisions = [row for row in decision_registry if str(row.get("status", "")).strip().lower() == "pending"]
+    open_decisions = [row for row in decision_registry if str(row.get("status", "")).strip().lower() in _USER_DECISION_STATUSES]
+    submitted_open = [row for row in decision_registry if str(row.get("status", "")).strip().lower() == "submitted"]
     needs_user_decision = bool(pending_user_decisions)
+
     has_error = run_status in _ERROR_RUN_STATUSES or gate_state in _ERROR_GATE_STATES or verify_result == "FAIL"
+    previous_error = previous_state.get("error", {})
+    if isinstance(previous_error, dict) and bool(previous_error.get("has_error", False)):
+        has_error = True
+
     phase = _derive_runtime_phase(
         run_status=run_status,
         verify_result=verify_result,
@@ -571,6 +571,8 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
         blocking_reason = str(gate.get("reason", "")).strip() or f"run_status={run_status or 'error'}"
     elif gate_state == "blocked":
         blocking_reason = str(gate.get("reason", "")).strip() or "blocked"
+    elif str(previous_state.get("blocking_reason", "")).strip():
+        blocking_reason = str(previous_state.get("blocking_reason", "")).strip()
 
     error_doc = {
         "has_error": bool(has_error),
@@ -589,6 +591,18 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
         "gate": gate,
         "status_raw": latest_status_raw,
     }
+    core_hash = _runtime_core_hash(
+        {
+            "run_status": run_status,
+            "verify_result": verify_result,
+            "verify_gate": verify_gate,
+            "gate": gate,
+            "iterations": iterations,
+            "latest_status_raw": latest_status_raw,
+            "decisions": decision_registry,
+        }
+    )
+
     snapshot = {
         "schema_version": "ctcp-support-runtime-state-v1",
         "run_id": _run_id_from_dir(run_dir),
@@ -611,7 +625,7 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
         "submitted_decisions_count": len(submitted_open),
         "core_hash": core_hash,
         "updated_at": now_ts,
-        "snapshot_source": "canonical_snapshot",
+        "snapshot_source": "backend_interface_snapshot",
     }
     _write_runtime_state(run_dir, snapshot)
     return snapshot
@@ -821,20 +835,26 @@ def ctcp_get_status(run_id: str = "") -> dict[str, Any]:
 
 def ctcp_get_support_context(run_id: str = "") -> dict[str, Any]:
     run_dir = _resolve_run_dir(run_id)
-    status = ctcp_get_status(_run_id_from_dir(run_dir))
-    decisions = ctcp_list_decisions_needed(_run_id_from_dir(run_dir))
+    rid = _run_id_from_dir(run_dir)
+    status = ctcp_get_status(rid)
+    decisions = ctcp_list_decisions_needed(rid)
+    current_snapshot = ctcp_get_current_state_snapshot(rid)
+    render_snapshot = ctcp_get_render_state_snapshot(rid)
+    output_artifacts = ctcp_list_output_artifacts(rid)
     whiteboard = ctcp_dispatch.get_support_whiteboard_context(run_dir)
     frontend_request = _read_json(run_dir / "artifacts" / "frontend_request.json")
-    run_doc = _read_json(run_dir / "RUN.json")
     return {
-        "run_id": _run_id_from_dir(run_dir),
+        "run_id": rid,
         "run_dir": str(run_dir),
         "status": status,
         "runtime_state": dict(status.get("runtime_state", {}) if isinstance(status.get("runtime_state", {}), dict) else {}),
+        "current_snapshot": current_snapshot,
+        "render_snapshot": render_snapshot,
         "decisions": decisions,
+        "output_artifacts": output_artifacts,
         "whiteboard": whiteboard,
         "frontend_request": frontend_request,
-        "goal": str(frontend_request.get("goal", "") or run_doc.get("goal", "")).strip(),
+        "goal": str(frontend_request.get("goal", "")).strip(),
     }
 
 
@@ -1001,7 +1021,7 @@ def ctcp_get_current_state_snapshot(run_id: str = "") -> dict[str, Any]:
     if not isinstance(runtime_state, dict):
         runtime_state = {}
     frontend_request = _read_json(run_dir / "artifacts" / "frontend_request.json")
-    goal = str(frontend_request.get("goal", "")).strip()
+    goal = str(frontend_request.get("goal", "")).strip() or str(runtime_state.get("goal", "")).strip()
     gate = runtime_state.get("gate", {})
     if not isinstance(gate, dict):
         gate = {}
@@ -1019,12 +1039,9 @@ def ctcp_get_current_state_snapshot(run_id: str = "") -> dict[str, Any]:
             break
     if not blocking_question:
         blocking_question = str(runtime_state.get("blocking_reason", "")).strip()
-    proof_refs: list[str] = []
-    verify_path = run_dir / "artifacts" / "verify_report.json"
-    if verify_path.exists():
-        proof_refs.append("artifacts/verify_report.json")
-    if (run_dir / "TRACE.md").exists():
-        proof_refs.append("TRACE.md")
+    proof_refs = runtime_state.get("proof_refs", [])
+    if not isinstance(proof_refs, list):
+        proof_refs = []
     authoritative_stage = str(runtime_state.get("phase", "")).strip().upper() or "EXECUTE"
     return {
         "task_id": _run_id_from_dir(run_dir),

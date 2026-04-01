@@ -1,0 +1,40 @@
+{
+  "schema_version": "ctcp-project-output-contract-v1",
+  "project_id": "<project_id>",
+  "frozen": true,
+  "stages": [
+    "intake",
+    "scope_freeze",
+    "output_contract_freeze",
+    "structure_plan",
+    "source_generation",
+    "docs_generation",
+    "workflow_generation",
+    "artifact_manifest_build",
+    "verify",
+    "deliver"
+  ],
+  "reference_project_mode": {
+    "enabled": false,
+    "mode": "structure_only",
+    "source_project": "",
+    "reference_style_applied": []
+  },
+  "required_interfaces": [
+    "list_output_artifacts",
+    "get_output_artifact_meta",
+    "read_output_artifact",
+    "get_project_manifest"
+  ],
+  "layers": {
+    "source_files": [],
+    "doc_files": [],
+    "workflow_files": []
+  },
+  "required_assets": {
+    "images": [],
+    "other_resources": []
+  },
+  "acceptance_files": [],
+  "assumptions_path": "docs/assumptions.md"
+}

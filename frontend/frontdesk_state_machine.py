@@ -4,17 +4,13 @@ import re
 from typing import Any, Literal, Mapping
 
 FrontdeskState = Literal[
-    "Idle",
-    "IntentDetect",
-    "Collect",
-    "Clarify",
-    "Confirm",
-    "Execute",
-    "AwaitDecision",
-    "ReturnResult",
-    "InterruptRecover",
-    "StyleAdjust",
-    "Error",
+    "idle",
+    "collecting_input",
+    "showing_progress",
+    "waiting_user_reply",
+    "showing_decision",
+    "showing_result",
+    "showing_error",
 ]
 
 InterruptKind = Literal[
@@ -29,17 +25,13 @@ InterruptKind = Literal[
 ]
 
 FRONTDESK_STATES: tuple[FrontdeskState, ...] = (
-    "Idle",
-    "IntentDetect",
-    "Collect",
-    "Clarify",
-    "Confirm",
-    "Execute",
-    "AwaitDecision",
-    "ReturnResult",
-    "InterruptRecover",
-    "StyleAdjust",
-    "Error",
+    "idle",
+    "collecting_input",
+    "showing_progress",
+    "waiting_user_reply",
+    "showing_decision",
+    "showing_result",
+    "showing_error",
 )
 
 INTERRUPT_KINDS: tuple[InterruptKind, ...] = (
@@ -54,49 +46,33 @@ INTERRUPT_KINDS: tuple[InterruptKind, ...] = (
 )
 
 STATE_DEFINITIONS: dict[FrontdeskState, dict[str, Any]] = {
-    "Idle": {
-        "purpose": "No active task line is currently being worked by the frontdesk.",
-        "next_states": ["IntentDetect", "StyleAdjust"],
+    "idle": {
+        "purpose": "No active task is bound in display layer.",
+        "next_states": ["collecting_input", "showing_progress", "waiting_user_reply"],
     },
-    "IntentDetect": {
-        "purpose": "Classify the latest turn before choosing reply strategy.",
-        "next_states": ["Collect", "Clarify", "Confirm", "Execute", "AwaitDecision", "ReturnResult", "InterruptRecover", "StyleAdjust", "Error"],
+    "collecting_input": {
+        "purpose": "Collect minimal missing user inputs.",
+        "next_states": ["waiting_user_reply", "showing_progress", "showing_decision"],
     },
-    "Collect": {
-        "purpose": "Capture the minimum task object needed to continue.",
-        "next_states": ["Clarify", "Confirm", "Execute", "Error"],
+    "showing_progress": {
+        "purpose": "Render backend progress without owning execution truth.",
+        "next_states": ["showing_decision", "showing_result", "showing_error", "waiting_user_reply"],
     },
-    "Clarify": {
-        "purpose": "Ask only the blocking detail or mutually exclusive choice.",
-        "next_states": ["Confirm", "Execute", "AwaitDecision", "Error"],
+    "waiting_user_reply": {
+        "purpose": "Wait for user clarification/reply from display flow.",
+        "next_states": ["showing_progress", "showing_decision", "showing_error"],
     },
-    "Confirm": {
-        "purpose": "Lock the current task line before or while entering execution.",
-        "next_states": ["Execute", "Clarify", "AwaitDecision", "Error"],
+    "showing_decision": {
+        "purpose": "Show backend-provided decision cards only.",
+        "next_states": ["showing_progress", "showing_result", "showing_error"],
     },
-    "Execute": {
-        "purpose": "Keep the current task moving and answer from run truth.",
-        "next_states": ["AwaitDecision", "ReturnResult", "InterruptRecover", "Error"],
+    "showing_result": {
+        "purpose": "Show backend-confirmed result/event/artifact outputs.",
+        "next_states": ["showing_progress", "idle", "showing_error"],
     },
-    "AwaitDecision": {
-        "purpose": "Surface a concrete user decision without losing the task line.",
-        "next_states": ["Execute", "ReturnResult", "Error"],
-    },
-    "ReturnResult": {
-        "purpose": "Return concrete progress or result for the active task.",
-        "next_states": ["Execute", "InterruptRecover", "Idle", "Error"],
-    },
-    "InterruptRecover": {
-        "purpose": "Handle interruptions while preserving resumable task state.",
-        "next_states": ["Execute", "AwaitDecision", "ReturnResult", "Collect", "StyleAdjust", "Error"],
-    },
-    "StyleAdjust": {
-        "purpose": "Persist style preferences without replacing the active task.",
-        "next_states": ["Idle", "IntentDetect", "Execute", "InterruptRecover"],
-    },
-    "Error": {
-        "purpose": "Expose the failing stage in a user-safe way and preserve resumable context.",
-        "next_states": ["IntentDetect", "Execute", "AwaitDecision", "ReturnResult"],
+    "showing_error": {
+        "purpose": "Show backend-reported error/recovery states.",
+        "next_states": ["waiting_user_reply", "showing_progress", "showing_decision"],
     },
 }
 
@@ -153,7 +129,7 @@ def default_style_profile(default_language: str = "") -> dict[str, str]:
 
 def default_frontdesk_state(default_language: str = "") -> dict[str, Any]:
     return {
-        "state": "Idle",
+        "state": "idle",
         "interrupt_kind": "",
         "current_goal": "",
         "current_scope": "",
@@ -182,7 +158,7 @@ def normalize_style_profile(raw: Any, default_language: str = "") -> dict[str, s
 def normalize_frontdesk_state(raw: Any, default_language: str = "") -> dict[str, Any]:
     state = default_frontdesk_state(default_language)
     data = raw if isinstance(raw, Mapping) else {}
-    raw_state = _norm(data.get("state", ""))
+    raw_state = _norm(data.get("state", "")).lower()
     if raw_state in FRONTDESK_STATES:
         state["state"] = raw_state
     raw_interrupt = _norm(data.get("interrupt_kind", ""))
@@ -212,13 +188,13 @@ def normalize_frontdesk_state(raw: Any, default_language: str = "") -> dict[str,
                 {
                     "decision_id": _norm(row.get("decision_id", "")),
                     "question": question,
-                    "status": _norm(row.get("status", "")),
+                    "status": _norm(row.get("status", "")) or "pending",
                 }
             )
-        state["decision_points"] = out_points[:4]
+        state["decision_points"] = out_points[:8]
     artifacts = data.get("artifacts", [])
     if isinstance(artifacts, list):
-        state["artifacts"] = [_norm(item) for item in artifacts if _norm(item)][:6]
+        state["artifacts"] = [_norm(item) for item in artifacts if _norm(item)][:8]
     return state
 
 
@@ -278,12 +254,65 @@ def classify_interrupt_kind(
     return ""
 
 
+def _render_snapshot(project_context: Mapping[str, Any]) -> Mapping[str, Any]:
+    for key in ("render_snapshot", "render_state_snapshot", "render_state"):
+        candidate = project_context.get(key, {})
+        if isinstance(candidate, Mapping) and candidate:
+            return candidate
+    return {}
+
+
+def _current_snapshot(project_context: Mapping[str, Any]) -> Mapping[str, Any]:
+    for key in ("current_snapshot", "current_state_snapshot", "current_state"):
+        candidate = project_context.get(key, {})
+        if isinstance(candidate, Mapping) and candidate:
+            return candidate
+    return {}
+
+
 def _decision_points_from_project_context(project_context: Mapping[str, Any]) -> list[dict[str, str]]:
+    render = _as_mapping(_render_snapshot(project_context))
+    decision_cards = render.get("decision_cards", [])
+    if isinstance(decision_cards, list):
+        out: list[dict[str, str]] = []
+        for item in decision_cards:
+            row = _as_mapping(item)
+            question = _norm(row.get("question", "") or row.get("question_hint", ""))
+            if not question:
+                continue
+            out.append(
+                {
+                    "decision_id": _norm(row.get("decision_id", "")),
+                    "question": question,
+                    "status": _norm(row.get("status", "")) or "pending",
+                }
+            )
+        if out:
+            return out[:8]
+
+    decisions = _as_mapping(project_context.get("decisions", {}))
+    rows = decisions.get("decisions", [])
+    if isinstance(rows, list):
+        out = []
+        for item in rows:
+            row = _as_mapping(item)
+            question = _norm(row.get("question", "") or row.get("question_hint", ""))
+            if not question:
+                continue
+            out.append(
+                {
+                    "decision_id": _norm(row.get("decision_id", "")),
+                    "question": question,
+                    "status": _norm(row.get("status", "")) or "pending",
+                }
+            )
+        if out:
+            return out[:8]
+
     runtime_state = _as_mapping(project_context.get("runtime_state", {}))
-    has_runtime_pending_field = "pending_decisions" in runtime_state
     runtime_rows = runtime_state.get("pending_decisions", [])
     if isinstance(runtime_rows, list):
-        out: list[dict[str, str]] = []
+        out = []
         for item in runtime_rows:
             row = _as_mapping(item)
             question = _norm(row.get("question", "") or row.get("question_hint", ""))
@@ -296,62 +325,39 @@ def _decision_points_from_project_context(project_context: Mapping[str, Any]) ->
                     "status": _norm(row.get("status", "")) or "pending",
                 }
             )
-        if out or has_runtime_pending_field:
-            return out[:4]
-
-    decisions = _as_mapping(project_context.get("decisions", {}))
-    rows = decisions.get("decisions", [])
-    if not isinstance(rows, list):
-        rows = []
-    out: list[dict[str, str]] = []
-    for item in rows:
-        row = _as_mapping(item)
-        question = _norm(row.get("question_hint", "") or row.get("question", ""))
-        if not question:
-            continue
-        out.append(
-            {
-                "decision_id": _norm(row.get("decision_id", "")),
-                "question": question,
-                "status": _norm(row.get("status", "")),
-            }
-        )
-    if out:
-        return out[:4]
-    status = _as_mapping(project_context.get("status", {}))
-    gate = _as_mapping(status.get("gate", {}))
-    if bool(status.get("needs_user_decision", False)):
-        question = _norm(gate.get("reason", "")) or "decision required"
-        return [{"decision_id": "", "question": question, "status": "pending"}]
+        if out:
+            return out[:8]
     return []
 
 
-def _artifacts_from_context(project_context: Mapping[str, Any] | None, delivery_state: Mapping[str, Any] | None) -> list[str]:
+def _artifacts_from_context(project_context: Mapping[str, Any] | None) -> list[str]:
+    if not isinstance(project_context, Mapping):
+        return []
     out: list[str] = []
-    if isinstance(project_context, Mapping):
-        run_id = _norm(project_context.get("run_id", ""))
-        if run_id:
-            out.append(f"run_id={run_id}")
-        status = _as_mapping(project_context.get("status", {}))
-        verify_result = _norm(status.get("verify_result", ""))
-        if verify_result:
-            out.append(f"verify={verify_result}")
-        whiteboard = _as_mapping(project_context.get("whiteboard", {}))
-        path = _norm(whiteboard.get("path", ""))
-        if path:
-            out.append(path)
-    if isinstance(delivery_state, Mapping):
-        if bool(delivery_state.get("package_ready", False)):
-            out.append("delivery:package_ready")
-        if bool(delivery_state.get("screenshot_ready", False)):
-            out.append("delivery:screenshot_ready")
-    return out[:6]
-
-
-def _delivery_ready(delivery_state: Mapping[str, Any] | None) -> bool:
-    if not isinstance(delivery_state, Mapping):
-        return False
-    return bool(delivery_state.get("package_ready", False) or delivery_state.get("screenshot_ready", False))
+    listing = project_context.get("output_artifacts", {})
+    rows = []
+    if isinstance(listing, Mapping):
+        value = listing.get("artifacts", [])
+        rows = value if isinstance(value, list) else []
+    for item in rows[:6]:
+        row = _as_mapping(item)
+        rel = _norm(row.get("rel_path", ""))
+        if rel:
+            out.append(rel)
+    manifest = _as_mapping(project_context.get("artifact_manifest", {}))
+    for key in ("source_files", "doc_files", "workflow_files"):
+        value = manifest.get(key, [])
+        if isinstance(value, list):
+            for path in value:
+                normalized = _norm(path)
+                if normalized and normalized not in out:
+                    out.append(normalized)
+                    if len(out) >= 8:
+                        return out
+    run_id = _norm(project_context.get("run_id", ""))
+    if run_id and (not out):
+        out.append(f"run_id={run_id}")
+    return out[:8]
 
 
 def derive_frontdesk_state(
@@ -364,14 +370,15 @@ def derive_frontdesk_state(
     provider_result: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     session = _as_mapping(session_state)
+    project = _as_mapping(project_context)
     profile_state = _as_mapping(session.get("session_profile", {}))
     default_language = _norm(profile_state.get("lang_hint", "")).lower()
     previous = normalize_frontdesk_state(session.get("frontdesk_state", {}), default_language)
-    runtime_state = _as_mapping(_as_mapping(project_context).get("runtime_state", {}))
-    runtime_latest = _as_mapping(runtime_state.get("latest_result", {}))
-    runtime_error = _as_mapping(runtime_state.get("error", {}))
-    status = _as_mapping(_as_mapping(project_context).get("status", {}))
-    gate = _as_mapping(status.get("gate", {}))
+
+    render = _as_mapping(_render_snapshot(project))
+    current = _as_mapping(_current_snapshot(project))
+    runtime_state = _as_mapping(project.get("runtime_state", {}))
+
     project_memory = _as_mapping(session.get("project_memory", {}))
     project_constraints = _as_mapping(session.get("project_constraints_memory", {}))
     execution_memory = _as_mapping(session.get("execution_memory", {}))
@@ -379,7 +386,7 @@ def derive_frontdesk_state(
     current_goal = (
         _norm(project_memory.get("project_brief", ""))
         or _norm(session.get("task_summary", ""))
-        or _norm(_as_mapping(project_context).get("goal", ""))
+        or _norm(project.get("goal", ""))
         or _norm(previous.get("current_goal", ""))
     )
     current_scope = (
@@ -390,124 +397,107 @@ def derive_frontdesk_state(
     )
     active_task_id = (
         _norm(session.get("bound_run_id", ""))
-        or _norm(_as_mapping(project_context).get("run_id", ""))
+        or _norm(project.get("run_id", ""))
         or _norm(previous.get("active_task_id", ""))
     )
     has_active_task = bool(active_task_id or current_goal)
-    phase = _norm(runtime_state.get("phase", "")).upper()
-    run_status = (_norm(runtime_state.get("run_status", "")).lower() or _norm(status.get("run_status", "")).lower())
-    verify_result = (
-        _norm(runtime_state.get("verify_result", "")).upper()
-        or _norm(runtime_latest.get("verify_result", "")).upper()
-        or _norm(status.get("verify_result", "")).upper()
-    )
-    done = (
-        phase in {"FINALIZE", "DELIVER", "DELIVERED"}
-        or (verify_result == "PASS" and run_status in {"pass", "done", "completed", "success"})
-    )
-    decision_points = _decision_points_from_project_context(_as_mapping(project_context))
-    pending_decision_points = [
-        row for row in decision_points if _norm(_as_mapping(row).get("status", "")).lower() in {"", "pending"}
-    ]
-    needs_decision = bool(runtime_state.get("needs_user_decision", False))
-    has_runtime_needs_field = "needs_user_decision" in runtime_state
-    if (not needs_decision) and (not has_runtime_needs_field):
-        needs_decision = bool(status.get("needs_user_decision", False)) or bool(pending_decision_points)
-    blocked_reason = _norm(runtime_state.get("blocking_reason", "")) or _norm(gate.get("reason", "")) or _norm(_as_mapping(project_context).get("error", ""))
-    if not blocked_reason:
-        blocked_reason = _norm(_as_mapping(provider_result).get("reason", ""))
 
     style_profile, style_changed = apply_style_preferences(
         user_text,
         current_profile=previous.get("user_style_profile", {}),
         default_language=default_language,
     )
+
+    decision_points = _decision_points_from_project_context(project)
+    pending_decision_points = [
+        row for row in decision_points if _norm(_as_mapping(row).get("status", "")).lower() in {"", "pending"}
+    ]
+
+    visible_state = _norm(render.get("visible_state", "")).upper()
+    ui_badge = _norm(render.get("ui_badge", "")).lower()
+    followup_questions = render.get("followup_questions", [])
+    if not isinstance(followup_questions, list):
+        followup_questions = []
+
+    decision_from_render = bool(render.get("decision_cards", [])) if isinstance(render.get("decision_cards", []), list) else False
+    needs_decision = bool(pending_decision_points) or decision_from_render or visible_state == "WAITING_FOR_DECISION"
+
+    authoritative_stage = _norm(current.get("authoritative_stage", "")).upper() or _norm(runtime_state.get("phase", "")).upper()
+    has_error = (
+        visible_state in {"BLOCKED_NEEDS_INPUT", "ERROR"}
+        or ui_badge in {"error", "failed"}
+        or authoritative_stage in {"FAILED"}
+        or bool(_as_mapping(runtime_state.get("error", {})).get("has_error", False))
+        or _norm(_as_mapping(provider_result).get("status", "")).lower() in {"exec_failed", "failed", "error"}
+    )
+
+    result_event = _as_mapping(project.get("result_event", {}))
+    artifact_manifest = _as_mapping(project.get("artifact_manifest", {}))
+    output_artifacts = _as_mapping(project.get("output_artifacts", {}))
+    output_rows = output_artifacts.get("artifacts", [])
+    has_output_payload = isinstance(output_rows, list) and len(output_rows) > 0
+    has_result_payload = bool(result_event) or bool(artifact_manifest) or bool(has_output_payload)
+    done_from_render = visible_state == "DONE"
+
+    blocked_reason = (
+        _norm(current.get("current_blocker", ""))
+        or _norm(render.get("progress_summary", ""))
+        or _norm(previous.get("blocked_reason", ""))
+    )
+
+    mode = _norm(conversation_mode).upper()
     interrupt_kind = classify_interrupt_kind(
         user_text=user_text,
         conversation_mode=conversation_mode,
         has_active_task=has_active_task,
         style_changed=style_changed,
-        result_ready=done or _delivery_ready(delivery_state),
+        result_ready=bool(done_from_render and has_result_payload),
     )
-    normalized_user_text = _norm(user_text)
-    if interrupt_kind == "override" and normalized_user_text and normalized_user_text in {current_goal, current_scope}:
-        interrupt_kind = ""
 
-    previous_state = _norm(previous.get("state", ""))
-    resumable_state = _norm(previous.get("resumable_state", ""))
-    if not resumable_state and previous_state not in {"", "Idle", "IntentDetect", "StyleAdjust"}:
-        resumable_state = previous_state
-    if not resumable_state and has_active_task:
-        resumable_state = "Execute"
-
-    error_status = _norm(_as_mapping(provider_result).get("status", "")).lower()
-    has_error = bool(runtime_error.get("has_error", False)) or bool(_as_mapping(project_context).get("error")) or error_status in {"exec_failed", "failed", "error"}
-    mode = _norm(conversation_mode).upper()
-    state: FrontdeskState = "IntentDetect"
-    state_reason = ""
+    state: FrontdeskState = "showing_progress"
+    state_reason = "render_progress"
     waiting_for = ""
 
     if has_error:
-        state = "Error"
-        state_reason = "runtime_or_provider_failure"
-    elif style_changed:
-        state = "StyleAdjust"
-        state_reason = "style_profile_updated"
+        state = "showing_error"
+        state_reason = "backend_error_or_blocked"
     elif needs_decision or mode == "PROJECT_DECISION_REPLY":
-        state = "AwaitDecision"
-        state_reason = "user_decision_required"
+        state = "showing_decision"
+        state_reason = "backend_decision_required"
         if pending_decision_points:
             waiting_for = _norm(pending_decision_points[0].get("question", ""))
         elif decision_points:
             waiting_for = _norm(decision_points[0].get("question", ""))
-    elif interrupt_kind == "result_query" or (mode == "STATUS_QUERY" and done):
-        state = "ReturnResult"
-        state_reason = "result_or_delivery_requested"
-    elif interrupt_kind in {"status_query", "clarify", "redirect", "override", "sidequest"} and has_active_task:
-        state = "InterruptRecover"
-        state_reason = f"interrupt:{interrupt_kind}"
-    elif phase in {"FINALIZE", "DELIVER", "DELIVERED"} and has_active_task:
-        state = "ReturnResult"
-        state_reason = "runtime_phase_finalized"
-    elif phase in {"EXECUTE", "VERIFY"} and has_active_task:
-        state = "Execute"
-        state_reason = "runtime_phase_execution"
-    elif phase == "RECOVER" and has_active_task:
-        state = "Error"
-        state_reason = "runtime_phase_recover"
-    elif mode in {"GREETING", "SMALLTALK", "CAPABILITY_QUERY"} and has_active_task:
-        state = "InterruptRecover"
-        state_reason = "non_project_turn_preserves_active_task"
+    elif done_from_render and has_result_payload:
+        state = "showing_result"
+        state_reason = "backend_render_done_with_payload"
+    elif style_changed:
+        state = "waiting_user_reply"
+        state_reason = "style_profile_updated"
     elif not current_goal:
-        state = "Idle" if mode in {"GREETING", "SMALLTALK", "CAPABILITY_QUERY"} else "Collect"
-        state_reason = "no_bound_goal"
+        state = "idle" if mode in {"GREETING", "SMALLTALK", "CAPABILITY_QUERY"} else "collecting_input"
+        state_reason = "goal_missing"
     elif mode == "PROJECT_INTAKE":
-        state = "Collect" if not active_task_id else "Confirm"
+        state = "collecting_input"
         state_reason = "project_intake"
-    elif mode == "PROJECT_DETAIL":
-        if not current_scope:
-            state = "Clarify"
-            state_reason = "scope_missing"
-        elif active_task_id:
-            state = "Execute"
-            state_reason = "active_task_detail_followup"
-        else:
-            state = "Confirm"
-            state_reason = "detail_without_bound_run"
-    elif mode == "STATUS_QUERY":
-        state = "ReturnResult" if done else ("Execute" if active_task_id else "IntentDetect")
-        state_reason = "status_followup"
-    elif active_task_id:
-        state = "ReturnResult" if done else "Execute"
-        state_reason = "active_task_present"
+    elif mode == "PROJECT_DETAIL" and followup_questions:
+        state = "waiting_user_reply"
+        state_reason = "render_followup_question"
+        waiting_for = _norm(followup_questions[0]) if followup_questions else ""
+    elif visible_state in {"UNDERSTOOD", "EXECUTING", ""}:
+        state = "showing_progress"
+        state_reason = "render_progress"
     else:
-        state = "Confirm"
-        state_reason = "goal_present_without_bound_run"
+        state = "showing_progress"
+        state_reason = "default_render_progress"
 
-    if state in {"Execute", "AwaitDecision", "ReturnResult", "InterruptRecover", "StyleAdjust"} and not resumable_state and has_active_task:
-        resumable_state = "Execute"
-    if state == "StyleAdjust" and not resumable_state:
-        resumable_state = "Idle"
+    if state == "showing_result" and (not has_result_payload):
+        state = "showing_progress"
+        state_reason = "render_done_without_payload"
+
+    resumable_state = ""
+    if state in {"showing_progress", "showing_decision", "waiting_user_reply", "showing_result"} and has_active_task:
+        resumable_state = "showing_progress"
 
     return normalize_frontdesk_state(
         {
@@ -519,7 +509,7 @@ def derive_frontdesk_state(
             "waiting_for": waiting_for or _norm(previous.get("waiting_for", "")),
             "user_style_profile": style_profile,
             "decision_points": decision_points,
-            "artifacts": _artifacts_from_context(project_context, delivery_state),
+            "artifacts": _artifacts_from_context(project_context),
             "blocked_reason": blocked_reason,
             "resumable_state": resumable_state,
             "latest_conversation_mode": mode,
@@ -580,22 +570,20 @@ def reply_strategy_from_frontdesk_state(
     active_task = bool(state["active_task_id"])
     interrupt = state["interrupt_kind"]
     prefer_frontend_render = state["state"] in {
-        "Collect",
-        "Clarify",
-        "Confirm",
-        "Execute",
-        "AwaitDecision",
-        "ReturnResult",
-        "InterruptRecover",
-        "Error",
+        "collecting_input",
+        "showing_progress",
+        "waiting_user_reply",
+        "showing_decision",
+        "showing_result",
+        "showing_error",
     }
-    prefer_progress_binding = interrupt in {"status_query", "result_query"} or state["state"] == "ReturnResult" or mode == "STATUS_QUERY"
+    prefer_progress_binding = interrupt in {"status_query", "result_query"} or state["state"] in {"showing_progress", "showing_result"} or mode == "STATUS_QUERY"
     if mode in {"GREETING", "SMALLTALK", "CAPABILITY_QUERY"}:
         allow_existing_project_reference = False
     elif interrupt in {"status_query", "result_query"}:
         allow_existing_project_reference = active_task
     else:
-        allow_existing_project_reference = active_task and state["state"] not in {"Idle", "IntentDetect", "StyleAdjust"}
+        allow_existing_project_reference = active_task and state["state"] not in {"idle", "collecting_input"}
     return {
         "allow_existing_project_reference": bool(allow_existing_project_reference),
         "latest_turn_only": not bool(allow_existing_project_reference),

@@ -30,6 +30,14 @@ Two state layers are mandatory and must not be mixed:
 
 Visible state is a render layer for frontend/frontdesk/support shell. It must not overwrite authoritative runtime truth.
 
+Truth binding:
+- `current.json` is runtime truth for shared-state execution view.
+- `render.json` is display truth for UI/support rendering view.
+- `render.json` must be derived from `current.json`; it cannot mint a parallel done state.
+
+Frontdesk display-state constraint:
+- frontdesk state machine is render-only and must stay in display states (`idle`, `collecting_input`, `showing_progress`, `waiting_user_reply`, `showing_decision`, `showing_result`, `showing_error`).
+
 ## Event Stream and Snapshots
 
 Shared workspace layout:
@@ -86,6 +94,16 @@ Minimum supported event types:
 - `next_action`
 - `proof_refs`
 - `verify_result`
+- `artifact_completeness`
+  - `source_layer_ready`
+  - `documentation_layer_ready`
+  - `workflow_layer_ready`
+  - `missing_files_count`
+  - `manifest_ready`
+  - `interfaces_readable`
+- `project_completion_gate`
+  - `status` (`blocked|ready`)
+  - `reasons[]`
 
 `render.json` minimum fields:
 
@@ -97,6 +115,12 @@ Minimum supported event types:
 - `visible_state`
 - `progress_summary`
 - `proof_refs`
+- `project_delivery_summary`
+  - `source_layer`
+  - `documentation_layer`
+  - `workflow_layer`
+  - `missing_files_count`
+  - `completion_status`
 
 ## Support Bridge Canonical Snapshot
 
@@ -136,6 +160,7 @@ Bridge rule:
 - Runtime progression confirmation requires either:
   - decision status transitions to `consumed`, or
   - canonical runtime snapshot core state advances after submission.
+- Completion confirmation requires all artifact-completeness fields to be ready; `run done` or `verify pass` alone is insufficient.
 
 ## Write Permissions
 
@@ -166,6 +191,7 @@ Write permissions are strict and source-scoped:
 ## Forbidden Actions
 
 - UI/support shell directly deciding `DONE` from ad-hoc file checks.
+- UI/support shell deciding `DONE` from only `run_status`, `verify_result`, report, or trace without manifest-backed artifact completeness.
 - Response generation layer acting as runtime truth authority.
 - Any module bypassing event append and mutating authoritative state directly.
 - Letting visible state overwrite authoritative stage.

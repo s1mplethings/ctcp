@@ -159,6 +159,59 @@ class BackendInterfaceContractApiTests(unittest.TestCase):
                 self.assertIn("decision_cards", render)
                 self.assertIn("progress_summary", render)
 
+    def test_bridge_does_not_peek_outbox_or_questions_for_primary_decision_truth(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_iface_no_file_peek_") as td:
+            run_dir = Path(td)
+            _state, fake = _make_fake_runtime(run_dir)
+
+            # Legacy files intentionally conflict with canonical runtime snapshot.
+            (run_dir / "outbox").mkdir(parents=True, exist_ok=True)
+            (run_dir / "outbox" / "legacy_decision.md").write_text(
+                "Role: chair\nAction: decision\nTarget-Path: artifacts/support_decisions/legacy.md\nReason: legacy pending\n",
+                encoding="utf-8",
+            )
+            (run_dir / "QUESTIONS.md").write_text("- legacy question should be ignored\\n", encoding="utf-8")
+            _write_json(run_dir / "RUN.json", {"status": "blocked", "goal": "legacy"})
+            _write_json(run_dir / "artifacts" / "verify_report.json", {"result": "PASS", "gate": "workflow"})
+
+            _write_json(
+                run_dir / "artifacts" / "support_runtime_state.json",
+                {
+                    "schema_version": "ctcp-support-runtime-state-v1",
+                    "run_id": "run-x",
+                    "run_dir": str(run_dir),
+                    "phase": "EXECUTE",
+                    "run_status": "running",
+                    "blocking_reason": "none",
+                    "needs_user_decision": False,
+                    "pending_decisions": [],
+                    "decisions": [],
+                    "latest_result": {"verify_result": "", "verify_gate": "", "iterations": {}, "gate": {}, "status_raw": {}},
+                    "error": {"has_error": False},
+                    "recovery": {"needed": False, "hint": "", "status": "none"},
+                    "gate": {"state": "open", "owner": "", "path": "", "reason": ""},
+                    "iterations": {"current": 0, "max": 0, "source": ""},
+                    "verify_result": "",
+                    "verify_gate": "",
+                    "decisions_needed_count": 0,
+                    "open_decisions_count": 0,
+                    "submitted_decisions_count": 0,
+                    "core_hash": "seed",
+                    "updated_at": "2026-03-31T00:00:00Z",
+                    "snapshot_source": "test",
+                },
+            )
+
+            with mock.patch.object(ctcp_front_bridge, "_resolve_run_dir", return_value=run_dir), mock.patch.object(
+                ctcp_front_bridge, "_run_cmd", side_effect=fake
+            ):
+                decisions = ctcp_front_bridge.list_pending_decisions("run-x")
+                status = ctcp_front_bridge.get_run_status("run-x")
+
+            self.assertEqual(int(decisions.get("count", 0) or 0), 0)
+            self.assertFalse(bool(status.get("needs_user_decision", False)))
+            self.assertEqual(int(status.get("decisions_needed_count", 0) or 0), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

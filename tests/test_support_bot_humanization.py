@@ -235,8 +235,8 @@ class SupportBotHumanizationTests(unittest.TestCase):
             )
 
         self.assertIn('"frontdesk_state": {', prompt)
-        self.assertIn('"state": "StyleAdjust"', prompt)
-        self.assertIn('"resumable_state": "Execute"', prompt)
+        self.assertIn('"state": "waiting_user_reply"', prompt)
+        self.assertIn('"resumable_state": "showing_progress"', prompt)
         self.assertIn('"verbosity": "brief"', prompt)
         self.assertIn('"tone": "natural"', prompt)
         self.assertIn('"current_goal": ""', prompt)
@@ -1684,7 +1684,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             self.assertIn("我会继续处理：", reply)
             self.assertNotIn("你好，随时可以开始", reply)
             self.assertNotEqual(reply.strip(), "你好，随时可以开始。你说说看要做什么？")
-            self.assertEqual(str(session_state.get("frontdesk_state", {}).get("state", "")), "Idle")
+        self.assertEqual(str(session_state.get("frontdesk_state", {}).get("state", "")), "idle")
 
     def test_process_message_greeting_does_not_reset_real_progress_digest(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_progress_baseline_guard_") as td:
@@ -1825,7 +1825,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
                 "error": {"has_error": False},
                 "gate": {"state": "open", "owner": "patchmaker", "reason": "working"},
             },
-            "decisions": {"count": 1, "decisions": [{"decision_id": "legacy", "question_hint": "legacy"}]},
+            "decisions": {"count": 0, "decisions": []},
             "whiteboard": {},
         }
 
@@ -1921,6 +1921,16 @@ class SupportBotHumanizationTests(unittest.TestCase):
                 "needs_user_decision": False,
                 "decisions_needed_count": 0,
                 "gate": {"state": "closed", "owner": "", "reason": ""},
+            },
+            "render_snapshot": {
+                "visible_state": "DONE",
+                "ui_badge": "success",
+                "progress_summary": "ready",
+            },
+            "artifact_manifest": {
+                "source_files": ["src/main.py"],
+                "doc_files": ["docs/overview.md"],
+                "workflow_files": ["PLAN.md"],
             },
             "decisions": {"count": 0, "decisions": []},
             "whiteboard": {},

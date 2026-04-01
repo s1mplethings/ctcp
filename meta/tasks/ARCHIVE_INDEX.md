@@ -7,6 +7,7 @@
 
 | Date | Topic | File |
 |------|-------|------|
+| 2026-04-01 | MD 导航锚点与 CURRENT/LAST 薄指针对齐 | [→](archive/20260401-md-navigation-pointer-alignment.md) |
 | 2026-03-21 | src 功能边界拆分（Bridge 瘦身 + 单一文件操作适配层） | [→](archive/20260321-src-functional-boundary-refactor.md) |
 | 2026-03-17 | Support frontdesk 显式状态机与任务槽位接线 | [→](archive/20260317-support-frontdesk-state-machine.md) |
 | 2026-03-17 | Support 旧项目进度追问绑定真实 run 状态 | [→](archive/20260317-support-previous-project-status-grounding.md) |

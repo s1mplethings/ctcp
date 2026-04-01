@@ -2584,6 +2584,118 @@
       },
       "status": "doing",
       "notes": "Bound on 2026-03-29 to introduce append-only shared state workspace with authoritative-vs-visible layering and adapter-based frontend/runtime integration under existing contract-first verify-gated architecture."
+    },
+    {
+      "id": "ADHOC-20260331-low-capability-project-generation-hardening",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Harden project generation chain for low-capability models with complete-project output contracts",
+      "owner_role": "Chair/Planner",
+      "deps": [],
+      "dod": [
+        "Project generation flow is fixed to one narrow 10-stage path with explicit stage input/output, output-contract freeze before generation, and mandatory stage self-checks",
+        "Final project output contract requires Source + Documentation + Agent Workflow layers, enforces minimum closed-loop delivery, and forbids report-only completion",
+        "Backend/output contracts require formal artifact interfaces including list/meta/read plus project manifest retrieval, and DONE depends on artifact completeness and readable manifests"
+      ],
+      "artifacts": {
+        "produces": [
+          "docs/04_execution_flow.md",
+          "docs/03_quality_gates.md",
+          "docs/30_artifact_contracts.md",
+          "docs/40_reference_project.md",
+          "docs/backend_interface_contract.md",
+          "docs/shared_state_contract.md",
+          "docs/frontend_runtime_boundary.md",
+          "docs/13_contracts_index.md",
+          "docs/41_low_capability_project_generation.md",
+          "meta/templates/project_output_contract_template.json",
+          "meta/templates/project_manifest_template.json",
+          "meta/templates/project_generation_acceptance_checklist.md",
+          "meta/templates/project_assumptions_template.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python scripts/sync_doc_links.py --check",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile contract"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-03-31: added fixed low-capability project-generation contract (`docs/41`), hardened workflow/artifact/reference/backend/shared-state/frontend boundary contracts, added output/manifest/assumption/checklist templates, and passed canonical verify via `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile contract`."
+    },
+    {
+      "id": "ADHOC-20260331-frontdesk-backend-separation-render-only",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Refactor frontdesk/support to render-only frontend consumption with strict backend interface boundaries",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260331-low-capability-project-generation-hardening"
+      ],
+      "dod": [
+        "Frontdesk state machine is display-only and no longer infers execution truth/done/decision from backend internals",
+        "Support controller is reduced to throttle/dedupe/notification orchestration and consumes backend render/current snapshot fields instead of local truth synthesis",
+        "Front bridge/BFF path stops using RUN/outbox/verify/TRACE file peeking as primary status sources and relies on formal backend interfaces with regression coverage"
+      ],
+      "artifacts": {
+        "produces": [
+          "frontend/frontdesk_state_machine.py",
+          "scripts/ctcp_support_controller.py",
+          "scripts/ctcp_front_bridge.py",
+          "tests/test_frontdesk_state_machine.py",
+          "tests/test_backend_interface_contract_apis.py",
+          "tests/test_support_bot_humanization.py",
+          "docs/frontend_runtime_boundary.md",
+          "docs/backend_interface_contract.md",
+          "docs/shared_state_contract.md",
+          "docs/42_frontend_backend_separation_contract.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest tests/test_frontdesk_state_machine.py -v",
+          "python -m unittest tests/test_backend_interface_contract_apis.py -v",
+          "python -m unittest tests/test_support_bot_humanization.py -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-03-31: frontdesk is render-only display state machine, support controller is orchestration-only, bridge consumes formal backend interfaces without run-dir file peeking as primary truth, separation contracts/docs were updated, and `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` passed."
+    },
+    {
+      "id": "ADHOC-20260401-md-navigation-pointer-alignment",
+      "layer": "L2",
+      "priority": "P1",
+      "title": "Align markdown navigation claims with actual files and restore thin-pointer CURRENT/LAST flow",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260331-frontdesk-backend-separation-render-only"
+      ],
+      "dod": [
+        "AGENTS.md contains explicit TOC anchors for fast section jump and matches README/notes navigation claims",
+        "meta/tasks/CURRENT.md is reduced to a thin active-task pointer while preserving mandatory workflow evidence fields",
+        "meta/reports/LAST.md is reduced to a thin latest-report pointer with required read/plan/verify/demo evidence"
+      ],
+      "artifacts": {
+        "produces": [
+          "AGENTS.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260401-md-navigation-pointer-alignment.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260401-md-navigation-pointer-alignment.md",
+          "tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch"
+        ],
+        "tests": [
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-01: added AGENTS TOC anchors, restored thin-pointer CURRENT/LAST with archive-backed records, fixed SimLab lite compatibility (`CURRENT.md` Acceptance section + S16 fixture patch update), and passed canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` (lite replay 14/14)."
     }
   ]
 }

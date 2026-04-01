@@ -68,6 +68,22 @@ python scripts\ctcp_orchestrate.py scaffold-pointcloud `
 - Supports profile-specific export sets (`minimal|standard|full`, and pointcloud profiles).
 - Writes generation provenance metadata including source version and source commit.
 
+## Reference Project Mode (Structure/Workflow/Docs Style Reuse)
+
+In addition to source mode (`template|live-reference`), project generation supports `reference_project_mode` for style inheritance.
+
+Allowed `reference_project_mode` values:
+- `structure_only`
+- `workflow_only`
+- `docs_only`
+- `structure_workflow_docs`
+
+Boundary rules:
+- Reference mode reuses organization style (directories, docs/meta/tasks layering, state-file layout, workflow skeleton).
+- Reference mode MUST NOT directly copy unrelated business logic/history as generated project defaults.
+- Reference mode MUST NOT import irrelevant legacy files just because they exist in source project.
+- Reference mode MUST preserve task relevance and current output contract scope.
+
 ## Live-Reference Safety Boundary
 
 `meta/reference_export_manifest.yaml` is the only whitelist truth source for live-reference export.
@@ -105,6 +121,14 @@ Generated manifest is also extended to include source/export inventory fields:
 - `source_commit`
 - `source_mode`
 
+For reference project mode, manifest MUST also include:
+- `reference_project_mode`
+- `reference_style_applied`
+- `workflow_files`
+- `doc_files`
+- `source_files`
+- `missing_files`
+
 ## Run Evidence
 
 Scaffold run artifacts remain:
@@ -121,6 +145,11 @@ For live-reference, reports additionally record:
 - `inherited_copy_count`
 - `inherited_transform_count`
 
+For reference project mode, reports additionally record:
+- `reference_project_mode`
+- `reference_style_applied`
+- whether source/doc/workflow layers all passed completeness checks
+
 Version / provenance rule:
 - `source_version` MUST come only from root `VERSION`.
 - `source_version` mismatch between repo, generated project metadata, and scaffold run report is a metadata consistency failure.
@@ -132,3 +161,5 @@ Generated projects remain CTCP-style contract projects and can continue with:
 - project-local `scripts/verify_repo.ps1` / `scripts/verify_repo.sh` (if present in generated project)
 - `cos-user-v2p` (pointcloud project flow)
 - repository `new-run / advance` orchestration in normal CTCP execution chain
+
+Project generation completion is invalid if reference mode is enabled but output structure does not reflect declared reference style.

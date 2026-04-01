@@ -56,6 +56,27 @@ Supporting chains (mandatory when relevant):
 - Output: explicit implementation plan with checks, expected fix loop, and any required response-lint / persona-lab / showcase / metadata-consistency checks.
 - Stop condition: plan is recorded before implementation edits.
 
+### Project Generation Fixed Subflow (Low-Capability Path)
+
+When the task goal is project generation, Step 5 MUST freeze and enforce the following subflow:
+
+1. `intake`
+2. `scope_freeze`
+3. `output_contract_freeze`
+4. `structure_plan`
+5. `source_generation`
+6. `docs_generation`
+7. `workflow_generation`
+8. `artifact_manifest_build`
+9. `verify`
+10. `deliver`
+
+Hard rules for this subflow:
+- Stage order is fixed; no jump/skip.
+- Each stage must record explicit input/output and self-check result.
+- `output_contract_freeze` must complete before any generated source/docs/workflow file writes.
+- Completion is blocked unless manifest build confirms source/doc/workflow layer coverage and missing-file visibility.
+
 ## Step 6: Spec
 
 - Input: approved plan.

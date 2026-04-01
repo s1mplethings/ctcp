@@ -1274,8 +1274,13 @@ def _derive_active_stage(
     provider_result: dict[str, Any] | None,
 ) -> tuple[str, str]:
     mode = sanitize_inline_text(conversation_mode, max_chars=40).upper()
-    state_name = sanitize_inline_text(str((frontdesk_state or {}).get("state", "")), max_chars=40)
+    state_name = sanitize_inline_text(str((frontdesk_state or {}).get("state", "")), max_chars=40).lower()
     runtime_state = _project_runtime_state(project_context)
+    render_snapshot = {}
+    if isinstance(project_context, dict):
+        render_snapshot = project_context.get("render_snapshot", {}) or project_context.get("render_state_snapshot", {})
+    if not isinstance(render_snapshot, dict):
+        render_snapshot = {}
     runtime_phase = sanitize_inline_text(str(runtime_state.get("phase", "")), max_chars=40).upper()
     status = (project_context or {}).get("status", {}) if isinstance(project_context, dict) else {}
     if not isinstance(status, dict):
@@ -1294,7 +1299,11 @@ def _derive_active_stage(
     gate_state = sanitize_inline_text(str(gate.get("state", "")), max_chars=40).lower()
     gate_owner = sanitize_inline_text(str(gate.get("owner", "")), max_chars=80).lower()
     gate_reason = sanitize_inline_text(str(gate.get("reason", "")), max_chars=220).lower()
-    needs_decision = bool(runtime_state.get("needs_user_decision", False))
+    visible_state = sanitize_inline_text(str(render_snapshot.get("visible_state", "")), max_chars=40).upper()
+    decision_cards = render_snapshot.get("decision_cards", [])
+    if not isinstance(decision_cards, list):
+        decision_cards = []
+    needs_decision = bool(runtime_state.get("needs_user_decision", False)) or bool(decision_cards) or visible_state == "WAITING_FOR_DECISION"
     if not needs_decision:
         needs_decision = bool(status.get("needs_user_decision", False)) or int(status.get("decisions_needed_count", 0) or 0) > 0
     provider_status = sanitize_inline_text(str((provider_result or {}).get("status", "")), max_chars=32).lower()
@@ -1310,26 +1319,26 @@ def _derive_active_stage(
         return "RECOVER", "runtime_or_provider_failure"
     runtime_stage = _runtime_phase_to_support_stage(runtime_phase)
     if runtime_stage:
-        if runtime_stage == "DELIVER" and (not delivery_ready) and state_name != "ReturnResult":
+        if runtime_stage == "DELIVER" and (not delivery_ready) and state_name != "showing_result":
             return "FINALIZE", f"canonical_phase:{runtime_phase.lower()}_pending_delivery"
         return runtime_stage, f"canonical_phase:{runtime_phase.lower()}"
-    if needs_decision or state_name == "AwaitDecision":
+    if needs_decision or state_name == "showing_decision":
         return "WAIT_USER_DECISION", "decision_required"
-    if final_ready and (delivery_ready or state_name == "ReturnResult"):
+    if final_ready and (delivery_ready or state_name == "showing_result"):
         return "DELIVER", "final_ready_for_delivery"
     if final_ready:
         return "FINALIZE", "final_ready_pending_delivery_payload"
-    if state_name == "Clarify":
+    if state_name == "waiting_user_reply":
         return "CLARIFY", "frontdesk_clarify_state"
-    if state_name in {"Confirm"}:
-        return "PLAN", "frontdesk_plan_state"
-    if state_name in {"Collect", "Idle", "IntentDetect"} or mode in {"PROJECT_INTAKE", "GREETING", "SMALLTALK", "CAPABILITY_QUERY"}:
+    if state_name in {"collecting_input", "idle"} or mode in {"PROJECT_INTAKE", "GREETING", "SMALLTALK", "CAPABILITY_QUERY"}:
         return "INTAKE", "intake_or_non_project_turn"
-    if state_name in {"Execute", "InterruptRecover", "StyleAdjust"}:
+    if state_name == "showing_error":
+        return "RECOVER", "frontdesk_error_state"
+    if state_name == "showing_progress":
         if gate_state == "blocked" and ("review" in gate_owner or "review" in gate_reason or "verify" in gate_reason):
             return "VERIFY", "gate_blocked_on_review_verify_step"
         return "EXECUTE", "active_execution_state"
-    if state_name == "ReturnResult":
+    if state_name == "showing_result":
         return "FINALIZE", "result_packaging_state"
     if run_status in {"running", "in_progress", "working"}:
         return "EXECUTE", "run_status_running"

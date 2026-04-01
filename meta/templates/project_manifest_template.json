@@ -1,0 +1,24 @@
+{
+  "schema_version": "ctcp-project-manifest-v1",
+  "project_id": "<project_id>",
+  "source_files": [],
+  "doc_files": [],
+  "workflow_files": [],
+  "generated_files": [],
+  "missing_files": [],
+  "acceptance_files": [],
+  "reference_project_mode": {
+    "enabled": false,
+    "mode": "structure_only"
+  },
+  "reference_style_applied": [],
+  "artifacts": [
+    {
+      "artifact_ref": "",
+      "path": "",
+      "kind": "source|doc|workflow|image|resource",
+      "mime_type": "",
+      "readable": false
+    }
+  ]
+}

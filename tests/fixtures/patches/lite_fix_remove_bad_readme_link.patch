@@ -1,22 +1,23 @@
 diff --git a/README.md b/README.md
 --- a/README.md
 +++ b/README.md
-@@ -1,4 +1,5 @@
- # CTCP — ADLC + Multi-Agent Execution Engine
-+<!-- simlab-s16-touch-readme -->
+@@ -128,6 +128,7 @@
+ - [ai_context/00_AI_CONTRACT.md](ai_context/00_AI_CONTRACT.md)
+ - [ai_context/CTCP_FAST_RULES.md](ai_context/CTCP_FAST_RULES.md)
+ - [ai_context/problem_registry.md](ai_context/problem_registry.md)
++- [ai_context/decision_log.md](ai_context/decision_log.md)
  
- Human navigation map:
+ <!-- CTCP:DOC_INDEX:END -->
  
- - Agent main contract: `AGENTS.md`
 diff --git a/meta/tasks/CURRENT.md b/meta/tasks/CURRENT.md
 --- a/meta/tasks/CURRENT.md
 +++ b/meta/tasks/CURRENT.md
 @@ -1,4 +1,5 @@
- # Current Task
+ # Task - md-navigation-pointer-alignment
 +<!-- simlab-s16-touch-current -->
  
- > **用法**：本文件保留当前活跃任务指针，同时内嵌 workflow gate 所需的最新任务摘要。
- > 历史任务正文在 `meta/tasks/archive/`。
+ ## Active Task
+ 
 diff --git a/meta/reports/LAST.md b/meta/reports/LAST.md
 --- a/meta/reports/LAST.md
 +++ b/meta/reports/LAST.md
@@ -24,5 +25,5 @@ diff --git a/meta/reports/LAST.md b/meta/reports/LAST.md
  # Demo Report - LAST
 +<!-- simlab-s16-touch-report -->
  
- > **用法**：本文件保留最近一次报告指针，同时内嵌 workflow gate 所需的最新报告摘要。
- > 历史报告正文在 `meta/reports/archive/`。
+ ## Latest Report
+ 

@@ -1,5 +1,20 @@
 # CTCP Agent Contract
 
+<!-- TOC -->
+| Section | Anchor |
+|---------|--------|
+| Fast Rules | [→](#fast-rules) |
+| 1. Purpose | [→](#1-purpose) |
+| 2. Single Entry | [→](#2-single-entry) |
+| 3. Single Flow | [→](#3-single-flow) |
+| 4. Allowed Questions | [→](#4-allowed-questions) |
+| 5. Required Outputs | [→](#5-required-outputs) |
+| 6. Non-Negotiable Rules | [→](#6-non-negotiable-rules) |
+| 7. Routing | [→](#7-routing) |
+<!-- /TOC -->
+
+<a id="fast-rules"></a>
+
 ## 1. Purpose
 
 CTCP is a contract-first execution repo. Agents should make the smallest scoped change that satisfies the bound task, preserve auditability, and close through the canonical verify gate.

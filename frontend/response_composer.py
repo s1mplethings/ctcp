@@ -1001,17 +1001,21 @@ def run_internal_reply_pipeline(
                 frontdesk_question = question
                 break
     raw_backend = dict(raw_backend_state)
-    frontdesk_name = str(frontdesk_state.get("state", "")).strip()
-    frontdesk_interrupt = str(frontdesk_state.get("interrupt_kind", "")).strip()
-    if frontdesk_name == "AwaitDecision":
+    frontdesk_name = str(frontdesk_state.get("state", "")).strip().lower()
+    frontdesk_interrupt = str(frontdesk_state.get("interrupt_kind", "")).strip().lower()
+    is_decision_state = frontdesk_name in {"showing_decision", "awaitdecision"}
+    is_error_state = frontdesk_name in {"showing_error", "error"}
+    is_result_state = frontdesk_name in {"showing_result", "returnresult"}
+    is_recoverish_state = frontdesk_name in {"showing_error", "interruptrecover"}
+    if is_decision_state:
         raw_backend["waiting_for_decision"] = True
         raw_backend["decisions_count"] = max(int(raw_backend.get("decisions_count", 0) or 0), max(1, len(decision_points)))
         if frontdesk_question and not str(raw_next_question or "").strip():
             raw_next_question = frontdesk_question
-    elif frontdesk_name == "Error":
+    elif is_error_state:
         raw_backend["blocked_needs_input"] = True
         raw_backend["needs_input"] = bool(frontdesk_question or str(raw_next_question or "").strip())
-    elif frontdesk_name == "ReturnResult":
+    elif is_result_state:
         raw_backend["stage"] = str(raw_backend.get("stage", "")).strip() or "done"
 
     shared_binding: dict[str, Any] = {}
@@ -1042,9 +1046,9 @@ def run_internal_reply_pipeline(
         latest_user_message,
         active_task_state,
     )
-    if frontdesk_name == "AwaitDecision":
+    if is_decision_state:
         mode = "PROJECT_DECISION_REPLY"
-    elif frontdesk_name in {"ReturnResult", "InterruptRecover"} and frontdesk_interrupt in {"status_query", "result_query"}:
+    elif (is_result_state or is_recoverish_state) and frontdesk_interrupt in {"status_query", "result_query"}:
         mode = "STATUS_QUERY"
     signal_score = compute_task_signal_score(user_messages + ([latest_user_message] if latest_user_message else []))
     has_signal = has_sufficient_task_signal(user_messages + ([latest_user_message] if latest_user_message else []))
@@ -1073,7 +1077,7 @@ def run_internal_reply_pipeline(
     progress_requested = bool(progress_binding) and (
         mode == "STATUS_QUERY"
         or _is_progress_update_request(latest_user_message)
-        or (frontdesk_name in {"InterruptRecover", "ReturnResult"} and frontdesk_interrupt in {"status_query", "result_query"})
+        or ((is_recoverish_state or is_result_state) and frontdesk_interrupt in {"status_query", "result_query"})
     )
 
     if progress_requested:
@@ -1114,7 +1118,7 @@ def run_internal_reply_pipeline(
         state = _stage_final_emission(state)
         return state
 
-    if frontdesk_name == "AwaitDecision":
+    if is_decision_state:
         state.visible_state = "WAITING_FOR_DECISION"
         if frontdesk_question:
             state.candidate_questions = [frontdesk_question]

@@ -68,6 +68,12 @@ The following rule classes are part of contract acceptance and MUST be owned by 
 5. Persona regression lint
    - Authority: `docs/14_persona_test_lab.md` plus repo-local `persona_lab/` assets
    - Blocking when a patch changes task-progress dialogue, support reply style, or style-regression acceptance but does not update persona-lab rubrics/cases or explicitly record `persona_lab_impact: none`.
+6. Project output completeness lint (project-generation tasks)
+   - Authority: `docs/41_low_capability_project_generation.md`, `docs/30_artifact_contracts.md`, `docs/backend_interface_contract.md`
+   - Blocking when project generation claims completion without all three layers (source/doc/workflow), explicit `target/generated/missing/acceptance` file lists, or formal artifact interface readability (`list_output_artifacts`, `get_output_artifact_meta`, `read_output_artifact`, `get_project_manifest`).
+7. Output freeze sequencing lint (project-generation tasks)
+   - Authority: `docs/04_execution_flow.md`, `docs/41_low_capability_project_generation.md`
+   - Blocking when generated files are produced before `output_contract_freeze` artifacts are defined.
 
 ## 5) Failure Attribution for New Contract Lints
 
@@ -76,6 +82,7 @@ The following rule classes are part of contract acceptance and MUST be owned by 
 - Version mismatch is blocking; missing version in a note that makes no version claim is advisory.
 - Persona regression asset drift is blocking when the patch changes style contracts, support lane style behavior, or style acceptance criteria.
 - Conflicting legacy docs must be marked `deprecated` / `superseded` in the same patch rather than silently removed.
+- Project-generation completion is blocking if any required layer/interface/manifest field is missing or unreadable.
 
 ## 6) Optional Full Gate
 
@@ -91,4 +98,4 @@ If a failure class is not covered by current gates:
 1. Add the check to `scripts/verify_repo.ps1` and `.sh` (or shared gate script invoked by both).
 2. Add/adjust tests or scenarios so the new gate is reproducible.
 3. Update this document and `docs/30_artifact_contracts.md` in the same patch.
-4. If the failure class changes user-visible task dialogue, persona regression, or showcase semantics, update `docs/11_task_progress_dialogue.md`, `docs/14_persona_test_lab.md`, or `docs/40_reference_project.md` in the same patch.
+4. If the failure class changes user-visible task dialogue, persona regression, showcase semantics, or project-generation completion rules, update the relevant routed contracts in the same patch (`docs/11_task_progress_dialogue.md`, `docs/14_persona_test_lab.md`, `docs/40_reference_project.md`, `docs/41_low_capability_project_generation.md`).

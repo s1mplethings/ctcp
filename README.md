@@ -7,6 +7,7 @@ Human navigation map:
 - Expanded workflow reference: `docs/04_execution_flow.md`
 - Current task purpose/scope: `meta/tasks/CURRENT.md`
 - Runtime engineering truth: `docs/00_CORE.md`
+- Frontend/backend separation boundary: `docs/42_frontend_backend_separation_contract.md`
 
 This README is human-oriented quickstart and navigation. It does not act as the root agent contract.
 
@@ -89,6 +90,7 @@ python scripts\ctcp_orchestrate.py scaffold-pointcloud --out D:\v2p_projects\dem
 ```
 
 更多说明见 `docs/40_reference_project.md`，导出清单真源见 `meta/reference_export_manifest.yaml`。
+低能力模型友好的完整项目生成硬约束见 `docs/41_low_capability_project_generation.md`。
 
 ---
 

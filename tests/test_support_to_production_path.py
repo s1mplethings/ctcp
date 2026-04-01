@@ -357,20 +357,68 @@ class SupportToProductionPathTests(unittest.TestCase):
             state["gate_state"] = "blocked"
             state["gate_owner"] = "chair"
             state["gate_reason"] = "请确认交付格式"
-            outbox_prompt = run_dir / "outbox" / "decision_format.md"
-            outbox_prompt.parent.mkdir(parents=True, exist_ok=True)
-            outbox_prompt.write_text(
-                "\n".join(
-                    [
-                        "Role: chair/planner",
-                        "Action: decide",
-                        "Target-Path: artifacts/answers/delivery_format.md",
-                        "Reason: choose delivery format",
-                        "Question: 你这轮是先要 zip 包，还是先看截图？",
-                    ]
-                )
-                + "\n",
-                encoding="utf-8",
+            runtime_state_path = run_dir / "artifacts" / "support_runtime_state.json"
+            runtime_state_path.parent.mkdir(parents=True, exist_ok=True)
+            _write_json(
+                runtime_state_path,
+                {
+                    "schema_version": "ctcp-support-runtime-state-v1",
+                    "run_id": "r-canonical",
+                    "run_dir": str(run_dir),
+                    "phase": "WAIT_USER_DECISION",
+                    "run_status": "blocked",
+                    "blocking_reason": "请确认交付格式",
+                    "needs_user_decision": True,
+                    "pending_decisions": [
+                        {
+                            "decision_id": "canonical:delivery-format",
+                            "kind": "decision",
+                            "prompt_path": "artifacts/decision_prompt.md",
+                            "role": "chair/planner",
+                            "action": "decide",
+                            "target_path": "artifacts/answers/delivery_format.md",
+                            "reason": "choose delivery format",
+                            "question": "你这轮是先要 zip 包，还是先看截图？",
+                            "expected_format": "markdown",
+                            "schema": {"type": "string"},
+                            "status": "pending",
+                            "created_at": "2026-03-12T00:00:00Z",
+                            "submitted_at": "",
+                            "consumed_at": "",
+                        }
+                    ],
+                    "decisions": [
+                        {
+                            "decision_id": "canonical:delivery-format",
+                            "kind": "decision",
+                            "prompt_path": "artifacts/decision_prompt.md",
+                            "role": "chair/planner",
+                            "action": "decide",
+                            "target_path": "artifacts/answers/delivery_format.md",
+                            "reason": "choose delivery format",
+                            "question": "你这轮是先要 zip 包，还是先看截图？",
+                            "expected_format": "markdown",
+                            "schema": {"type": "string"},
+                            "status": "pending",
+                            "created_at": "2026-03-12T00:00:00Z",
+                            "submitted_at": "",
+                            "consumed_at": "",
+                        }
+                    ],
+                    "latest_result": {"verify_result": "", "verify_gate": "workflow", "iterations": {"current": 0, "max": 8, "source": "test"}, "gate": {}, "status_raw": {}},
+                    "error": {"has_error": False, "code": "", "message": ""},
+                    "recovery": {"needed": False, "hint": "", "status": "none"},
+                    "gate": {"state": "blocked", "owner": "chair", "path": "artifacts/PLAN.md", "reason": "请确认交付格式"},
+                    "iterations": {"current": 0, "max": 8, "source": "test"},
+                    "verify_result": "",
+                    "verify_gate": "workflow",
+                    "decisions_needed_count": 1,
+                    "open_decisions_count": 1,
+                    "submitted_decisions_count": 0,
+                    "core_hash": "test-core-hash",
+                    "updated_at": "2026-03-12T00:00:00Z",
+                    "snapshot_source": "canonical_snapshot",
+                },
             )
 
             with mock.patch.object(ctcp_front_bridge, "_resolve_run_dir", return_value=run_dir), mock.patch.object(
@@ -411,6 +459,32 @@ class SupportToProductionPathTests(unittest.TestCase):
                 state["gate_state"] = "open"
                 state["gate_owner"] = "patchmaker"
                 state["gate_reason"] = "continuing execution"
+                submitted_runtime_state = dict(status_submitted.get("runtime_state", {}))
+                decisions_rows = [
+                    dict(item)
+                    for item in list(submitted_runtime_state.get("decisions", []))
+                    if isinstance(item, dict)
+                ]
+                for item in decisions_rows:
+                    if str(item.get("decision_id", "")) != str(row.get("decision_id", "")):
+                        continue
+                    item["status"] = "consumed"
+                    item["consumed_at"] = "2026-03-12T00:05:00Z"
+                _write_json(
+                    runtime_state_path,
+                    {
+                        **submitted_runtime_state,
+                        "phase": "EXECUTE",
+                        "run_status": "running",
+                        "blocking_reason": "none",
+                        "needs_user_decision": False,
+                        "pending_decisions": [],
+                        "decisions": decisions_rows,
+                        "decisions_needed_count": 0,
+                        "open_decisions_count": 0,
+                        "submitted_decisions_count": 0,
+                    },
+                )
                 consumed_status = ctcp_front_bridge.ctcp_get_status("r-canonical")
                 decisions_after_consume = list(
                     dict(consumed_status.get("runtime_state", {})).get("decisions", [])
@@ -423,6 +497,22 @@ class SupportToProductionPathTests(unittest.TestCase):
                 state["verify_result"] = "PASS"
                 state["gate_state"] = "closed"
                 state["gate_reason"] = "done"
+                consumed_runtime_state = dict(consumed_status.get("runtime_state", {}))
+                _write_json(
+                    runtime_state_path,
+                    {
+                        **consumed_runtime_state,
+                        "phase": "FINALIZE",
+                        "run_status": "completed",
+                        "blocking_reason": "none",
+                        "needs_user_decision": False,
+                        "verify_result": "PASS",
+                        "verify_gate": "workflow",
+                        "decisions_needed_count": 0,
+                        "open_decisions_count": 0,
+                        "submitted_decisions_count": 0,
+                    },
+                )
                 final_status = ctcp_front_bridge.ctcp_get_status("r-canonical")
                 self.assertEqual(str(final_status.get("phase", "")), "FINALIZE")
                 self.assertEqual(int(final_status.get("decisions_needed_count", 0) or 0), 0)

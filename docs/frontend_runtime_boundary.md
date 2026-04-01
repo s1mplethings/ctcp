@@ -33,6 +33,8 @@ Support shell must read `render truth` only:
 
 If render state says not done, support shell cannot announce done.
 
+If render state says done but artifact completeness is not ready in current state, support shell must still treat delivery as blocked.
+
 ## Why User Explanation Is Not Engineering Truth
 
 User-visible explanation is necessary but not sufficient:
@@ -46,6 +48,7 @@ Therefore:
 - frontend reply generation consumes shared `current/render` snapshots
 - runtime still owns authoritative state and verify evidence
 - support wording does not replace engineering truth
+- completion wording must be consistent with manifest-backed artifact completeness
 
 ## Backend Interface Binding
 
@@ -56,3 +59,14 @@ Required integration anchor:
 - `docs/backend_interface_contract.md`
 
 This includes stable backend reads/writes for run lifecycle, decisions, artifact I/O, and shared current/render snapshots.
+
+Required completion-safe interface set:
+- `list_output_artifacts`
+- `get_output_artifact_meta`
+- `read_output_artifact`
+- `get_project_manifest`
+
+Support/frontdesk must use these interfaces (or bridge wrappers) to report what was actually delivered in source/docs/workflow layers, including image outputs.
+
+Frontend/backend role split authority:
+- `docs/42_frontend_backend_separation_contract.md`

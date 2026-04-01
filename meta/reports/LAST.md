@@ -2,78 +2,46 @@
 
 ## Latest Report
 
-- File: [`meta/reports/archive/20260330-support-canonical-runtime-state-fix.md`](archive/20260330-support-canonical-runtime-state-fix.md)
-- Date: 2026-03-30
-- Topic: support/frontdesk/bridge canonical runtime state + decision protocol fix
+- File: [`meta/reports/archive/20260401-md-navigation-pointer-alignment.md`](archive/20260401-md-navigation-pointer-alignment.md)
+- Date: 2026-04-01
+- Topic: AGENTS TOC restoration + CURRENT/LAST thin-pointer realignment
 
 ### Readlist
 
 - `AGENTS.md`
+- `.agent_private/NOTES.md`
+- `meta/backlog/execution_queue.json`
 - `meta/tasks/CURRENT.md`
-- `scripts/ctcp_front_bridge.py`
-- `scripts/ctcp_support_controller.py`
-- `scripts/ctcp_support_bot.py`
-- `frontend/frontdesk_state_machine.py`
-- `docs/shared_state_contract.md`
-- `tests/test_support_to_production_path.py`
-- `tests/test_support_bot_humanization.py`
-- `tests/test_frontdesk_state_machine.py`
+- `meta/reports/archive/20260401-md-navigation-pointer-alignment.md`
 
 ### Plan
 
-1. Introduce one canonical runtime snapshot for bridge reads (`artifacts/support_runtime_state.json`).
-2. Define explicit decision object protocol with lifecycle status (`pending/submitted/consumed/rejected/expired`).
-3. Move `ctcp_get_status` and `ctcp_submit_decision` to canonical-state-first flow and keep legacy as fallback-only refresh source.
-4. Make support controller/frontdesk/support-bot stage decisions consume canonical runtime state instead of independent heuristics.
-5. Add regressions for executing/no-decision, pending decision, submit-not-consumed, and completion/failure without stale decisions.
-6. Run focused tests + canonical verify and record first failure + minimal fix.
+1) Bind ADHOC task and archive topic.
+2) Restore AGENTS TOC block.
+3) Restore thin-pointer CURRENT/LAST structure.
+4) Run workflow check + canonical verify.
 
 ### Changes
 
-- `scripts/ctcp_front_bridge.py`
-  - Added canonical snapshot path: `artifacts/support_runtime_state.json`.
-  - Added canonical snapshot refresh/build helpers and explicit decision object normalization.
-  - Added decision lifecycle fields: `decision_id/kind/question/target_path/expected_format/schema/status/created_at/submitted_at/consumed_at`.
-  - `ctcp_get_status()` now reads canonical runtime state and exposes `phase/run_status/blocking_reason/needs_user_decision/pending_decisions/latest_result/error/recovery/updated_at`.
-  - `ctcp_list_decisions_needed()` now reads canonical decision list; `count` means pending-user decisions only.
-  - `ctcp_submit_decision()` now marks `submitted` and returns `backend_acknowledged=False` until consumed/advanced confirmation.
-- `scripts/ctcp_support_controller.py`
-  - Switched state view to consume `project_context.runtime_state` first.
-  - Decision prompting now reads canonical pending decisions only (`status=pending`).
-- `scripts/ctcp_support_bot.py`
-  - `active_stage` derivation and shared-state authoritative stage mapping now prefer canonical `runtime_state.phase`.
-  - `build_progress_binding` now uses canonical state/decision status; supports `submitted` without treating it as consumed.
-- `frontend/frontdesk_state_machine.py`
-  - Decision extraction and state derivation now consume `runtime_state` first.
-  - Avoids stale legacy decision fallback when canonical `pending_decisions` is explicitly empty.
-- `docs/shared_state_contract.md`
-  - Added support bridge canonical snapshot and decision lifecycle contract section.
-- Tests:
-  - `tests/test_support_to_production_path.py`
-  - `tests/test_support_bot_humanization.py`
-  - `tests/test_frontdesk_state_machine.py`
+- `AGENTS.md` now contains `<!-- TOC -->` jump table.
+- `meta/tasks/CURRENT.md` is pointer-first and keeps required workflow fields.
+- `meta/reports/LAST.md` is pointer-first and links to archive report.
+- Queue/task/report archive records were added for this topic.
+- `meta/tasks/CURRENT.md` restored explicit `## Acceptance` section for SimLab S00 contract assertion.
+- `tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch` was synced to new CURRENT header and fixed patch syntax.
 
 ### Verify
 
-- `python -m unittest discover -s tests -p "test_support_to_production_path.py" -v` -> 0
-- `python -m unittest discover -s tests -p "test_frontdesk_state_machine.py" -v` -> 0
-- `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v` -> 0
-- `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` -> 0
-- `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` -> 0
-- `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` -> 0
-- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` -> 1
-  - first failure point: `workflow gate (workflow checks)`
-  - first failing reason: changes detected but `meta/reports/LAST.md` not updated.
-  - minimal fix strategy: update `meta/reports/LAST.md` with current task evidence, then rerun canonical verify.
-- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` -> 1
-  - first failure point: `workflow gate (workflow checks)`
-  - first failing reason: `CURRENT.md` missing mandatory completion criteria evidence.
-  - minimal fix strategy: add explicit completion criteria evidence text including `connected + accumulated + consumed`.
-- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` -> 1
-  - first failure point: `lite scenario replay`
-  - first failing reason: simlab lite replay returned `passed=12, failed=2`.
-  - minimal fix strategy: keep all earlier passed gates unchanged and rerun canonical verify with repo-supported `CTCP_SKIP_LITE_REPLAY=1`.
-- `$env:CTCP_SKIP_LITE_REPLAY='1'; powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` -> 0
+- `python scripts/workflow_checks.py` -> `0 (ok)`
+- first canonical verify: `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` -> `1`
+- first failure point: `lite scenario replay` (`S00_lite_headless` missing `## Acceptance`; `S16_lite_fixer_loop_pass` patch-first rejected malformed fixture patch)
+- minimal fix strategy: restore `## Acceptance` in CURRENT + repair S16 fixture patch context/syntax, then rerun canonical verify
+- second canonical verify: `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` -> `1` (patch_check out-of-scope temp file `simlab_last_debug.json`)
+- minimal fix strategy: delete temporary debug artifact and rerun
+- final canonical verify: `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` -> `0 (OK)`; lite replay `passed=14 failed=0` (`run_dir=C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260401-012553`)
+- `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` -> covered by verify_repo
+- `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` -> covered by verify_repo
+- `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` -> covered by verify_repo
 
 ### Questions
 
@@ -81,9 +49,5 @@
 
 ### Demo
 
-- Canonical status now has one stable snapshot for bridge/support/frontdesk:
-  - `phase/run_status/blocking_reason/needs_user_decision/pending_decisions/latest_result/error/recovery/updated_at`
-- Decision submission now distinguishes:
-  - write success => `submitted`
-  - runtime advance or explicit consume => `consumed`
-- Frontdesk/support/controller no longer each hold an independent mainline state truth; they map from canonical runtime state.
+- Thin-pointer startup restored: read `CURRENT.md` for active task pointer, then follow archive.
+- Contract navigation restored: AGENTS now has TOC anchors for fast jump.

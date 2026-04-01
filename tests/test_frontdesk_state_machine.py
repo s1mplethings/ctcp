@@ -13,149 +13,153 @@ from frontend.frontdesk_state_machine import (
 
 
 class FrontdeskStateMachineTests(unittest.TestCase):
-    def test_minimum_state_set_is_present(self) -> None:
+    def test_display_state_set_is_render_only(self) -> None:
         expected = {
-            "Idle",
-            "IntentDetect",
-            "Collect",
-            "Clarify",
-            "Confirm",
-            "Execute",
-            "AwaitDecision",
-            "ReturnResult",
-            "InterruptRecover",
-            "StyleAdjust",
-            "Error",
+            "idle",
+            "collecting_input",
+            "showing_progress",
+            "waiting_user_reply",
+            "showing_decision",
+            "showing_result",
+            "showing_error",
         }
         self.assertEqual(set(FRONTDESK_STATES), expected)
         self.assertEqual(set(STATE_DEFINITIONS.keys()), expected)
         self.assertTrue({"style_change", "status_query", "result_query"}.issubset(set(INTERRUPT_KINDS)))
 
-    def test_derive_frontdesk_state_enters_await_decision_when_run_needs_user_choice(self) -> None:
+    def test_render_only_progress_ignores_legacy_status_guess(self) -> None:
         session_state = {
-            "task_summary": "继续优化 VN 前台",
-            "bound_run_id": "run-vn",
+            "task_summary": "继续推进项目",
+            "bound_run_id": "run-render",
             "session_profile": {"lang_hint": "zh"},
-            "project_memory": {"project_brief": "继续优化 VN 前台"},
+            "project_memory": {"project_brief": "继续推进项目"},
             "project_constraints_memory": {},
             "execution_memory": {},
             "frontdesk_state": {},
         }
         project_context = {
-            "run_id": "run-vn",
-            "goal": "继续优化 VN 前台",
+            "run_id": "run-render",
             "status": {
-                "run_status": "blocked",
-                "verify_result": "",
+                "run_status": "completed",
+                "verify_result": "PASS",
                 "needs_user_decision": True,
-                "gate": {"reason": "请确认保留旧 UI 还是重做 UI"},
+                "decisions_needed_count": 1,
             },
-            "decisions": {
-                "decisions": [
-                    {
-                        "decision_id": "d-ui",
-                        "question_hint": "这轮你要保留旧 UI，还是直接重做 UI？",
-                    }
-                ]
+            "render_snapshot": {
+                "visible_state": "EXECUTING",
+                "ui_badge": "in_progress",
+                "progress_summary": "backend executing",
+                "decision_cards": [],
+            },
+            "current_snapshot": {
+                "authoritative_stage": "EXECUTE",
+                "current_blocker": "none",
             },
         }
 
         state = derive_frontdesk_state(
-            user_text="继续做这个项目",
+            user_text="继续做",
             conversation_mode="PROJECT_DETAIL",
             session_state=session_state,
             project_context=project_context,
         )
 
-        self.assertEqual(state["state"], "AwaitDecision")
-        self.assertEqual(state["active_task_id"], "run-vn")
-        self.assertIn("重做 UI", state["waiting_for"])
-        self.assertEqual(len(list(state["decision_points"])), 1)
+        self.assertEqual(state["state"], "showing_progress")
+        self.assertNotEqual(state["state"], "showing_result")
+        self.assertNotEqual(state["state"], "showing_decision")
 
-    def test_style_change_updates_profile_and_preserves_resumable_execute(self) -> None:
+    def test_decision_flow_comes_from_render_or_decision_interface(self) -> None:
         session_state = {
-            "task_summary": "继续优化 VN 前台",
-            "bound_run_id": "run-vn",
+            "task_summary": "继续推进项目",
+            "bound_run_id": "run-decision",
             "session_profile": {"lang_hint": "zh"},
-            "project_memory": {"project_brief": "继续优化 VN 前台"},
+            "project_memory": {"project_brief": "继续推进项目"},
             "project_constraints_memory": {},
             "execution_memory": {},
-            "frontdesk_state": {
-                "state": "Execute",
-                "current_goal": "继续优化 VN 前台",
-                "active_task_id": "run-vn",
-                "user_style_profile": {
-                    "language": "auto",
-                    "tone": "task_progressive",
-                    "initiative": "balanced",
-                    "verbosity": "normal",
-                },
-            },
+            "frontdesk_state": {},
         }
         project_context = {
-            "run_id": "run-vn",
-            "goal": "继续优化 VN 前台",
-            "status": {
-                "run_status": "running",
-                "verify_result": "",
-                "needs_user_decision": False,
-                "gate": {"reason": ""},
+            "run_id": "run-decision",
+            "render_snapshot": {
+                "visible_state": "WAITING_FOR_DECISION",
+                "ui_badge": "needs_decision",
+                "progress_summary": "waiting for one user choice",
+                "decision_cards": [
+                    {
+                        "decision_id": "d-ui",
+                        "question": "这轮先保速度还是先保质量？",
+                        "status": "pending",
+                    }
+                ],
+            },
+            "current_snapshot": {
+                "authoritative_stage": "WAIT_USER_DECISION",
+                "current_blocker": "need one decision",
             },
         }
 
         state = derive_frontdesk_state(
-            user_text="后面用中文回答，简短一点，别太机械",
-            conversation_mode="SMALLTALK",
+            user_text="继续",
+            conversation_mode="PROJECT_DETAIL",
             session_state=session_state,
             project_context=project_context,
         )
 
-        self.assertEqual(state["state"], "StyleAdjust")
-        self.assertEqual(state["interrupt_kind"], "style_change")
-        self.assertEqual(state["resumable_state"], "Execute")
-        profile = dict(state["user_style_profile"])
-        self.assertEqual(profile.get("language"), "zh")
-        self.assertEqual(profile.get("verbosity"), "brief")
-        self.assertEqual(profile.get("tone"), "natural")
+        self.assertEqual(state["state"], "showing_decision")
+        self.assertIn("保速度", state["waiting_for"])
+        self.assertEqual(len(list(state["decision_points"])), 1)
 
-    def test_reply_strategy_hides_project_context_for_greeting_interrupt(self) -> None:
-        strategy = reply_strategy_from_frontdesk_state(
-            {
-                "state": "InterruptRecover",
-                "active_task_id": "run-vn",
-                "current_goal": "继续优化 VN 前台",
-                "interrupt_kind": "",
+    def test_done_requires_render_done_and_result_payload(self) -> None:
+        session_state = {
+            "task_summary": "继续推进项目",
+            "bound_run_id": "run-done",
+            "session_profile": {"lang_hint": "zh"},
+            "project_memory": {"project_brief": "继续推进项目"},
+            "project_constraints_memory": {},
+            "execution_memory": {},
+            "frontdesk_state": {},
+        }
+        base = {
+            "run_id": "run-done",
+            "render_snapshot": {
+                "visible_state": "DONE",
+                "ui_badge": "done",
+                "progress_summary": "done",
+                "decision_cards": [],
             },
-            conversation_mode="GREETING",
-        )
-
-        self.assertFalse(bool(strategy["allow_existing_project_reference"]))
-        self.assertTrue(bool(strategy["latest_turn_only"]))
-
-    def test_reply_strategy_prefers_progress_binding_for_status_interrupt(self) -> None:
-        strategy = reply_strategy_from_frontdesk_state(
-            {
-                "state": "InterruptRecover",
-                "active_task_id": "run-vn",
-                "current_goal": "继续优化 VN 前台",
-                "interrupt_kind": "status_query",
+            "current_snapshot": {
+                "authoritative_stage": "DELIVERED",
+                "current_blocker": "none",
             },
+        }
+
+        without_payload = derive_frontdesk_state(
+            user_text="结果给我",
             conversation_mode="STATUS_QUERY",
+            session_state=session_state,
+            project_context=dict(base),
         )
+        self.assertEqual(without_payload["state"], "showing_progress")
 
-        self.assertTrue(bool(strategy["allow_existing_project_reference"]))
-        self.assertTrue(bool(strategy["prefer_frontend_render"]))
-        self.assertTrue(bool(strategy["prefer_progress_binding"]))
+        with_payload_context = dict(base)
+        with_payload_context["result_event"] = {"event_type": "event_result", "summary": "done"}
+        with_payload = derive_frontdesk_state(
+            user_text="结果给我",
+            conversation_mode="STATUS_QUERY",
+            session_state=session_state,
+            project_context=with_payload_context,
+        )
+        self.assertEqual(with_payload["state"], "showing_result")
 
-    def test_prompt_context_omits_task_slots_when_project_reference_is_not_allowed(self) -> None:
+    def test_prompt_context_respects_include_task_context_flag(self) -> None:
         context = prompt_context_from_frontdesk_state(
             {
-                "state": "StyleAdjust",
-                "interrupt_kind": "style_change",
-                "current_goal": "继续优化 VN 前台",
-                "current_scope": "先收紧前台状态机",
+                "state": "showing_result",
+                "interrupt_kind": "result_query",
+                "current_goal": "继续推进 VN 前台",
+                "current_scope": "收敛前后台边界",
                 "active_task_id": "run-vn",
-                "resumable_state": "Execute",
+                "resumable_state": "showing_progress",
                 "user_style_profile": {
                     "language": "zh",
                     "tone": "natural",
@@ -165,124 +169,23 @@ class FrontdeskStateMachineTests(unittest.TestCase):
             },
             include_task_context=False,
         )
-
-        self.assertEqual(context["state"], "StyleAdjust")
+        self.assertEqual(context["state"], "showing_result")
         self.assertEqual(context["current_goal"], "")
         self.assertEqual(context["active_task_id"], "")
-        self.assertEqual(dict(context["user_style_profile"])["verbosity"], "brief")
-        self.assertEqual(context["resumable_state"], "Execute")
 
-    def test_canonical_runtime_execute_state_does_not_regress_to_await_decision(self) -> None:
-        session_state = {
-            "task_summary": "继续推进 VN 前台",
-            "bound_run_id": "run-canonical",
-            "session_profile": {"lang_hint": "zh"},
-            "project_memory": {"project_brief": "继续推进 VN 前台"},
-            "project_constraints_memory": {},
-            "execution_memory": {},
-            "frontdesk_state": {},
-        }
-        project_context = {
-            "run_id": "run-canonical",
-            "status": {
-                "run_status": "blocked",
-                "verify_result": "",
-                "needs_user_decision": True,
-                "gate": {"reason": "legacy fallback says pending decision"},
+    def test_reply_strategy_prefers_render_progress_binding_on_status_query(self) -> None:
+        strategy = reply_strategy_from_frontdesk_state(
+            {
+                "state": "showing_progress",
+                "active_task_id": "run-vn",
+                "current_goal": "继续推进 VN 前台",
+                "interrupt_kind": "status_query",
             },
-            "runtime_state": {
-                "phase": "EXECUTE",
-                "run_status": "running",
-                "verify_result": "",
-                "needs_user_decision": False,
-                "pending_decisions": [],
-                "blocking_reason": "none",
-                "error": {"has_error": False},
-            },
-        }
-
-        first = derive_frontdesk_state(
-            user_text="继续做这个项目",
-            conversation_mode="PROJECT_DETAIL",
-            session_state=session_state,
-            project_context=project_context,
-        )
-        self.assertEqual(first["state"], "Execute")
-        self.assertNotEqual(first["state"], "AwaitDecision")
-
-        session_state["frontdesk_state"] = dict(first)
-        second = derive_frontdesk_state(
-            user_text="继续做这个项目",
-            conversation_mode="PROJECT_DETAIL",
-            session_state=session_state,
-            project_context=project_context,
-        )
-        self.assertEqual(second["state"], "Execute")
-        self.assertEqual(second["state_reason"], first["state_reason"])
-
-    def test_canonical_runtime_finalize_clears_stale_legacy_decision_and_recover_maps_error(self) -> None:
-        session_state = {
-            "task_summary": "继续推进 VN 前台",
-            "bound_run_id": "run-final",
-            "session_profile": {"lang_hint": "zh"},
-            "project_memory": {"project_brief": "继续推进 VN 前台"},
-            "project_constraints_memory": {},
-            "execution_memory": {},
-            "frontdesk_state": {},
-        }
-        finalized_context = {
-            "run_id": "run-final",
-            "status": {
-                "run_status": "completed",
-                "verify_result": "PASS",
-                "needs_user_decision": False,
-                "gate": {"reason": ""},
-            },
-            "runtime_state": {
-                "phase": "FINALIZE",
-                "run_status": "completed",
-                "verify_result": "PASS",
-                "needs_user_decision": False,
-                "pending_decisions": [],
-                "blocking_reason": "none",
-                "error": {"has_error": False},
-            },
-            "decisions": {
-                "decisions": [
-                    {
-                        "decision_id": "legacy:1",
-                        "question_hint": "旧问题，不应再干扰",
-                        "status": "pending",
-                    }
-                ]
-            },
-        }
-        state = derive_frontdesk_state(
-            user_text="现在进度到哪了？",
             conversation_mode="STATUS_QUERY",
-            session_state=session_state,
-            project_context=finalized_context,
         )
-        self.assertEqual(state["state"], "ReturnResult")
-        self.assertEqual(len(list(state["decision_points"])), 0)
-
-        recover_context = dict(finalized_context)
-        recover_context["runtime_state"] = {
-            "phase": "RECOVER",
-            "run_status": "fail",
-            "verify_result": "FAIL",
-            "needs_user_decision": False,
-            "pending_decisions": [],
-            "blocking_reason": "verify failed",
-            "error": {"has_error": True, "message": "verify failed"},
-        }
-        recover = derive_frontdesk_state(
-            user_text="现在怎么样",
-            conversation_mode="STATUS_QUERY",
-            session_state=session_state,
-            project_context=recover_context,
-        )
-        self.assertEqual(recover["state"], "Error")
+        self.assertTrue(bool(strategy["allow_existing_project_reference"]))
+        self.assertTrue(bool(strategy["prefer_frontend_render"]))
+        self.assertTrue(bool(strategy["prefer_progress_binding"]))
 
 
 if __name__ == "__main__":

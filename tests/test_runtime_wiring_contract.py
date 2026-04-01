@@ -117,7 +117,7 @@ class RuntimeWiringContractTests(unittest.TestCase):
         self.assertNotIn("什么类型的项目", result.reply_text)
         self.assertFalse(any("什么类型的项目" in q for q in result.followup_questions), msg=result.followup_questions)
 
-    def test_frontend_render_consumes_frontdesk_await_decision_state(self) -> None:
+    def test_frontend_render_consumes_frontdesk_showing_decision_state(self) -> None:
         result = render_frontend_output(
             raw_backend_state={
                 "stage": "analysis",
@@ -131,7 +131,7 @@ class RuntimeWiringContractTests(unittest.TestCase):
                 "lang": "zh",
                 "recent_user_messages": ["继续优化这个项目"],
                 "frontdesk_state": {
-                    "state": "AwaitDecision",
+                    "state": "showing_decision",
                     "active_task_id": "run-vn",
                     "current_goal": "继续优化 VN 前台",
                     "decision_points": [
@@ -144,7 +144,7 @@ class RuntimeWiringContractTests(unittest.TestCase):
             },
         )
         state = dict(result.pipeline_state or {})
-        self.assertEqual(str(dict(state.get("frontdesk_state", {})).get("state", "")), "AwaitDecision")
+        self.assertEqual(str(dict(state.get("frontdesk_state", {})).get("state", "")), "showing_decision")
         self.assertTrue(
             ("重做 UI" in result.reply_text) or any("重做 UI" in q for q in result.followup_questions),
             msg=f"reply={result.reply_text}; questions={result.followup_questions}",
@@ -310,13 +310,13 @@ class RuntimeWiringContractTests(unittest.TestCase):
             history_layers = dict(session_state.get("history_layers", {}))
             working_memory = dict(history_layers.get("working_memory", {}))
             raw_turns = list(history_layers.get("raw_turns", []))
-            self.assertEqual(str(frontdesk_state.get("state", "")), "Execute")
+            self.assertEqual(str(frontdesk_state.get("state", "")), "showing_progress")
             self.assertEqual(str(frontdesk_state.get("active_task_id", "")), "r-frontdesk")
-            self.assertEqual(str(latest_support_context.get("frontdesk_state", "")), "Execute")
+            self.assertEqual(str(latest_support_context.get("frontdesk_state", "")), "showing_progress")
             self.assertEqual(str(session_state.get("active_task_id", "")), "r-frontdesk")
             self.assertEqual(str(session_state.get("active_run_id", "")), "r-frontdesk")
             self.assertEqual(str(session_state.get("active_stage", "")), "EXECUTE")
-            self.assertEqual(str(session_state.get("latest_message_intent", "")), "continue")
+            self.assertEqual(str(session_state.get("latest_message_intent", "")), "constraint_update")
             self.assertEqual(str(working_memory.get("current_stage", "")), "EXECUTE")
             self.assertGreaterEqual(len(raw_turns), 2)
 

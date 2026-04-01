@@ -575,3 +575,71 @@ Isolation rules:
 - Each case MUST run in a fresh session and MUST NOT reuse the previous case transcript or conversation memory.
 - Production conversation state and project run artifacts MUST NOT be mutated by persona-lab execution.
 - Judge/scoring output is authoritative for persona-lab verdicts; human summaries MUST not contradict `score.json`.
+
+Q) Final project output contract artifacts (project-generation tasks)
+
+Project generation tasks MUST freeze and emit output contracts before generation:
+
+- `artifacts/project_output_contract.json`
+  - REQUIRED fields:
+    - `schema_version`
+    - `project_id`
+    - `frozen` (must be `true` before generation)
+    - `stages[]` (fixed 10-stage sequence)
+    - `required_interfaces[]`
+    - `layers.source_files[]`
+    - `layers.doc_files[]`
+    - `layers.workflow_files[]`
+    - `required_assets.images[]`
+    - `required_assets.other_resources[]`
+    - `acceptance_files[]`
+    - `reference_project_mode` and `reference_style_applied[]`
+
+Rules:
+- `source_generation`, `docs_generation`, and `workflow_generation` are forbidden before `frozen=true`.
+- Generation must preserve explicit target-layer file lists.
+- Report-only completion is invalid when this contract exists.
+
+R) Project manifest contract (project-generation tasks)
+
+Canonical manifest artifact:
+- `artifacts/project_manifest.json`
+
+REQUIRED fields:
+- `schema_version`
+- `project_id`
+- `source_files[]`
+- `doc_files[]`
+- `workflow_files[]`
+- `generated_files[]`
+- `missing_files[]`
+- `acceptance_files[]`
+- `reference_project_mode`
+- `reference_style_applied[]`
+- `artifacts[]` (each entry includes `artifact_ref`, `path`, `kind`, `mime_type`, `readable`)
+
+Rules:
+- `missing_files[]` MUST be explicit. Empty/missing `missing_files` is not equivalent.
+- Images are first-class artifacts and MUST appear in `artifacts[]` with readable metadata.
+- DONE cannot be declared if `missing_files[]` is non-empty.
+
+S) Formal output interface parity (project-generation tasks)
+
+The following interfaces and manifest artifacts must stay consistent:
+- `list_output_artifacts`
+- `get_output_artifact_meta`
+- `read_output_artifact`
+- `get_project_manifest`
+
+Rules:
+- `list_output_artifacts` output MUST be reconcilable with `project_manifest.artifacts[]`.
+- `get_output_artifact_meta` and `read_output_artifact` MUST support all key source/doc/workflow/image outputs.
+- `get_project_manifest` MUST return the manifest fields defined in section R.
+
+T) Completion and ResultEvent binding (project-generation tasks)
+
+When publishing final result for project generation:
+- Result payload MUST include explicit artifact list, not only summary text.
+- Artifact list MUST include references covering source/doc/workflow layers.
+- If reference mode is enabled, result payload MUST include mode and applied style list.
+- Verify pass without artifact completeness proof is insufficient for DONE.

@@ -25,15 +25,39 @@ def _write_json(path: Path, doc: dict[str, Any]) -> None:
     path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _read_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
 def _runtime_project_context(status: dict[str, Any]) -> dict[str, Any]:
     pending = list(status.get("pending_decisions", [])) if isinstance(status.get("pending_decisions", []), list) else []
-    return {
+    context: dict[str, Any] = {
         "run_id": str(status.get("run_id", "")),
         "status": status,
         "runtime_state": dict(status.get("runtime_state", {}) if isinstance(status.get("runtime_state", {}), dict) else {}),
         "decisions": {"count": int(status.get("decisions_needed_count", 0) or 0), "decisions": pending},
         "whiteboard": {},
     }
+    run_status = str(status.get("run_status", "")).strip().lower()
+    verify_result = str(status.get("verify_result", "")).strip().upper()
+    if run_status in {"completed", "done", "pass", "success"} and verify_result == "PASS":
+        context["render_snapshot"] = {
+            "visible_state": "DONE",
+            "ui_badge": "success",
+            "progress_summary": "done",
+        }
+        context["artifact_manifest"] = {
+            "source_files": ["src/main.py"],
+            "doc_files": ["docs/overview.md"],
+            "workflow_files": ["PLAN.md"],
+        }
+    return context
 
 
 def _decision_row_by_id(rows: list[dict[str, Any]], decision_id: str) -> dict[str, Any]:
@@ -56,12 +80,36 @@ class _FakeRuntime:
             "gate_path": "artifacts/PLAN.md",
             "gate_reason": "working",
             "last_max_steps": 0,
+            "decisions": [],
         }
         self.sync()
 
     def set(self, **kwargs: Any) -> None:
         self.state.update(kwargs)
+        self._consume_submitted_decisions_if_resumed()
         self.sync()
+
+    def _now_ts(self) -> str:
+        return "2026-03-30T00:00:00Z"
+
+    def _consume_submitted_decisions_if_resumed(self) -> None:
+        run_status = str(self.state.get("run_status", "")).strip().lower()
+        if run_status not in {"running", "in_progress", "working", "completed", "done", "pass", "success"}:
+            return
+        rows = self.state.get("decisions", [])
+        if not isinstance(rows, list):
+            return
+        changed = False
+        for item in rows:
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("status", "")).strip().lower() != "submitted":
+                continue
+            item["status"] = "consumed"
+            item["consumed_at"] = self._now_ts()
+            changed = True
+        if changed:
+            self.state["decisions"] = rows
 
     def write_outbox_decision(
         self,
@@ -86,6 +134,30 @@ class _FakeRuntime:
             + "\n",
             encoding="utf-8",
         )
+        decision_id = f"outbox:{stem}"
+        row = {
+            "decision_id": decision_id,
+            "kind": "outbox_md",
+            "prompt_path": f"outbox/{stem}.md",
+            "role": "chair/planner",
+            "action": "decide",
+            "target_path": target_path,
+            "reason": reason,
+            "question": question,
+            "expected_format": "markdown",
+            "schema": {"type": "string"},
+            "status": "pending",
+            "created_at": self._now_ts(),
+            "submitted_at": "",
+            "consumed_at": "",
+        }
+        rows = self.state.get("decisions", [])
+        if not isinstance(rows, list):
+            rows = []
+        rows = [item for item in rows if not (isinstance(item, dict) and str(item.get("decision_id", "")) == decision_id)]
+        rows.append(row)
+        self.state["decisions"] = rows
+        self.sync()
         return path
 
     def sync(self) -> None:
@@ -113,6 +185,126 @@ class _FakeRuntime:
                 "goal": self.state["goal"],
                 "constraints": {},
                 "attachments": [],
+            },
+        )
+        decisions = self.state.get("decisions", [])
+        if not isinstance(decisions, list):
+            decisions = []
+        existing_runtime = _read_json(self.run_dir / "artifacts" / "support_runtime_state.json")
+        if isinstance(existing_runtime, dict) and str(existing_runtime.get("schema_version", "")) == "ctcp-support-runtime-state-v1":
+            existing_rows = existing_runtime.get("decisions", [])
+            if isinstance(existing_rows, list):
+                merged: dict[str, dict[str, Any]] = {}
+                for item in decisions:
+                    if not isinstance(item, dict):
+                        continue
+                    decision_id = str(item.get("decision_id", "")).strip()
+                    if not decision_id:
+                        continue
+                    merged[decision_id] = dict(item)
+                for item in existing_rows:
+                    if not isinstance(item, dict):
+                        continue
+                    decision_id = str(item.get("decision_id", "")).strip()
+                    if not decision_id:
+                        continue
+                    current = merged.get(decision_id, {})
+                    current_status = str(current.get("status", "")).strip().lower()
+                    existing_status = str(item.get("status", "")).strip().lower()
+                    if existing_status in {"submitted", "consumed"} and current_status == "pending":
+                        current["status"] = existing_status
+                        current["submitted_at"] = str(item.get("submitted_at", "")).strip()
+                        current["consumed_at"] = str(item.get("consumed_at", "")).strip()
+                    if not current:
+                        current = dict(item)
+                    merged[decision_id] = current
+                decisions = list(merged.values())
+                self.state["decisions"] = decisions
+        pending_user = [
+            item for item in decisions
+            if isinstance(item, dict) and str(item.get("status", "")).strip().lower() == "pending"
+        ]
+        open_rows = [
+            item for item in decisions
+            if isinstance(item, dict) and str(item.get("status", "")).strip().lower() in {"pending", "submitted"}
+        ]
+        submitted_rows = [
+            item for item in decisions
+            if isinstance(item, dict) and str(item.get("status", "")).strip().lower() == "submitted"
+        ]
+        run_status = str(self.state.get("run_status", "")).strip().lower()
+        verify_result = str(self.state.get("verify_result", "")).strip().upper()
+        gate_state = str(self.state.get("gate_state", "")).strip().lower()
+        if verify_result == "PASS" and run_status in {"completed", "done", "pass", "success"} and not pending_user:
+            phase = "FINALIZE"
+        elif pending_user:
+            phase = "WAIT_USER_DECISION"
+        elif run_status in {"running", "in_progress", "working"}:
+            phase = "EXECUTE"
+        elif run_status in {"fail", "failed", "error", "aborted"}:
+            phase = "RECOVER"
+        elif gate_state in {"error", "failed"}:
+            phase = "RECOVER"
+        else:
+            phase = "PLAN"
+        has_error = bool(run_status in {"fail", "failed", "error", "aborted"} or gate_state in {"error", "failed"} or verify_result == "FAIL")
+        blocking_reason = "none"
+        if pending_user:
+            first = pending_user[0]
+            blocking_reason = str(first.get("question", "") or first.get("reason", "") or "decision_required")
+        elif submitted_rows:
+            blocking_reason = "decision_submitted_waiting_backend_consume"
+        elif has_error:
+            blocking_reason = str(self.state.get("gate_reason", "")).strip() or "runtime_error"
+        _write_json(
+            self.run_dir / "artifacts" / "support_runtime_state.json",
+            {
+                "schema_version": "ctcp-support-runtime-state-v1",
+                "run_id": self.state["run_id"],
+                "run_dir": str(self.run_dir),
+                "phase": phase,
+                "run_status": run_status,
+                "blocking_reason": blocking_reason,
+                "needs_user_decision": bool(len(pending_user) > 0),
+                "pending_decisions": open_rows,
+                "decisions": decisions,
+                "latest_result": {
+                    "verify_result": verify_result,
+                    "verify_gate": "workflow",
+                    "iterations": {"current": 0, "max": 8, "source": "test"},
+                    "gate": {
+                        "state": self.state["gate_state"],
+                        "owner": self.state["gate_owner"],
+                        "path": self.state["gate_path"],
+                        "reason": self.state["gate_reason"],
+                    },
+                    "status_raw": {},
+                },
+                "error": {
+                    "has_error": has_error,
+                    "code": run_status if has_error else "",
+                    "message": str(self.state.get("gate_reason", "")).strip() if has_error else "",
+                },
+                "recovery": {
+                    "needed": bool(has_error or submitted_rows),
+                    "hint": "run ctcp_advance after decision consumption" if submitted_rows else ("inspect verify report and failure bundle" if has_error else ""),
+                    "status": "required" if (has_error or submitted_rows) else "none",
+                },
+                "gate": {
+                    "state": self.state["gate_state"],
+                    "owner": self.state["gate_owner"],
+                    "path": self.state["gate_path"],
+                    "reason": self.state["gate_reason"],
+                },
+                "iterations": {"current": 0, "max": 8, "source": "test"},
+                "verify_result": verify_result,
+                "verify_gate": "workflow",
+                "decisions_needed_count": len(pending_user),
+                "open_decisions_count": len(open_rows),
+                "submitted_decisions_count": len(submitted_rows),
+                "core_hash": "test-core-hash",
+                "updated_at": self._now_ts(),
+                "snapshot_source": "canonical_snapshot",
             },
         )
 
@@ -179,7 +371,7 @@ class RuntimeStateContractAcceptanceTests(unittest.TestCase):
                 "updated_at",
             ):
                 self.assertIn(key, runtime)
-            self.assertEqual(str(runtime.get("snapshot_source", "")), "canonical_snapshot")
+            self.assertEqual(str(runtime.get("snapshot_source", "")), "backend_interface_snapshot")
             self.assertEqual(str(status.get("phase", "")), "EXECUTE")
             self.assertFalse(bool(status.get("needs_user_decision", False)))
 
@@ -349,8 +541,8 @@ class SupportFrontdeskMappingAcceptanceTests(unittest.TestCase):
             session_state=frontdesk_session,
             project_context=context,
         )
-        self.assertEqual(first_state["state"], "Execute")
-        self.assertEqual(second_state["state"], "Execute")
+        self.assertEqual(first_state["state"], "showing_progress")
+        self.assertEqual(second_state["state"], "showing_progress")
         self.assertEqual(str(second_state.get("state_reason", "")), str(first_state.get("state_reason", "")))
 
     def test_layer3_wait_decision_submitted_finalize_and_error_mapping(self) -> None:
@@ -434,14 +626,14 @@ class SupportFrontdeskMappingAcceptanceTests(unittest.TestCase):
             session_state=frontdesk_session,
             project_context=wait_context,
         )
-        self.assertEqual(wait_state["state"], "AwaitDecision")
+        self.assertEqual(wait_state["state"], "showing_decision")
         submitted_state = derive_frontdesk_state(
             user_text="continue work",
             conversation_mode="PROJECT_DETAIL",
             session_state=frontdesk_session,
             project_context=submitted_context,
         )
-        self.assertEqual(submitted_state["state"], "Execute")
+        self.assertEqual(submitted_state["state"], "showing_progress")
 
         done_context = dict(submitted_context)
         done_context["runtime_state"] = {
@@ -461,13 +653,23 @@ class SupportFrontdeskMappingAcceptanceTests(unittest.TestCase):
             "decisions_needed_count": 0,
             "gate": {"state": "closed", "owner": "", "reason": ""},
         }
+        done_context["render_snapshot"] = {
+            "visible_state": "DONE",
+            "ui_badge": "success",
+            "progress_summary": "done",
+        }
+        done_context["artifact_manifest"] = {
+            "source_files": ["src/main.py"],
+            "doc_files": ["docs/overview.md"],
+            "workflow_files": ["PLAN.md"],
+        }
         done_state = derive_frontdesk_state(
             user_text="continue work",
             conversation_mode="PROJECT_DETAIL",
             session_state=frontdesk_session,
             project_context=done_context,
         )
-        self.assertEqual(done_state["state"], "ReturnResult")
+        self.assertEqual(done_state["state"], "showing_result")
 
         error_context = dict(done_context)
         error_context["runtime_state"] = {
@@ -493,7 +695,7 @@ class SupportFrontdeskMappingAcceptanceTests(unittest.TestCase):
             session_state=frontdesk_session,
             project_context=error_context,
         )
-        self.assertEqual(error_state["state"], "Error")
+        self.assertEqual(error_state["state"], "showing_error")
 
 
 class EndToEndReplayAcceptanceTests(unittest.TestCase):
@@ -527,7 +729,7 @@ class EndToEndReplayAcceptanceTests(unittest.TestCase):
                     session_state=session,
                     project_context=context,
                 )
-                self.assertEqual(frontdesk["state"], "ReturnResult")
+                self.assertEqual(frontdesk["state"], "showing_result")
 
     def test_layer4_replay_decision_mid_execution(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_accept_layer4_decision_") as td:
@@ -628,7 +830,7 @@ class EndToEndReplayAcceptanceTests(unittest.TestCase):
                     session_state=session,
                     project_context=fail_context,
                 )
-                self.assertEqual(fail_frontdesk["state"], "Error")
+                self.assertEqual(fail_frontdesk["state"], "showing_error")
                 fake.set(run_status="running", verify_result="", gate_state="open", gate_owner="patchmaker", gate_reason="recovered")
                 recovered = ctcp_front_bridge.ctcp_get_status("r-layer4-recover")
                 self.assertEqual(str(recovered.get("phase", "")), "EXECUTE")
@@ -639,7 +841,7 @@ class EndToEndReplayAcceptanceTests(unittest.TestCase):
                     session_state=session,
                     project_context=_runtime_project_context(recovered),
                 )
-                self.assertEqual(recover_frontdesk["state"], "Execute")
+                self.assertEqual(recover_frontdesk["state"], "showing_progress")
 
 
 if __name__ == "__main__":

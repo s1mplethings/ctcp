@@ -26,6 +26,11 @@
 | [14_persona_test_lab.md](14_persona_test_lab.md) | Markdown contract | Persona-lab runner/judge/spec assets → isolated style regression evidence |
 | [30_artifact_contracts.md](30_artifact_contracts.md) | Markdown contract | Orchestrator/test runners/support delivery → run artifacts and demo evidence |
 | [40_reference_project.md](40_reference_project.md) | Markdown contract | scaffold/live-reference exporters → generated project provenance |
+| [41_low_capability_project_generation.md](41_low_capability_project_generation.md) | Markdown contract | project generation pipeline → low-capability fixed stages, output freeze, completion hard gate |
+| [backend_interface_contract.md](backend_interface_contract.md) | Markdown contract | backend bridge/service layer → frontend/support artifact/status interfaces |
+| [shared_state_contract.md](shared_state_contract.md) | Markdown contract | runtime/frontend/support shared current/render state authority split |
+| [frontend_runtime_boundary.md](frontend_runtime_boundary.md) | Markdown contract | frontdesk/support render layer → runtime truth boundary and completion wording guard |
+| [42_frontend_backend_separation_contract.md](42_frontend_backend_separation_contract.md) | Markdown contract | frontend/support/BFF/backend strict boundary and render-only consumption model |
 
 ## Persona Lab Static Assets
 
