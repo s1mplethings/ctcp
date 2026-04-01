@@ -52,6 +52,7 @@ PROFILE_SKIP_BEHAVIOR_CATALOG=false
 PROFILE_SKIP_TRIPLET_GUARD=false
 PROFILE_SKIP_LITE_REPLAY=false
 PROFILE_SKIP_PYTHON_UNIT_TESTS=false
+PROFILE_SKIP_CODE_HEALTH=false
 PROFILE_ADVISORY_CONTRACT_CHECKS=false
 
 case "${PROFILE}" in
@@ -61,6 +62,7 @@ case "${PROFILE}" in
     PROFILE_SKIP_TRIPLET_GUARD=true
     PROFILE_SKIP_LITE_REPLAY=true
     PROFILE_SKIP_PYTHON_UNIT_TESTS=true
+    PROFILE_SKIP_CODE_HEALTH=true
     PROFILE_ADVISORY_CONTRACT_CHECKS=true
     ;;
   contract)
@@ -68,6 +70,7 @@ case "${PROFILE}" in
     PROFILE_SKIP_TRIPLET_GUARD=true
     PROFILE_SKIP_LITE_REPLAY=true
     PROFILE_SKIP_PYTHON_UNIT_TESTS=true
+    PROFILE_SKIP_CODE_HEALTH=true
     ;;
 esac
 
@@ -301,6 +304,15 @@ fi
 echo "[verify_repo] doc index check (sync doc links --check)"
 python3 "${ROOT}/scripts/sync_doc_links.py" --check
 add_executed_gate "doc_index_check"
+
+if [[ "${PROFILE_SKIP_CODE_HEALTH}" == "true" ]]; then
+  echo "[verify_repo] code health growth-guard skipped (profile: ${PROFILE})"
+  add_executed_gate "code_health_check"
+else
+  echo "[verify_repo] code health growth-guard"
+  python3 "${ROOT}/scripts/code_health_check.py" --enforce --changed-only --baseline-ref HEAD --scope-current-task
+  add_executed_gate "code_health_check"
+fi
 
 if [[ "${PROFILE_SKIP_TRIPLET_GUARD}" == "true" ]]; then
   echo "[verify_repo] triplet integration guard skipped (profile: ${PROFILE})"

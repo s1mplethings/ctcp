@@ -7,6 +7,8 @@
 
 | Date | Topic | File |
 |------|-------|------|
+| 2026-04-01 | 代码健康治理（检测器 + 禁扩张门禁 + 拆分积压） | [→](archive/20260401-code-health-governance-guard.md) |
+| 2026-04-01 | 基线 c224a08 前后端解耦与接口对齐收口 | [→](archive/20260401-c224a08-decoupling-interface-closure.md) |
 | 2026-04-01 | MD 导航锚点与 CURRENT/LAST 薄指针对齐 | [→](archive/20260401-md-navigation-pointer-alignment.md) |
 | 2026-03-21 | src 功能边界拆分（Bridge 瘦身 + 单一文件操作适配层） | [→](archive/20260321-src-functional-boundary-refactor.md) |
 | 2026-03-17 | Support frontdesk 显式状态机与任务槽位接线 | [→](archive/20260317-support-frontdesk-state-machine.md) |

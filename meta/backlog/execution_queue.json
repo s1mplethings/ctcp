@@ -2696,6 +2696,94 @@
       },
       "status": "done",
       "notes": "Completed on 2026-04-01: added AGENTS TOC anchors, restored thin-pointer CURRENT/LAST with archive-backed records, fixed SimLab lite compatibility (`CURRENT.md` Acceptance section + S16 fixture patch update), and passed canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` (lite replay 14/14)."
+    },
+    {
+      "id": "ADHOC-20260401-c224a08-decoupling-interface-closure",
+      "layer": "L2",
+      "priority": "P0",
+      "title": "Close frontend-backend decoupling and interface-alignment independently on baseline c224a08",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260331-frontdesk-backend-separation-render-only"
+      ],
+      "dod": [
+        "Bridge/BFF path is canonical-interface-first for status/decision/result/artifact reads, with legacy file-peeking centralized into explicit fallback helpers only",
+        "Backend get_result/ResultEvent payload becomes artifact-first and includes artifact_manifest, output_artifacts, layered source/doc/workflow outputs, and image artifacts when present",
+        "Frontdesk/support boundary is hardened (frontdesk render-only display truth, support controller orchestration-only), and standalone backend plus frontdesk/support fixture runners are covered by tests"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_front_bridge.py",
+          "apps/project_backend/application/service.py",
+          "apps/project_backend/orchestrator/job_runner.py",
+          "frontend/frontdesk_state_machine.py",
+          "scripts/ctcp_support_controller.py",
+          "scripts/ctcp_support_bot.py",
+          "tests/test_backend_interface_contract_apis.py",
+          "tests/backend/test_backend_service.py",
+          "tests/test_frontdesk_state_machine.py",
+          "tests/test_support_controller_boundary.py",
+          "tests/test_runtime_wiring_contract.py",
+          "tests/test_support_to_production_path.py",
+          "tests/test_support_runtime_acceptance.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/archive/20260401-c224a08-decoupling-interface-closure.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260401-c224a08-decoupling-interface-closure.md"
+        ],
+        "tests": [
+          "python -m unittest tests/test_backend_interface_contract_apis.py -v",
+          "python -m unittest tests/backend/test_backend_service.py -v",
+          "python -m unittest tests/test_frontdesk_state_machine.py -v",
+          "python -m unittest tests/test_support_controller_boundary.py -v",
+          "python -m unittest tests/test_runtime_wiring_contract.py -v",
+          "python -m unittest tests/test_support_runtime_acceptance.py -v",
+          "python -m unittest tests/test_support_to_production_path.py -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "doing",
+      "notes": "Bound on 2026-04-01 at baseline commit c224a08 (version 3.3.2): close decoupling + interface alignment without jumping to newer commits."
+    },
+    {
+      "id": "ADHOC-20260401-code-health-governance-guard",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Code health governance: detector, growth guard, and decomposition backlog",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260401-c224a08-decoupling-interface-closure"
+      ],
+      "dod": [
+        "A repository code-health detector reports per-file total/code/import/function/max-function/churn and outputs risk ranking",
+        "Canonical verify gate includes a code-health growth-guard check to block oversized file expansion on code profile",
+        "A code-health backlog and repository growth-guard rule document define minimal split order and module boundaries for high-risk files"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/code_health_check.py",
+          "meta/code_health/rules.json",
+          "scripts/verify_repo.ps1",
+          "scripts/verify_repo.sh",
+          "docs/rules/RULE-code-health-growth-guard.md",
+          "meta/backlog/code_health_backlog.md",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "meta/tasks/archive/20260401-code-health-governance-guard.md",
+          "meta/reports/archive/20260401-code-health-governance-guard.md",
+          ".github/workflows/code-health.yml"
+        ],
+        "tests": [
+          "python scripts/code_health_check.py --top 40",
+          "python scripts/code_health_check.py --enforce --changed-only --baseline-ref HEAD",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-01: landed multi-factor code health detector + rules + CI/verify growth guard + decomposition backlog/rule docs, stabilized S16 lite replay fixture/scenario for deterministic closure, and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` returned 0 (includes triplet guard + lite replay pass)."
     }
   ]
 }

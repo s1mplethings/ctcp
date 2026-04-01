@@ -5,7 +5,6 @@
 - Queue Item: `ADHOC-20260401-code-health-governance-guard`
 - Layer/Priority: `L1 / P0`
 - Source Queue File: `meta/backlog/execution_queue.json`
-- Archive Task File: [`meta/tasks/archive/20260401-code-health-governance-guard.md`](archive/20260401-code-health-governance-guard.md)
 
 ## Context
 
@@ -36,15 +35,16 @@
 - out_of_scope_modules: runtime business flow implementation and unrelated feature logic.
 - completion_evidence: detector output with ranked risk list + verify gate wiring + governance docs/backlog + canonical verify attempt evidence.
 
-## Analysis / Find
+## Analysis / Find (before plan)
 
 - Entrypoint analysis: current largest hotspots are concentrated in entry and orchestration files (`scripts/ctcp_support_bot.py`, `scripts/ctcp_orchestrate.py`).
 - Downstream consumer analysis: CI/verify gate is the only reliable enforcement point for anti-expansion.
 - Source of truth: `meta/code_health/rules.json` + `scripts/code_health_check.py` + canonical verify scripts.
 - Current break point / missing wiring: there is no blocking growth guard in `verify_repo.*` for oversized files or long-function growth.
 - Repo-local search sufficient: yes.
+- If no, external research artifact: none.
 
-## Integration Check
+## Integration Check (before implementation)
 
 - upstream: user request for code health governance and anti-god-file mechanism.
 - current_module: `scripts/code_health_check.py` and `scripts/verify_repo.*`.
@@ -68,7 +68,7 @@
 - [x] DoD-2: Canonical verify gate includes a code-health growth-guard check to block oversized file expansion on code profile.
 - [x] DoD-3: A code-health backlog and repository growth-guard rule document define minimal split order and module boundaries for high-risk files.
 
-## Acceptance
+## Acceptance (must be checkable)
 
 - [x] DoD written (this file complete)
 - [x] Research logged (if needed): not needed, repo-local data sufficient
@@ -85,21 +85,22 @@
 4) Run scan and produce high-risk ranking evidence.
 5) Write anti-expansion rule and decomposition backlog.
 6) Run workflow checks and canonical verify.
-7) Record the first failure and minimal fix strategy if verify does not pass.
+7) Capture check/contrast/fix loop evidence and first failure point if any.
 8) Completion criteria: prove `connected + accumulated + consumed`.
 
 ## Notes / Decisions
 
 - Default choices made: enforce growth-guard on changed files for code profile only; keep doc-only/contract profiles lightweight.
 - Alternatives considered: hard-failing all historical oversized files now (rejected due immediate repo-wide blockade).
+- Any contract exception reference (must also log in `ai_context/decision_log.md`): None.
 - issue memory decision: no new user-visible runtime defect class; governance debt captured in `meta/backlog/code_health_backlog.md`.
-- skillized: no, because this is a repo-specific governance policy and threshold profile rather than a reusable cross-repo workflow skill.
+- Skill decision (`skillized: yes` or `skillized: no, because ...`): `skillized: no, because this is a repo-specific governance policy, not a reusable cross-repo workflow package yet.`
 
 ## Check / Contrast / Fix Loop Evidence
 
 - check: first enforcement run flagged long-function and oversized growth violations in current dirty workspace.
 - contrast: guard should prevent further expansion but not require one-shot full legacy cleanup.
-- fix: enforcement now compares changed files to baseline and blocks growth, while backlog defines staged decomposition order; S16 lite replay fixture/scenario was minimally stabilized so canonical verify can complete.
+- fix: enforcement now compares against baseline and blocks growth, while backlog defines staged decomposition; S16 lite replay fixture/scenario was minimally stabilized so canonical verify can complete.
 
 ## Completion Criteria Evidence
 

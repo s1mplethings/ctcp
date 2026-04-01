@@ -340,14 +340,16 @@ Current required gate classes are:
 5. Contract and doc index checks:
    - `scripts/contract_checks.py`
    - `scripts/sync_doc_links.py --check`
-6. Triplet integration guard tests:
+6. Code health growth-guard check (code profile):
+   - `python scripts/code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task`
+7. Triplet integration guard tests:
    - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
    - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
    - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
-7. Lite replay and unit tests:
+8. Lite replay and unit tests:
    - `python simlab/run.py --suite lite` (unless explicitly skipped by env)
    - `python -m unittest discover -s tests -p "test_*.py"`
-8. PLAN gate evidence replay check:
+9. PLAN gate evidence replay check:
    - `scripts/plan_check.py --executed-gates ... --check-evidence`
 
 Full suite (`CTCP_FULL_GATE=1` or `--full`) is optional extension.
@@ -369,8 +371,8 @@ Default profile when detection is unavailable: `code` (strictest).
 | `code` | Any code/integration/script/runtime/test/build change | All gates (current full behavior) |
 
 Rules:
-- `doc-only` skips: headless build, triplet guard, lite replay, python unit tests, behavior catalog.
-- `contract` skips: headless build, triplet guard, lite replay, python unit tests.
+- `doc-only` skips: headless build, code health growth-guard, triplet guard, lite replay, python unit tests, behavior catalog.
+- `contract` skips: headless build, code health growth-guard, triplet guard, lite replay, python unit tests.
 - `code` skips nothing; preserves current strict behavior.
 - Profile-skipped gates are recorded as executed (profile-skip) for plan evidence purposes.
 - `CURRENT.md` and `LAST.md` workflow evidence remain mandatory across all profiles.

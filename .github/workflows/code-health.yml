@@ -1,0 +1,55 @@
+name: code-health
+
+on:
+  pull_request:
+  push:
+    branches: ["**"]
+
+jobs:
+  code-health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Resolve baseline
+        id: baseline
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "ref=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            BASE="$(git rev-parse HEAD~1 2>/dev/null || echo HEAD)"
+            echo "ref=${BASE}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build risk report
+        run: |
+          python scripts/code_health_check.py \
+            --top 40 \
+            --output-json artifacts/code_health_report.json \
+            --output-md artifacts/code_health_report.md
+
+      - name: Enforce growth guard
+        run: |
+          python scripts/code_health_check.py \
+            --enforce \
+            --changed-only \
+            --baseline-ref "${{ steps.baseline.outputs.ref }}"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-health-report
+          path: |
+            artifacts/code_health_report.json
+            artifacts/code_health_report.md
+

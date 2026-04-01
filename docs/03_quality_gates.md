@@ -38,14 +38,16 @@ No alternative `scripts/verify.*` family is authoritative for DoD in this repo.
 5. Contract and doc index gates
    - `python scripts/contract_checks.py`
    - `python scripts/sync_doc_links.py --check`
-6. Triplet integration guard gate
+6. Code health growth-guard gate (code profile)
+   - `python scripts/code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task`
+7. Triplet integration guard gate
    - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
    - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
    - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
-7. Lite replay + Python unit tests
+8. Lite replay + Python unit tests
    - `python simlab/run.py --suite lite` (unless `CTCP_SKIP_LITE_REPLAY=1`)
    - `python -m unittest discover -s tests -p "test_*.py"`
-8. Plan declared-gate/evidence replay check
+9. Plan declared-gate/evidence replay check
    - `python scripts/plan_check.py --executed-gates <csv> --check-evidence`
 
 Passing all required steps is a DoD pass.

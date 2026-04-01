@@ -26,6 +26,31 @@ _ERROR_RUN_STATUSES = {"fail", "failed", "error", "aborted"}
 _ERROR_GATE_STATES = {"error", "failed"}
 _USER_DECISION_STATUSES = {"pending", "submitted"}
 _DECISION_STATUSES = {"pending", "submitted", "consumed", "rejected", "expired"}
+_SOURCE_CODE_EXTS = {
+    ".c",
+    ".cc",
+    ".cpp",
+    ".h",
+    ".hpp",
+    ".py",
+    ".js",
+    ".ts",
+    ".tsx",
+    ".jsx",
+    ".java",
+    ".go",
+    ".rs",
+    ".cs",
+    ".m",
+    ".mm",
+    ".swift",
+    ".kt",
+    ".sh",
+    ".ps1",
+    ".cmake",
+}
+_DOC_EXTS = {".md", ".txt", ".rst", ".adoc", ".pdf", ".doc", ".docx"}
+_WORKFLOW_NAME_HINTS = ("plan", "workflow", "dispatch", "review", "verify", "trace", "checklist")
 
 STATUS_LINE_RE = re.compile(r"^\[ctcp_orchestrate\]\s*([^=]+)=(.*)$")
 
@@ -286,6 +311,7 @@ def _normalize_decision_row(raw: dict[str, Any], *, now_ts: str, status_fallback
     action = str(raw.get("action", "")).strip()
     reason = str(raw.get("reason", "")).strip() or question
     kind = str(raw.get("kind", "")).strip() or "decision"
+    source = str(raw.get("source", "")).strip() or "canonical"
 
     return {
         "decision_id": decision_id,
@@ -306,6 +332,7 @@ def _normalize_decision_row(raw: dict[str, Any], *, now_ts: str, status_fallback
         "rejected_at": rejected_at,
         "expired_at": expired_at,
         "submission_state_hash": submission_state_hash,
+        "source": source,
     }
 
 
@@ -329,6 +356,7 @@ def _scan_pending_decisions_from_legacy(run_dir: Path) -> list[dict[str, Any]]:
                 {
                     "decision_id": decision_id,
                     "kind": "outbox_prompt",
+                    "source": "fallback_legacy",
                     "prompt_path": prompt.relative_to(run_dir).as_posix(),
                     "role": str(parsed.get("role", "")).strip(),
                     "action": str(parsed.get("action", "")).strip(),
@@ -366,6 +394,7 @@ def _scan_pending_decisions_from_legacy(run_dir: Path) -> list[dict[str, Any]]:
                     {
                         "decision_id": decision_id,
                         "kind": "questions_md",
+                        "source": "fallback_legacy",
                         "prompt_path": "QUESTIONS.md",
                         "role": "chair/planner",
                         "action": "question",
@@ -381,6 +410,62 @@ def _scan_pending_decisions_from_legacy(run_dir: Path) -> list[dict[str, Any]]:
                 )
             )
     return decisions
+
+
+def _canonical_decisions_from_runtime_state(state_doc: dict[str, Any], *, now_ts: str) -> tuple[list[dict[str, Any]], bool]:
+    rows: list[dict[str, Any]] = []
+    has_explicit = False
+    for key in ("decisions", "pending_decisions"):
+        if key in state_doc:
+            has_explicit = True
+        value = state_doc.get(key, [])
+        if not isinstance(value, list):
+            continue
+        for item in value:
+            if not isinstance(item, dict):
+                continue
+            normalized = _normalize_decision_row(item, now_ts=now_ts, status_fallback="pending")
+            decision_id = str(normalized.get("decision_id", "")).strip()
+            if not decision_id:
+                continue
+            if not str(normalized.get("source", "")).strip():
+                normalized["source"] = "canonical"
+            rows.append(normalized)
+    merged: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        decision_id = str(row.get("decision_id", "")).strip()
+        if not decision_id:
+            continue
+        merged[decision_id] = row
+    deduped = list(merged.values())
+    deduped.sort(key=_decision_sort_key)
+    return deduped, has_explicit
+
+
+def _decision_registry_with_fallback(
+    *,
+    run_dir: Path,
+    previous_state: dict[str, Any],
+    now_ts: str,
+    core_hash_seed: str,
+) -> tuple[list[dict[str, Any]], str, bool]:
+    canonical_rows, canonical_explicit = _canonical_decisions_from_runtime_state(previous_state, now_ts=now_ts)
+    if canonical_explicit:
+        return canonical_rows, "canonical", False
+
+    legacy_rows = _scan_pending_decisions_from_legacy(run_dir)
+    if legacy_rows:
+        merged = _merge_decision_registry(
+            previous_state=previous_state,
+            pending_from_legacy=legacy_rows,
+            core_hash=core_hash_seed,
+            now_ts=now_ts,
+        )
+        for item in merged:
+            if not str(item.get("source", "")).strip():
+                item["source"] = "fallback_legacy"
+        return merged, "fallback_legacy", True
+    return canonical_rows, "canonical", False
 
 
 def _runtime_core_hash(payload: dict[str, Any]) -> str:

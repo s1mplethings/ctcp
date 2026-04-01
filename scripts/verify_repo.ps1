@@ -46,6 +46,7 @@ $ProfileSkipBehaviorCatalog = ($Profile -eq "doc-only")
 $ProfileSkipTripletGuard = ($Profile -eq "doc-only") -or ($Profile -eq "contract")
 $ProfileSkipLiteReplay = ($Profile -eq "doc-only") -or ($Profile -eq "contract")
 $ProfileSkipPythonUnitTests = ($Profile -eq "doc-only") -or ($Profile -eq "contract")
+$ProfileSkipCodeHealth = ($Profile -eq "doc-only") -or ($Profile -eq "contract")
 $ProfileAdvisoryContractChecks = ($Profile -eq "doc-only")
 
 Write-Host "[verify_repo] repo root: $Root"
@@ -389,6 +390,18 @@ Invoke-Step -Name "doc index check (sync doc links --check)" -Block {
   }
 }
 Add-ExecutedGate "doc_index_check"
+
+if ($ProfileSkipCodeHealth) {
+  Write-Host "[verify_repo] code health growth-guard skipped (profile: $Profile)"
+  Add-ExecutedGate "code_health_check"
+} else {
+  Invoke-Step -Name "code health growth-guard" -Block {
+    Invoke-ExternalChecked -Label "code health growth-guard" -Command {
+      python scripts\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task
+    }
+  }
+  Add-ExecutedGate "code_health_check"
+}
 
 if ($ProfileSkipTripletGuard) {
   Write-Host "[verify_repo] triplet integration guard skipped (profile: $Profile)"

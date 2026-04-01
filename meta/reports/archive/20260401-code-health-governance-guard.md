@@ -1,12 +1,6 @@
-# Demo Report - LAST
+# Demo Report - code-health-governance-guard
 
-## Latest Report
-
-- File: [`meta/reports/archive/20260401-code-health-governance-guard.md`](archive/20260401-code-health-governance-guard.md)
-- Date: 2026-04-01
-- Topic: Code health governance (detector + growth guard + decomposition backlog)
-
-### Readlist
+## Readlist
 
 - `AGENTS.md`
 - `ai_context/00_AI_CONTRACT.md`
@@ -18,7 +12,7 @@
 - `scripts/verify_repo.ps1`
 - `scripts/verify_repo.sh`
 
-### Plan
+## Plan
 
 1) Add a code-health detector that computes total/code/import/function/max-function/churn and risk ranking.
 2) Add file-health thresholds and exclusion scope config.
@@ -26,7 +20,7 @@
 4) Produce high-risk backlog and decomposition boundaries before any broad refactor.
 5) Close canonical verify with auditable pass evidence.
 
-### Changes
+## Changes
 
 - Added `scripts/code_health_check.py` for repository-wide file health metrics and ranking.
 - Added `meta/code_health/rules.json` for thresholds, include/exclude scope, and entrypoint patterns.
@@ -50,9 +44,8 @@
   - `meta/tasks/CURRENT.md`
   - `meta/tasks/archive/20260401-code-health-governance-guard.md`
   - `meta/tasks/ARCHIVE_INDEX.md`
-  - `meta/reports/archive/20260401-code-health-governance-guard.md`
 
-### Verify
+## Verify
 
 - `python scripts/code_health_check.py --top 40 --output-json .agent_private/code_health_report.json --output-md .agent_private/code_health_report.md` -> `0`
 - `python scripts/code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task` -> `0`
@@ -67,11 +60,11 @@
   - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` -> `0`
   - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` -> `0`
 
-### Questions
+## Questions
 
 - None.
 
-### Demo
+## Demo
 
 - Repository now has an executable code-health detector and enforceable growth-guard rule.
 - Current high-risk hotspots are ranked with multi-factor signals (size/function/churn/mixed responsibility), and split priorities are documented for staged refactor.

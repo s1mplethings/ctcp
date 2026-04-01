@@ -1,0 +1,69 @@
+{
+  "include_extensions": [
+    ".py",
+    ".pyi",
+    ".js",
+    ".jsx",
+    ".ts",
+    ".tsx",
+    ".c",
+    ".cc",
+    ".cpp",
+    ".cxx",
+    ".h",
+    ".hpp",
+    ".hh",
+    ".hxx",
+    ".java",
+    ".cs",
+    ".go",
+    ".rs",
+    ".sh",
+    ".ps1",
+    ".psm1",
+    ".cmake",
+    ".qml"
+  ],
+  "include_files": [
+    "CMakeLists.txt"
+  ],
+  "exclude_prefixes": [
+    ".git/",
+    ".venv/",
+    "artifacts/",
+    "build/",
+    "build_lite/",
+    "build_verify_tmp/",
+    "dist/",
+    "generated_projects/",
+    "third_party/",
+    "web/_archive/",
+    "ctcp_pointcloud_full_project_taskpack/",
+    "ctcp_pointcloud_concrete_impl_taskpack/",
+    "ctcp_v2p_fixture_clean_taskpack/",
+    "templates/pointcloud_project/",
+    "tests/fixtures/",
+    "tools/tests/fixtures/"
+  ],
+  "exclude_globs": [
+    "**/*.min.js",
+    "**/*.min.css"
+  ],
+  "entrypoint_patterns": [
+    "scripts/ctcp_*.py",
+    "apps/**/main.py",
+    "apps/**/bootstrap.py",
+    "src/main.cpp",
+    "src/headless_main.cpp"
+  ],
+  "thresholds": {
+    "file_lines_warn": 600,
+    "file_lines_critical": 1000,
+    "entry_file_lines_warn": 450,
+    "function_lines_warn": 80,
+    "function_lines_critical": 140,
+    "imports_warn": 35,
+    "churn_90d_hot": 12
+  }
+}
+

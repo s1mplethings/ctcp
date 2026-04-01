@@ -13,10 +13,10 @@ diff --git a/meta/tasks/CURRENT.md b/meta/tasks/CURRENT.md
 --- a/meta/tasks/CURRENT.md
 +++ b/meta/tasks/CURRENT.md
 @@ -1,4 +1,5 @@
- # Task - md-navigation-pointer-alignment
+ # Task - code-health-governance-guard
 +<!-- simlab-s16-touch-current -->
  
- ## Active Task
+ ## Queue Binding
  
 diff --git a/meta/reports/LAST.md b/meta/reports/LAST.md
 --- a/meta/reports/LAST.md

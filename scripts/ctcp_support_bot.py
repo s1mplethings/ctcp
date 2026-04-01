@@ -399,6 +399,12 @@ try:
         prompt_context_from_frontdesk_state as frontend_prompt_context_from_frontdesk_state,
         reply_strategy_from_frontdesk_state as frontend_reply_strategy_from_frontdesk_state,
     )
+    from frontend.support_reply_policy import (
+        default_reply_dedupe_memory as frontend_default_reply_dedupe_memory,
+        enforce_reply_policy as frontend_enforce_reply_policy,
+        normalize_reply_dedupe_memory as frontend_normalize_reply_dedupe_memory,
+        render_fallback_reply as frontend_render_fallback_reply,
+    )
     from frontend.response_composer import render_frontend_output
 except ModuleNotFoundError:
     if str(ROOT) not in sys.path:
@@ -416,6 +422,12 @@ except ModuleNotFoundError:
         prompt_context_from_frontdesk_state as frontend_prompt_context_from_frontdesk_state,
         reply_strategy_from_frontdesk_state as frontend_reply_strategy_from_frontdesk_state,
     )
+    from frontend.support_reply_policy import (
+        default_reply_dedupe_memory as frontend_default_reply_dedupe_memory,
+        enforce_reply_policy as frontend_enforce_reply_policy,
+        normalize_reply_dedupe_memory as frontend_normalize_reply_dedupe_memory,
+        render_fallback_reply as frontend_render_fallback_reply,
+    )
     from frontend.response_composer import render_frontend_output
 except Exception:
     frontend_has_sufficient_task_signal = None  # type: ignore[assignment]
@@ -427,6 +439,10 @@ except Exception:
     frontend_normalize_frontdesk_state = None  # type: ignore[assignment]
     frontend_prompt_context_from_frontdesk_state = None  # type: ignore[assignment]
     frontend_reply_strategy_from_frontdesk_state = None  # type: ignore[assignment]
+    frontend_default_reply_dedupe_memory = None  # type: ignore[assignment]
+    frontend_enforce_reply_policy = None  # type: ignore[assignment]
+    frontend_normalize_reply_dedupe_memory = None  # type: ignore[assignment]
+    frontend_render_fallback_reply = None  # type: ignore[assignment]
     render_frontend_output = None  # type: ignore[assignment]
 
 try:
@@ -993,6 +1009,19 @@ def load_inbox_history(run_dir: Path, limit: int = 8) -> list[dict[str, str]]:
     return rows[-max(1, limit) :]
 
 
+def load_last_reply_text(run_dir: Path) -> str:
+    path = run_dir / SUPPORT_REPLY_REL_PATH
+    if not path.exists():
+        return ""
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    except Exception:
+        return ""
+    if not isinstance(doc, dict):
+        return ""
+    return str(doc.get("reply_text", "")).strip()
+
+
 def default_support_session_state(chat_id: str) -> dict[str, Any]:
     frontdesk_state: dict[str, Any] = {}
     if frontend_normalize_frontdesk_state is not None:
@@ -1084,6 +1113,11 @@ def default_support_session_state(chat_id: str) -> dict[str, Any]:
             "last_provider_status": "",
             "last_provider_reason": "",
         },
+        "reply_dedupe_memory": (
+            frontend_default_reply_dedupe_memory(max_entries=48)
+            if frontend_default_reply_dedupe_memory is not None
+            else {"schema_version": "ctcp-reply-dedupe-memory-v1", "turn_index": 0, "max_entries": 48, "by_intent": {}}
+        ),
         "notification_state": {
             "last_progress_hash": "",
             "last_progress_ts": "",
@@ -1161,6 +1195,10 @@ def latest_turn_memory(session_state: dict[str, Any]) -> dict[str, Any]:
 
 def latest_provider_runtime(session_state: dict[str, Any]) -> dict[str, Any]:
     return _state_zone(session_state, "provider_runtime_buffer")
+
+
+def latest_reply_dedupe_memory(session_state: dict[str, Any]) -> dict[str, Any]:
+    return _state_zone(session_state, "reply_dedupe_memory")
 
 
 def latest_notification_state(session_state: dict[str, Any]) -> dict[str, Any]:
@@ -1740,6 +1778,7 @@ def normalize_support_session_state(doc: dict[str, Any] | None, chat_id: str) ->
                 "turn_memory",
                 "history_layers",
                 "provider_runtime_buffer",
+                "reply_dedupe_memory",
                 "notification_state",
                 "controller_state",
                 "outbound_queue",
@@ -1761,6 +1800,7 @@ def normalize_support_session_state(doc: dict[str, Any] | None, chat_id: str) ->
     history_layers = _state_zone(state, "history_layers")
     session_profile = _state_zone(state, "session_profile")
     provider_runtime = _state_zone(state, "provider_runtime_buffer")
+    reply_dedupe_memory = _state_zone(state, "reply_dedupe_memory")
     notification_state = _state_zone(state, "notification_state")
     controller_state = _state_zone(state, "controller_state")
     outbound_queue = _state_zone(state, "outbound_queue")
@@ -1899,6 +1939,25 @@ def normalize_support_session_state(doc: dict[str, Any] | None, chat_id: str) ->
     provider_runtime["last_provider_reason"] = sanitize_inline_text(
         str(provider_runtime.get("last_provider_reason", "")), max_chars=220
     )
+    if frontend_normalize_reply_dedupe_memory is not None:
+        try:
+            state["reply_dedupe_memory"] = frontend_normalize_reply_dedupe_memory(reply_dedupe_memory, max_entries=48)
+        except Exception:
+            state["reply_dedupe_memory"] = {
+                "schema_version": "ctcp-reply-dedupe-memory-v1",
+                "turn_index": 0,
+                "max_entries": 48,
+                "by_intent": {},
+            }
+    else:
+        reply_dedupe_memory["schema_version"] = sanitize_inline_text(
+            str(reply_dedupe_memory.get("schema_version", "ctcp-reply-dedupe-memory-v1")),
+            max_chars=64,
+        ) or "ctcp-reply-dedupe-memory-v1"
+        reply_dedupe_memory["turn_index"] = int(reply_dedupe_memory.get("turn_index", 0) or 0)
+        reply_dedupe_memory["max_entries"] = max(12, min(200, int(reply_dedupe_memory.get("max_entries", 48) or 48)))
+        if not isinstance(reply_dedupe_memory.get("by_intent"), dict):
+            reply_dedupe_memory["by_intent"] = {}
     notification_state["last_progress_hash"] = sanitize_inline_text(
         str(notification_state.get("last_progress_hash", "")), max_chars=80
     )
@@ -4620,6 +4679,28 @@ def normalize_reply_text(raw_reply: str, next_question: str) -> str:
 
     if raw and not contains_forbidden_reply(raw):
         return raw
+    if not raw:
+        if detect_lang_hint(raw, next_question).startswith("en"):
+            return "I do not have a customer-ready reply yet."
+        return "这边没拿到可直接发出的回复。"
+
+    if frontend_render_fallback_reply is not None:
+        try:
+            rendered = frontend_render_fallback_reply(
+                intent="guide_recovery",
+                lang_hint=detect_lang_hint(raw, next_question) or "zh",
+                project_context={},
+                next_question=next_question,
+                previous_reply_text="",
+            )
+            fallback_text = str(rendered.get("reply_text", "")).strip()
+            fallback_question = normalize_question(str(rendered.get("next_question", "")).strip())
+            if fallback_text and not contains_forbidden_reply(fallback_text):
+                if fallback_question:
+                    return f"{fallback_text}\n\n{fallback_question}"
+                return fallback_text
+        except Exception:
+            pass
 
     conclusion = sanitize_inline_text(raw, max_chars=120)
     if (not conclusion) or contains_forbidden_reply(conclusion):
@@ -4927,12 +5008,16 @@ def build_final_reply_doc(
     frontdesk_state: dict[str, Any] | None = None,
     latest_user_message_override: str = "",
     shared_state_snapshots: Mapping[str, Any] | None = None,
+    session_state: dict[str, Any] | None = None,
+    allow_dedupe_suppress: bool = False,
+    dedupe_source_kind: str = "",
 ) -> dict[str, Any]:
     raw_doc = provider_doc if isinstance(provider_doc, dict) else fallback_reply_doc(provider_result)
     raw_reply_text = str(raw_doc.get("reply_text", ""))
     raw_next_question = str(raw_doc.get("next_question", ""))
     history = load_inbox_history(run_dir, limit=12)
     user_msgs = [str(item.get("text", "")).strip() for item in history if str(item.get("text", "")).strip()]
+    previous_reply_text = load_last_reply_text(run_dir)
     preferred_lang = sanitize_inline_text(str(lang_hint or ""), max_chars=12).lower()
     expected_lang = preferred_lang or detect_lang_hint(*(user_msgs[-3:] or [task_summary_hint or raw_reply_text or raw_next_question]))
     lang = expected_lang or detect_lang_hint(raw_reply_text, raw_next_question, str(raw_doc.get("debug_notes", "")))
@@ -5070,6 +5155,54 @@ def build_final_reply_doc(
         actions=actions,
         zip_confirmation_intent=zip_confirmation_intent,
     )
+    reply_intent = ""
+    reply_template_id = ""
+    reply_policy: dict[str, Any] = {"fallback_used": False, "reasons": []}
+    if frontend_enforce_reply_policy is not None:
+        try:
+            reply_memory = latest_reply_dedupe_memory(session_state) if isinstance(session_state, dict) else {}
+            policy_out = frontend_enforce_reply_policy(
+                reply_text=reply_text,
+                next_question=next_question,
+                conversation_mode=conversation_mode,
+                lang_hint=lang,
+                project_context=project_context or {},
+                provider_status=str(provider_result.get("status", "")).strip(),
+                previous_reply_text=previous_reply_text,
+                reply_memory=reply_memory,
+                now_ts=now_iso(),
+                provider_mode=provider,
+                source_kind=sanitize_inline_text(
+                    dedupe_source_kind
+                    or ("fallback" if str(provider_result.get("status", "")).strip().lower() in {"exec_failed", "failed", "error", "deferred"} else "provider"),
+                    max_chars=24,
+                ),
+                allow_suppress=bool(allow_dedupe_suppress),
+            )
+            policy_reply_text = str(policy_out.get("reply_text", "")).strip()
+            if policy_reply_text:
+                reply_text = policy_reply_text
+            policy_next_question = str(policy_out.get("next_question", "")).strip()
+            next_question = normalize_question(policy_next_question) if policy_next_question else ""
+            reply_intent = sanitize_inline_text(str(policy_out.get("intent", "")), max_chars=32).lower()
+            reply_template_id = sanitize_inline_text(str(policy_out.get("template_id", "")), max_chars=80)
+            reply_policy = {
+                "fallback_used": bool(policy_out.get("fallback_used", False)),
+                "reasons": [
+                    sanitize_inline_text(str(item), max_chars=60)
+                    for item in list(policy_out.get("reasons", []))
+                    if sanitize_inline_text(str(item), max_chars=60)
+                ][:8],
+                "dedupe_action": sanitize_inline_text(str(policy_out.get("dedupe_action", "send")), max_chars=24) or "send",
+                "similarity_max": float(policy_out.get("similarity_max", 0.0) or 0.0),
+                "suppressed": bool(policy_out.get("suppressed", False)),
+            }
+            if isinstance(session_state, dict):
+                mem = policy_out.get("reply_memory", {})
+                if isinstance(mem, dict):
+                    session_state["reply_dedupe_memory"] = mem
+        except Exception as exc:
+            reply_policy = {"fallback_used": False, "reasons": [f"policy_error:{sanitize_inline_text(str(exc), max_chars=80)}"]}
 
     debug_notes = sanitize_inline_text(str(raw_doc.get("debug_notes", "")), max_chars=400)
     provider_status = str(provider_result.get("status", "")).strip()
@@ -5113,6 +5246,19 @@ def build_final_reply_doc(
         reasons = ",".join(str(item) for item in list(runtime_guard.get("reasons", []))[:6] if str(item).strip())
         if reasons:
             debug_combined += f"; runtime_guard={reasons}"
+    if reply_intent:
+        debug_combined += f"; reply_intent={reply_intent}"
+    if bool(reply_policy.get("fallback_used", False)):
+        debug_combined += "; reply_policy=fallback"
+    policy_reasons = ",".join(str(item) for item in list(reply_policy.get("reasons", []))[:6] if str(item).strip())
+    if policy_reasons:
+        debug_combined += f"; reply_policy_reasons={policy_reasons}"
+    if reply_template_id:
+        debug_combined += f"; template_id={reply_template_id}"
+    if str(reply_policy.get("dedupe_action", "")).strip():
+        debug_combined += f"; dedupe_action={sanitize_inline_text(str(reply_policy.get('dedupe_action', '')), max_chars=24)}"
+    if bool(reply_policy.get("suppressed", False)):
+        debug_combined += "; dedupe_suppressed=true"
 
     append_log(run_dir / "logs" / "support_bot.debug.log", f"[{now_iso()}] {debug_combined}\n")
 
@@ -5124,6 +5270,9 @@ def build_final_reply_doc(
         "reply_text": reply_text,
         "next_question": next_question,
         "actions": actions,
+        "reply_intent": reply_intent or "acknowledge_user",
+        "reply_template_id": reply_template_id,
+        "reply_policy": reply_policy,
         "debug_notes": debug_combined,
         "runtime_progress_guard": runtime_guard if isinstance(runtime_guard, dict) else {},
     }
@@ -5427,6 +5576,9 @@ def process_message(
         delivery_state=delivery_state,
         frontdesk_state=frontdesk_state,
         shared_state_snapshots=shared_state_snapshots,
+        session_state=session_state,
+        allow_dedupe_suppress=False,
+        dedupe_source_kind="provider",
     )
     if (
         isinstance(t2p_report, dict)
@@ -5944,6 +6096,9 @@ def build_grounded_status_reply_doc(
         delivery_state=delivery_state,
         frontdesk_state=frontdesk_state,
         latest_user_message_override=synthetic_status_turn,
+        session_state=shadow_state,
+        allow_dedupe_suppress=True,
+        dedupe_source_kind="proactive",
     )
     return doc
 
@@ -5958,6 +6113,20 @@ def _controller_decision_reply_text(*, project_context: dict[str, Any] | None, d
                 prompt = sanitize_inline_text(str(gate.get("reason", "")), max_chars=280)
     if not prompt:
         prompt = "这一步需要你确认一个关键选择。"
+    if frontend_render_fallback_reply is not None:
+        try:
+            rendered = frontend_render_fallback_reply(
+                intent="ask_decision",
+                lang_hint=str(lang_hint or "").strip().lower() or "zh",
+                project_context=project_context or {},
+                next_question=prompt,
+                previous_reply_text="",
+            )
+            text = str(rendered.get("reply_text", "")).strip()
+            if text:
+                return text
+        except Exception:
+            pass
     if str(lang_hint or "").strip().lower().startswith("en"):
         return f"We need one decision from you before I can continue: {prompt}"
     return f"现在这一步需要你先拍一个板：{prompt}"
