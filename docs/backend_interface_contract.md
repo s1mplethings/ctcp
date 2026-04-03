@@ -4,8 +4,8 @@
 
 - repo: `s1mplethings/ctcp`
 - branch: `main`
-- baseline commit: `81f8f35`
-- version: `3.3.0`
+- baseline commit: `7777ebd2b46bcd334d14bc872bfbf184c9c93d78`
+- version: `3.2.0`
 
 This contract defines backend interfaces used for:
 

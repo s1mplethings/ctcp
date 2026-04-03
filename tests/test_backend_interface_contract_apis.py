@@ -92,6 +92,7 @@ class BackendInterfaceContractApiTests(unittest.TestCase):
             "list_output_artifacts",
             "get_output_artifact_meta",
             "read_output_artifact",
+            "get_project_manifest",
             "get_current_state_snapshot",
             "get_render_state_snapshot",
         ]
@@ -146,6 +147,21 @@ class BackendInterfaceContractApiTests(unittest.TestCase):
                 read_text = ctcp_front_bridge.read_output_artifact("run-x", "artifacts/analysis.md")
                 self.assertIn("download_path", read_text)
                 self.assertIn("text", read_text)
+
+                manifest = ctcp_front_bridge.get_project_manifest("run-x")
+                self.assertIn("run_id", manifest)
+                self.assertIn("project_id", manifest)
+                self.assertIn("source_files", manifest)
+                self.assertIn("doc_files", manifest)
+                self.assertIn("workflow_files", manifest)
+                self.assertIn("generated_files", manifest)
+                self.assertIn("missing_files", manifest)
+                self.assertIn("acceptance_files", manifest)
+                self.assertIn("project_root", manifest)
+                self.assertIn("startup_entrypoint", manifest)
+                self.assertIn("startup_readme", manifest)
+                self.assertIn("reference_project_mode", manifest)
+                self.assertIn("artifacts", manifest)
 
                 current = ctcp_front_bridge.get_current_state_snapshot("run-x")
                 self.assertIn("task_id", current)

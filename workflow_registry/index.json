@@ -51,6 +51,37 @@
         "status": "pass",
         "source": "simlab_lite"
       }
+    },
+    {
+      "id": "wf_project_generation_manifest",
+      "version": "1.0.0",
+      "path": "workflow_registry/wf_project_generation_manifest/recipe.yaml",
+      "entry": "scripts/ctcp_orchestrate.py",
+      "tags": [
+        "ctcp",
+        "project-generation",
+        "output-contract-freeze",
+        "artifact-manifest-build",
+        "deliver",
+        "headless",
+        "adlc"
+      ],
+      "supported_goals": [
+        "project-generation",
+        "project-scaffold",
+        "creative-assistant-project",
+        "content-assistant-project",
+        "vn-helper-project"
+      ],
+      "dependency_level": "low",
+      "cost_hint": {
+        "time_level": "med",
+        "api_level": "high"
+      },
+      "last_known_good": {
+        "status": "unknown",
+        "source": "pending_regression"
+      }
     }
   ]
 }

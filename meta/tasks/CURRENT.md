@@ -1,128 +1,117 @@
-# Task - code-health-governance-guard
+# Task - project-generation-mainline-closure
 
 ## Queue Binding
 
-- Queue Item: `ADHOC-20260401-code-health-governance-guard`
+- Queue Item: `ADHOC-20260402-project-generation-mainline-closure`
 - Layer/Priority: `L1 / P0`
 - Source Queue File: `meta/backlog/execution_queue.json`
-- Archive Task File: [`meta/tasks/archive/20260401-code-health-governance-guard.md`](archive/20260401-code-health-governance-guard.md)
 
 ## Context
 
-- Why this item now: repo currently has multiple 1000+ and 3000+ files, including 5000+ entrypoint files, and lacks hard anti-expansion checks.
-- Dependency check: `ADHOC-20260401-c224a08-decoupling-interface-closure = doing` (non-blocking for governance setup).
-- Scope boundary: build detector + gate + governance docs + split backlog only; no broad product refactor.
+- Why this item now: concrete project-generation requests currently fall into generic patch flow and fail to form manifest-driven delivery closure.
+- Dependency check: `L1-ORCH-001 = done`, `L1-DISP-001 = done`.
+- Scope boundary: fix project-generation routing/gating/interface/test authenticity only; do not implement VN business product features.
+- Baseline lock: `repo=D:/.c_projects/adc/ctcp`, `branch=main`, `commit=7777ebd2b46bcd334d14bc872bfbf184c9c93d78`, `version=3.2.0`.
 
 ## Task Truth Source (single source for current task)
 
-- task_purpose: Establish repository-level code health governance to detect god files and block further expansion before deep refactoring.
+- task_purpose: repair project-generation mainline so concrete project requests enter fixed generation stages and expose manifest-based deliverables.
 - allowed_behavior_change:
-  - `scripts/code_health_check.py`
-  - `meta/code_health/rules.json`
-  - `scripts/verify_repo.ps1`
-  - `scripts/verify_repo.sh`
-  - `docs/00_CORE.md`
-  - `docs/03_quality_gates.md`
-  - `docs/rules/RULE-code-health-growth-guard.md`
-  - `meta/backlog/code_health_backlog.md`
-  - `.github/workflows/code-health.yml`
+  - `scripts/resolve_workflow.py`
+  - `workflow_registry/index.json`
+  - `workflow_registry/wf_project_generation_manifest/recipe.yaml`
+  - `scripts/ctcp_orchestrate.py`
+  - `scripts/ctcp_dispatch.py`
+  - `scripts/ctcp_front_bridge.py`
+  - `tools/providers/api_agent.py`
+  - `tests/manual_backend_interface_vn_project_runner.py`
+  - `tests/test_backend_interface_contract_apis.py`
+  - `docs/backend_interface_contract.md`
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/CURRENT.md`
   - `meta/reports/LAST.md`
-  - `simlab/scenarios/S16_lite_fixer_loop_pass.yaml`
-  - `tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch`
-- forbidden_goal_shift: Do not execute broad code decomposition in this patch; only detection and governance constraints.
-- in_scope_modules: `scripts/`, `docs/`, `meta/`, `simlab/`, `tests/fixtures/`.
-- out_of_scope_modules: runtime business flow implementation and unrelated feature logic.
-- completion_evidence: detector output with ranked risk list + verify gate wiring + governance docs/backlog + canonical verify attempt evidence.
+- forbidden_goal_shift: do not handcraft a standalone VN assistant project; do not inject fake deliverables into run_dir.
+- in_scope_modules: `scripts/`, `tools/providers/`, `workflow_registry/`, `tests/`, `docs/`, `meta/`.
+- out_of_scope_modules: unrelated product features and broad refactors.
+- completion_evidence: fixed VN prompt run shows project-generation stages (`output_contract_freeze -> source_generation -> docs_generation -> workflow_generation -> artifact_manifest_build -> deliver`), bridge-readable manifest, and generated project root with startup smoke pass.
 
-## Analysis / Find
+## Analysis / Find (before plan)
 
-- Entrypoint analysis: current largest hotspots are concentrated in entry and orchestration files (`scripts/ctcp_support_bot.py`, `scripts/ctcp_orchestrate.py`).
-- Downstream consumer analysis: CI/verify gate is the only reliable enforcement point for anti-expansion.
-- Source of truth: `meta/code_health/rules.json` + `scripts/code_health_check.py` + canonical verify scripts.
-- Current break point / missing wiring: there is no blocking growth guard in `verify_repo.*` for oversized files or long-function growth.
+- Entrypoint analysis: project requests enter via `ctcp_front_bridge.create_run -> ctcp_orchestrate`.
+- Downstream consumer analysis: `ctcp_dispatch` provider execution and `ctcp_front_bridge` output interfaces consume run artifacts.
+- Source of truth: run_dir artifacts (`events.jsonl`, `TRACE.md`, `artifacts/*.json`) + bridge API responses.
+- Current break point / missing wiring: workflow resolver has only generic workflow; orchestrator gate lacks project-generation stage gates; bridge lacks `get_project_manifest`; manual VN runner writes deliverables directly.
 - Repo-local search sufficient: yes.
 
-## Integration Check
+## Integration Check (before implementation)
 
-- upstream: user request for code health governance and anti-god-file mechanism.
-- current_module: `scripts/code_health_check.py` and `scripts/verify_repo.*`.
-- downstream: `verify_repo.*` execution and CI workflows invoking canonical verify.
-- source_of_truth: generated metrics report and verify gate exit code.
-- fallback: if canonical verify fails, record first failure point and minimal fix strategy in `meta/reports/LAST.md`.
+- upstream: fixed project request from user (VN creator assistant request) as regression prompt.
+- current_module: resolver + orchestrator gate + dispatch request derivation + bridge interface + api provider normalization + manual runner.
+- downstream: bridge consumers and regression tests reading output artifact list and project manifest.
+- source_of_truth: run_dir stage artifacts + bridge `get_project_manifest` response.
+- fallback: if verify fails, preserve failure bundle and report first failure gate with minimal next fix.
 - acceptance_test:
-  - `python scripts/code_health_check.py --top 40 --output-json .agent_private/code_health_report.json --output-md .agent_private/code_health_report.md`
-  - `python scripts/code_health_check.py --enforce --changed-only --baseline-ref HEAD`
-  - `python scripts/workflow_checks.py`
+  - `python -m unittest tests/test_backend_interface_contract_apis.py -v`
+  - `python tests/manual_backend_interface_vn_project_runner.py`
   - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
 - forbidden_bypass:
-  - do not claim healthy status from line count only
-  - do not skip mixed-responsibility and churn checks
-  - do not skip canonical verify attempt evidence
-- user_visible_effect: repo now has a machine-enforced no-growth guard for oversized files and a prioritized split backlog.
+  - do not add manual file writes in runner to simulate deliverables
+  - do not claim DONE from intermediate analysis/plan artifacts only
+  - do not route project-generation request to generic patch-only path by default
+- user_visible_effect: project-generation runs become stage-explicit and manifest-readable even before final DONE.
 
 ## DoD Mapping (from execution_queue.json)
 
-- [x] DoD-1: A repository code-health detector reports per-file total/code/import/function/max-function/churn and outputs risk ranking.
-- [x] DoD-2: Canonical verify gate includes a code-health growth-guard check to block oversized file expansion on code profile.
-- [x] DoD-3: A code-health backlog and repository growth-guard rule document define minimal split order and module boundaries for high-risk files.
+- [x] DoD-1: Project-generation requests are routed to a dedicated workflow and do not default to the generic patch path.
+- [x] DoD-2: Project-generation runs explicitly gate on output_contract_freeze, artifact_manifest_build, and deliver before verify.
+- [x] DoD-3: Backend interface exposes get_project_manifest and manual VN runner no longer injects deliverables into run_dir.
 
 ## Acceptance
 
 - [x] DoD written (this file complete)
-- [x] Research logged (if needed): not needed, repo-local data sufficient
+- [ ] Research logged (if needed): not needed, repo-local artifacts sufficient
 - [x] Code changes allowed
-- [x] Patch applies cleanly (`git apply ...`) OR overlay zip applies cleanly
+- [ ] Patch applies cleanly (`git apply ...`) OR overlay zip applies cleanly
 - [x] `scripts/verify_repo.*` passes (or first failure + minimal fix recorded)
 - [x] Demo report updated: `meta/reports/LAST.md`
 
 ## Plan
 
-1) Build a code-health scanner with multi-factor risk scoring.
-2) Add a configurable rule set for thresholds and exclusions.
-3) Wire scanner enforcement into canonical verify scripts.
-4) Run scan and produce high-risk ranking evidence.
-5) Write anti-expansion rule and decomposition backlog.
-6) Run workflow checks and canonical verify.
-7) Record the first failure and minimal fix strategy if verify does not pass.
-8) Completion criteria: prove `connected + accumulated + consumed`.
+1) Add dedicated project-generation workflow in resolver/registry.
+2) Add orchestrator gate stages for `output_contract_freeze -> artifact_manifest_build -> deliver`.
+3) Map new stage paths to dispatch requests (chair actions).
+4) Add bridge `get_project_manifest` and surface in compatibility aliases/context.
+5) Add deterministic JSON normalization for project-stage artifacts in api provider and patch output normalization.
+6) Remove manual deliverable injection from VN manual runner and switch to fixed VN prompt regression path.
+7) Update contract baseline metadata drift in backend interface doc.
+8) Run targeted tests + fixed VN regression + canonical verify and report evidence.
 
 ## Notes / Decisions
 
-- Default choices made: enforce growth-guard on changed files for code profile only; keep doc-only/contract profiles lightweight.
-- Alternatives considered: hard-failing all historical oversized files now (rejected due immediate repo-wide blockade).
-- issue memory decision: no new user-visible runtime defect class; governance debt captured in `meta/backlog/code_health_backlog.md`.
-- skillized: no, because this is a repo-specific governance policy and threshold profile rather than a reusable cross-repo workflow skill.
-
-## Check / Contrast / Fix Loop Evidence
-
-- check: first enforcement run flagged long-function and oversized growth violations in current dirty workspace.
-- contrast: guard should prevent further expansion but not require one-shot full legacy cleanup.
-- fix: enforcement now compares changed files to baseline and blocks growth, while backlog defines staged decomposition order; S16 lite replay fixture/scenario was minimally stabilized so canonical verify can complete.
-
-## Completion Criteria Evidence
-
-- connected: scanner -> verify gate wiring in both `verify_repo.ps1` and `verify_repo.sh`.
-- accumulated: risk metrics + thresholds + backlog recorded in docs/meta artifacts.
-- consumed: verify scripts now consume scanner results as a blocking gate in code profile.
+- Default choices made: keep modifications minimal and chain-oriented; no new standalone project implementation.
+- Alternatives considered: direct VN project generation in repo (rejected as goal-shift).
+- issue memory decision: if project run still defaults to patch path after changes, log as routing regression.
+- skillized: no, because this patch is repository-specific chain repair.
+- check/contrast/fix loop evidence: implement routing + gate patch -> check fixed VN run timeline -> contrast against expected stage chain -> fix workflow gate blockers iteratively.
+- completion criteria evidence: connected + accumulated + consumed evidence must hold before DONE claim (project workflow selected, stage artifacts accumulated, bridge/verify consumed with auditable logs).
 
 ## Results
 
 - Files changed:
-  - `scripts/code_health_check.py`
-  - `meta/code_health/rules.json`
-  - `scripts/verify_repo.ps1`
-  - `scripts/verify_repo.sh`
-  - `docs/00_CORE.md`
-  - `docs/03_quality_gates.md`
-  - `docs/rules/RULE-code-health-growth-guard.md`
-  - `meta/backlog/code_health_backlog.md`
-  - `.github/workflows/code-health.yml`
-  - `meta/backlog/execution_queue.json`
-  - `meta/tasks/CURRENT.md`
-  - `meta/reports/LAST.md`
-  - `simlab/scenarios/S16_lite_fixer_loop_pass.yaml`
-  - `tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch`
-- Verification summary: scanner/workflow checks + lite replay passed; canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` returned `0`.
-- Queue status update suggestion (`todo/doing/done/blocked`): `done` (governance mechanism landed and verify gate closed green).
+  - `tools/providers/project_generation_artifacts.py`
+  - `tools/providers/api_agent.py`
+  - `scripts/project_generation_gate.py`
+  - `scripts/ctcp_dispatch.py`
+  - `scripts/project_manifest_bridge.py`
+  - `workflow_registry/wf_project_generation_manifest/recipe.yaml`
+  - `tests/manual_backend_interface_vn_project_runner.py`
+  - `tests/test_backend_interface_contract_apis.py`
+  - `artifacts/backend_interface_vn/vn_backend_interface_e2e_report.json`
+- Verification summary:
+  - `python -m py_compile tools/providers/project_generation_artifacts.py tools/providers/api_agent.py scripts/ctcp_dispatch.py scripts/project_generation_gate.py scripts/project_manifest_bridge.py tests/manual_backend_interface_vn_project_runner.py tests/test_backend_interface_contract_apis.py` -> `0`
+  - `python -m unittest discover -s tests -p "test_workflow_dispatch.py" -v` -> `0`
+  - `python -m unittest discover -s tests -p "test_backend_interface_contract_apis.py" -v` -> `0`
+  - `python tests/manual_backend_interface_vn_project_runner.py` -> `0` (run `20260403-013447-927876-orchestrate`)
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` -> `0`
+- Queue status update suggestion (`todo/doing/done/blocked`):
+  - `done`

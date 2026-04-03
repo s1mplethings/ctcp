@@ -26,31 +26,6 @@ _ERROR_RUN_STATUSES = {"fail", "failed", "error", "aborted"}
 _ERROR_GATE_STATES = {"error", "failed"}
 _USER_DECISION_STATUSES = {"pending", "submitted"}
 _DECISION_STATUSES = {"pending", "submitted", "consumed", "rejected", "expired"}
-_SOURCE_CODE_EXTS = {
-    ".c",
-    ".cc",
-    ".cpp",
-    ".h",
-    ".hpp",
-    ".py",
-    ".js",
-    ".ts",
-    ".tsx",
-    ".jsx",
-    ".java",
-    ".go",
-    ".rs",
-    ".cs",
-    ".m",
-    ".mm",
-    ".swift",
-    ".kt",
-    ".sh",
-    ".ps1",
-    ".cmake",
-}
-_DOC_EXTS = {".md", ".txt", ".rst", ".adoc", ".pdf", ".doc", ".docx"}
-_WORKFLOW_NAME_HINTS = ("plan", "workflow", "dispatch", "review", "verify", "trace", "checklist")
 
 STATUS_LINE_RE = re.compile(r"^\[ctcp_orchestrate\]\s*([^=]+)=(.*)$")
 
@@ -67,6 +42,12 @@ except ModuleNotFoundError:
     if str(SCRIPTS_DIR) not in sys.path:
         sys.path.insert(0, str(SCRIPTS_DIR))
     import ctcp_dispatch
+try:
+    from project_manifest_bridge import resolve_project_manifest
+except ModuleNotFoundError:
+    if str(SCRIPTS_DIR) not in sys.path:
+        sys.path.insert(0, str(SCRIPTS_DIR))
+    from project_manifest_bridge import resolve_project_manifest
 
 
 class BridgeError(RuntimeError):
@@ -782,6 +763,17 @@ def _collect_output_artifacts(run_dir: Path) -> list[dict[str, Any]]:
     return rows
 
 
+def ctcp_get_project_manifest(run_id: str = "") -> dict[str, Any]:
+    run_dir = _resolve_run_dir(run_id)
+    rid = _run_id_from_dir(run_dir)
+    artifacts = _collect_output_artifacts(run_dir)
+    manifest_path = run_dir / "artifacts" / "project_manifest.json"
+    declared = _read_json(manifest_path) if manifest_path.exists() else None
+    if not isinstance(declared, dict) or not declared:
+        declared = None
+    return resolve_project_manifest(run_id=rid, run_dir=run_dir, artifacts=artifacts, declared=declared)
+
+
 def _resolve_artifact_path(run_dir: Path, artifact_ref: str) -> tuple[Path, dict[str, Any]]:
     ref = str(artifact_ref or "").strip()
     if not ref:
@@ -926,6 +918,7 @@ def ctcp_get_support_context(run_id: str = "") -> dict[str, Any]:
     current_snapshot = ctcp_get_current_state_snapshot(rid)
     render_snapshot = ctcp_get_render_state_snapshot(rid)
     output_artifacts = ctcp_list_output_artifacts(rid)
+    project_manifest = ctcp_get_project_manifest(rid)
     whiteboard = ctcp_dispatch.get_support_whiteboard_context(run_dir)
     frontend_request = _read_json(run_dir / "artifacts" / "frontend_request.json")
     return {
@@ -937,6 +930,7 @@ def ctcp_get_support_context(run_id: str = "") -> dict[str, Any]:
         "render_snapshot": render_snapshot,
         "decisions": decisions,
         "output_artifacts": output_artifacts,
+        "project_manifest": project_manifest,
         "whiteboard": whiteboard,
         "frontend_request": frontend_request,
         "goal": str(frontend_request.get("goal", "")).strip(),
@@ -1458,6 +1452,10 @@ def read_output_artifact(run_id: str, artifact_ref: str, *, max_text_bytes: int 
     return ctcp_read_output_artifact(run_id=run_id, artifact_ref=artifact_ref, max_text_bytes=max_text_bytes)
 
 
+def get_project_manifest(run_id: str = "") -> dict[str, Any]:
+    return ctcp_get_project_manifest(run_id=run_id)
+
+
 def get_current_state_snapshot(run_id: str = "") -> dict[str, Any]:
     return ctcp_get_current_state_snapshot(run_id=run_id)
 
@@ -1479,6 +1477,7 @@ __all__ = [
     "ctcp_list_output_artifacts",
     "ctcp_get_output_artifact_meta",
     "ctcp_read_output_artifact",
+    "ctcp_get_project_manifest",
     "ctcp_get_current_state_snapshot",
     "ctcp_get_render_state_snapshot",
     "ctcp_upload_artifact",
@@ -1494,6 +1493,7 @@ __all__ = [
     "list_output_artifacts",
     "get_output_artifact_meta",
     "read_output_artifact",
+    "get_project_manifest",
     "get_current_state_snapshot",
     "get_render_state_snapshot",
 ]

@@ -53,8 +53,6 @@ BEHAVIOR_ID_STEP_FIXER_PATCH = "B025"
 BEHAVIOR_ID_STEP_PLAN_DRAFT_FAMILY = "B026"
 # BEHAVIOR_ID: B027
 BEHAVIOR_ID_PROVIDER_RESOLUTION = "B027"
-
-
 def default_dispatch_config_doc(role_defaults: dict[str, str] | None = None) -> dict[str, Any]:
     role_providers: dict[str, str] = dict(HARD_ROLE_PROVIDERS)
     if isinstance(role_defaults, dict):
@@ -63,21 +61,17 @@ def default_dispatch_config_doc(role_defaults: dict[str, str] | None = None) -> 
             if key in HARD_ROLE_PROVIDERS:
                 continue
             role_providers[key] = _normalize_provider(str(provider))
-
     return {
         "schema_version": "ctcp-dispatch-config-v1",
         "mode": "api_agent",
         "role_providers": role_providers,
         "budgets": {"max_outbox_prompts": 20},
     }
-
-
 def _normalize_provider(value: str) -> str:
     text = (value or "").strip().lower()
     if text in KNOWN_PROVIDERS:
         return text
     return "manual_outbox"
-
 
 def _apply_hard_role_providers(role_providers: dict[str, str], *, mode: str) -> dict[str, str]:
     out: dict[str, str] = {}
@@ -91,25 +85,20 @@ def _apply_hard_role_providers(role_providers: dict[str, str], *, mode: str) -> 
         out[role] = provider
     return out
 
-
 def _read_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
-
 
 def _write_json(path: Path, doc: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
 
 def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(row, ensure_ascii=False) + "\n")
 
-
 def _now_iso() -> str:
     return datetime.now().isoformat(timespec="seconds")
-
 
 def _forced_provider() -> str:
     raw = str(os.environ.get("CTCP_FORCE_PROVIDER", "")).strip().lower()
@@ -117,13 +106,11 @@ def _forced_provider() -> str:
         return raw
     return ""
 
-
 def _append_trace(run_dir: Path, text: str) -> None:
     trace = run_dir / "TRACE.md"
     trace.parent.mkdir(parents=True, exist_ok=True)
     with trace.open("a", encoding="utf-8") as fh:
         fh.write(f"- {_now_iso()} | {text}\n")
-
 
 def _brief_text(value: str, *, max_chars: int = 260) -> str:
     text = re.sub(r"\s+", " ", str(value or "").strip())
@@ -893,6 +880,18 @@ def derive_request(gate: dict[str, str], run_doc: dict[str, Any]) -> dict[str, A
     elif "plan.md" in path_l:
         # BEHAVIOR_ID: B021
         role, action, target = "chair", "plan_signed", "artifacts/PLAN.md"
+    elif "output_contract_freeze.json" in path_l:
+        role, action, target = "chair", "output_contract_freeze", "artifacts/output_contract_freeze.json"
+    elif "source_generation_report.json" in path_l:
+        role, action, target = "chair", "source_generation", "artifacts/source_generation_report.json"
+    elif "docs_generation_report.json" in path_l:
+        role, action, target = "chair", "docs_generation", "artifacts/docs_generation_report.json"
+    elif "workflow_generation_report.json" in path_l:
+        role, action, target = "chair", "workflow_generation", "artifacts/workflow_generation_report.json"
+    elif "project_manifest.json" in path_l:
+        role, action, target = "chair", "artifact_manifest_build", "artifacts/project_manifest.json"
+    elif "deliverable_index.json" in path_l:
+        role, action, target = "chair", "deliver", "artifacts/deliverable_index.json"
     elif "file_request.json" in path_l:
         # BEHAVIOR_ID: B022
         role, action, target = "chair", "file_request", "artifacts/file_request.json"

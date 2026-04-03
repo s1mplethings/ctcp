@@ -43,46 +43,48 @@ try:
 except ModuleNotFoundError:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import ctcp_dispatch
-
 try:
     from tools.patch_first import PatchPolicy, apply_patch_safely
 except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
     from tools.patch_first import PatchPolicy, apply_patch_safely
-
 try:
     from tools import scaffold as scaffold_tools
 except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
     from tools import scaffold as scaffold_tools
-
 try:
     from tools import reference_export
 except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
     from tools import reference_export
-
 try:
     from tools import testkit_runner
 except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
     from tools import testkit_runner
-
 try:
     from tools import v2p_fixtures
 except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
     from tools import v2p_fixtures
-
-
+try:
+    from project_generation_gate import (
+        evaluate_project_generation_gate,
+        is_project_generation_workflow,
+        selected_workflow_id_from_find_result,
+    )
+except ModuleNotFoundError:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from project_generation_gate import (
+        evaluate_project_generation_gate,
+        is_project_generation_workflow,
+        selected_workflow_id_from_find_result,
+    )
 def now_iso() -> str:
     return dt.datetime.now().isoformat(timespec="seconds")
-
-
 def now_utc_iso() -> str:
     return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
-
 def run_cmd(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> tuple[int, str, str]:
     proc_env = os.environ.copy()
     if env:
@@ -98,25 +100,15 @@ def run_cmd(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> tup
         errors="replace",
     )
     return p.returncode, p.stdout, p.stderr
-
-
 def write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
-
-
 def write_json(path: Path, doc: dict[str, Any]) -> None:
     write_text(path, json.dumps(doc, ensure_ascii=False, indent=2) + "\n")
-
-
 def read_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
-
-
 def default_run_id() -> str:
     return dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f-orchestrate")
-
-
 def file_sha256(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as fh:
@@ -126,8 +118,6 @@ def file_sha256(path: Path) -> str:
                 break
             h.update(chunk)
     return h.hexdigest()
-
-
 def active_patch_candidate(run_dir: Path) -> Path | None:
     artifacts = run_dir / "artifacts"
     patch = artifacts / "diff.patch"
@@ -137,8 +127,6 @@ def active_patch_candidate(run_dir: Path) -> Path | None:
     if patch.exists():
         return patch
     return None
-
-
 def ensure_active_patch(run_dir: Path) -> tuple[Path | None, bool]:
     artifacts = run_dir / "artifacts"
     patch = artifacts / "diff.patch"
@@ -666,6 +654,9 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
     patch = artifacts / "diff.patch"
     patch_marker = artifacts / "patch_apply.json"
     verify_report = artifacts / "verify_report.json"
+    find_result = artifacts / "find_result.json"
+    selected_workflow_id = selected_workflow_id_from_find_result(find_result)
+    project_generation_mode = is_project_generation_workflow(selected_workflow_id)
 
     if str(run_doc.get("status", "")).lower() == "pass":
         return {"state": "pass", "owner": "", "path": "", "reason": "run already pass"}
@@ -690,6 +681,13 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
                 pass
 
     if str(run_doc.get("status", "")).lower() == "fail":
+        if project_generation_mode:
+            return {
+                "state": "ready_verify",
+                "owner": "Local Verifier",
+                "path": "artifacts/verify_report.json",
+                "reason": "project-generation run failed; retry verify after artifact adjustments",
+            }
         candidate = active_patch_candidate(run_dir)
         if candidate is not None:
             candidate_sha = file_sha256(candidate)
@@ -740,7 +738,6 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
 
     guardrails = artifacts / "guardrails.md"
     analysis = artifacts / "analysis.md"
-    find_result = artifacts / "find_result.json"
     find_web = artifacts / "find_web.json"
     file_request = artifacts / "file_request.json"
     context_pack = artifacts / "context_pack.json"
@@ -811,6 +808,9 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
 
     if not plan.exists() or not plan_signed(plan):
         return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/PLAN.md", "reason": "waiting for signed PLAN.md"}
+
+    if project_generation_mode:
+        return evaluate_project_generation_gate(artifacts)
 
     if not patch.exists() and not (artifacts / "diff.patch.v2").exists():
         return {"state": "blocked", "owner": "PatchMaker", "path": "artifacts/diff.patch", "reason": "waiting for diff.patch"}

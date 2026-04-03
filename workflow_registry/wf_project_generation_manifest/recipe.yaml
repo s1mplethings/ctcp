@@ -1,0 +1,68 @@
+id: wf_project_generation_manifest
+version: 1.0.0
+description: Dedicated low-capability project-generation path with manifest and deliver-stage gating.
+
+inputs:
+  required:
+    - goal
+    - repo_root
+    - workflow_registry/index.json
+  optional:
+    - constraints
+    - previous_runs
+
+outputs:
+  required:
+    - artifacts/find_result.json
+    - artifacts/output_contract_freeze.json
+    - artifacts/source_generation_report.json
+    - artifacts/docs_generation_report.json
+    - artifacts/workflow_generation_report.json
+    - artifacts/project_manifest.json
+    - artifacts/deliverable_index.json
+    - artifacts/verify_report.json
+    - TRACE.md
+  on_failure:
+    - failure_bundle.zip
+
+steps:
+  - doc
+  - analysis
+  - find
+  - file_request
+  - context_pack
+  - plan
+  - output_contract_freeze
+  - source_generation
+  - docs_generation
+  - workflow_generation
+  - artifact_manifest_build
+  - deliver
+  - verify
+
+gates:
+  lite:
+    - verify_repo_default
+  full:
+    - verify_repo_full
+
+cost_hints:
+  dependency_level: low
+  api_level: high
+  estimated_minutes: 10
+
+roles:
+  librarian:
+    provider: local_exec
+  contract_guardian:
+    provider: api_agent
+  chair:
+    provider: api_agent
+  cost_controller:
+    provider: api_agent
+  patchmaker:
+    provider: api_agent
+  fixer:
+    provider: api_agent
+  researcher:
+    provider: api_agent

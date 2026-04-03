@@ -22,7 +22,8 @@ class WorkflowDispatchTests(unittest.TestCase):
         index_path = ROOT / "workflow_registry" / "index.json"
         doc = json.loads(index_path.read_text(encoding="utf-8"))
         ids = {str(row.get("id", "")) for row in doc.get("workflows", [])}
-        self.assertEqual(ids, {"wf_orchestrator_only"})
+        self.assertIn("wf_orchestrator_only", ids)
+        self.assertIn("wf_project_generation_manifest", ids)
         fallback = str(doc.get("resolver_policy", {}).get("fallback_workflow_id", ""))
         self.assertEqual(fallback, "wf_orchestrator_only")
 

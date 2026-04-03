@@ -2784,6 +2784,45 @@
       },
       "status": "done",
       "notes": "Completed on 2026-04-01: landed multi-factor code health detector + rules + CI/verify growth guard + decomposition backlog/rule docs, stabilized S16 lite replay fixture/scenario for deterministic closure, and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` returned 0 (includes triplet guard + lite replay pass)."
+    },
+    {
+      "id": "ADHOC-20260402-project-generation-mainline-closure",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Project-generation mainline closure for concrete project requests",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "L1-ORCH-001",
+        "L1-DISP-001"
+      ],
+      "dod": [
+        "Project-generation requests are routed to a dedicated workflow and do not default to the generic patch path",
+        "Project-generation runs explicitly gate on output_contract_freeze, artifact_manifest_build, and deliver before verify",
+        "Backend interface exposes get_project_manifest and manual VN runner no longer injects deliverables into run_dir"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/resolve_workflow.py",
+          "workflow_registry/index.json",
+          "workflow_registry/wf_project_generation_manifest/recipe.yaml",
+          "scripts/ctcp_orchestrate.py",
+          "scripts/ctcp_dispatch.py",
+          "scripts/ctcp_front_bridge.py",
+          "tools/providers/api_agent.py",
+          "tests/manual_backend_interface_vn_project_runner.py",
+          "tests/test_backend_interface_contract_apis.py",
+          "docs/backend_interface_contract.md",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest tests/test_backend_interface_contract_apis.py -v",
+          "python tests/manual_backend_interface_vn_project_runner.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "doing",
+      "notes": "Bound at baseline commit 7777ebd2b46bcd334d14bc872bfbf184c9c93d78 (version 3.2.0); scope is mainline closure only, not implementing VN business functionality."
     }
   ]
 }

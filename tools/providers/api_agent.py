@@ -12,21 +12,25 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_LOCAL_NOTES_PATH = ROOT / ".agent_private" / "NOTES.md"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-try:
-    from tools import contrast_rules, contract_guard, local_librarian
-except ModuleNotFoundError:
-    if str(ROOT) not in sys.path:
-        sys.path.insert(0, str(ROOT))
-    from tools import contrast_rules, contract_guard, local_librarian
+from tools import contrast_rules, contract_guard, local_librarian
+from tools.providers.project_generation_artifacts import (
+    normalize_deliverable_index,
+    normalize_docs_generation,
+    normalize_output_contract_freeze,
+    normalize_patch_payload,
+    normalize_project_manifest,
+    normalize_source_generation,
+    normalize_workflow_generation,
+)
 
 
 def _sanitize(value: str) -> str:
     text = re.sub(r"[^a-z0-9_]+", "_", (value or "").strip().lower())
     text = re.sub(r"_+", "_", text).strip("_")
     return text or "item"
-
-
 def _load_local_notes_defaults() -> dict[str, str]:
     path_text = str(os.environ.get("CTCP_LOCAL_NOTES_PATH", "")).strip()
     path = Path(path_text) if path_text else DEFAULT_LOCAL_NOTES_PATH
@@ -36,7 +40,6 @@ def _load_local_notes_defaults() -> dict[str, str]:
         text = path.read_text(encoding="utf-8", errors="replace")
     except Exception:
         return {}
-
     out: dict[str, str] = {}
     m_url = re.search(r"`(https?://[^`\s]+)`", text)
     if m_url:
@@ -45,8 +48,6 @@ def _load_local_notes_defaults() -> dict[str, str]:
     if m_key:
         out["api_key"] = m_key.group(1).strip()
     return out
-
-
 def _resolved_external_api_credentials() -> tuple[str, str]:
     defaults = _load_local_notes_defaults()
     env_key = str(os.environ.get("OPENAI_API_KEY", "")).strip()
@@ -55,7 +56,6 @@ def _resolved_external_api_credentials() -> tuple[str, str]:
     ctcp_base_url = str(os.environ.get("CTCP_OPENAI_BASE_URL", "")).strip()
     notes_key = str(defaults.get("api_key", "")).strip()
     notes_base_url = str(defaults.get("base_url", "")).strip()
-
     key = env_key
     if key.lower() == "ollama" and not env_base_url:
         replacement_key = ctcp_key or notes_key
@@ -64,17 +64,12 @@ def _resolved_external_api_credentials() -> tuple[str, str]:
         return key, env_base_url or ctcp_base_url
     if not key:
         key = ctcp_key or notes_key
-
     base_url = env_base_url or ctcp_base_url or notes_base_url
     return key, base_url
-
-
 def _slug(text: str) -> str:
     value = re.sub(r"[^a-z0-9_-]+", "-", (text or "").strip().lower())
     value = re.sub(r"-+", "-", value).strip("-")
     return value or "goal"
-
-
 def _read_text(path: Path, limit: int = 20000) -> str:
     if not path.exists():
         return ""
@@ -82,21 +77,15 @@ def _read_text(path: Path, limit: int = 20000) -> str:
     if len(text) > limit:
         return text[:limit] + "\n\n[truncated]"
     return text
-
-
 def _write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
-
-
 def _first_non_empty_line(text: str) -> str:
     for raw in (text or "").splitlines():
         line = raw.strip()
         if line:
             return line
     return ""
-
-
 def _normalize_line_ranges(raw: Any) -> list[list[int]]:
     if not isinstance(raw, list):
         return []
@@ -115,8 +104,6 @@ def _normalize_line_ranges(raw: Any) -> list[list[int]]:
             a, b = b, a
         out.append([a, b])
     return out
-
-
 def _extract_json_dict(text: str) -> dict[str, Any] | None:
     raw = (text or "").strip()
     if not raw:
@@ -127,7 +114,6 @@ def _extract_json_dict(text: str) -> dict[str, Any] | None:
             return doc
     except Exception:
         pass
-
     for m in re.finditer(r"```(?:json)?\s*([\s\S]*?)```", raw, flags=re.IGNORECASE):
         block = m.group(1).strip()
         if not block:
@@ -138,7 +124,6 @@ def _extract_json_dict(text: str) -> dict[str, Any] | None:
                 return doc
         except Exception:
             continue
-
     start = raw.find("{")
     end = raw.rfind("}")
     if start >= 0 and end > start:
@@ -149,10 +134,7 @@ def _extract_json_dict(text: str) -> dict[str, Any] | None:
                 return doc
         except Exception:
             pass
-
     return None
-
-
 def _to_json_text(doc: dict[str, Any]) -> str:
     return json.dumps(doc, ensure_ascii=False, indent=2) + "\n"
 
@@ -397,7 +379,7 @@ def _normalize_plan_md(raw_text: str, *, signed: bool, goal: str) -> str:
     )
 
 
-def _normalize_json_artifact(*, repo_root: Path, request: dict[str, Any], raw_text: str) -> tuple[str, str]:
+def _normalize_json_artifact(*, repo_root: Path, run_dir: Path, request: dict[str, Any], raw_text: str) -> tuple[str, str]:
     role = str(request.get("role", "")).strip().lower()
     action = str(request.get("action", "")).strip().lower()
     goal = str(request.get("goal", "")).strip()
@@ -405,6 +387,17 @@ def _normalize_json_artifact(*, repo_root: Path, request: dict[str, Any], raw_te
 
     if role == "chair" and action == "file_request":
         return _to_json_text(_normalize_file_request(doc, goal=goal)), ""
+    if role == "chair":
+        chair_builders: dict[str, Any] = {
+            "output_contract_freeze": lambda: normalize_output_contract_freeze(doc, goal=goal),
+            "source_generation": lambda: normalize_source_generation(doc, goal=goal, run_dir=run_dir),
+            "docs_generation": lambda: normalize_docs_generation(doc, goal=goal, run_dir=run_dir),
+            "workflow_generation": lambda: normalize_workflow_generation(doc, goal=goal, run_dir=run_dir),
+            "artifact_manifest_build": lambda: normalize_project_manifest(doc, goal=goal, run_dir=run_dir),
+            "deliver": lambda: normalize_deliverable_index(doc, goal=goal, run_dir=run_dir),
+        }
+        if action in chair_builders:
+            return _to_json_text(chair_builders[action]()), ""
     if role == "librarian" and action == "context_pack":
         return _to_json_text(_normalize_context_pack(doc, goal=goal, repo_root=repo_root)), ""
     if role == "researcher" and action == "find_web":
@@ -1110,7 +1103,18 @@ def execute(
                 "stderr_log": patch_stderr.relative_to(run_dir).as_posix(),
                 "review": review.relative_to(run_dir).as_posix(),
             }
-        patch_text = (proc.stdout or "").strip()
+        patch_text, patch_norm_err = normalize_patch_payload(proc.stdout or "")
+        if patch_norm_err:
+            reason = patch_norm_err
+            review = _record_failure_review(run_dir, reason)
+            return {
+                "status": "exec_failed",
+                "reason": reason,
+                "cmd": cmd,
+                "stdout_log": patch_stdout.relative_to(run_dir).as_posix(),
+                "stderr_log": patch_stderr.relative_to(run_dir).as_posix(),
+                "review": review.relative_to(run_dir).as_posix(),
+            }
         first = _first_non_empty_line(patch_text)
         if first != "" and not first.startswith("diff --git"):
             reason = "patch output must start with diff --git"
@@ -1123,18 +1127,7 @@ def execute(
                 "stderr_log": patch_stderr.relative_to(run_dir).as_posix(),
                 "review": review.relative_to(run_dir).as_posix(),
             }
-        if not patch_text:
-            reason = "patch output is empty"
-            review = _record_failure_review(run_dir, reason)
-            return {
-                "status": "exec_failed",
-                "reason": reason,
-                "cmd": cmd,
-                "stdout_log": patch_stdout.relative_to(run_dir).as_posix(),
-                "stderr_log": patch_stderr.relative_to(run_dir).as_posix(),
-                "review": review.relative_to(run_dir).as_posix(),
-            }
-        patch_payload = patch_text + "\n"
+        patch_payload = patch_text if patch_text.endswith("\n") else (patch_text + "\n")
         _write_text(patch_out, patch_payload)
         _write_text(target_path, patch_payload)
         return {
@@ -1146,7 +1139,6 @@ def execute(
             "stdout_log": patch_stdout.relative_to(run_dir).as_posix(),
             "stderr_log": patch_stderr.relative_to(run_dir).as_posix(),
         }
-
     agent_tpl = templates.get("agent") or templates.get("plan")
     if not agent_tpl:
         available_keys = ", ".join(sorted(templates.keys())) or "(none)"
@@ -1192,6 +1184,7 @@ def execute(
     if target_rel.lower().endswith(".json"):
         target_payload, norm_err = _normalize_json_artifact(
             repo_root=repo_root,
+            run_dir=run_dir,
             request=request,
             raw_text=target_payload_raw,
         )
