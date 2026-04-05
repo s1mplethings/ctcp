@@ -139,7 +139,7 @@ When to add:
 - Symptom:
   support bot 已能给出自然客服回复，但项目型消息并没有真正进入后台制作流程；客服侧看不到生产 run 的 whiteboard / librarian 上下文，用户也只会得到 support-only 的泛化答复。
 - Repro:
-  1. 通过 `scripts/ctcp_support_bot.py` 发送一条明确项目需求，例如“我想做一个帮我整理 VN 剧情结构的项目”。
+  1. 通过 `scripts/ctcp_support_bot.py` 发送一条明确项目需求，例如“我想做一个帮我整理剧情结构的项目”。
   2. 检查 support session artifacts 与 production run artifacts，发现 support turn 只写 `support_inbox.jsonl` / `support_reply.json`，没有通过 `scripts/ctcp_front_bridge.py` 创建或绑定 run，也没有消费 `${run_dir}/artifacts/support_whiteboard.json`。
 - Root cause:
   support bot 的入口 `process_message()` 只把消息交给 reply provider，并未走 frontend-to-execution bridge；共享 whiteboard 与 librarian 线索只在 `scripts/ctcp_dispatch.py::dispatch_once()` 的生产 run 路径内可见，导致 support entrypoint 与 backend flow 脱节。
@@ -167,7 +167,7 @@ When to add:
 - Symptom:
   support bot 在同一会话里会突然“忘记项目是什么”，并把 `没有，你先做着` 之类的短句理解成“先暂停项目”；首句问候还可能漂成英文。
 - Repro:
-  1. 先发送一条明确项目需求，例如 `i want to create a project to help me make vn games, especially in clarify storyline`。
+  1. 先发送一条明确项目需求，例如 `i want to create a project to help me structure narrative projects, especially in clarify storyline`。
   2. 再发送短句 follow-up，例如 `没有，你先做着`。
   3. 当显式 provider 为 `api_agent` 且 reply 中带有 Unicode replacement char 时，观察 support bot 路由跌到 `ollama_agent` 并返回错误语义。
 - Root cause:
@@ -253,7 +253,7 @@ When to add:
 - Symptom:
   support bot 在同一个项目会话里先说“会开始做第一版”，但实际 backend 没有开始制作；同时项目目标还会被后续的技术约束消息覆盖。
 - Repro:
-  1. 在已绑定 run 的 support session 里先发送真实项目目标，例如“我想做一个帮我理顺 VN 剧情结构的项目”。
+  1. 在已绑定 run 的 support session 里先发送真实项目目标，例如“我想做一个帮我理顺剧情结构的项目”。
   2. 再发送实现细节，例如 `window开发，然后ui可以使用qt6`。
   3. 接着发送执行指令，例如 `你先做出第一版给我看，然后我在做调整`。
 - Root cause:
@@ -471,7 +471,7 @@ When to add:
 ## Example 19
 
 - Symptom:
-  真实 Telegram 旧会话里只发一句 `你好`，support bot 仍会回“之前的 VN 项目已经打包好了”并直接附带 zip 发送动作。
+  真实 Telegram 旧会话里只发一句 `你好`，support bot 仍会回“之前的剧情项目已经打包好了”并直接附带 zip 发送动作。
 - Repro:
   1. 使用一个已经绑定旧 run 且 `package_ready=true` 的 support session。
   2. 在 Telegram 里只发送 greeting，例如 `你好`。
@@ -676,7 +676,7 @@ When to add:
 - Symptom:
   用户发项目创建需求后，support bot 几秒内回复“项目已准备好并可发包”，但主 run 仍停在 `gate=blocked`，后续并未按同一主流程继续推进。
 - Repro:
-  1. 在 Telegram support session 发送项目创建句（如“帮我创建一个 VN 工具项目”）。
+  1. 在 Telegram support session 发送项目创建句（如“帮我创建一个剧情工具项目”）。
   2. 观察 `support_session_state.json`、`support_t2p_state_machine_report.json` 与绑定 run 的 `RUN.json/status.gate`。
   3. 可见 support 侧先出现 `SUPPORT_T2P_STATE_MACHINE_REPORTED=PASS`，同时 bound run 仍 `status.gate.state=blocked`（例如等待 `artifacts/PLAN_draft.md`）。
 - Root cause:

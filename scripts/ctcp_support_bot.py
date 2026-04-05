@@ -126,7 +126,7 @@ LOW_SIGNAL_PROJECT_REPLY_PATTERNS = (
     re.compile(r"^\s*((你)?\s*先\s*(做着?|继续|推进|开始)|继续|先继续|先推进|先这样|就这样|可以|好的|好|行|嗯+)\s*[，,。.!！ ]*(吧|呀|呢|吗)?\s*$"),
     re.compile(r"^\s*(no|not yet|none yet|go ahead|keep going|continue|start first|you start)\s*[!.,? ]*\s*$", re.IGNORECASE),
 )
-PROJECT_GOAL_HINTS_ZH = ("项目", "剧情", "故事", "设定", "分支", "脚本", "游戏", "视觉小说", "VN", "vn", "角色", "世界观")
+PROJECT_GOAL_HINTS_ZH = ("项目", "剧情", "故事", "设定", "分支", "脚本", "游戏", "叙事", "分镜", "角色", "世界观")
 PROJECT_GOAL_HINTS_EN = (
     "project",
     "storyline",
@@ -135,8 +135,8 @@ PROJECT_GOAL_HINTS_EN = (
     "branch",
     "script",
     "game",
-    "visual novel",
-    "vn",
+    "narrative design",
+    "storyboard",
     "character",
     "worldbuilding",
 )

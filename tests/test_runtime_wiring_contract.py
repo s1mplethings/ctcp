@@ -124,7 +124,7 @@ class RuntimeWiringContractTests(unittest.TestCase):
                 "has_actionable_goal": True,
                 "first_pass_understood": True,
             },
-            task_summary="继续优化 VN 前台",
+            task_summary="继续优化剧情前台",
             raw_reply_text="",
             raw_next_question="",
             notes={
@@ -132,8 +132,8 @@ class RuntimeWiringContractTests(unittest.TestCase):
                 "recent_user_messages": ["继续优化这个项目"],
                 "frontdesk_state": {
                     "state": "showing_decision",
-                    "active_task_id": "run-vn",
-                    "current_goal": "继续优化 VN 前台",
+                    "active_task_id": "run-story",
+                    "current_goal": "继续优化剧情前台",
                     "decision_points": [
                         {
                             "decision_id": "d-ui",
@@ -559,7 +559,7 @@ class RuntimeWiringContractTests(unittest.TestCase):
             support_context = {
                 "run_id": "r-demo",
                 "run_dir": "D:/tmp/r-demo",
-                "goal": "VN 剧情项目",
+                "goal": "剧情项目",
                 "status": {
                     "run_status": "running",
                     "verify_result": "",
@@ -570,7 +570,7 @@ class RuntimeWiringContractTests(unittest.TestCase):
                 "decisions": {"count": 0, "decisions": []},
                 "whiteboard": {
                     "path": "artifacts/support_whiteboard.json",
-                    "query": "VN 剧情项目",
+                    "query": "剧情项目",
                     "hits": [{"path": "docs/10_team_mode.md", "start_line": 1, "snippet": "support bot"}],
                     "lookup_error": "",
                     "snapshot": {"path": "artifacts/support_whiteboard.json", "entry_count": 1, "entries": []},
@@ -615,12 +615,12 @@ class RuntimeWiringContractTests(unittest.TestCase):
             ):
                 doc, run_dir = support_bot.process_message(
                     chat_id="runtime-bridge-demo",
-                    user_text="我想做一个帮我整理 VN 剧情节奏的项目。",
+                    user_text="我想做一个帮我整理剧情节奏的项目。",
                     source="stdin",
                 )
 
             self.assertEqual(str(doc.get("provider_status", "")), "executed")
-            new_run_spy.assert_called_once_with(goal="我想做一个帮我整理 VN 剧情节奏的项目。")
+            new_run_spy.assert_called_once_with(goal="我想做一个帮我整理剧情节奏的项目。")
             record_spy.assert_called_once()
             advance_spy.assert_called_once_with("r-demo", max_steps=4)
             self.assertEqual(context_spy.call_count, 2)
@@ -630,7 +630,7 @@ class RuntimeWiringContractTests(unittest.TestCase):
     def test_support_bot_current_turn_router_does_not_reopen_project_intake_for_short_followup(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_runtime_support_turn_router_") as td:
             run_dir = Path(td)
-            project_request = "i want to create a project to help me make vn games, especially in clarify storyline"
+            project_request = "i want to create a project to help me structure narrative projects, especially in clarify storyline"
             _append_jsonl(
                 run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
                 {
@@ -681,15 +681,15 @@ class RuntimeWiringContractTests(unittest.TestCase):
             root = Path(td)
             support_run_dir = root / "support-session"
             (support_run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
-            bound_run_dir = root / "runs" / "bound-vn"
+            bound_run_dir = root / "runs" / "bound-story"
             (bound_run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
-            project_dir = root / "generated_projects" / "vn_story_organizer"
+            project_dir = root / "generated_projects" / "story_organizer"
             (project_dir / "docs").mkdir(parents=True, exist_ok=True)
             (project_dir / "meta" / "tasks").mkdir(parents=True, exist_ok=True)
             (project_dir / "scripts").mkdir(parents=True, exist_ok=True)
             (project_dir / "tests").mkdir(parents=True, exist_ok=True)
             (project_dir / "artifacts" / "screenshots").mkdir(parents=True, exist_ok=True)
-            (project_dir / "README.md").write_text("# vn_story_organizer\n", encoding="utf-8")
+            (project_dir / "README.md").write_text("# story_organizer\n", encoding="utf-8")
             (project_dir / "manifest.json").write_text("{}", encoding="utf-8")
             (project_dir / "docs" / "00_CORE.md").write_text("# core\n", encoding="utf-8")
             (project_dir / "meta" / "tasks" / "CURRENT.md").write_text("# current\n", encoding="utf-8")
@@ -702,18 +702,18 @@ class RuntimeWiringContractTests(unittest.TestCase):
             (project_dir / "artifacts" / "screenshots" / "step01.png").write_bytes(b"\x89PNG\r\n")
 
             state = support_bot.default_support_session_state("123")
-            state["bound_run_id"] = "r-vn"
+            state["bound_run_id"] = "r-story"
             state["bound_run_dir"] = str(bound_run_dir)
             (support_run_dir / support_bot.SUPPORT_SESSION_STATE_REL_PATH).write_text(
                 json.dumps(state, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
             (bound_run_dir / "artifacts" / "patch_apply.json").write_text(
-                json.dumps({"touched_files": ["generated_projects/vn_story_organizer/README.md"]}, ensure_ascii=False),
+                json.dumps({"touched_files": ["generated_projects/story_organizer/README.md"]}, ensure_ascii=False),
                 encoding="utf-8",
             )
             (bound_run_dir / "artifacts" / "PLAN.md").write_text(
-                "Status: SIGNED\nScope-Allow: generated_projects/vn_story_organizer/\n",
+                "Status: SIGNED\nScope-Allow: generated_projects/story_organizer/\n",
                 encoding="utf-8",
             )
 
@@ -757,7 +757,7 @@ class RuntimeWiringContractTests(unittest.TestCase):
                 support_bot.ctcp_front_bridge,
                 "ctcp_get_support_context",
                 return_value={
-                    "run_id": "r-vn",
+                    "run_id": "r-story",
                     "run_dir": str(bound_run_dir),
                     "status": {
                         "run_status": "completed",
@@ -775,7 +775,7 @@ class RuntimeWiringContractTests(unittest.TestCase):
             self.assertEqual(fake.sent_messages, [(123, "项目包我直接发到当前对话。")])
             self.assertEqual(len(fake.sent_documents), 1)
             self.assertTrue(fake.sent_documents[0][1].exists(), msg=str(fake.sent_documents[0][1]))
-            self.assertEqual(fake.sent_documents[0][1].name, "vn_story_organizer.zip")
+            self.assertEqual(fake.sent_documents[0][1].name, "story_organizer.zip")
             process_spy.assert_called_once_with(chat_id="123", user_text="zip就行", source="telegram", provider_override="")
             manifest = json.loads((support_run_dir / support_bot.SUPPORT_PUBLIC_DELIVERY_REL_PATH).read_text(encoding="utf-8"))
             self.assertEqual(len(list(manifest.get("sent", []))), 1)
@@ -799,7 +799,7 @@ class RuntimeWiringContractTests(unittest.TestCase):
             running_context = {
                 "run_id": "run-proactive",
                 "run_dir": "D:/tmp/run-proactive",
-                "goal": "我想要你继续优化我的vn项目",
+                "goal": "我想要你继续优化我的剧情项目",
                 "status": {
                     "run_status": "running",
                     "verify_result": "",
@@ -812,7 +812,7 @@ class RuntimeWiringContractTests(unittest.TestCase):
             blocked_context = {
                 "run_id": "run-proactive",
                 "run_dir": "D:/tmp/run-proactive",
-                "goal": "我想要你继续优化我的vn项目",
+                "goal": "我想要你继续优化我的剧情项目",
                 "status": {
                     "run_status": "blocked",
                     "verify_result": "",
@@ -956,7 +956,7 @@ class RuntimeWiringContractTests(unittest.TestCase):
             decision_context = {
                 "run_id": "run-decision",
                 "run_dir": "D:/tmp/run-decision",
-                "goal": "继续优化 VN 项目",
+                "goal": "继续优化剧情项目",
                 "status": {
                     "run_status": "blocked",
                     "verify_result": "",

@@ -41,7 +41,7 @@ class ProviderSelectionTests(unittest.TestCase):
             cfg, msg = ctcp_dispatch.load_dispatch_config(run_dir)
             self.assertIsNotNone(cfg, msg)
             role_providers = cfg.get("role_providers", {})
-            self.assertEqual(role_providers.get("librarian"), "local_exec")
+            self.assertEqual(role_providers.get("librarian"), "ollama_agent")
             self.assertNotEqual(role_providers.get("contract_guardian"), "local_exec")
             self.assertEqual(role_providers.get("patchmaker"), "api_agent")
             self.assertEqual(role_providers.get("fixer"), "api_agent")
@@ -84,7 +84,7 @@ class ProviderSelectionTests(unittest.TestCase):
             self.assertIsNotNone(cfg, msg)
             role_providers = cfg.get("role_providers", {})
             self.assertEqual(role_providers.get("patchmaker"), "manual_outbox")
-            self.assertEqual(role_providers.get("librarian"), "local_exec")
+            self.assertEqual(role_providers.get("librarian"), "ollama_agent")
             self.assertNotEqual(role_providers.get("contract_guardian"), "local_exec")
 
     def test_non_librarian_local_exec_provider_falls_back_to_api(self) -> None:
@@ -139,7 +139,7 @@ class ProviderSelectionTests(unittest.TestCase):
             cfg, msg = ctcp_dispatch.load_dispatch_config(run_dir)
             self.assertIsNotNone(cfg, msg)
             role_providers = cfg.get("role_providers", {})
-            self.assertEqual(role_providers.get("librarian"), "local_exec")
+            self.assertEqual(role_providers.get("librarian"), "ollama_agent")
             self.assertEqual(role_providers.get("patchmaker"), "manual_outbox")
 
     def test_api_agent_preview_disabled_without_env_or_cmd(self) -> None:
@@ -227,12 +227,70 @@ class ProviderSelectionTests(unittest.TestCase):
                 },
                 clear=False,
             ):
-                result = ctcp_dispatch.dispatch_once(run_dir, run_doc, gate, ROOT)
+                def _fake_execute(*, repo_root: Path, run_dir: Path, request: dict[str, object], config: dict[str, object], guardrails_budgets: dict[str, str]) -> dict[str, object]:
+                    del repo_root, config, guardrails_budgets
+                    (run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+                    (run_dir / "artifacts" / "context_pack.json").write_text(
+                        json.dumps({"schema_version": "ctcp-context-pack-v1", "files": [], "omitted": [], "summary": "ok"}, ensure_ascii=False),
+                        encoding="utf-8",
+                    )
+                    self.assertEqual(str(request.get("role", "")), "librarian")
+                    return {
+                        "status": "executed",
+                        "target_path": "artifacts/context_pack.json",
+                        "provider_mode": "local",
+                        "model_name": "qwen-local-test",
+                        "fallback_blocked": True,
+                    }
+
+                with mock.patch.object(ctcp_dispatch.ollama_agent, "execute", side_effect=_fake_execute) as ollama_execute, mock.patch.object(
+                    ctcp_dispatch.api_agent, "execute"
+                ) as api_execute:
+                    result = ctcp_dispatch.dispatch_once(run_dir, run_doc, gate, ROOT)
 
             self.assertEqual(result.get("status"), "executed", msg=str(result))
-            self.assertEqual(result.get("provider"), "local_exec")
+            self.assertEqual(result.get("provider"), "ollama_agent")
+            self.assertEqual(result.get("chosen_provider"), "ollama_agent")
+            self.assertEqual(result.get("provider_mode"), "local")
+            self.assertEqual(result.get("model_name"), "qwen-local-test")
+            self.assertTrue(bool(result.get("fallback_blocked")))
             self.assertIn("ignored CTCP_FORCE_PROVIDER=api_agent", str(result.get("note", "")))
+            ollama_execute.assert_called_once()
+            api_execute.assert_not_called()
             self.assertTrue((run_dir / "artifacts" / "context_pack.json").exists())
+
+    def test_librarian_local_model_failure_does_not_fallback_to_api(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            run_dir = Path(td)
+            (run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+            run_doc = {"goal": "local model failure should stay failed"}
+            gate = {
+                "state": "blocked",
+                "owner": "Local Librarian",
+                "path": "artifacts/context_pack.json",
+                "reason": "waiting for context_pack.json",
+            }
+            with mock.patch.object(
+                ctcp_dispatch.ollama_agent,
+                "execute",
+                return_value={
+                    "status": "exec_failed",
+                    "reason": "librarian local model unavailable: connection refused",
+                    "provider_mode": "local",
+                    "model_name": "qwen-local-test",
+                    "fallback_blocked": True,
+                },
+            ) as ollama_execute, mock.patch.object(ctcp_dispatch.api_agent, "execute") as api_execute:
+                result = ctcp_dispatch.dispatch_once(run_dir, run_doc, gate, ROOT)
+
+            self.assertEqual(result.get("status"), "exec_failed", msg=str(result))
+            self.assertEqual(result.get("provider"), "ollama_agent")
+            self.assertEqual(result.get("provider_mode"), "local")
+            self.assertEqual(result.get("model_name"), "qwen-local-test")
+            self.assertTrue(bool(result.get("fallback_blocked")))
+            self.assertIn("local model unavailable", str(result.get("reason", "")))
+            ollama_execute.assert_called_once()
+            api_execute.assert_not_called()
 
     def test_dispatch_once_writes_step_meta(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -355,7 +413,12 @@ class ProviderSelectionTests(unittest.TestCase):
             entries = wb_doc.get("entries", [])
             self.assertTrue(any(str(e.get("role", "")) == "patchmaker" and str(e.get("kind", "")) == "dispatch_request" for e in entries))
             self.assertTrue(any(str(e.get("role", "")) == "patchmaker" and str(e.get("kind", "")) == "dispatch_result" for e in entries))
-            self.assertTrue(any(str(e.get("role", "")) == "librarian" for e in entries))
+            self.assertTrue(
+                any(
+                    str(e.get("role", "")) == "local_search" and str(e.get("kind", "")) == "dispatch_lookup"
+                    for e in entries
+                )
+            )
 
     def test_manual_outbox_prompt_contains_shared_whiteboard_context(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -381,7 +444,7 @@ class ProviderSelectionTests(unittest.TestCase):
             )
             cfg, msg = ctcp_dispatch.load_dispatch_config(run_dir)
             self.assertIsNotNone(cfg, msg)
-            self.assertEqual(cfg.get("role_providers", {}).get("librarian"), "local_exec")
+            self.assertEqual(cfg.get("role_providers", {}).get("librarian"), "ollama_agent")
 
             run_doc = {"goal": "manual outbox shared whiteboard"}
             gate = {

@@ -14,6 +14,7 @@ Scope:
 Non-goals:
 - Not a replacement for runtime truth ownership in `docs/00_CORE.md`.
 - Not permission to copy legacy business code from reference projects.
+- Not permission to treat any fixed narrative benchmark sample as the production default project target.
 
 ## 1) Final Project Output Contract
 
@@ -40,6 +41,41 @@ Minimum delivery layers:
    - queue/task/report scaffolding usable by next agents
 
 If any required layer is missing, task is not done.
+
+### 1.1) Production Mode vs Benchmark / Regression Mode
+
+Project generation MUST separate real-user production work from fixed-sample benchmark work.
+
+Production mode:
+- applies to real user requests
+- MUST classify project type before workflow/agent selection
+- MUST decide `gui-first|cli-first|web-first|tool-first` from project type and user goal
+- demo, screenshots, visual verification, export contract, and deliverable shape MUST follow project type and user goal
+- MUST NOT hard-code benchmark story, roles, chapters, export names, or demo payloads into default output contracts
+
+Benchmark / regression mode:
+- applies to fixed-sample replay for mainline, gate, deliverable, and evidence-chain validation
+- MAY use a fixed narrative benchmark sample such as `Mystery Narrative Copilot` / `镜廊疑影` as a benchmark case
+- MUST NOT use benchmark output to define production default project content
+- MUST NOT let benchmark sample content overwrite or pollute a real user request
+
+### 1.2) Project-Type Decision Before Generation
+
+Real project generation MUST follow this decision order:
+- generic project intake
+- project type classification
+- workflow/agent decision
+- generation
+- manifest/deliver
+- verify/gates
+- regression replay when required
+
+Rules:
+- Real requests MUST NOT directly inherit a narrative benchmark sample just because that sample exists in regression.
+- Agent MUST decide whether GUI, CLI, web flows, demo assets, screenshots, state persistence, or export support are required from project type and user goal.
+- GUI is not a default mandatory path.
+- CLI is not a default downgrade path.
+- Benchmark samples are validation inputs only, not production defaults.
 
 ## 2) Low-Capability Fixed Stage Workflow
 
@@ -75,6 +111,18 @@ Before generating files, system MUST freeze output contract artifacts:
 
 Generation is blocked until freeze artifacts exist and pass stage self-check.
 
+### 3.1) Effective `context_pack` Consumption
+
+`context_pack.json` presence alone is not effective consumption.
+
+`context_pack` counts as consumed only when it has provable impact on at least one of:
+- project type classification
+- generation strategy or workflow/agent choice
+- output contract / deliverable contract
+- business/module selection
+
+If `context_pack` exists but none of the above changes can be shown in artifacts or reports, consumption is incomplete.
+
 ## 4) Template-Driven Generation
 
 Project generation MUST use templates, not free-form structure invention.
@@ -107,6 +155,7 @@ Even under weak-model performance, the system MUST deliver a minimum closed-loop
 - baseline workflow/governance files
 
 Advanced features may be deferred, but minimum closed-loop output cannot be skipped.
+The minimum closed-loop shape MUST still be derived from project type and user goal, not from any fixed narrative benchmark sample.
 
 ## 7) Report-Only Completion Is Forbidden
 
@@ -137,6 +186,18 @@ Every stage closure must record:
 - next-stage entry allowed or blocked
 
 If blocked, backfill first, then re-check.
+
+### 10.1) Gate Layering
+
+Project-generation gates MUST distinguish these layers:
+- structural completion: required files, entrypoints, manifest, and deliverable inventory exist
+- behavioral completion: the project can start, execute its main flow, and export or deliver what the contract says it should
+- result completion: the result matches the real user request, or matches the declared benchmark sample when running benchmark / regression mode
+
+Rules:
+- Passing structural gates does not prove full project delivery.
+- Production-mode result gates and benchmark-mode result gates MUST NOT be mixed.
+- A fixed narrative benchmark may satisfy benchmark-result checks only; it does not define production completeness.
 
 ## 11) Formal Output Interfaces
 
@@ -175,6 +236,15 @@ Hard boundaries:
 - allowed: folder/layout/state/workflow contract style reuse
 - forbidden: blind copy of unrelated historical files
 - forbidden: direct carry-over of old business logic as implicit default
+
+### 13.1) Benchmark Sample Boundary
+
+Testing rules are a separate concern from production defaults.
+
+Rules:
+- Fixed narrative benchmark samples belong to benchmark / regression rules only.
+- Fixed benchmark characters, chapter names, export names, screenshots, and demo content are valid only for benchmark acceptance.
+- Those benchmark details MUST NOT be written into production default output contracts, manifest defaults, or delivery templates.
 
 ## 14) Hard DONE Gate (Project Generation)
 

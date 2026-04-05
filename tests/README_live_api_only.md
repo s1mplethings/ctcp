@@ -1,6 +1,6 @@
 # Live API-Only Tests
 
-These tests validate CTCP multi-role contract linking with `api_agent` for API-capable roles while keeping `librarian/context_pack` on hard-local `local_exec`.
+These tests validate CTCP multi-role contract linking with `api_agent` for API-capable roles while keeping `librarian/context_pack` on hard-local local-model `ollama_agent`.
 
 ## Preconditions
 
@@ -22,7 +22,7 @@ python -m unittest tests.test_live_api_only_pipeline.LiveApiOnlyPipelineTests.te
 ```
 
 `CTCP_FORCE_PROVIDER=api_agent` still leaves `librarian/context_pack` on
-`local_exec`.
+`ollama_agent`.
 
 Routing matrix:
 

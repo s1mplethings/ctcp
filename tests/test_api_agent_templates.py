@@ -146,6 +146,63 @@ class ApiAgentTemplateTests(unittest.TestCase):
                 self.assertTrue(target.exists(), msg=str(result))
                 self.assertIn(expected_status, target.read_text(encoding="utf-8"))
 
+    def test_execute_plan_only_flattens_multiline_goal_and_reason_for_shell_command(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo_root = Path(td) / "repo"
+            run_dir = repo_root / "runs" / "r1"
+            repo_root.mkdir(parents=True, exist_ok=True)
+            run_dir.mkdir(parents=True, exist_ok=True)
+
+            plan_script = repo_root / "plan_args_stub.py"
+            plan_script.write_text(
+                "\n".join(
+                    [
+                        "import sys",
+                        "goal = sys.argv[1]",
+                        "reason = sys.argv[2]",
+                        "assert '\\n' not in goal and '\\r' not in goal",
+                        "assert '\\n' not in reason and '\\r' not in reason",
+                        "print('# PLAN')",
+                        "print(f'Goal: {goal}')",
+                        "print(f'Reason: {reason}')",
+                        "",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            request = {
+                "role": "chair",
+                "action": "plan_draft",
+                "target_path": "artifacts/analysis.md",
+                "reason": "waiting for analysis.md\nand planner retry",
+                "goal": "第一行需求\n第二行需求\n第三行需求",
+            }
+            with mock.patch.dict(
+                os.environ,
+                {
+                    "SDDAI_PLAN_CMD": f'"{sys.executable}" "{plan_script}" "{{GOAL}}" "{{REASON}}"',
+                    "SDDAI_AGENT_CMD": "",
+                    "SDDAI_PATCH_CMD": "",
+                    "OPENAI_API_KEY": "",
+                    "OPENAI_BASE_URL": "",
+                },
+                clear=False,
+            ):
+                result = api_agent.execute(
+                    repo_root=repo_root,
+                    run_dir=run_dir,
+                    request=request,
+                    config={"budgets": {"max_outbox_prompts": 8}},
+                    guardrails_budgets={},
+                )
+
+            self.assertEqual(result.get("status"), "executed", msg=str(result))
+            target = run_dir / "artifacts" / "analysis.md"
+            text = target.read_text(encoding="utf-8")
+            self.assertIn("Goal: 第一行需求 第二行需求 第三行需求", text)
+            self.assertIn("Reason: waiting for analysis.md and planner retry", text)
+
     def test_execute_file_request_normalizes_non_json_output(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             repo_root = Path(td) / "repo"
@@ -199,6 +256,60 @@ class ApiAgentTemplateTests(unittest.TestCase):
             self.assertIsInstance(doc.get("budget"), dict)
             self.assertIn("reason", doc)
 
+    def test_execute_file_request_expands_narrative_project_context_defaults(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo_root = Path(td) / "repo"
+            run_dir = repo_root / "runs" / "r1"
+            repo_root.mkdir(parents=True, exist_ok=True)
+            run_dir.mkdir(parents=True, exist_ok=True)
+
+            agent_script = repo_root / "agent_stub_narrative_ctx.py"
+            agent_script.write_text("print('not json')\n", encoding="utf-8")
+
+            request = {
+                "role": "chair",
+                "action": "file_request",
+                "target_path": "artifacts/file_request.json",
+                "reason": "waiting for file_request.json",
+                "goal": (
+                    "我想要生成一个可以帮助创作者制作叙事项目的助手。"
+                    "它需要处理故事线、角色关系、章节结构和提示词导出。"
+                ),
+            }
+            with mock.patch.dict(
+                os.environ,
+                {
+                    "SDDAI_AGENT_CMD": f'"{sys.executable}" "{agent_script}"',
+                    "SDDAI_PLAN_CMD": "",
+                    "SDDAI_PATCH_CMD": "",
+                    "OPENAI_API_KEY": "",
+                    "OPENAI_BASE_URL": "",
+                },
+                clear=False,
+            ):
+                result = api_agent.execute(
+                    repo_root=repo_root,
+                    run_dir=run_dir,
+                    request=request,
+                    config={"budgets": {"max_outbox_prompts": 8}},
+                    guardrails_budgets={},
+                )
+
+            self.assertEqual(result.get("status"), "executed", msg=str(result))
+            target = run_dir / "artifacts" / "file_request.json"
+            doc = json.loads(target.read_text(encoding="utf-8"))
+            paths = {str(dict(item).get("path", "")) for item in list(doc.get("needs", [])) if isinstance(item, dict)}
+            self.assertIn("README.md", paths)
+            self.assertIn("workflow_registry/wf_project_generation_manifest/recipe.yaml", paths)
+            self.assertIn("tools/providers/project_generation_artifacts.py", paths)
+            self.assertIn("tools/providers/api_agent.py", paths)
+            self.assertIn("scripts/ctcp_dispatch.py", paths)
+            self.assertIn("scripts/ctcp_front_bridge.py", paths)
+            self.assertIn("scripts/project_generation_gate.py", paths)
+            self.assertIn("scripts/ctcp_librarian.py", paths)
+            self.assertGreaterEqual(int(dict(doc.get("budget", {})).get("max_files", 0) or 0), 12)
+            self.assertGreaterEqual(int(dict(doc.get("budget", {})).get("max_total_bytes", 0) or 0), 100000)
+
     def test_execute_context_pack_normalizes_partial_json(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             repo_root = Path(td) / "repo"
@@ -251,6 +362,76 @@ class ApiAgentTemplateTests(unittest.TestCase):
             self.assertIsInstance(doc.get("files"), list)
             self.assertIsInstance(doc.get("omitted"), list)
             self.assertTrue(str(doc.get("summary", "")).strip())
+
+    def test_execute_context_pack_falls_back_to_file_request_materialization_when_model_output_has_no_json(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo_root = Path(td) / "repo"
+            run_dir = repo_root / "runs" / "r1"
+            repo_root.mkdir(parents=True, exist_ok=True)
+            run_dir.mkdir(parents=True, exist_ok=True)
+
+            (repo_root / "README.md").write_text("# Demo\nHello context pack\n", encoding="utf-8")
+            (repo_root / "docs").mkdir(parents=True, exist_ok=True)
+            (repo_root / "docs" / "guide.md").write_text("line1\nline2\nline3\nline4\n", encoding="utf-8")
+            (run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+            (run_dir / "artifacts" / "file_request.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "ctcp-file-request-v1",
+                        "goal": "fallback context pack",
+                        "needs": [
+                            {"path": "README.md", "mode": "full"},
+                            {"path": "docs/guide.md", "mode": "snippets", "line_ranges": [[2, 3]]},
+                        ],
+                        "budget": {"max_files": 4, "max_total_bytes": 4096},
+                        "reason": "collect repo context",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            agent_script = repo_root / "agent_stub_ctx_empty.py"
+            agent_script.write_text("print('plain text without json structure')\n", encoding="utf-8")
+
+            request = {
+                "role": "librarian",
+                "action": "context_pack",
+                "target_path": "artifacts/context_pack.json",
+                "reason": "waiting for context_pack.json",
+                "goal": "fallback context pack",
+            }
+            with mock.patch.dict(
+                os.environ,
+                {
+                    "SDDAI_AGENT_CMD": f'"{sys.executable}" "{agent_script}"',
+                    "SDDAI_PLAN_CMD": "",
+                    "SDDAI_PATCH_CMD": "",
+                    "OPENAI_API_KEY": "",
+                    "OPENAI_BASE_URL": "",
+                },
+                clear=False,
+            ):
+                result = api_agent.execute(
+                    repo_root=repo_root,
+                    run_dir=run_dir,
+                    request=request,
+                    config={"budgets": {"max_outbox_prompts": 8}},
+                    guardrails_budgets={},
+                )
+
+            self.assertEqual(result.get("status"), "executed", msg=str(result))
+            target = run_dir / "artifacts" / "context_pack.json"
+            doc = json.loads(target.read_text(encoding="utf-8"))
+            self.assertEqual(doc.get("schema_version"), "ctcp-context-pack-v1")
+            files = list(doc.get("files", []))
+            self.assertGreaterEqual(len(files), 2)
+            paths = {str(dict(item).get("path", "")) for item in files if isinstance(item, dict)}
+            self.assertIn("README.md", paths)
+            self.assertIn("docs/guide.md", paths)
+            self.assertIn("included=", str(doc.get("summary", "")))
 
     def test_execute_guardrails_normalizes_required_keys(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -516,3 +697,4 @@ class ApiAgentTemplateTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -187,6 +187,16 @@ def _artifact_labels(project_context: Mapping[str, Any] | None) -> list[str]:
     return out[:6]
 
 
+def _delivery_summary(project_context: Mapping[str, Any] | None) -> dict[str, str]:
+    source = _as_mapping(project_context)
+    manifest = _as_mapping(source.get("project_manifest", {}))
+    return {
+        "project_root": _norm(manifest.get("project_root", "")),
+        "startup_entrypoint": _norm(manifest.get("startup_entrypoint", "")),
+        "startup_readme": _norm(manifest.get("startup_readme", "")),
+    }
+
+
 def _has_error_truth(project_context: Mapping[str, Any] | None) -> bool:
     source = _as_mapping(project_context)
     render = _render_snapshot(source)
@@ -242,15 +252,17 @@ def infer_reply_intent(
     authoritative_stage = _norm(current.get("authoritative_stage", "")).upper()
     pending_prompt = _decision_prompt(project_context)
     provider_low = _norm(provider_status).lower()
+    error_truth = _has_error_truth(project_context)
+    result_truth = _has_result_truth(project_context)
 
-    if provider_low in {"exec_failed", "failed", "error"} or _has_error_truth(project_context):
-        return "explain_error"
     if visible_state == "WAITING_FOR_DECISION" or authoritative_stage == "WAIT_USER_DECISION" or pending_prompt:
         return "ask_decision"
+    if result_truth and not error_truth:
+        return "deliver_result"
+    if provider_low in {"exec_failed", "failed", "error"} or error_truth:
+        return "explain_error"
     if mode in {"PROJECT_INTAKE", "PROJECT_DETAIL"} and _norm(next_question):
         return "ask_missing_input"
-    if _has_result_truth(project_context):
-        return "deliver_result"
     if mode in {"STATUS_QUERY", "PROJECT_DETAIL"} or visible_state in {"EXECUTING", "SHOWING_PROGRESS"}:
         return "progress_update"
     return "acknowledge_user"
@@ -270,6 +282,7 @@ def render_fallback_reply(
     decision_prompt = _decision_prompt(project_context) or _norm(next_question)
     artifacts = _artifact_labels(project_context)
     visible_state = _norm(render.get("visible_state", "")).upper()
+    delivery = _delivery_summary(project_context)
 
     if use_en:
         if intent == "progress_update":
@@ -294,7 +307,12 @@ def render_fallback_reply(
         if intent == "deliver_result":
             if artifacts:
                 return {
-                    "reply_text": f"The result is ready. I have produced: {', '.join(artifacts[:3])}. You can review these first, and I can iterate right away based on your feedback.",
+                    "reply_text": f"The result is ready. Startup entry: {delivery.get('startup_entrypoint', '') or 'available in project artifacts'}. Produced artifacts: {', '.join(artifacts[:3])}.",
+                    "next_question": "",
+                }
+            if any(delivery.values()):
+                return {
+                    "reply_text": f"The result is ready. Project root: {delivery.get('project_root', '')}. Startup entry: {delivery.get('startup_entrypoint', '')}. Readme: {delivery.get('startup_readme', '')}.",
                     "next_question": "",
                 }
             return {"reply_text": "The result is ready. I can walk you through what was produced and continue with your next preference.", "next_question": ""}
@@ -327,7 +345,12 @@ def render_fallback_reply(
     if intent == "deliver_result":
         if artifacts:
             return {
-                "reply_text": f"这轮结果已经产出，主要文件有：{', '.join(artifacts[:3])}。你先看这些，我可以按你的反馈继续迭代。",
+                "reply_text": f"这轮结果已经产出。启动入口：{delivery.get('startup_entrypoint', '') or '项目产物中可见'}。主要文件有：{', '.join(artifacts[:3])}。",
+                "next_question": "",
+            }
+        if any(delivery.values()):
+            return {
+                "reply_text": f"这轮已经完成。项目目录：{delivery.get('project_root', '')}。启动入口：{delivery.get('startup_entrypoint', '')}。说明入口：{delivery.get('startup_readme', '')}。",
                 "next_question": "",
             }
         if visible_state == "DONE":

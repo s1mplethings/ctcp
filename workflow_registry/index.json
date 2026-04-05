@@ -71,7 +71,7 @@
         "project-scaffold",
         "creative-assistant-project",
         "content-assistant-project",
-        "vn-helper-project"
+        "narrative-helper-project"
       ],
       "dependency_level": "low",
       "cost_hint": {

@@ -95,125 +95,113 @@ def _tiny_png_bytes() -> bytes:
     )
 
 
-def _materialize_high_quality_project(run_dir: Path, logo_bytes: bytes) -> dict[str, str]:
-    out_root = run_dir / "artifacts" / "vn_story_tree_hq_project"
-    out_root.mkdir(parents=True, exist_ok=True)
-    logo_b64 = base64.b64encode(logo_bytes).decode("ascii")
-    (out_root / "preview.png").write_bytes(_tiny_png_bytes())
-    (out_root / "story_seed.json").write_text(
-        json.dumps(
-            {
-                "title": "雾港回声",
-                "root": "intro_return_home",
-                "nodes": [
-                    {"id": "intro_return_home", "label": "归乡开场", "to": ["school_archive", "cafe_evening"]},
-                    {"id": "school_archive", "label": "旧校舍档案室", "to": ["storm_confession"]},
-                    {"id": "cafe_evening", "label": "夜间咖啡馆", "to": ["storm_confession"]},
-                    {"id": "storm_confession", "label": "暴雨告白", "to": ["ending_truth", "ending_silence"]},
-                    {"id": "ending_truth", "label": "真相结局", "to": []},
-                    {"id": "ending_silence", "label": "沉默结局", "to": []},
-                ],
-            },
-            ensure_ascii=False,
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (out_root / "styles.css").write_text(
-        "\n".join(
-            [
-                ":root{--bg:#f7f5ef;--ink:#222;--muted:#5f5a4f;--panel:#fffdf8;--line:#d9d2c4;--accent:#2f6d62;--accent2:#9a6a3a}",
-                "*{box-sizing:border-box}",
-                "body{margin:0;font-family:'Noto Sans SC','Microsoft YaHei',sans-serif;color:var(--ink);background:radial-gradient(circle at 10% 10%,#fff,#f1ece1 65%)}",
-                ".wrap{max-width:1200px;margin:0 auto;padding:28px}",
-                ".hero{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:22px;display:flex;gap:18px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.06)}",
-                ".logo{width:84px;height:84px;border-radius:14px;border:1px solid #ece5d8;background:#fff;padding:8px}",
-                ".hero h1{margin:0 0 8px 0;font-size:28px}.hero p{margin:0;color:var(--muted)}",
-                ".grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:16px}",
-                ".panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}",
-                ".panel h2{margin:0 0 10px 0;font-size:18px}",
-                ".branch-row{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px dashed #e8e1d5}",
-                ".branch-row:last-child{border-bottom:none}",
-                ".tag{display:inline-block;background:#e9f4f2;color:#1e5d53;border:1px solid #cde3df;border-radius:999px;padding:2px 9px;font-size:12px}",
-                ".muted{color:var(--muted)}",
-                "textarea,input,select{width:100%;border:1px solid #cabfae;border-radius:10px;padding:10px;background:#fff}",
-                "textarea{min-height:92px;resize:vertical}",
-                "button{border:none;border-radius:10px;padding:9px 12px;cursor:pointer;background:var(--accent);color:#fff}",
-                ".btn-alt{background:var(--accent2)}",
-                "pre{margin:0;background:#1f2521;color:#d6f6da;border-radius:10px;padding:12px;min-height:180px;overflow:auto}",
-                ".toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}",
-                ".kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}",
-                ".kpi .card{background:#fff;border:1px solid #ece4d6;border-radius:12px;padding:10px}",
-                "@media(max-width:960px){.grid{grid-template-columns:1fr}.kpi{grid-template-columns:1fr 1fr}}",
-            ]
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (out_root / "app.js").write_text(
-        "\n".join(
-            [
-                "const $ = (id) => document.getElementById(id);",
-                "const seed = {",
-                "  title: '雾港回声',",
-                "  nodes: [",
-                "    { id:'intro_return_home', label:'归乡开场', to:['school_archive','cafe_evening'] },",
-                "    { id:'school_archive', label:'旧校舍档案室', to:['storm_confession'] },",
-                "    { id:'cafe_evening', label:'夜间咖啡馆', to:['storm_confession'] },",
-                "    { id:'storm_confession', label:'暴雨告白', to:['ending_truth','ending_silence'] },",
-                "    { id:'ending_truth', label:'真相结局', to:[] },",
-                "    { id:'ending_silence', label:'沉默结局', to:[] },",
-                "  ]",
-                "};",
-                "function drawRows() {",
-                "  const host = $('branchRows'); host.innerHTML='';",
-                "  seed.nodes.forEach((n) => {",
-                "    const div = document.createElement('div'); div.className='branch-row';",
-                "    div.innerHTML = `<span class='tag'>${n.id}</span><strong>${n.label}</strong><span class='muted'>-> ${n.to.join(', ') || 'END'}</span>`;",
-                "    host.appendChild(div);",
-                "  });",
-                "  $('kpiNodeCount').textContent = String(seed.nodes.length);",
-                "  $('kpiBranchCount').textContent = String(seed.nodes.filter(n => n.to.length > 1).length);",
-                "}",
-                "function exportJSON() {",
-                "  const payload = {",
-                "    title: $('titleInput').value || seed.title,",
-                "    theme: $('themeInput').value,",
-                "    core_conflict: $('conflictInput').value,",
-                "    node_flow: seed.nodes,",
-                "    role_background: $('roleInput').value.split('\\n').filter(Boolean),",
-                "    scene_background: $('sceneInput').value.split('\\n').filter(Boolean),",
-                "  };",
-                "  $('jsonOut').textContent = JSON.stringify(payload, null, 2);",
-                "  $('kpiUpdated').textContent = new Date().toLocaleString();",
-                "}",
-                "function exportMarkdown() {",
-                "  const lines = [];",
-                "  lines.push('# ' + ($('titleInput').value || seed.title));",
-                "  lines.push('');",
-                "  lines.push('## 主冲突');",
-                "  lines.push($('conflictInput').value || '（待补）');",
-                "  lines.push('');",
-                "  lines.push('## 节点流');",
-                "  seed.nodes.forEach((n) => lines.push(`- ${n.id} ${n.label} -> ${n.to.join(', ') || 'END'}`));",
-                "  $('mdOut').textContent = lines.join('\\n');",
-                "}",
-                "$('btnJson').addEventListener('click', exportJSON);",
-                "$('btnMd').addEventListener('click', exportMarkdown);",
-                "drawRows(); exportJSON();",
-            ]
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (out_root / "index.html").write_text(
-        f"""<!doctype html>
+def _story_seed_doc() -> dict[str, Any]:
+    return {
+        "title": "雾港回声",
+        "root": "intro_return_home",
+        "nodes": [
+            {"id": "intro_return_home", "label": "归乡开场", "to": ["school_archive", "cafe_evening"]},
+            {"id": "school_archive", "label": "旧校舍档案室", "to": ["storm_confession"]},
+            {"id": "cafe_evening", "label": "夜间咖啡馆", "to": ["storm_confession"]},
+            {"id": "storm_confession", "label": "暴雨告白", "to": ["ending_truth", "ending_silence"]},
+            {"id": "ending_truth", "label": "真相结局", "to": []},
+            {"id": "ending_silence", "label": "沉默结局", "to": []},
+        ],
+    }
+
+
+def _story_styles_css() -> str:
+    return "\n".join(
+        [
+            ":root{--bg:#f7f5ef;--ink:#222;--muted:#5f5a4f;--panel:#fffdf8;--line:#d9d2c4;--accent:#2f6d62;--accent2:#9a6a3a}",
+            "*{box-sizing:border-box}",
+            "body{margin:0;font-family:'Noto Sans SC','Microsoft YaHei',sans-serif;color:var(--ink);background:radial-gradient(circle at 10% 10%,#fff,#f1ece1 65%)}",
+            ".wrap{max-width:1200px;margin:0 auto;padding:28px}",
+            ".hero{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:22px;display:flex;gap:18px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.06)}",
+            ".logo{width:84px;height:84px;border-radius:14px;border:1px solid #ece5d8;background:#fff;padding:8px}",
+            ".hero h1{margin:0 0 8px 0;font-size:28px}.hero p{margin:0;color:var(--muted)}",
+            ".grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:16px}",
+            ".panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}",
+            ".panel h2{margin:0 0 10px 0;font-size:18px}",
+            ".branch-row{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px dashed #e8e1d5}",
+            ".branch-row:last-child{border-bottom:none}",
+            ".tag{display:inline-block;background:#e9f4f2;color:#1e5d53;border:1px solid #cde3df;border-radius:999px;padding:2px 9px;font-size:12px}",
+            ".muted{color:var(--muted)}",
+            "textarea,input,select{width:100%;border:1px solid #cabfae;border-radius:10px;padding:10px;background:#fff}",
+            "textarea{min-height:92px;resize:vertical}",
+            "button{border:none;border-radius:10px;padding:9px 12px;cursor:pointer;background:var(--accent);color:#fff}",
+            ".btn-alt{background:var(--accent2)}",
+            "pre{margin:0;background:#1f2521;color:#d6f6da;border-radius:10px;padding:12px;min-height:180px;overflow:auto}",
+            ".toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}",
+            ".kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}",
+            ".kpi .card{background:#fff;border:1px solid #ece4d6;border-radius:12px;padding:10px}",
+            "@media(max-width:960px){.grid{grid-template-columns:1fr}.kpi{grid-template-columns:1fr 1fr}}",
+        ]
+    ) + "\n"
+
+
+def _story_app_js() -> str:
+    return "\n".join(
+        [
+            "const $ = (id) => document.getElementById(id);",
+            "const seed = {",
+            "  title: '雾港回声',",
+            "  nodes: [",
+            "    { id:'intro_return_home', label:'归乡开场', to:['school_archive','cafe_evening'] },",
+            "    { id:'school_archive', label:'旧校舍档案室', to:['storm_confession'] },",
+            "    { id:'cafe_evening', label:'夜间咖啡馆', to:['storm_confession'] },",
+            "    { id:'storm_confession', label:'暴雨告白', to:['ending_truth','ending_silence'] },",
+            "    { id:'ending_truth', label:'真相结局', to:[] },",
+            "    { id:'ending_silence', label:'沉默结局', to:[] },",
+            "  ]",
+            "};",
+            "function drawRows() {",
+            "  const host = $('branchRows'); host.innerHTML='';",
+            "  seed.nodes.forEach((n) => {",
+            "    const div = document.createElement('div'); div.className='branch-row';",
+            "    div.innerHTML = `<span class='tag'>${n.id}</span><strong>${n.label}</strong><span class='muted'>-> ${n.to.join(', ') || 'END'}</span>`;",
+            "    host.appendChild(div);",
+            "  });",
+            "  $('kpiNodeCount').textContent = String(seed.nodes.length);",
+            "  $('kpiBranchCount').textContent = String(seed.nodes.filter(n => n.to.length > 1).length);",
+            "}",
+            "function exportJSON() {",
+            "  const payload = {",
+            "    title: $('titleInput').value || seed.title,",
+            "    theme: $('themeInput').value,",
+            "    core_conflict: $('conflictInput').value,",
+            "    node_flow: seed.nodes,",
+            "    role_background: $('roleInput').value.split('\\n').filter(Boolean),",
+            "    scene_background: $('sceneInput').value.split('\\n').filter(Boolean),",
+            "  };",
+            "  $('jsonOut').textContent = JSON.stringify(payload, null, 2);",
+            "  $('kpiUpdated').textContent = new Date().toLocaleString();",
+            "}",
+            "function exportMarkdown() {",
+            "  const lines = [];",
+            "  lines.push('# ' + ($('titleInput').value || seed.title));",
+            "  lines.push('');",
+            "  lines.push('## 主冲突');",
+            "  lines.push($('conflictInput').value || '（待补）');",
+            "  lines.push('');",
+            "  lines.push('## 节点流');",
+            "  seed.nodes.forEach((n) => lines.push(`- ${n.id} ${n.label} -> ${n.to.join(', ') || 'END'}`));",
+            "  $('mdOut').textContent = lines.join('\\n');",
+            "}",
+            "$('btnJson').addEventListener('click', exportJSON);",
+            "$('btnMd').addEventListener('click', exportMarkdown);",
+            "drawRows(); exportJSON();",
+        ]
+    ) + "\n"
+
+
+def _story_index_html(logo_b64: str) -> str:
+    return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VN 剧情树与背景梳理台（高质量探测）</title>
+  <title>剧情树与背景梳理台（高质量探测）</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
@@ -221,7 +209,7 @@ def _materialize_high_quality_project(run_dir: Path, logo_bytes: bytes) -> dict[
     <section class="hero">
       <img class="logo" alt="logo" src="data:image/png;base64,{logo_b64}" />
       <div>
-        <h1>VN 剧情树与背景梳理台</h1>
+        <h1>剧情树与背景梳理台</h1>
         <p>用于首稿阶段快速统一剧情树、人物背景、场景背景，并导出结构化草案。</p>
       </div>
     </section>
@@ -268,34 +256,43 @@ def _materialize_high_quality_project(run_dir: Path, logo_bytes: bytes) -> dict[
   <script src="./app.js"></script>
 </body>
 </html>
-""",
-        encoding="utf-8",
-    )
-    (out_root / "README.md").write_text(
-        "\n".join(
-            [
-                "# VN 剧情树与背景梳理台（高质量探测版）",
-                "",
-                "## 首稿定位",
-                "- 用于 VN 前期策划，把剧情树、角色背景、场景背景统一到一页操作台。",
-                "- 输出 JSON 与 Markdown 两种草案格式，方便后续喂给脚本/引擎/写作工作流。",
-                "",
-                "## 文件说明",
-                "- `index.html`: 单页界面",
-                "- `styles.css`: 样式",
-                "- `app.js`: 节点展示与导出逻辑",
-                "- `story_seed.json`: 初始剧情树种子",
-                "- `preview.png`: 预览占位图",
-                "",
-                "## 使用步骤",
-                "1. 打开 `index.html`",
-                "2. 修改标题、主冲突、角色背景、场景背景",
-                "3. 点击导出按钮得到 JSON/Markdown 草案",
-            ]
-        )
-        + "\n",
-        encoding="utf-8",
-    )
+"""
+
+
+def _story_readme() -> str:
+    return "\n".join(
+        [
+            "# 剧情树与背景梳理台（高质量探测版）",
+            "",
+            "## 首稿定位",
+            "- 用于前期叙事策划，把剧情树、角色背景、场景背景统一到一页操作台。",
+            "- 输出 JSON 与 Markdown 两种草案格式，方便后续喂给脚本/引擎/写作工作流。",
+            "",
+            "## 文件说明",
+            "- `index.html`: 单页界面",
+            "- `styles.css`: 样式",
+            "- `app.js`: 节点展示与导出逻辑",
+            "- `story_seed.json`: 初始剧情树种子",
+            "- `preview.png`: 预览占位图",
+            "",
+            "## 使用步骤",
+            "1. 打开 `index.html`",
+            "2. 修改标题、主冲突、角色背景、场景背景",
+            "3. 点击导出按钮得到 JSON/Markdown 草案",
+        ]
+    ) + "\n"
+
+
+def _materialize_high_quality_project(run_dir: Path, logo_bytes: bytes) -> dict[str, str]:
+    out_root = run_dir / "artifacts" / "story_tree_hq_project"
+    out_root.mkdir(parents=True, exist_ok=True)
+    logo_b64 = base64.b64encode(logo_bytes).decode("ascii")
+    (out_root / "preview.png").write_bytes(_tiny_png_bytes())
+    (out_root / "story_seed.json").write_text(json.dumps(_story_seed_doc(), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (out_root / "styles.css").write_text(_story_styles_css(), encoding="utf-8")
+    (out_root / "app.js").write_text(_story_app_js(), encoding="utf-8")
+    (out_root / "index.html").write_text(_story_index_html(logo_b64), encoding="utf-8")
+    (out_root / "README.md").write_text(_story_readme(), encoding="utf-8")
     return {
         "index_html": (out_root / "index.html").resolve().relative_to(run_dir.resolve()).as_posix(),
         "styles_css": (out_root / "styles.css").resolve().relative_to(run_dir.resolve()).as_posix(),
@@ -324,7 +321,7 @@ def _quality_score(run_dir: Path, rels: dict[str, str]) -> dict[str, Any]:
 
 
 def run_quality_probe() -> dict[str, Any]:
-    out_root = ROOT / "artifacts" / "backend_interface_vn_quality"
+    out_root = ROOT / "artifacts" / "backend_interface_story_quality"
     out_root.mkdir(parents=True, exist_ok=True)
     inputs = out_root / "inputs"
     inputs.mkdir(parents=True, exist_ok=True)
@@ -333,13 +330,13 @@ def run_quality_probe() -> dict[str, Any]:
     logo_bytes = _tiny_png_bytes()
     logo.write_bytes(logo_bytes)
     brief.write_text(
-        "目标：生成可用于 VN 剧情树和背景梳理的高质量单页项目。"
+        "目标：生成可用于剧情树和背景梳理的高质量单页项目。"
         "要求：结构清晰、可导出 JSON/Markdown、包含预览图。\n",
         encoding="utf-8",
     )
 
     create = bridge.create_run(
-        goal="高质量首稿探测：VN剧情树与背景梳理台",
+        goal="高质量首稿探测：剧情树与背景梳理台",
         constraints={"quality_mode": "high", "must_have": ["index.html", "styles.css", "README.md", "preview.png"]},
         attachments=[str(brief), str(logo)],
     )
@@ -388,6 +385,6 @@ def run_quality_probe() -> dict[str, Any]:
 
 if __name__ == "__main__":
     result = run_quality_probe()
-    report = ROOT / "artifacts" / "backend_interface_vn_quality" / "vn_quality_probe_report.json"
+    report = ROOT / "artifacts" / "backend_interface_story_quality" / "story_quality_probe_report.json"
     _write_json(report, result)
     print(json.dumps({"report_path": str(report), "run_id": result.get("run_id", ""), "quality_score": result.get("quality", {}).get("score", 0)}, ensure_ascii=False))

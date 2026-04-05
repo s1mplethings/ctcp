@@ -16,12 +16,12 @@ if str(SCRIPTS) not in sys.path:
 import ctcp_front_bridge as bridge
 
 
-FIXED_VN_PROMPT = (
-    "我想要生成一个可以帮助创作者制作 VN 游戏的助手。"
+FIXED_NARRATIVE_PROMPT = (
+    "我想要生成一个可以帮助创作者制作叙事项目的助手。"
     "它重点服务悬疑 / 解谜 / 猎奇风格。"
     "它需要能帮助用户梳理故事线、角色关系、章节结构、分支结局，"
     "还能生成角色立绘、表情、背景、CG 的提示词，"
-    "最后输出成可以继续用于 VN 制作的结构化内容。"
+    "最后输出成可以继续用于叙事制作的结构化内容。"
 )
 
 
@@ -85,6 +85,11 @@ def _collect_project_output(
     startup_smoke: dict[str, Any] = {}
     if startup_entry_path and startup_entry_path.exists():
         startup_smoke = _run_cmd([sys.executable, str(startup_entry_path), "--help"], cwd=startup_entry_path.parent)
+    business_files_generated = (
+        list(manifest_file.get("business_files_generated", []))
+        if isinstance(manifest_file.get("business_files_generated"), list)
+        else []
+    )
     return {
         "project_root": project_root,
         "project_dir": project_dir,
@@ -92,17 +97,78 @@ def _collect_project_output(
         "startup_entry_path": startup_entry_path,
         "startup_readme": startup_readme,
         "startup_smoke": startup_smoke,
+        "business_files_generated": business_files_generated,
     }
 
 
-def run_vn_project_e2e() -> dict[str, Any]:
-    out_root = ROOT / "artifacts" / "backend_interface_vn"
+def _build_checks(
+    *,
+    find_result: dict[str, Any],
+    output_contract: dict[str, Any],
+    source_stage: dict[str, Any],
+    docs_stage: dict[str, Any],
+    workflow_stage: dict[str, Any],
+    manifest: dict[str, Any],
+    manifest_file: dict[str, Any],
+    deliver_index: dict[str, Any],
+    project_output: dict[str, Any],
+    status_final: dict[str, Any],
+    output_paths: list[str],
+    run_dir: Path,
+) -> dict[str, Any]:
+    deliverables = list(deliver_index.get("deliverables", [])) if isinstance(deliver_index.get("deliverables"), list) else []
+    business_files_generated = list(source_stage.get("business_files_generated", [])) if isinstance(source_stage.get("business_files_generated"), list) else []
+    narrative_required_modules = [
+        f"{project_output.get('project_root', '')}/src/narrative_copilot/story/outline.py",
+        f"{project_output.get('project_root', '')}/src/narrative_copilot/story/chapter_planner.py",
+        f"{project_output.get('project_root', '')}/src/narrative_copilot/cast/schema.py",
+        f"{project_output.get('project_root', '')}/src/narrative_copilot/pipeline/prompt_pipeline.py",
+        f"{project_output.get('project_root', '')}/src/narrative_copilot/exporters/deliver.py",
+        f"{project_output.get('project_root', '')}/src/narrative_copilot/service.py",
+        f"{project_output.get('project_root', '')}/tests/test_narrative_copilot_service.py",
+    ]
+    return {
+        "selected_workflow_id": str(find_result.get("selected_workflow_id", "")).strip(),
+        "has_output_contract_freeze": bool(output_contract),
+        "has_source_generation_report": bool(source_stage),
+        "has_docs_generation_report": bool(docs_stage),
+        "has_workflow_generation_report": bool(workflow_stage),
+        "has_project_manifest_file": bool(manifest_file),
+        "has_deliverable_index": bool(deliver_index),
+        "bridge_has_project_manifest": bool(isinstance(manifest, dict) and manifest.get("run_id")),
+        "manifest_missing_files_empty": not bool(list(manifest_file.get("missing_files", []) if isinstance(manifest_file.get("missing_files"), list) else [])),
+        "source_generation_business_codegen_used": bool(source_stage.get("business_codegen_used", False)),
+        "source_generation_consumed_context_pack": bool(source_stage.get("consumed_context_pack", False)),
+        "source_generation_execution_mode_is_benchmark": str(source_stage.get("execution_mode", "")).strip() == "benchmark_regression",
+        "source_generation_delivery_shape_present": bool(str(source_stage.get("delivery_shape", "")).strip()),
+        "source_generation_context_influence_present": bool(list(source_stage.get("context_influence_summary", []) if isinstance(source_stage.get("context_influence_summary"), list) else [])),
+        "source_generation_business_files_generated_non_empty": bool(business_files_generated),
+        "source_generation_business_files_missing_empty": not bool(list(source_stage.get("business_files_missing", []) if isinstance(source_stage.get("business_files_missing"), list) else [])),
+        "project_root_exists": bool(project_output.get("project_root") and Path(project_output.get("project_dir", "")).exists()),
+        "startup_entry_exists": bool(project_output.get("startup_entrypoint") and Path(project_output.get("startup_entry_path", "")).exists()),
+        "startup_readme_exists": bool(project_output.get("startup_readme") and (run_dir / str(project_output.get("startup_readme", ""))).exists()),
+        "startup_smoke_passed": bool(dict(project_output.get("startup_smoke", {})) and int(dict(project_output.get("startup_smoke", {})).get("rc", 1)) == 0),
+        "narrative_business_modules_present": all((run_dir / rel).exists() for rel in narrative_required_modules if rel.strip()),
+        "deliver_index_contains_business_modules": any(rel in deliverables for rel in business_files_generated),
+        "deliver_index_not_scaffold_only": any("/src/narrative_copilot/" in rel for rel in deliverables),
+        "manifest_execution_mode_is_benchmark": str(manifest_file.get("execution_mode", "")).strip() == "benchmark_regression",
+        "manifest_delivery_shape_present": bool(str(manifest_file.get("delivery_shape", "")).strip()),
+        "fell_back_to_ready_apply": str((status_final.get("gate", {}) or {}).get("state", "")).strip().lower() == "ready_apply",
+        "has_manual_injected_story_tree_project": any(path.startswith("artifacts/story_tree_project/") for path in output_paths),
+        "output_count": len(output_paths),
+    }
+
+
+def run_narrative_project_e2e() -> dict[str, Any]:
+    out_root = ROOT / "artifacts" / "backend_interface_narrative"
     out_root.mkdir(parents=True, exist_ok=True)
 
     req_create = {
-        "goal": FIXED_VN_PROMPT,
+        "goal": FIXED_NARRATIVE_PROMPT,
         "constraints": {
-            "test_case": "vn_fixed_project_generation_regression",
+            "project_generation_mode": "benchmark_regression",
+            "benchmark_case": "narrative_fixed_project_generation_regression",
+            "test_case": "narrative_fixed_project_generation_regression",
             "expect_project_generation_workflow": True,
         },
         "attachments": [],
@@ -180,10 +246,24 @@ def run_vn_project_e2e() -> dict[str, Any]:
 
     output_rows = list(outputs.get("artifacts", [])) if isinstance(outputs.get("artifacts"), list) else []
     output_paths = [str(dict(row).get("rel_path", "")).strip() for row in output_rows if isinstance(row, dict)]
+    checks = _build_checks(
+        find_result=find_result,
+        output_contract=output_contract,
+        source_stage=source_stage,
+        docs_stage=docs_stage,
+        workflow_stage=workflow_stage,
+        manifest=manifest,
+        manifest_file=manifest_file,
+        deliver_index=deliver_index,
+        project_output=project_output,
+        status_final=status_final,
+        output_paths=output_paths,
+        run_dir=run_dir,
+    )
 
     return {
-        "task_name": "fixed_vn_project_generation_regression",
-        "fixed_prompt": FIXED_VN_PROMPT,
+        "task_name": "benchmark_narrative_project_generation_regression",
+        "fixed_prompt": FIXED_NARRATIVE_PROMPT,
         "run_id": run_id,
         "run_dir": str(run_dir),
         "step1_create_run": {"request": req_create, "response": create_resp},
@@ -211,32 +291,48 @@ def run_vn_project_e2e() -> dict[str, Any]:
             "startup_entrypoint": str(project_output.get("startup_entrypoint", "")),
             "startup_readme": str(project_output.get("startup_readme", "")),
             "startup_smoke": dict(project_output.get("startup_smoke", {})),
+            "business_files_generated": list(project_output.get("business_files_generated", [])),
         },
-        "checks": {
-            "selected_workflow_id": str(find_result.get("selected_workflow_id", "")).strip(),
-            "has_output_contract_freeze": bool(output_contract),
-            "has_source_generation_report": bool(source_stage),
-            "has_docs_generation_report": bool(docs_stage),
-            "has_workflow_generation_report": bool(workflow_stage),
-            "has_project_manifest_file": bool(manifest_file),
-            "has_deliverable_index": bool(deliver_index),
-            "bridge_has_project_manifest": bool(isinstance(manifest, dict) and manifest.get("run_id")),
-            "manifest_missing_files_empty": not bool(list(manifest_file.get("missing_files", []) if isinstance(manifest_file.get("missing_files"), list) else [])),
-            "project_root_exists": bool(project_output.get("project_root") and Path(project_output.get("project_dir", "")).exists()),
-            "startup_entry_exists": bool(project_output.get("startup_entrypoint") and Path(project_output.get("startup_entry_path", "")).exists()),
-            "startup_readme_exists": bool(project_output.get("startup_readme") and (run_dir / str(project_output.get("startup_readme", ""))).exists()),
-            "startup_smoke_passed": bool(dict(project_output.get("startup_smoke", {})) and int(dict(project_output.get("startup_smoke", {})).get("rc", 1)) == 0),
-            "fell_back_to_ready_apply": str((status_final.get("gate", {}) or {}).get("state", "")).strip().lower() == "ready_apply",
-            "has_manual_injected_vn_story_tree_project": any(
-                path.startswith("artifacts/vn_story_tree_project/") for path in output_paths
-            ),
-            "output_count": len(output_paths),
-        },
+        "checks": checks,
     }
 
 
+def _assert_pass(checks: dict[str, Any]) -> None:
+    required = [
+        "has_output_contract_freeze",
+        "has_source_generation_report",
+        "has_docs_generation_report",
+        "has_workflow_generation_report",
+        "has_project_manifest_file",
+        "has_deliverable_index",
+        "bridge_has_project_manifest",
+        "manifest_missing_files_empty",
+        "source_generation_business_codegen_used",
+        "source_generation_consumed_context_pack",
+        "source_generation_execution_mode_is_benchmark",
+        "source_generation_delivery_shape_present",
+        "source_generation_context_influence_present",
+        "source_generation_business_files_generated_non_empty",
+        "source_generation_business_files_missing_empty",
+        "project_root_exists",
+        "startup_entry_exists",
+        "startup_readme_exists",
+        "startup_smoke_passed",
+        "narrative_business_modules_present",
+        "deliver_index_contains_business_modules",
+        "deliver_index_not_scaffold_only",
+        "manifest_execution_mode_is_benchmark",
+        "manifest_delivery_shape_present",
+    ]
+    failures = [name for name in required if not bool(checks.get(name, False))]
+    if failures:
+        raise SystemExit("manual narrative regression failed: " + ", ".join(failures))
+
+
 if __name__ == "__main__":
-    result = run_vn_project_e2e()
-    report_path = ROOT / "artifacts" / "backend_interface_vn" / "vn_backend_interface_e2e_report.json"
+    result = run_narrative_project_e2e()
+    report_path = ROOT / "artifacts" / "backend_interface_narrative" / "narrative_backend_interface_e2e_report.json"
     _write_json(report_path, result)
+    _assert_pass(dict(result.get("checks", {})))
     print(json.dumps({"report_path": str(report_path), "run_id": result.get("run_id", "")}, ensure_ascii=False))
+

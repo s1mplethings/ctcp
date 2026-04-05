@@ -1,117 +1,151 @@
-# Task - project-generation-mainline-closure
+# Task - support-pass-runtime-and-benchmark-mode-isolation
 
 ## Queue Binding
 
-- Queue Item: `ADHOC-20260402-project-generation-mainline-closure`
+- Queue Item: `ADHOC-20260405-support-pass-runtime-and-benchmark-mode-isolation`
 - Layer/Priority: `L1 / P0`
 - Source Queue File: `meta/backlog/execution_queue.json`
 
 ## Context
 
-- Why this item now: concrete project-generation requests currently fall into generic patch flow and fail to form manifest-driven delivery closure.
-- Dependency check: `L1-ORCH-001 = done`, `L1-DISP-001 = done`.
-- Scope boundary: fix project-generation routing/gating/interface/test authenticity only; do not implement VN business product features.
-- Baseline lock: `repo=D:/.c_projects/adc/ctcp`, `branch=main`, `commit=7777ebd2b46bcd334d14bc872bfbf184c9c93d78`, `version=3.2.0`.
+- Why this item now: customer-facing support still misreports final state after runtime PASS, and explicit benchmark/regression requests need stronger benchmark-mode delivery without leaking fixture logic into production defaults.
+- Dependency check: `ADHOC-20260405-temp-trace-cleanup` = `done`.
+- Scope boundary: only common support/runtime/result-consumption fixes plus explicit benchmark-mode isolation/wiring; do not write fixed VN sample content, benchmark acceptance rules, or benchmark reply text into production logic.
 
 ## Task Truth Source (single source for current task)
 
-- task_purpose: repair project-generation mainline so concrete project requests enter fixed generation stages and expose manifest-based deliverables.
+- task_purpose: repair generic support PASS-state delivery and keep benchmark-only project-generation strengthening isolated to explicit benchmark mode.
 - allowed_behavior_change:
-  - `scripts/resolve_workflow.py`
-  - `workflow_registry/index.json`
-  - `workflow_registry/wf_project_generation_manifest/recipe.yaml`
-  - `scripts/ctcp_orchestrate.py`
-  - `scripts/ctcp_dispatch.py`
   - `scripts/ctcp_front_bridge.py`
-  - `tools/providers/api_agent.py`
-  - `tests/manual_backend_interface_vn_project_runner.py`
-  - `tests/test_backend_interface_contract_apis.py`
-  - `docs/backend_interface_contract.md`
+  - `scripts/ctcp_support_bot.py`
+  - `frontend/support_reply_policy.py`
+  - `apps/cs_frontend/dialogue/requirement_collector.py`
+  - `tools/providers/project_generation_business_templates.py`
+  - `tests/test_support_to_production_path.py`
+  - `tests/test_project_generation_artifacts.py`
+  - `tests/test_support_bot_humanization.py`
+  - `tests/test_runtime_wiring_contract.py`
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/CURRENT.md`
   - `meta/reports/LAST.md`
-- forbidden_goal_shift: do not handcraft a standalone VN assistant project; do not inject fake deliverables into run_dir.
-- in_scope_modules: `scripts/`, `tools/providers/`, `workflow_registry/`, `tests/`, `docs/`, `meta/`.
-- out_of_scope_modules: unrelated product features and broad refactors.
-- completion_evidence: fixed VN prompt run shows project-generation stages (`output_contract_freeze -> source_generation -> docs_generation -> workflow_generation -> artifact_manifest_build -> deliver`), bridge-readable manifest, and generated project root with startup smoke pass.
+- forbidden_goal_shift: do not write benchmark sample names, fixed VN roles/chapters, benchmark acceptance rules, or benchmark-specific customer reply wording into production default logic.
+- in_scope_modules:
+  - `scripts/ctcp_front_bridge.py`
+  - `scripts/ctcp_support_bot.py`
+  - `frontend/support_reply_policy.py`
+  - `apps/cs_frontend/dialogue/requirement_collector.py`
+  - `tools/providers/project_generation_business_templates.py`
+  - focused regression tests listed above
+  - task/report/queue metadata for this topic
+- out_of_scope_modules:
+  - production default templates carrying fixed benchmark content
+  - production verify gates carrying benchmark acceptance rules
+  - benchmark-case literals in default support reply logic
+  - manual deliverable injection or bypass paths
+- completion_evidence: support PASS truth is consumed into readable delivery fallback; explicit benchmark mode remains opt-in; focused regressions plus canonical verify record the first failure and minimal fix.
 
 ## Analysis / Find (before plan)
 
-- Entrypoint analysis: project requests enter via `ctcp_front_bridge.create_run -> ctcp_orchestrate`.
-- Downstream consumer analysis: `ctcp_dispatch` provider execution and `ctcp_front_bridge` output interfaces consume run artifacts.
-- Source of truth: run_dir artifacts (`events.jsonl`, `TRACE.md`, `artifacts/*.json`) + bridge API responses.
-- Current break point / missing wiring: workflow resolver has only generic workflow; orchestrator gate lacks project-generation stage gates; bridge lacks `get_project_manifest`; manual VN runner writes deliverables directly.
-- Repo-local search sufficient: yes.
+- Entrypoint analysis: the user-visible entrypoint remains `scripts/ctcp_support_bot.py`, which creates/binds runs through `scripts/ctcp_front_bridge.py` and then renders fallback replies from `frontend/support_reply_policy.py`.
+- Downstream consumer analysis: pass-state truth flows into `support_reply_policy`, while explicit benchmark mode flows into project-generation contract resolution and then benchmark-only export templates.
+- Source of truth: `artifacts/support_runtime_state.json`, `artifacts/verify_report.json`, and `artifacts/project_manifest.json`.
+- Current break point / missing wiring: support fallback could still render stale failure language after PASS truth, and benchmark-mode ingress/egress needed explicit mode plumbing without fixture injection.
+- Repo-local search sufficient: `yes`
+- If no, external research artifact: `N/A`
 
 ## Integration Check (before implementation)
 
-- upstream: fixed project request from user (VN creator assistant request) as regression prompt.
-- current_module: resolver + orchestrator gate + dispatch request derivation + bridge interface + api provider normalization + manual runner.
-- downstream: bridge consumers and regression tests reading output artifact list and project manifest.
-- source_of_truth: run_dir stage artifacts + bridge `get_project_manifest` response.
-- fallback: if verify fails, preserve failure bundle and report first failure gate with minimal next fix.
+- upstream: `scripts/ctcp_support_bot.py` conversation handling and `scripts/ctcp_front_bridge.py` runtime-state refresh.
+- current_module: support reply policy plus explicit frontend constraint extraction and benchmark-only business template branch.
+- downstream: customer-visible reply text, generated benchmark-mode deliverables, and runtime/contract regression suites.
+- source_of_truth: canonical runtime status + verify result + manifest delivery fields.
+- fallback: if canonical verify fails, repair only the first gate failure and keep scope bounded to this topic.
 - acceptance_test:
-  - `python -m unittest tests/test_backend_interface_contract_apis.py -v`
-  - `python tests/manual_backend_interface_vn_project_runner.py`
+  - `python -m unittest discover -s tests -p "test_support_to_production_path.py" -v`
+  - `python -m unittest discover -s tests -p "test_project_generation_artifacts.py" -v`
+  - `python -m unittest discover -s tests -p "test_api_agent_templates.py" -v`
+  - `python -m unittest discover -s tests -p "test_support_reply_policy_regression.py" -v`
+  - `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v`
+  - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
+  - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
+  - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
   - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
 - forbidden_bypass:
-  - do not add manual file writes in runner to simulate deliverables
-  - do not claim DONE from intermediate analysis/plan artifacts only
-  - do not route project-generation request to generic patch-only path by default
-- user_visible_effect: project-generation runs become stage-explicit and manifest-readable even before final DONE.
+  - do not hardcode benchmark content into production template/gate/reply paths
+  - do not bypass support entrypoint by injecting deliverables into run_dir
+  - do not claim benchmark completion from benchmark-only intermediate artifacts
+  - do not skip canonical verify
+- user_visible_effect: PASS/VERIFY_PASSED can now produce readable delivery messaging from generic runtime truth, while benchmark-mode stronger exports remain explicit and isolated.
 
 ## DoD Mapping (from execution_queue.json)
 
-- [x] DoD-1: Project-generation requests are routed to a dedicated workflow and do not default to the generic patch path.
-- [x] DoD-2: Project-generation runs explicitly gate on output_contract_freeze, artifact_manifest_build, and deliver before verify.
-- [x] DoD-3: Backend interface exposes get_project_manifest and manual VN runner no longer injects deliverables into run_dir.
+- [x] DoD-1: customer-facing support replies prefer runtime PASS truth over stale provider failure state and return readable delivery info
+- [x] DoD-2: explicit benchmark/regression requests can attach benchmark_regression mode through frontend constraints without injecting fixture payload into production defaults
+- [x] DoD-3: benchmark-only stronger export shape remains isolated to benchmark_regression mode while production narrative generation stays goal-driven and generic
 
-## Acceptance
+## Acceptance (must be checkable)
 
 - [x] DoD written (this file complete)
-- [ ] Research logged (if needed): not needed, repo-local artifacts sufficient
+- [x] Research logged (repo-local search only)
 - [x] Code changes allowed
-- [ ] Patch applies cleanly (`git apply ...`) OR overlay zip applies cleanly
+- [x] Patch applies cleanly
 - [x] `scripts/verify_repo.*` passes (or first failure + minimal fix recorded)
 - [x] Demo report updated: `meta/reports/LAST.md`
 
 ## Plan
 
-1) Add dedicated project-generation workflow in resolver/registry.
-2) Add orchestrator gate stages for `output_contract_freeze -> artifact_manifest_build -> deliver`.
-3) Map new stage paths to dispatch requests (chair actions).
-4) Add bridge `get_project_manifest` and surface in compatibility aliases/context.
-5) Add deterministic JSON normalization for project-stage artifacts in api provider and patch output normalization.
-6) Remove manual deliverable injection from VN manual runner and switch to fixed VN prompt regression path.
-7) Update contract baseline metadata drift in backend interface doc.
-8) Run targeted tests + fixed VN regression + canonical verify and report evidence.
+1) Rebind task/report metadata to this topic and preserve baseline evidence.
+2) Repair generic support PASS-state delivery and stale-error clearing.
+3) Keep benchmark-mode ingress explicit and benchmark-only export strengthening isolated from production defaults.
+4) Run focused regressions.
+5) `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
+6) `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
+7) `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
+8) Record the first failure and minimal fix strategy.
+9) Canonical verify gate: `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
+10) Completion criteria: prove `connected + accumulated + consumed`.
+
+## Check / Contrast / Fix Loop Evidence
+
+- check-1: `test_support_to_production_path.py` first failed because `render_fallback_reply()` returned English delivery text for `lang_hint="zh"`.
+- contrast-1: delivery fallback must remain language-aware while consuming the same generic PASS truth.
+- fix-1: move `deliver_result` handling back under the language branch and keep manifest/artifact consumption generic.
+- check-2: support/humanization/runtime-wiring tests still asserted the old `ctcp_new_run(goal=...)` signature.
+- contrast-2: the repaired support entrypoint should forward generic constraints, but must not forward benchmark fixture payload fields by default.
+- fix-2: update those regressions to assert preserved `goal`, allowed generic `constraints`, and absence of `benchmark_case`.
+- check-3: canonical verify first failed at workflow gate because `CURRENT.md` lacked the mandatory 10-step evidence sections.
+- contrast-3: task metadata must carry analysis/integration/plan/fix-loop/completion/issue-memory evidence for code patches.
+- fix-3: expand `meta/tasks/CURRENT.md` and `meta/reports/LAST.md` to satisfy workflow evidence requirements without changing runtime logic.
+
+## Completion Criteria Evidence
+
+- connected + accumulated + consumed:
+  - connected: support entrypoint forwards explicit benchmark-mode constraints through the normal frontend bridge; PASS truth is wired from bridge runtime state into reply intent/rendering.
+  - accumulated: runtime PASS state, verify result, manifest delivery fields, and explicit benchmark-mode constraint are accumulated into one bounded decision path.
+  - consumed: fallback reply rendering, benchmark-only export materialization, and focused regression tests consume that state and prove the repaired path.
 
 ## Notes / Decisions
 
-- Default choices made: keep modifications minimal and chain-oriented; no new standalone project implementation.
-- Alternatives considered: direct VN project generation in repo (rejected as goal-shift).
-- issue memory decision: if project run still defaults to patch path after changes, log as routing regression.
-- skillized: no, because this patch is repository-specific chain repair.
-- check/contrast/fix loop evidence: implement routing + gate patch -> check fixed VN run timeline -> contrast against expected stage chain -> fix workflow gate blockers iteratively.
-- completion criteria evidence: connected + accumulated + consumed evidence must hold before DONE claim (project workflow selected, stage artifacts accumulated, bridge/verify consumed with auditable logs).
+- Default choices made: keep production reply/template logic generic; use only explicit `project_generation_mode=benchmark_regression` as the benchmark switch.
+- Alternatives considered: writing fixed benchmark payload names or acceptance checks into production branches; rejected because it would contaminate defaults.
+- Any contract exception reference (must also log in `ai_context/decision_log.md`): none.
+- Issue memory decision: no new issue_memory entry for this round; the observed failures were closed as bounded runtime wiring/test-contract regressions inside the existing support/project-generation path.
+- Skill decision (`skillized: yes` or `skillized: no, because ...`): skillized: no, because this is a bounded runtime hardening and mode-isolation repair inside existing support/project-generation paths, not a new reusable workflow asset.
 
 ## Results
 
 - Files changed:
-  - `tools/providers/project_generation_artifacts.py`
-  - `tools/providers/api_agent.py`
-  - `scripts/project_generation_gate.py`
-  - `scripts/ctcp_dispatch.py`
-  - `scripts/project_manifest_bridge.py`
-  - `workflow_registry/wf_project_generation_manifest/recipe.yaml`
-  - `tests/manual_backend_interface_vn_project_runner.py`
-  - `tests/test_backend_interface_contract_apis.py`
-  - `artifacts/backend_interface_vn/vn_backend_interface_e2e_report.json`
-- Verification summary:
-  - `python -m py_compile tools/providers/project_generation_artifacts.py tools/providers/api_agent.py scripts/ctcp_dispatch.py scripts/project_generation_gate.py scripts/project_manifest_bridge.py tests/manual_backend_interface_vn_project_runner.py tests/test_backend_interface_contract_apis.py` -> `0`
-  - `python -m unittest discover -s tests -p "test_workflow_dispatch.py" -v` -> `0`
-  - `python -m unittest discover -s tests -p "test_backend_interface_contract_apis.py" -v` -> `0`
-  - `python tests/manual_backend_interface_vn_project_runner.py` -> `0` (run `20260403-013447-927876-orchestrate`)
-  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` -> `0`
-- Queue status update suggestion (`todo/doing/done/blocked`):
-  - `done`
+  - `scripts/ctcp_front_bridge.py`
+  - `frontend/support_reply_policy.py`
+  - `apps/cs_frontend/dialogue/requirement_collector.py`
+  - `tools/providers/project_generation_business_templates.py`
+  - `tests/test_support_to_production_path.py`
+  - `tests/test_project_generation_artifacts.py`
+  - `tests/test_support_bot_humanization.py`
+  - `tests/test_runtime_wiring_contract.py`
+  - `meta/backlog/execution_queue.json`
+  - `meta/tasks/CURRENT.md`
+  - `meta/reports/LAST.md`
+-  `tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch`
+- Verification summary: focused suites passed; standalone `python simlab/run.py --suite lite --json-out <tmp>` passed (`14/14`); canonical `verify_repo.ps1` passed with repo-supported `CTCP_SKIP_LITE_REPLAY=1` after the standalone lite replay proof was captured.
+- Queue status update suggestion (`todo/doing/done/blocked`): done

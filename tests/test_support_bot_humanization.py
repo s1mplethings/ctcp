@@ -53,11 +53,11 @@ class SupportBotHumanizationTests(unittest.TestCase):
 
     def test_sync_active_task_truth_keeps_mainline_on_smalltalk_interrupt(self) -> None:
         session_state = support_bot.default_support_session_state("mainline-demo")
-        session_state["active_task_id"] = "run-vn"
-        session_state["active_run_id"] = "run-vn"
-        session_state["active_goal"] = "继续优化 VN 前台"
-        session_state["bound_run_id"] = "run-vn"
-        session_state["bound_run_dir"] = "D:/tmp/run-vn"
+        session_state["active_task_id"] = "run-story"
+        session_state["active_run_id"] = "run-story"
+        session_state["active_goal"] = "继续优化剧情前台"
+        session_state["bound_run_id"] = "run-story"
+        session_state["bound_run_dir"] = "D:/tmp/run-story"
         support_bot.sync_active_task_truth(
             session_state,
             user_text="你好",
@@ -66,11 +66,11 @@ class SupportBotHumanizationTests(unittest.TestCase):
             frontdesk_state={
                 "state": "InterruptRecover",
                 "interrupt_kind": "",
-                "current_goal": "继续优化 VN 前台",
-                "active_task_id": "run-vn",
+                "current_goal": "继续优化剧情前台",
+                "active_task_id": "run-story",
             },
             project_context={
-                "run_id": "run-vn",
+                "run_id": "run-story",
                 "status": {
                     "run_status": "running",
                     "verify_result": "",
@@ -83,8 +83,8 @@ class SupportBotHumanizationTests(unittest.TestCase):
             delivery_state={},
         )
         self.assertEqual(str(session_state.get("latest_message_intent", "")), "small_talk")
-        self.assertEqual(str(session_state.get("active_goal", "")), "继续优化 VN 前台")
-        self.assertEqual(str(session_state.get("active_task_id", "")), "run-vn")
+        self.assertEqual(str(session_state.get("active_goal", "")), "继续优化剧情前台")
+        self.assertEqual(str(session_state.get("active_task_id", "")), "run-story")
 
     def test_process_message_greeting_routes_through_provider(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_greeting_fast_path_") as td:
@@ -160,14 +160,14 @@ class SupportBotHumanizationTests(unittest.TestCase):
             session_state = support_bot.default_support_session_state("greeting-demo")
             session_state["bound_run_id"] = "r-old"
             session_state["bound_run_dir"] = "D:/tmp/r-old"
-            session_state["project_memory"]["project_brief"] = "我想要你继续优化我的vn项目"
+            session_state["project_memory"]["project_brief"] = "我想要你继续优化我的剧情项目"
             session_state["project_constraints_memory"]["constraint_brief"] = "zip交付"
             _append_jsonl(
                 run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
                 {
                     "ts": support_bot.now_iso(),
                     "source": "telegram",
-                    "text": "我想要你继续优化我的vn项目",
+                    "text": "我想要你继续优化我的剧情项目",
                 },
             )
             _append_jsonl(
@@ -185,7 +185,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
                 source="telegram",
                 conversation_mode="GREETING",
                 session_state=session_state,
-                project_context={"run_id": "r-old", "run_dir": "D:/tmp/r-old", "goal": "我想要你继续优化我的vn项目"},
+                project_context={"run_id": "r-old", "run_dir": "D:/tmp/r-old", "goal": "我想要你继续优化我的剧情项目"},
                 delivery_state={"channel": "telegram", "channel_can_send_files": True, "package_ready": True, "package_delivery_mode": "existing_package"},
             )
 
@@ -195,7 +195,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
         self.assertIn('"project_brief": ""', prompt)
         self.assertNotIn('"project_run":', prompt)
         self.assertNotIn('"public_delivery":', prompt)
-        self.assertNotIn('我想要你继续优化我的vn项目', prompt)
+        self.assertNotIn('我想要你继续优化我的剧情项目', prompt)
 
     def test_build_support_prompt_includes_frontdesk_state_and_style_profile(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_frontdesk_prompt_") as td:
@@ -203,12 +203,12 @@ class SupportBotHumanizationTests(unittest.TestCase):
             session_state = support_bot.default_support_session_state("frontdesk-demo")
             session_state["bound_run_id"] = "r-frontdesk"
             session_state["bound_run_dir"] = "D:/tmp/r-frontdesk"
-            session_state["project_memory"]["project_brief"] = "我想要你继续优化我的vn项目"
-            session_state["task_summary"] = "我想要你继续优化我的vn项目"
+            session_state["project_memory"]["project_brief"] = "我想要你继续优化我的剧情项目"
+            session_state["task_summary"] = "我想要你继续优化我的剧情项目"
             project_context = {
                 "run_id": "r-frontdesk",
                 "run_dir": "D:/tmp/r-frontdesk",
-                "goal": "我想要你继续优化我的vn项目",
+                "goal": "我想要你继续优化我的剧情项目",
                 "status": {
                     "run_status": "running",
                     "verify_result": "",
@@ -315,7 +315,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
                         "debug_notes": "",
                     },
                     conversation_mode="PROJECT_DETAIL",
-                    task_summary_hint="VN 项目推进",
+                    task_summary_hint="剧情项目推进",
                     project_context={
                         "run_id": "run-guard-low-info",
                         "status": {
@@ -360,7 +360,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
                         "debug_notes": "",
                     },
                     conversation_mode="STATUS_QUERY",
-                    task_summary_hint="VN 项目推进",
+                    task_summary_hint="剧情项目推进",
                     project_context={
                         "run_id": "run-guard-completion",
                         "status": {
@@ -417,7 +417,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
                         "debug_notes": "",
                     },
                     conversation_mode="STATUS_QUERY",
-                    task_summary_hint="VN 项目推进",
+                    task_summary_hint="剧情项目推进",
                     project_context=context,
                 )
                 support_bot.write_json(run_dir / support_bot.SUPPORT_REPLY_REL_PATH, first_doc)
@@ -432,7 +432,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
                         "debug_notes": "",
                     },
                     conversation_mode="STATUS_QUERY",
-                    task_summary_hint="VN 项目推进",
+                    task_summary_hint="剧情项目推进",
                     project_context=context,
                 )
 
@@ -620,7 +620,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             ):
                 doc, _run_dir = support_bot.process_message(
                     chat_id="outbox-demo",
-                    user_text="我想做一个帮我整理VN剧情的项目。",
+                    user_text="我想做一个帮我整理剧情的项目。",
                     source="stdin",
                 )
 
@@ -781,7 +781,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             support_context = {
                 "run_id": "r-demo",
                 "run_dir": "D:/tmp/r-demo",
-                "goal": "做一个 VN 项目",
+                "goal": "做一个剧情项目",
                 "status": {
                     "run_status": "running",
                     "verify_result": "",
@@ -792,7 +792,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
                 "decisions": {"count": 0, "decisions": []},
                 "whiteboard": {
                     "path": "artifacts/support_whiteboard.json",
-                    "query": "帮我理顺 VN 剧情结构",
+                    "query": "帮我理顺剧情结构",
                     "hits": [{"path": "docs/10_team_mode.md", "start_line": 1, "snippet": "support bot"}],
                     "lookup_error": "",
                     "snapshot": {
@@ -833,14 +833,14 @@ class SupportBotHumanizationTests(unittest.TestCase):
             ):
                 doc, run_dir = support_bot.process_message(
                     chat_id="bridge-demo",
-                    user_text="我想做一个帮我整理 VN 剧情结构的项目。",
+                    user_text="我想做一个帮我整理剧情结构的项目。",
                     source="stdin",
                 )
 
             session_state = json.loads((run_dir / support_bot.SUPPORT_SESSION_STATE_REL_PATH).read_text(encoding="utf-8"))
             self.assertEqual(str(session_state.get("bound_run_id", "")), "r-demo")
             self.assertEqual(str(doc.get("provider_status", "")), "executed")
-            new_run_spy.assert_called_once_with(goal="我想做一个帮我整理 VN 剧情结构的项目。")
+            new_run_spy.assert_called_once_with(goal="我想做一个帮我整理剧情结构的项目。")
             record_spy.assert_called_once()
             advance_spy.assert_called_once_with("r-demo", max_steps=4)
             self.assertEqual(context_spy.call_count, 2)
@@ -848,7 +848,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
     def test_process_message_preserves_project_brief_across_low_signal_followup(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_memory_isolation_") as td:
             runs_root = Path(td) / "runs"
-            project_request = "i want to create a project to help me make vn games, especially in clarify storyline"
+            project_request = "i want to create a project to help me structure narrative projects, especially in clarify storyline"
             support_context = {
                 "run_id": "r-memory",
                 "run_dir": "D:/tmp/r-memory",
@@ -911,7 +911,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
     def test_process_message_separates_goal_constraints_and_execution_directive_memory(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_memory_zones_") as td:
             runs_root = Path(td) / "runs"
-            project_request = "我想做一个帮我理顺 VN 剧情结构的项目。"
+            project_request = "我想做一个帮我理顺剧情结构的项目。"
             constraint_turn = "window开发，然后ui可以使用qt6"
             directive_turn = "你先做出第一版给我看，然后我在做调整"
             support_context = {
@@ -987,7 +987,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             def _fake_execute(*, provider, run_dir, request, config):  # type: ignore[no-untyped-def]
                 calls.append(provider)
                 if provider == "api_agent":
-                    _write_provider_doc(run_dir, "I don\ufffdt have your outline yet, but I can start from a first VN story draft.")
+                    _write_provider_doc(run_dir, "I don\ufffdt have your outline yet, but I can start from a first narrative story draft.")
                     return {
                         "status": "executed",
                         "reason": "ok",
@@ -1022,7 +1022,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             ):
                 doc, run_dir = support_bot.process_message(
                     chat_id="api-strict-demo",
-                    user_text="i want to create a project for vn storyline support",
+                    user_text="i want to create a project for narrative storyline support",
                     source="stdin",
                     provider_override="api_agent",
                 )
@@ -1091,7 +1091,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
                     provider_doc=provider_doc,
                     project_context=project_context,
                     conversation_mode="STATUS_QUERY",
-                    task_summary_hint="VN 剧情项目",
+                    task_summary_hint="剧情项目",
                 )
 
             self.assertEqual(str(captured.get("waiting_for_decision", False)).lower(), "true")
@@ -1108,7 +1108,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
                 {
                     "ts": support_bot.now_iso(),
                     "source": "telegram",
-                    "text": "我想做一个帮我理顺 VN 剧情结构的项目。",
+                    "text": "我想做一个帮我理顺剧情结构的项目。",
                 },
             )
             _append_jsonl(
@@ -1145,7 +1145,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
                 provider_doc=provider_doc,
                 project_context=project_context,
                 conversation_mode="PROJECT_DETAIL",
-                task_summary_hint="我想做一个帮我理顺 VN 剧情结构的项目。",
+                task_summary_hint="我想做一个帮我理顺剧情结构的项目。",
                 lang_hint="zh",
             )
 
@@ -1204,7 +1204,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
                         "path": "artifacts/support_whiteboard.json",
                         "entry_count": 3,
                         "entries": [
-                            {"role": "librarian", "kind": "dispatch_lookup", "text": "lookup completed with 0 hits"},
+                            {"role": "local_search", "kind": "dispatch_lookup", "text": "lookup completed with 0 hits"},
                             {
                                 "role": "cost_controller",
                                 "kind": "dispatch_result",
@@ -1241,7 +1241,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
     def test_detect_conversation_mode_treats_previous_project_progress_followup_as_status_query(self) -> None:
         session_state = support_bot.default_support_session_state("6092527664")
         session_state["bound_run_id"] = "r-prev"
-        session_state["project_memory"]["project_brief"] = "我想要你继续优化我的vn项目"
+        session_state["project_memory"]["project_brief"] = "我想要你继续优化我的剧情项目"
 
         mode = support_bot.detect_conversation_mode(
             Path("."),
@@ -1266,7 +1266,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
                 {
                     "ts": support_bot.now_iso(),
                     "source": "telegram",
-                    "text": "我想做一个 VN 项目",
+                    "text": "我想做一个剧情项目",
                 },
             )
             _append_jsonl(
@@ -1279,7 +1279,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             )
             session_state = support_bot.default_support_session_state("mode-router-demo")
             session_state["bound_run_id"] = "r-mode"
-            session_state["project_memory"]["project_brief"] = "我想做一个 VN 项目"
+            session_state["project_memory"]["project_brief"] = "我想做一个剧情项目"
             captured_roles: list[str] = []
 
             def _fake_execute(*, provider, run_dir, request, config):  # type: ignore[no-untyped-def]
@@ -1330,7 +1330,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             )
             session_state = support_bot.default_support_session_state("mode-router-fallback-demo")
             session_state["bound_run_id"] = "r-mode"
-            session_state["project_memory"]["project_brief"] = "我想做一个 VN 项目"
+            session_state["project_memory"]["project_brief"] = "我想做一个剧情项目"
 
             def _fake_execute(*, provider, run_dir, request, config):  # type: ignore[no-untyped-def]
                 del provider, config
@@ -1383,7 +1383,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             }
             project_context = {
                 "run_id": "r-prev-status",
-                "goal": "我想要你继续优化我的vn项目",
+                "goal": "我想要你继续优化我的剧情项目",
                 "status": {
                     "run_status": "blocked",
                     "verify_result": "",
@@ -1417,7 +1417,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
                             {
                                 "role": "librarian",
                                 "kind": "dispatch_result",
-                                "text": "librarian/context_pack via local_exec => executed (artifacts/context_pack.json)",
+                                "text": "librarian/context_pack via ollama_agent => executed (artifacts/context_pack.json)",
                             },
                         ],
                     },
@@ -1431,7 +1431,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
                 provider_doc=provider_doc,
                 project_context=project_context,
                 conversation_mode="STATUS_QUERY",
-                task_summary_hint="我想要你继续优化我的vn项目",
+                task_summary_hint="我想要你继续优化我的剧情项目",
                 lang_hint="zh",
             )
 
@@ -1460,7 +1460,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             }
             project_context = {
                 "run_id": "r-running-blocked",
-                "goal": "我想要你继续优化我的vn项目",
+                "goal": "我想要你继续优化我的剧情项目",
                 "status": {
                     "run_status": "running",
                     "verify_result": "",
@@ -1484,7 +1484,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
                 provider_doc=provider_doc,
                 project_context=project_context,
                 conversation_mode="STATUS_QUERY",
-                task_summary_hint="我想要你继续优化我的vn项目",
+                task_summary_hint="我想要你继续优化我的剧情项目",
                 lang_hint="zh",
             )
 
@@ -1502,8 +1502,8 @@ class SupportBotHumanizationTests(unittest.TestCase):
             (backup_run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
 
             backup_state = support_bot.default_support_session_state("6092527664")
-            backup_state["bound_run_id"] = "old-vn-run"
-            backup_state["project_memory"]["project_brief"] = "我想要你继续优化我的vn项目"
+            backup_state["bound_run_id"] = "old-story-run"
+            backup_state["project_memory"]["project_brief"] = "我想要你继续优化我的剧情项目"
             (backup_run_dir / support_bot.SUPPORT_SESSION_STATE_REL_PATH).write_text(
                 json.dumps(backup_state, ensure_ascii=False, indent=2),
                 encoding="utf-8",
@@ -1514,12 +1514,12 @@ class SupportBotHumanizationTests(unittest.TestCase):
 
             def _fake_new_run(goal: str) -> dict[str, str]:
                 new_run_calls.append(goal)
-                return {"run_id": "new-vn-run", "run_dir": "D:/tmp/new-vn-run"}
+                return {"run_id": "new-story-run", "run_dir": "D:/tmp/new-story-run"}
 
             fake_context = {
-                "run_id": "new-vn-run",
-                "run_dir": "D:/tmp/new-vn-run",
-                "goal": "我想要你继续优化我的vn项目",
+                "run_id": "new-story-run",
+                "run_dir": "D:/tmp/new-story-run",
+                "goal": "我想要你继续优化我的剧情项目",
                 "status": {
                     "run_status": "running",
                     "verify_result": "",
@@ -1558,11 +1558,11 @@ class SupportBotHumanizationTests(unittest.TestCase):
                     session_state=current_state,
                 )
 
-            self.assertEqual(new_run_calls, ["我想要你继续优化我的vn项目"])
-            self.assertEqual(str(updated_state.get("bound_run_id", "")), "new-vn-run")
-            self.assertEqual(str(updated_state.get("task_summary", "")), "我想要你继续优化我的vn项目")
-            self.assertEqual(str(updated_state.get("resume_state", {}).get("last_resume_source_run_id", "")), "old-vn-run")
-            self.assertEqual(str(project_context.get("goal", "")), "我想要你继续优化我的vn项目")
+            self.assertEqual(new_run_calls, ["我想要你继续优化我的剧情项目"])
+            self.assertEqual(str(updated_state.get("bound_run_id", "")), "new-story-run")
+            self.assertEqual(str(updated_state.get("task_summary", "")), "我想要你继续优化我的剧情项目")
+            self.assertEqual(str(updated_state.get("resume_state", {}).get("last_resume_source_run_id", "")), "old-story-run")
+            self.assertEqual(str(project_context.get("goal", "")), "我想要你继续优化我的剧情项目")
 
     def test_sync_project_context_zip_request_triggers_delivery_unblock_advance(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_zip_unblock_advance_") as td:
@@ -1571,12 +1571,12 @@ class SupportBotHumanizationTests(unittest.TestCase):
             session_state = support_bot.default_support_session_state("zip-demo")
             session_state["bound_run_id"] = "run-zip"
             session_state["bound_run_dir"] = "D:/tmp/run-zip"
-            session_state["project_memory"]["project_brief"] = "继续推进 VN 项目"
+            session_state["project_memory"]["project_brief"] = "继续推进剧情项目"
 
             blocked_context = {
                 "run_id": "run-zip",
                 "run_dir": "D:/tmp/run-zip",
-                "goal": "继续推进 VN 项目",
+                "goal": "继续推进剧情项目",
                 "status": {
                     "run_status": "running",
                     "verify_result": "",
@@ -1590,7 +1590,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             final_context = {
                 "run_id": "run-zip",
                 "run_dir": "D:/tmp/run-zip",
-                "goal": "继续推进 VN 项目",
+                "goal": "继续推进剧情项目",
                 "status": {
                     "run_status": "completed",
                     "verify_result": "PASS",
@@ -1644,11 +1644,11 @@ class SupportBotHumanizationTests(unittest.TestCase):
             )
             session_state = support_bot.default_support_session_state("proactive-demo")
             session_state["bound_run_id"] = "run-proactive"
-            session_state["project_memory"]["project_brief"] = "我想要你继续优化我的vn项目"
+            session_state["project_memory"]["project_brief"] = "我想要你继续优化我的剧情项目"
             session_state["session_profile"]["lang_hint"] = "zh"
             project_context = {
                 "run_id": "run-proactive",
-                "goal": "我想要你继续优化我的vn项目",
+                "goal": "我想要你继续优化我的剧情项目",
                 "status": {
                     "run_status": "running",
                     "verify_result": "",
@@ -1711,7 +1711,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
                 state = support_bot.default_support_session_state("baseline-demo")
                 state["bound_run_id"] = "run-proactive"
                 state["bound_run_dir"] = "D:/tmp/run-proactive"
-                state["project_memory"]["project_brief"] = "我想要你继续优化我的vn项目"
+                state["project_memory"]["project_brief"] = "我想要你继续优化我的剧情项目"
                 state["notification_state"]["last_progress_hash"] = "existing-real-hash"
                 state["notification_state"]["last_progress_ts"] = "2026-03-17T09:00:00Z"
                 support_bot.write_json(session_dir / support_bot.SUPPORT_SESSION_STATE_REL_PATH, state)
@@ -1747,7 +1747,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             "whiteboard": {},
         }
 
-        binding = support_bot.build_progress_binding(project_context=project_context, task_summary_hint="VN项目")
+        binding = support_bot.build_progress_binding(project_context=project_context, task_summary_hint="剧情项目")
         self.assertEqual(str(binding.get("active_stage", "")), "WAIT_USER_DECISION")
         self.assertEqual(str(binding.get("stage_exit_condition", "")), "required_user_decision_received")
         report = support_bot.ctcp_support_controller.decide_and_queue(
@@ -1791,7 +1791,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             "count": 1,
             "decisions": [{"decision_id": "outbox:2", "question_hint": "你要先做剧情主线，还是先做UI框架？"}],
         }
-        changed_binding = support_bot.build_progress_binding(project_context=changed_context, task_summary_hint="VN项目")
+        changed_binding = support_bot.build_progress_binding(project_context=changed_context, task_summary_hint="剧情项目")
         support_bot.ctcp_support_controller.decide_and_queue(
             session_state,
             project_context=changed_context,
@@ -1829,7 +1829,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             "whiteboard": {},
         }
 
-        binding = support_bot.build_progress_binding(project_context=project_context, task_summary_hint="VN项目")
+        binding = support_bot.build_progress_binding(project_context=project_context, task_summary_hint="剧情项目")
         report = support_bot.ctcp_support_controller.decide_and_queue(
             session_state,
             project_context=project_context,
@@ -1873,7 +1873,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             "whiteboard": {},
         }
 
-        binding = support_bot.build_progress_binding(project_context=project_context, task_summary_hint="VN项目")
+        binding = support_bot.build_progress_binding(project_context=project_context, task_summary_hint="剧情项目")
         report = support_bot.ctcp_support_controller.decide_and_queue(
             session_state,
             project_context=project_context,
@@ -1901,7 +1901,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             "decisions": {"count": 0, "decisions": []},
             "whiteboard": {},
         }
-        binding = support_bot.build_progress_binding(project_context=not_ready_context, task_summary_hint="VN项目")
+        binding = support_bot.build_progress_binding(project_context=not_ready_context, task_summary_hint="剧情项目")
         self.assertEqual(str(binding.get("active_stage", "")), "EXECUTE")
         support_bot.ctcp_support_controller.decide_and_queue(
             session_state,
@@ -1935,7 +1935,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             "decisions": {"count": 0, "decisions": []},
             "whiteboard": {},
         }
-        ready_binding = support_bot.build_progress_binding(project_context=ready_context, task_summary_hint="VN项目")
+        ready_binding = support_bot.build_progress_binding(project_context=ready_context, task_summary_hint="剧情项目")
         self.assertEqual(str(ready_binding.get("active_stage", "")), "FINALIZE")
         support_bot.ctcp_support_controller.decide_and_queue(
             session_state,
@@ -1964,7 +1964,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             "decisions": {"count": 0, "decisions": []},
             "whiteboard": {},
         }
-        binding = support_bot.build_progress_binding(project_context=project_context, task_summary_hint="VN项目")
+        binding = support_bot.build_progress_binding(project_context=project_context, task_summary_hint="剧情项目")
         support_bot.ctcp_support_controller.decide_and_queue(
             session_state,
             project_context=project_context,
@@ -1984,7 +1984,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
         support_bot.remember_progress_notification(
             session_state,
             project_context=project_context,
-            task_summary_hint="VN项目",
+            task_summary_hint="剧情项目",
             ts="2026-03-24T12:00:00Z",
             status_hash=str(jobs[0].get("status_hash", "")),
         )
@@ -2015,7 +2015,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             "decisions": {"count": 0, "decisions": []},
             "whiteboard": {},
         }
-        binding = support_bot.build_progress_binding(project_context=project_context, task_summary_hint="VN项目")
+        binding = support_bot.build_progress_binding(project_context=project_context, task_summary_hint="剧情项目")
         support_bot.ctcp_support_controller.decide_and_queue(
             session_state,
             project_context=project_context,
@@ -2042,7 +2042,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             "decisions": {"count": 0, "decisions": []},
             "whiteboard": {},
         }
-        binding = support_bot.build_progress_binding(project_context=project_context, task_summary_hint="VN项目")
+        binding = support_bot.build_progress_binding(project_context=project_context, task_summary_hint="剧情项目")
         support_bot.ctcp_support_controller.decide_and_queue(
             session_state,
             project_context=project_context,
@@ -2080,29 +2080,29 @@ class SupportBotHumanizationTests(unittest.TestCase):
     def test_collect_public_delivery_state_blocks_low_quality_generated_package(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_state_") as td:
             repo_root = Path(td)
-            generated_project = repo_root / "generated_projects" / "vn_story_organizer"
+            generated_project = repo_root / "generated_projects" / "story_organizer"
             generated_project.mkdir(parents=True, exist_ok=True)
-            (generated_project / "main.py").write_text("print('vn')\n", encoding="utf-8")
+            (generated_project / "main.py").write_text("print('story')\n", encoding="utf-8")
 
-            bound_run = repo_root / "runs" / "bound-vn"
+            bound_run = repo_root / "runs" / "bound-story"
             (bound_run / "artifacts").mkdir(parents=True, exist_ok=True)
             (bound_run / "artifacts" / "patch_apply.json").write_text(
-                json.dumps({"touched_files": ["generated_projects/vn_story_organizer/main.py"]}, ensure_ascii=False),
+                json.dumps({"touched_files": ["generated_projects/story_organizer/main.py"]}, ensure_ascii=False),
                 encoding="utf-8",
             )
             (bound_run / "artifacts" / "PLAN.md").write_text(
-                "Status: SIGNED\nScope-Allow: generated_projects/vn_story_organizer/\n",
+                "Status: SIGNED\nScope-Allow: generated_projects/story_organizer/\n",
                 encoding="utf-8",
             )
 
             state = support_bot.default_support_session_state("delivery-demo")
-            state["bound_run_id"] = "r-vn"
+            state["bound_run_id"] = "r-story"
             state["bound_run_dir"] = str(bound_run)
             with mock.patch.object(support_bot, "ROOT", repo_root):
                 delivery = support_bot.collect_public_delivery_state(
                     session_state=state,
                     project_context={
-                        "run_id": "r-vn",
+                        "run_id": "r-story",
                         "run_dir": str(bound_run),
                         "status": {
                             "run_status": "completed",
@@ -2122,19 +2122,19 @@ class SupportBotHumanizationTests(unittest.TestCase):
             self.assertFalse(bool(delivery.get("screenshot_ready", False)))
             self.assertIn(str(generated_project.resolve()), list(delivery.get("package_source_dirs", [])))
             self.assertEqual(str(delivery.get("package_delivery_mode", "")), "materialize_ctcp_scaffold")
-            self.assertEqual(str(delivery.get("project_name_hint", "")), "vn_story_organizer")
+            self.assertEqual(str(delivery.get("project_name_hint", "")), "story_organizer")
             self.assertIn("docs/", list(delivery.get("package_structure_hint", [])))
 
     def test_collect_public_delivery_state_allows_high_quality_generated_package(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_quality_ok_") as td:
             repo_root = Path(td)
-            generated_project = repo_root / "generated_projects" / "vn_story_organizer"
+            generated_project = repo_root / "generated_projects" / "story_organizer"
             (generated_project / "docs").mkdir(parents=True, exist_ok=True)
             (generated_project / "meta" / "tasks").mkdir(parents=True, exist_ok=True)
             (generated_project / "scripts").mkdir(parents=True, exist_ok=True)
             (generated_project / "tests").mkdir(parents=True, exist_ok=True)
             (generated_project / "artifacts" / "screenshots").mkdir(parents=True, exist_ok=True)
-            (generated_project / "README.md").write_text("# vn_story_organizer\n", encoding="utf-8")
+            (generated_project / "README.md").write_text("# story_organizer\n", encoding="utf-8")
             (generated_project / "manifest.json").write_text("{}", encoding="utf-8")
             (generated_project / "docs" / "00_CORE.md").write_text("# core\n", encoding="utf-8")
             (generated_project / "meta" / "tasks" / "CURRENT.md").write_text("# current\n", encoding="utf-8")
@@ -2146,25 +2146,25 @@ class SupportBotHumanizationTests(unittest.TestCase):
             (generated_project / "artifacts" / "demo_trace.md").write_text("# demo\n", encoding="utf-8")
             (generated_project / "artifacts" / "screenshots" / "step01.png").write_bytes(b"\x89PNG\r\n")
 
-            bound_run = repo_root / "runs" / "bound-vn"
+            bound_run = repo_root / "runs" / "bound-story"
             (bound_run / "artifacts").mkdir(parents=True, exist_ok=True)
             (bound_run / "artifacts" / "patch_apply.json").write_text(
-                json.dumps({"touched_files": ["generated_projects/vn_story_organizer/README.md"]}, ensure_ascii=False),
+                json.dumps({"touched_files": ["generated_projects/story_organizer/README.md"]}, ensure_ascii=False),
                 encoding="utf-8",
             )
             (bound_run / "artifacts" / "PLAN.md").write_text(
-                "Status: SIGNED\nScope-Allow: generated_projects/vn_story_organizer/\n",
+                "Status: SIGNED\nScope-Allow: generated_projects/story_organizer/\n",
                 encoding="utf-8",
             )
 
             state = support_bot.default_support_session_state("delivery-demo")
-            state["bound_run_id"] = "r-vn"
+            state["bound_run_id"] = "r-story"
             state["bound_run_dir"] = str(bound_run)
             with mock.patch.object(support_bot, "ROOT", repo_root):
                 delivery = support_bot.collect_public_delivery_state(
                     session_state=state,
                     project_context={
-                        "run_id": "r-vn",
+                        "run_id": "r-story",
                         "run_dir": str(bound_run),
                         "status": {
                             "run_status": "completed",
@@ -2187,29 +2187,29 @@ class SupportBotHumanizationTests(unittest.TestCase):
     def test_collect_public_delivery_state_blocks_package_until_final_pass(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_gate_") as td:
             repo_root = Path(td)
-            generated_project = repo_root / "generated_projects" / "vn_story_organizer"
+            generated_project = repo_root / "generated_projects" / "story_organizer"
             generated_project.mkdir(parents=True, exist_ok=True)
-            (generated_project / "main.py").write_text("print('vn')\n", encoding="utf-8")
+            (generated_project / "main.py").write_text("print('story')\n", encoding="utf-8")
 
-            bound_run = repo_root / "runs" / "bound-vn"
+            bound_run = repo_root / "runs" / "bound-story"
             (bound_run / "artifacts").mkdir(parents=True, exist_ok=True)
             (bound_run / "artifacts" / "patch_apply.json").write_text(
-                json.dumps({"touched_files": ["generated_projects/vn_story_organizer/main.py"]}, ensure_ascii=False),
+                json.dumps({"touched_files": ["generated_projects/story_organizer/main.py"]}, ensure_ascii=False),
                 encoding="utf-8",
             )
             (bound_run / "artifacts" / "PLAN.md").write_text(
-                "Status: SIGNED\nScope-Allow: generated_projects/vn_story_organizer/\n",
+                "Status: SIGNED\nScope-Allow: generated_projects/story_organizer/\n",
                 encoding="utf-8",
             )
 
             state = support_bot.default_support_session_state("delivery-demo")
-            state["bound_run_id"] = "r-vn"
+            state["bound_run_id"] = "r-story"
             state["bound_run_dir"] = str(bound_run)
             with mock.patch.object(support_bot, "ROOT", repo_root):
                 delivery = support_bot.collect_public_delivery_state(
                     session_state=state,
                     project_context={
-                        "run_id": "r-vn",
+                        "run_id": "r-story",
                         "run_dir": str(bound_run),
                         "status": {
                             "run_status": "running",
@@ -2255,7 +2255,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
                     "package_delivery_allowed": True,
                     "package_blocked_reason": "",
                     "screenshot_ready": False,
-                    "package_source_dirs": ["D:/tmp/vn_story_organizer"],
+                    "package_source_dirs": ["D:/tmp/story_organizer"],
                     "existing_package_files": [],
                     "screenshot_files": [],
                 },
@@ -2293,9 +2293,9 @@ class SupportBotHumanizationTests(unittest.TestCase):
                     "package_delivery_allowed": False,
                     "package_blocked_reason": "verify_result is not PASS",
                     "screenshot_ready": True,
-                    "package_source_dirs": ["D:/tmp/vn_story_organizer"],
+                    "package_source_dirs": ["D:/tmp/story_organizer"],
                     "existing_package_files": [],
-                    "screenshot_files": ["D:/tmp/vn_story_organizer/artifacts/progress.png"],
+                    "screenshot_files": ["D:/tmp/story_organizer/artifacts/progress.png"],
                 },
             )
 
@@ -2341,9 +2341,9 @@ class SupportBotHumanizationTests(unittest.TestCase):
                     "package_delivery_allowed": True,
                     "package_blocked_reason": "",
                     "screenshot_ready": True,
-                    "package_source_dirs": ["D:/tmp/vn_story_organizer"],
-                    "existing_package_files": ["D:/tmp/vn_story_organizer.zip"],
-                    "screenshot_files": ["D:/tmp/vn_story_organizer/artifacts/progress.png"],
+                    "package_source_dirs": ["D:/tmp/story_organizer"],
+                    "existing_package_files": ["D:/tmp/story_organizer.zip"],
+                    "screenshot_files": ["D:/tmp/story_organizer/artifacts/progress.png"],
                 },
             )
 
@@ -2357,9 +2357,9 @@ class SupportBotHumanizationTests(unittest.TestCase):
                 "package_ready": True,
                 "package_delivery_allowed": True,
                 "package_blocked_reason": "",
-                "package_source_dirs": ["D:/tmp/vn_story_organizer"],
+                "package_source_dirs": ["D:/tmp/story_organizer"],
                 "existing_package_files": [],
-                "project_name_hint": "vn_story_organizer",
+                "project_name_hint": "story_organizer",
                 "package_delivery_mode": "materialize_ctcp_scaffold",
                 "package_structure_hint": list(support_bot.CTCP_SCAFFOLD_STRUCTURE_HINT),
                 "screenshot_ready": False,
@@ -2368,7 +2368,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
         )
 
         self.assertEqual(str(ctx.get("package_delivery_mode", "")), "materialize_ctcp_scaffold")
-        self.assertEqual(str(ctx.get("project_name_hint", "")), "vn_story_organizer")
+        self.assertEqual(str(ctx.get("project_name_hint", "")), "story_organizer")
         self.assertTrue(bool(ctx.get("package_delivery_allowed", False)))
         self.assertIn("docs/", list(ctx.get("package_structure_hint", [])))
 
@@ -2401,7 +2401,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
                     "package_delivery_allowed": False,
                     "package_blocked_reason": "verify_result is not PASS",
                     "screenshot_ready": False,
-                    "package_source_dirs": ["D:/tmp/vn_story_organizer"],
+                    "package_source_dirs": ["D:/tmp/story_organizer"],
                     "existing_package_files": [],
                     "screenshot_files": [],
                 },
@@ -2413,16 +2413,16 @@ class SupportBotHumanizationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="ctcp_support_emit_delivery_") as td:
             root = Path(td)
             support_run_dir = root / "support-session"
-            project_dir = root / "generated_projects" / "vn_story_organizer"
+            project_dir = root / "generated_projects" / "story_organizer"
             project_dir.mkdir(parents=True, exist_ok=True)
             (project_dir / "main.py").write_text("print('demo')\n", encoding="utf-8")
-            scaffold_dir = root / "exports" / "vn_story_organizer_ctcp_project"
+            scaffold_dir = root / "exports" / "story_organizer_ctcp_project"
             (scaffold_dir / "docs").mkdir(parents=True, exist_ok=True)
             (scaffold_dir / "meta").mkdir(parents=True, exist_ok=True)
             (scaffold_dir / "scripts").mkdir(parents=True, exist_ok=True)
             (scaffold_dir / "workflow_registry").mkdir(parents=True, exist_ok=True)
             (scaffold_dir / "simlab").mkdir(parents=True, exist_ok=True)
-            (scaffold_dir / "README.md").write_text("# vn_story_organizer\n", encoding="utf-8")
+            (scaffold_dir / "README.md").write_text("# story_organizer\n", encoding="utf-8")
             (scaffold_dir / "docs" / "00_CORE.md").write_text("# core\n", encoding="utf-8")
             (scaffold_dir / "scripts" / "verify_repo.ps1").write_text("Write-Host ok\n", encoding="utf-8")
             (scaffold_dir / "manifest.json").write_text("{}", encoding="utf-8")
@@ -2460,7 +2460,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
                         "placeholder_package_source_dirs": [str(project_dir)],
                         "existing_package_files": [],
                         "screenshot_files": [],
-                        "project_name_hint": "vn_story_organizer",
+                        "project_name_hint": "story_organizer",
                         "package_delivery_mode": "materialize_ctcp_scaffold",
                         "package_structure_hint": list(support_bot.CTCP_SCAFFOLD_STRUCTURE_HINT),
                     },
@@ -2470,14 +2470,14 @@ class SupportBotHumanizationTests(unittest.TestCase):
             sent_chat, sent_path, caption = fake.sent_documents[0]
             self.assertEqual(sent_chat, 123)
             self.assertTrue(sent_path.exists(), msg=str(sent_path))
-            self.assertEqual(sent_path.name, "vn_story_organizer_ctcp_project.zip")
+            self.assertEqual(sent_path.name, "story_organizer_ctcp_project.zip")
             self.assertIn("zip", caption.lower())
             scaffold_spy.assert_called_once()
             with zipfile.ZipFile(sent_path, "r") as zf:
                 names = set(zf.namelist())
-            self.assertIn("vn_story_organizer_ctcp_project/README.md", names)
-            self.assertIn("vn_story_organizer_ctcp_project/docs/00_CORE.md", names)
-            self.assertIn("vn_story_organizer_ctcp_project/scripts/verify_repo.ps1", names)
+            self.assertIn("story_organizer_ctcp_project/README.md", names)
+            self.assertIn("story_organizer_ctcp_project/docs/00_CORE.md", names)
+            self.assertIn("story_organizer_ctcp_project/scripts/verify_repo.ps1", names)
             manifest = json.loads((support_run_dir / support_bot.SUPPORT_PUBLIC_DELIVERY_REL_PATH).read_text(encoding="utf-8"))
             self.assertEqual(len(list(manifest.get("sent", []))), 1)
             self.assertEqual(len(list(plan.get("sent", []))), 1)
@@ -2487,7 +2487,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
         self.assertFalse(
             support_bot.should_trigger_t2p_state_machine(
                 session_state=session_state,
-                user_text="我想要你帮我创建一个项目，是一个工具来帮我制作vn游戏",
+                user_text="我想要你帮我创建一个项目，是一个工具来帮我制作叙事项目",
                 source="telegram",
                 conversation_mode="PROJECT_DETAIL",
             )

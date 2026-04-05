@@ -51,25 +51,42 @@ def _safe_int(value: str, default: int, minimum: int, maximum: int) -> int:
     return out
 
 
-def _provider_cfg(config: dict[str, Any]) -> dict[str, Any]:
+def _provider_cfg(config: dict[str, Any], request: dict[str, Any] | None = None) -> dict[str, Any]:
     providers = config.get("providers", {}) if isinstance(config, dict) else {}
     if not isinstance(providers, dict):
         providers = {}
     raw = providers.get("ollama_agent", {})
     if not isinstance(raw, dict):
         raw = {}
+    librarian_request = _is_librarian_context_pack_request(request or {})
+
+    librarian_base_url = str(raw.get("librarian_base_url", "")).strip() if librarian_request else ""
+    librarian_api_key = str(raw.get("librarian_api_key", "")).strip() if librarian_request else ""
+    librarian_model = str(raw.get("librarian_model", "")).strip() if librarian_request else ""
+    librarian_env_base_url = str(os.environ.get("LIBRARIAN_BASE_URL", "")).strip() if librarian_request else ""
+    librarian_env_api_key = str(os.environ.get("LIBRARIAN_API_KEY", "")).strip() if librarian_request else ""
+    librarian_env_model = str(os.environ.get("LIBRARIAN_MODEL", "")).strip() if librarian_request else ""
 
     base_url = (
+        librarian_base_url
+        or librarian_env_base_url
+        or
         str(raw.get("base_url", "")).strip()
         or str(os.environ.get("CTCP_OLLAMA_BASE_URL", "")).strip()
         or DEFAULT_OLLAMA_BASE_URL
     )
     api_key = (
+        librarian_api_key
+        or librarian_env_api_key
+        or
         str(raw.get("api_key", "")).strip()
         or str(os.environ.get("CTCP_OLLAMA_API_KEY", "")).strip()
         or DEFAULT_OLLAMA_API_KEY
     )
     model = (
+        librarian_model
+        or librarian_env_model
+        or
         str(raw.get("model", "")).strip()
         or str(os.environ.get("CTCP_OLLAMA_MODEL", "")).strip()
         or DEFAULT_OLLAMA_MODEL
@@ -117,6 +134,13 @@ def _is_support_reply_request(request: dict[str, Any]) -> bool:
     )
 
 
+def _is_librarian_context_pack_request(request: dict[str, Any]) -> bool:
+    return (
+        str(request.get("role", "")).strip().lower() == "librarian"
+        and str(request.get("action", "")).strip().lower() == "context_pack"
+    )
+
+
 def _extract_json_dict(text: str) -> dict[str, Any] | None:
     raw = str(text or "").strip()
     if not raw:
@@ -158,6 +182,15 @@ def _extract_json_dict(text: str) -> dict[str, Any] | None:
 def _write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
+
+
+def _response_message_content(doc: dict[str, Any] | None) -> str:
+    if not isinstance(doc, dict):
+        return ""
+    message = doc.get("message")
+    if isinstance(message, dict):
+        return str(message.get("content", "")).strip()
+    return ""
 
 
 def _support_timeout_sec() -> int:
@@ -248,10 +281,7 @@ def _execute_native_support_reply(*, run_dir: Path, request: dict[str, Any], cfg
     response_text = json.dumps(doc, ensure_ascii=False, indent=2) + "\n"
     _write_text(stdout_log, response_text)
     _write_text(stderr_log, "")
-    message = doc.get("message") if isinstance(doc, dict) else None
-    content = ""
-    if isinstance(message, dict):
-        content = str(message.get("content", "")).strip()
+    content = _response_message_content(doc)
     if not content:
         return {
             "status": "exec_failed",
@@ -275,6 +305,169 @@ def _execute_native_support_reply(*, run_dir: Path, request: dict[str, Any], cfg
         "target_path": target_rel,
         "stdout_log": stdout_log.relative_to(run_dir).as_posix(),
         "stderr_log": stderr_log.relative_to(run_dir).as_posix(),
+    }
+
+
+def _render_librarian_prompt(
+    *,
+    repo_root: Path,
+    run_dir: Path,
+    request: dict[str, Any],
+    config: dict[str, Any],
+    guardrails_budgets: dict[str, str],
+) -> tuple[str, str, str]:
+    file_request_path = run_dir / "artifacts" / "file_request.json"
+    if not file_request_path.exists():
+        return "", "", f"missing artifacts/file_request.json: {file_request_path}"
+    file_request_text = file_request_path.read_text(encoding="utf-8", errors="replace")
+    evidence = api_agent._build_evidence_pack(  # type: ignore[attr-defined]
+        repo_root=repo_root,
+        run_dir=run_dir,
+        request=request,
+        config=config,
+        guardrails_budgets=guardrails_budgets,
+    )
+    prompt = api_agent._render_prompt(  # type: ignore[attr-defined]
+        run_dir=run_dir,
+        repo_root=repo_root,
+        request=request,
+        evidence=evidence,
+    )
+    prompt += "\n## FILE_REQUEST\n```json\n" + file_request_text.strip() + "\n```\n"
+    return (
+        prompt.replace("Provider: api_agent", "Provider: ollama_agent", 1),
+        (run_dir / "outbox" / "AGENT_PROMPT_librarian_context_pack.md").relative_to(run_dir).as_posix(),
+        "",
+    )
+
+
+def _execute_native_librarian_context_pack(
+    *,
+    repo_root: Path,
+    run_dir: Path,
+    request: dict[str, Any],
+    config: dict[str, Any],
+    guardrails_budgets: dict[str, str],
+    cfg: dict[str, Any],
+) -> dict[str, Any]:
+    target_rel = str(request.get("target_path", "")).strip()
+    target_path = (run_dir / target_rel).resolve()
+    try:
+        target_path.relative_to(run_dir.resolve())
+    except ValueError:
+        return {
+            "status": "exec_failed",
+            "reason": f"target_path escapes run_dir: {target_rel}",
+            "provider_mode": "local",
+            "model_name": str(cfg.get("model", "")).strip(),
+            "fallback_blocked": True,
+        }
+
+    ready, reason = _ensure_ollama_ready(cfg, run_dir)
+    logs_dir = run_dir / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    stdout_log = logs_dir / "ollama_librarian.stdout.log"
+    stderr_log = logs_dir / "ollama_librarian.stderr.log"
+    prompt_text, prompt_rel, prompt_err = _render_librarian_prompt(
+        repo_root=repo_root,
+        run_dir=run_dir,
+        request=request,
+        config=config,
+        guardrails_budgets=guardrails_budgets,
+    )
+    if prompt_err:
+        _write_text(stdout_log, "")
+        _write_text(stderr_log, prompt_err + "\n")
+        return {
+            "status": "exec_failed",
+            "reason": prompt_err,
+            "target_path": target_rel,
+            "stdout_log": stdout_log.relative_to(run_dir).as_posix(),
+            "stderr_log": stderr_log.relative_to(run_dir).as_posix(),
+            "provider_mode": "local",
+            "model_name": str(cfg.get("model", "")).strip(),
+            "fallback_blocked": True,
+        }
+    _write_text(run_dir / prompt_rel, prompt_text)
+    if not ready:
+        _write_text(stdout_log, "")
+        _write_text(stderr_log, reason + "\n")
+        return {
+            "status": "exec_failed",
+            "reason": f"librarian local model unavailable: {reason}",
+            "target_path": target_rel,
+            "prompt_path": prompt_rel,
+            "stdout_log": stdout_log.relative_to(run_dir).as_posix(),
+            "stderr_log": stderr_log.relative_to(run_dir).as_posix(),
+            "provider_mode": "local",
+            "model_name": str(cfg.get("model", "")).strip(),
+            "fallback_blocked": True,
+        }
+
+    timeout_sec = _support_timeout_sec()
+    doc, err = _call_ollama_chat(cfg=cfg, prompt=prompt_text, timeout_sec=timeout_sec)
+    if err:
+        _write_text(stdout_log, "")
+        _write_text(stderr_log, err + "\n")
+        return {
+            "status": "exec_failed",
+            "reason": f"librarian local model request failed: {err}",
+            "target_path": target_rel,
+            "prompt_path": prompt_rel,
+            "stdout_log": stdout_log.relative_to(run_dir).as_posix(),
+            "stderr_log": stderr_log.relative_to(run_dir).as_posix(),
+            "provider_mode": "local",
+            "model_name": str(cfg.get("model", "")).strip(),
+            "fallback_blocked": True,
+        }
+
+    response_text = json.dumps(doc, ensure_ascii=False, indent=2) + "\n"
+    _write_text(stdout_log, response_text)
+    _write_text(stderr_log, "")
+    content = _response_message_content(doc)
+    if not content:
+        return {
+            "status": "exec_failed",
+            "reason": "librarian local model returned empty content",
+            "target_path": target_rel,
+            "prompt_path": prompt_rel,
+            "stdout_log": stdout_log.relative_to(run_dir).as_posix(),
+            "stderr_log": stderr_log.relative_to(run_dir).as_posix(),
+            "provider_mode": "local",
+            "model_name": str(cfg.get("model", "")).strip(),
+            "fallback_blocked": True,
+        }
+
+    normalized, norm_err = api_agent._normalize_json_artifact(  # type: ignore[attr-defined]
+        repo_root=repo_root,
+        run_dir=run_dir,
+        request=request,
+        raw_text=content,
+    )
+    if norm_err:
+        _write_text(stderr_log, norm_err + "\n")
+        return {
+            "status": "exec_failed",
+            "reason": f"librarian local model normalization failed: {norm_err}",
+            "target_path": target_rel,
+            "prompt_path": prompt_rel,
+            "stdout_log": stdout_log.relative_to(run_dir).as_posix(),
+            "stderr_log": stderr_log.relative_to(run_dir).as_posix(),
+            "provider_mode": "local",
+            "model_name": str(cfg.get("model", "")).strip(),
+            "fallback_blocked": True,
+        }
+
+    _write_text(target_path, normalized)
+    return {
+        "status": "executed",
+        "target_path": target_rel,
+        "prompt_path": prompt_rel,
+        "stdout_log": stdout_log.relative_to(run_dir).as_posix(),
+        "stderr_log": stderr_log.relative_to(run_dir).as_posix(),
+        "provider_mode": "local",
+        "model_name": str(cfg.get("model", "")).strip(),
+        "fallback_blocked": True,
     }
 
 
@@ -381,7 +574,29 @@ def _ensure_ollama_ready(cfg: dict[str, Any], run_dir: Path) -> tuple[bool, str]
 
 
 def preview(*, run_dir: Path, request: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
-    cfg = _provider_cfg(config)
+    cfg = _provider_cfg(config, request=request)
+    if _is_librarian_context_pack_request(request):
+        ready, reason = _ensure_ollama_ready(cfg, run_dir)
+        if not ready:
+            return {
+                "status": "disabled",
+                "reason": reason,
+                "runtime": "ollama",
+                "provider_mode": "local",
+                "model_name": cfg["model"],
+                "fallback_blocked": True,
+                "ollama_base_url": cfg["base_url"],
+                "ollama_model": cfg["model"],
+            }
+        return {
+            "status": "can_exec",
+            "runtime": "ollama",
+            "provider_mode": "local",
+            "model_name": cfg["model"],
+            "fallback_blocked": True,
+            "ollama_base_url": cfg["base_url"],
+            "ollama_model": cfg["model"],
+        }
     if _is_support_reply_request(request):
         ready, reason = _ensure_ollama_ready(cfg, run_dir)
         if not ready:
@@ -425,7 +640,20 @@ def execute(
     guardrails_budgets: dict[str, str],
 ) -> dict[str, Any]:
     # BEHAVIOR_ID: B035
-    cfg = _provider_cfg(config)
+    cfg = _provider_cfg(config, request=request)
+    if _is_librarian_context_pack_request(request):
+        out = _execute_native_librarian_context_pack(
+            repo_root=repo_root,
+            run_dir=run_dir,
+            request=request,
+            config=config,
+            guardrails_budgets=guardrails_budgets,
+            cfg=cfg,
+        )
+        out["runtime"] = "ollama"
+        out["ollama_base_url"] = cfg["base_url"]
+        out["ollama_model"] = cfg["model"]
+        return out
     if _is_support_reply_request(request):
         ready, reason = _ensure_ollama_ready(cfg, run_dir)
         if not ready:

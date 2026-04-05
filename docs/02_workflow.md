@@ -35,9 +35,9 @@ Execution starts only after signed `artifacts/PLAN.md`, required adversarial rev
 ### Hard gate rule for `context_pack`
 
 - Orchestrator/dispatcher MUST block plan signing and execution until `artifacts/context_pack.json` exists.
-- If context_pack is missing, dispatcher MUST route to deterministic local Librarian execution by default (`scripts/ctcp_librarian.py`).
+- If context_pack is missing, dispatcher MUST route to the hard-local-model Librarian path by default (`ollama_agent` / local Ollama).
 - `librarian/context_pack` is the only hard-local role.
-- Manual outbox, API providers, and `CTCP_FORCE_PROVIDER` MUST NOT bypass that hard-local role (except explicit `mock_agent` test mode).
+- Manual outbox, remote API providers, and `CTCP_FORCE_PROVIDER` MUST NOT bypass that hard-local role (except explicit `mock_agent` test mode).
 
 ## Standard Artifact Paths
 

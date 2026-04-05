@@ -94,6 +94,27 @@ class SharedStateWorkspaceTests(unittest.TestCase):
             self.assertEqual(str(current.get("visible_state", "")), "DONE")
             self.assertEqual(str(render.get("visible_state", "")), "DONE")
 
+    def test_refresh_render_can_emit_runtime_render_event(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_shared_state_render_event_") as td:
+            store = SharedStateStore(workspace_root=td)
+            tid = "task-render-event"
+            store.append_event(
+                task_id=tid,
+                event_type="authoritative_stage_changed",
+                source="runtime",
+                payload={"authoritative_stage": "EXECUTING", "execution_status": "running"},
+            )
+            store.rebuild_current(tid)
+
+            render = store.refresh_render(tid, source="runtime", emit_event=True)
+            events = store.read_events(tid)
+
+            self.assertEqual(str(render.get("visible_state", "")), "EXECUTING")
+            self.assertTrue(any(str(row.get("type", "")) == "render_state_refreshed" for row in events))
+            render_rows = [row for row in events if str(row.get("type", "")) == "render_state_refreshed"]
+            self.assertEqual(str(render_rows[-1].get("payload", {}).get("visible_state", "")), "EXECUTING")
+            self.assertTrue(bool(str(render_rows[-1].get("payload", {}).get("ui_badge", ""))))
+
     def test_response_composer_can_render_from_shared_state_binding(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_shared_state_render_") as td:
             store = SharedStateStore(workspace_root=td)

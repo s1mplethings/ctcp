@@ -61,10 +61,11 @@
 - Orchestrator MAY call a local dispatcher when blocked by missing artifacts.
 - Dispatcher input authority remains the same gate state; it does not change workflow selection authority.
 - Provider types:
-  - `local_exec`: deterministic local provider for `librarian/context_pack` (default only).
+  - `ollama_agent`: hard-local-model provider for `librarian/context_pack` (default only).
+  - `local_exec`: local CLI/provider path retained for other bounded local execution cases.
   - `api_agent`: external command-template provider for API roles.
   - `manual_outbox`: writes standardized outbox prompts for external/manual agents.
-- For missing `artifacts/context_pack.json`, dispatcher must default to local deterministic librarian execution (`local_exec`).
+- For missing `artifacts/context_pack.json`, dispatcher must default to the local-model librarian execution path (`ollama_agent`).
 - `librarian/context_pack` remains hard-local even when `mode`, `role_providers`, or `CTCP_FORCE_PROVIDER` request another provider.
 - `manual_outbox` prompts must constrain write scope to run_dir target artifacts only.
 - `manual_outbox` prompts must not instruct any direct repo edits.

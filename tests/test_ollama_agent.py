@@ -18,6 +18,28 @@ from tools.providers import ollama_agent
 
 
 class OllamaAgentTests(unittest.TestCase):
+    def test_preview_librarian_context_pack_reports_local_model_metadata(self) -> None:
+        request = {
+            "role": "librarian",
+            "action": "context_pack",
+            "target_path": "artifacts/context_pack.json",
+        }
+        with tempfile.TemporaryDirectory() as td:
+            run_dir = Path(td)
+            with mock.patch.object(
+                ollama_agent,
+                "_ensure_ollama_ready",
+                return_value=(True, ""),
+            ) as ensure_ready, mock.patch.object(ollama_agent.api_agent, "preview") as api_preview:
+                out = ollama_agent.preview(run_dir=run_dir, request=request, config={})
+
+        self.assertEqual(out.get("status"), "can_exec", msg=str(out))
+        self.assertEqual(out.get("provider_mode"), "local")
+        self.assertEqual(out.get("fallback_blocked"), True)
+        self.assertTrue(str(out.get("model_name", "")).strip())
+        ensure_ready.assert_called_once()
+        api_preview.assert_not_called()
+
     def test_preview_returns_disabled_when_autostart_fails(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             run_dir = Path(td)
@@ -147,6 +169,90 @@ class OllamaAgentTests(unittest.TestCase):
             self.assertTrue((run_dir / "artifacts" / "support_reply.provider.json").exists())
             saved = json.loads((run_dir / "artifacts" / "support_reply.provider.json").read_text(encoding="utf-8"))
             self.assertEqual(str(saved.get("reply_text", "")), "收到，我先把这轮目标整理出来。")
+            ensure_ready.assert_called_once()
+            api_execute.assert_not_called()
+            urlopen.assert_called_once()
+
+    def test_execute_librarian_context_pack_uses_native_chat_api(self) -> None:
+        class _Response:
+            def __init__(self, payload: dict[str, object]) -> None:
+                self._payload = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+
+            def read(self) -> bytes:
+                return self._payload
+
+            def __enter__(self) -> "_Response":
+                return self
+
+            def __exit__(self, exc_type, exc, tb) -> None:
+                return None
+
+        request = {
+            "role": "librarian",
+            "action": "context_pack",
+            "target_path": "artifacts/context_pack.json",
+            "reason": "Return JSON only.",
+            "goal": "local librarian context pack",
+        }
+        payload = {
+            "message": {
+                "content": json.dumps(
+                    {
+                        "schema_version": "ctcp-context-pack-v1",
+                        "goal": "local librarian context pack",
+                        "repo_slug": "ctcp",
+                        "summary": "included=1 omitted=0",
+                        "files": [{"path": "README.md", "why": "local_model", "content": "sample"}],
+                        "omitted": [],
+                    },
+                    ensure_ascii=False,
+                )
+            }
+        }
+
+        with tempfile.TemporaryDirectory() as td:
+            run_dir = Path(td)
+            (run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+            (run_dir / "artifacts" / "file_request.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "ctcp-file-request-v1",
+                        "goal": "local librarian context pack",
+                        "needs": [{"path": "README.md", "mode": "snippets", "line_ranges": [[1, 20]]}],
+                        "budget": {"max_files": 8, "max_total_bytes": 200000},
+                        "reason": "test local librarian path",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            with mock.patch.object(
+                ollama_agent,
+                "_ensure_ollama_ready",
+                return_value=(True, ""),
+            ) as ensure_ready, mock.patch.object(
+                ollama_agent.api_agent, "execute"
+            ) as api_execute, mock.patch(
+                "tools.providers.ollama_agent.urllib.request.urlopen",
+                return_value=_Response(payload),
+            ) as urlopen:
+                out = ollama_agent.execute(
+                    repo_root=ROOT,
+                    run_dir=run_dir,
+                    request=request,
+                    config={},
+                    guardrails_budgets={},
+                )
+
+            self.assertEqual(out.get("status"), "executed", msg=str(out))
+            self.assertEqual(out.get("provider_mode"), "local")
+            self.assertEqual(out.get("fallback_blocked"), True)
+            self.assertTrue(str(out.get("model_name", "")).strip())
+            saved = json.loads((run_dir / "artifacts" / "context_pack.json").read_text(encoding="utf-8"))
+            self.assertEqual(saved.get("schema_version"), "ctcp-context-pack-v1")
+            self.assertTrue((run_dir / "outbox" / "AGENT_PROMPT_librarian_context_pack.md").exists())
             ensure_ready.assert_called_once()
             api_execute.assert_not_called()
             urlopen.assert_called_once()

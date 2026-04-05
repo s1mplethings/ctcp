@@ -110,7 +110,7 @@ class FrontendBackendIntegrationTests(unittest.TestCase):
         self.assertIn("pick one", first.reply_text)
         self.assertTrue(bridge.created_runs)
         first_constraints = bridge.created_runs[0].get("constraints", {})
-        self.assertEqual(str(first_constraints.get("project_domain", "")), "vn_reasoning_game")
+        self.assertEqual(str(first_constraints.get("project_domain", "")), "story_reasoning_game")
         self.assertEqual(str(first_constraints.get("worldline_management", "")), "required")
         self.assertEqual(str(first_constraints.get("diagram_support", "")), "required")
 

@@ -17,13 +17,13 @@
     },
     {
       "run": {
-        "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s26_advance.out.txt 2>&1",
+        "cmd": "python simlab/ollama_stub_runner.py --shell-command \"python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s26_advance.out.txt 2>&1\"",
         "expect_exit": 0
       }
     },
     {
       "run": {
-        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; outbox=r/'outbox'; cp=art/'context_pack.json'; assert cp.exists(), str(cp); doc=json.loads(cp.read_text(encoding='utf-8')); assert doc.get('schema_version')=='ctcp-context-pack-v1', doc.get('schema_version'); paths=[str(x.get('path','')) for x in doc.get('files',[]) if isinstance(x,dict)]; req={'AGENTS.md','ai_context/00_AI_CONTRACT.md','ai_context/CTCP_FAST_RULES.md','docs/00_CORE.md','PATCH_README.md'}; assert req.issubset(set(paths)), paths; prompts=[p for p in outbox.glob('*.md') if 'Role: librarian' in p.read_text(encoding='utf-8', errors='replace')]; assert not prompts, [str(p) for p in prompts]; Path('artifacts/_s26_context_pack.json').write_text(cp.read_text(encoding='utf-8'), encoding='utf-8')\"",
+        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; outbox=r/'outbox'; cp=art/'context_pack.json'; assert cp.exists(), str(cp); doc=json.loads(cp.read_text(encoding='utf-8')); assert doc.get('schema_version')=='ctcp-context-pack-v1', doc.get('schema_version'); paths=[str(x.get('path','')) for x in doc.get('files',[]) if isinstance(x,dict)]; req={'AGENTS.md','ai_context/00_AI_CONTRACT.md','ai_context/CTCP_FAST_RULES.md','docs/00_CORE.md','PATCH_README.md'}; assert req.issubset(set(paths)), paths; prompts=[p for p in outbox.glob('[0-9][0-9][0-9]_*.md') if 'Role: librarian' in p.read_text(encoding='utf-8', errors='replace')]; assert not prompts, [str(p) for p in prompts]; assert (outbox/'AGENT_PROMPT_librarian_context_pack.md').exists(), 'missing librarian agent prompt evidence'; Path('artifacts/_s26_context_pack.json').write_text(cp.read_text(encoding='utf-8'), encoding='utf-8')\"",
         "expect_exit": 0
       }
     },

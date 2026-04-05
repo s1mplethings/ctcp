@@ -63,7 +63,7 @@ class BackendServiceTests(unittest.TestCase):
                 "request_id": "req-1",
                 "user_goal": "build decoupled architecture",
                 "constraints": {
-                    "project_domain": "vn_reasoning_game",
+                    "project_domain": "story_reasoning_game",
                     "worldline_management": "required",
                     "diagram_support": "required",
                 },
@@ -79,7 +79,7 @@ class BackendServiceTests(unittest.TestCase):
         self.assertIn("event_question", event_types)
         self.assertTrue(bridge.created_runs)
         forwarded_constraints = bridge.created_runs[0].get("constraints", {})
-        self.assertEqual(str(forwarded_constraints.get("project_domain", "")), "vn_reasoning_game")
+        self.assertEqual(str(forwarded_constraints.get("project_domain", "")), "story_reasoning_game")
         self.assertEqual(str(forwarded_constraints.get("worldline_management", "")), "required")
         self.assertEqual(str(forwarded_constraints.get("diagram_support", "")), "required")
 

@@ -56,6 +56,8 @@ _RUNTIME_WRITABLE_KEYS = {
     "verification_events",
     "failure_reason",
     "evidence_paths",
+    "visible_state",
+    "ui_badge",
 }
 
 _VERIFIER_WRITABLE_KEYS = {
@@ -182,4 +184,3 @@ def build_event(
         "source": src,
         "payload": body,
     }
-

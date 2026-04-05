@@ -51,46 +51,31 @@ budget: { "max_files": int, "max_total_bytes": int }
 
 reason
 
-B.1) Librarian mandatory contract injection (hard)
+B.1) Librarian prompt/input contract (hard)
 
-- `scripts/ctcp_librarian.py` MUST prepend mandatory contract docs before processing `needs[]`:
-  - `AGENTS.md`
-  - `ai_context/00_AI_CONTRACT.md`
-  - `ai_context/CTCP_FAST_RULES.md` (single-screen hard-rule summary for fast policy injection)
-  - `docs/00_CORE.md` (if present)
-  - `PATCH_README.md` (if present)
-- Duplicate paths MUST be de-duplicated (mandatory copy wins).
-- Mandatory docs consume budget first.
-- If `budget.max_files` or `budget.max_total_bytes` cannot cover mandatory docs, librarian MUST fail with a clear "increase budget" error.
-- Chair/Planner MUST reserve budget for mandatory docs before adding extra `needs[]`.
+- The librarian execution path MUST consume `artifacts/file_request.json` before generating `artifacts/context_pack.json`.
+- If `artifacts/file_request.json` is missing or unreadable, librarian MUST fail fast with an explicit error.
+- Local prompt/context preparation MAY prepend repo-local contract docs and helper context, but the provider path MUST remain local-model only and MUST NOT silently fall back to remote `api_agent`.
+- Chair/Planner MUST still provide budget and `needs[]` intent through `file_request.json`.
 
-B.2) Context pack generation rules (MUST, deterministic)
+B.2) Context pack generation rules (MUST, local-model locked)
 
-The librarian output MUST be deterministic for the same `(repo, file_request.json)`.
+The librarian output MUST come from the hard-local-model provider path for the same run and `file_request.json`.
 
 Path rules:
 - `needs[].path` MUST be repo-relative POSIX paths (no drive letters, no `..`, no leading `/`).
 - Denylist by prefix (MUST omit with `reason: denied`): `.git/`, `runs/`, `build/`, `dist/`, `node_modules/`, `__pycache__/`.
 - If a path does not exist: omit with `reason: not_found`.
 
-Mode rules:
-- `mode="full"`: include verbatim file bytes as UTF-8 (replacement allowed) and MAY truncate to fit budget.
-- `mode="snippets"`: include only requested line ranges.
-- `line_ranges` are 1-indexed inclusive `[start,end]`.
-- If `mode="snippets"` and `line_ranges` is missing/empty: omit with `reason: invalid_request`.
-- Out-of-range line ranges MUST be clamped deterministically to file bounds.
+Provider rules:
+- Default provider for `librarian/context_pack` is `ollama_agent`.
+- `librarian/context_pack` is the hard-local-model role; `mode`, `role_providers`, and `CTCP_FORCE_PROVIDER` MUST NOT remap it away from `ollama_agent` (except explicit `mock_agent` test mode).
+- If the local model is unavailable, returns empty content, or produces non-normalizable output, librarian MUST fail explicitly instead of pretending success.
 
-Budget rules:
-- Apply B.1 mandatory injection first.
-- Then process `needs[]` in order.
-- When the next file/snippet would exceed `budget.max_files` or `budget.max_total_bytes`, omit with `reason: budget_exceeded`.
-
-Truncation:
-- For `mode="full"` when remaining budget is smaller than file size, include prefix that fits and mark `truncated: true`.
-
-Verbatim-only rule:
-- `files[].content` MUST be copied from repo files; librarian MUST NOT invent/summarize/paraphrase.
-- `files[].why` MUST be short provenance text (for example `mandatory_contract`, `requested:<reason>`).
+Output rules:
+- `files[].path` and `omitted[].path` MUST remain repo-relative POSIX paths.
+- `omitted[].reason` MUST stay explicit (`denied|not_found|invalid_request|budget_exceeded|irrelevant|too_large|unspecified`).
+- `summary` MUST describe the context-pack result without claiming downstream consumption that did not happen.
 
 C) artifacts/context_pack.json (Librarian output)
 
@@ -110,9 +95,9 @@ files[] MAY include: { "truncated": true }
 omitted[]: { "path": "...", "reason": "too_large|denied|irrelevant|not_found|invalid_request|budget_exceeded" }
 
 Notes:
-- `files[]` MUST include the mandatory contract docs listed in B.1 when budget is sufficient.
-- If mandatory docs cannot fit, context generation MUST fail instead of silently omitting them.
-- `summary` MUST report high-level omitted reasons; MUST NOT include plans/solutions.
+- `context_pack.json` success is valid only when the local-model provider actually returned content that normalized into this contract.
+- If local-model execution fails, the run must stay failed/blocked rather than pretending `context_pack` already exists.
+- `summary` MUST report high-level omitted reasons; MUST NOT include fake downstream completion claims.
 
 D) artifacts/find_result.json (resolver final)
 
@@ -277,7 +262,7 @@ schema_version: "ctcp-dispatch-config-v1"
 mode: "manual_outbox" | "ollama_agent" | "api_agent" | "local_exec"
 
 role_providers: {
-  "librarian": "local_exec",
+  "librarian": "ollama_agent",
   "chair": "manual_outbox|api_agent",
   "contract_guardian": "manual_outbox|api_agent",
   "cost_controller": "manual_outbox",
@@ -289,9 +274,9 @@ role_providers: {
 budgets: { "max_outbox_prompts": int }
 
 Rules:
-- Default path for missing `artifacts/context_pack.json` is deterministic local librarian execution (`local_exec` -> `scripts/ctcp_librarian.py`).
-- `librarian/context_pack` is the hard-local role; `mode`, `role_providers`, and `CTCP_FORCE_PROVIDER` MUST NOT remap it away from `local_exec` (except explicit `mock_agent` test mode).
-- `local_exec` librarian execution MUST follow B.1/B.2 (deterministic, verbatim-only, repo-scoped read-only).
+- Default path for missing `artifacts/context_pack.json` is hard-local-model librarian execution (`ollama_agent` / local Ollama).
+- `librarian/context_pack` is the hard-local-model role; `mode`, `role_providers`, and `CTCP_FORCE_PROVIDER` MUST NOT remap it away from `ollama_agent` (except explicit `mock_agent` test mode).
+- `ollama_agent` librarian execution MUST emit explicit local-model evidence (`provider_mode`, `model_name`, failure reason when relevant) and MUST NOT silently fall back to `api_agent`.
 - `api_agent` executes configured external command templates (`SDDAI_PLAN_CMD`, `SDDAI_PATCH_CMD`, `SDDAI_AGENT_CMD`) and records stdout/stderr logs.
 - For patch targets, `api_agent` output MUST start with `diff --git`, otherwise provider execution fails with explicit logs/reason.
 

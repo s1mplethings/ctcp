@@ -53,7 +53,7 @@ cost_hints:
 
 roles:
   librarian:
-    provider: local_exec
+    provider: ollama_agent
   contract_guardian:
     provider: api_agent
   chair:

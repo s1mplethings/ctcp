@@ -104,7 +104,7 @@ def _dispatch_config_all_mock() -> dict[str, Any]:
         "role_providers": {
             "chair": "mock_agent",
             "planner": "mock_agent",
-            "librarian": "mock_agent",
+            "librarian": "ollama_agent",
             "contract_guardian": "mock_agent",
             "cost_controller": "mock_agent",
             "patchmaker": "mock_agent",
@@ -349,13 +349,42 @@ class MockAgentPipelineTests(unittest.TestCase):
             run_doc = {"goal": "linked flow smoke"}
 
             step_results: list[dict[str, Any]] = []
-            for gate in FLOW_GATES:
-                result = _dispatch_once(run_dir=run_dir, run_doc=run_doc, gate=gate, env=None)
-                step_results.append(result)
-                self.assertEqual(result.get("status"), "executed", msg=str(result))
-                self.assertEqual(result.get("provider"), "mock_agent", msg=str(result))
-                ok, reason = _validate_artifact_for_gate(run_dir, gate["path"])
-                self.assertTrue(ok, msg=f"{gate['path']}: {reason}")
+            def _fake_librarian_execute(
+                *,
+                repo_root: Path,
+                run_dir: Path,
+                request: dict[str, Any],
+                config: dict[str, Any],
+                guardrails_budgets: dict[str, str],
+            ) -> dict[str, Any]:
+                _write_json(
+                    run_dir / "artifacts" / "context_pack.json",
+                    {
+                        "schema_version": "ctcp-context-pack-v1",
+                        "goal": run_doc["goal"],
+                        "repo_slug": repo_root.name,
+                        "summary": "mocked local librarian",
+                        "files": [],
+                        "omitted": [],
+                    },
+                )
+                return {
+                    "status": "executed",
+                    "target_path": str(request.get("target_path", "")),
+                    "provider_mode": "local",
+                    "model_name": "simlab-mock-librarian",
+                    "fallback_blocked": True,
+                }
+
+            with mock.patch.object(ctcp_dispatch.ollama_agent, "execute", side_effect=_fake_librarian_execute):
+                for gate in FLOW_GATES:
+                    result = _dispatch_once(run_dir=run_dir, run_doc=run_doc, gate=gate, env=None)
+                    step_results.append(result)
+                    self.assertEqual(result.get("status"), "executed", msg=str(result))
+                    expected_provider = "ollama_agent" if gate["path"] == "artifacts/context_pack.json" else "mock_agent"
+                    self.assertEqual(result.get("provider"), expected_provider, msg=str(result))
+                    ok, reason = _validate_artifact_for_gate(run_dir, gate["path"])
+                    self.assertTrue(ok, msg=f"{gate['path']}: {reason}")
 
             required = [
                 run_dir / "artifacts" / "guardrails.md",
@@ -405,7 +434,7 @@ class MockAgentPipelineTests(unittest.TestCase):
             rows.append(
                 {
                     "case": "default_librarian",
-                    "expected": "local_exec",
+                    "expected": "ollama_agent",
                     "actual": str(preview_librarian.get("provider", "")),
                 }
             )

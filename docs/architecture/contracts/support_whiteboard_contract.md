@@ -166,15 +166,15 @@ When `get_support_whiteboard_context()` is called, it returns a **snapshot** (la
         "ts": "2026-03-22T10:30:45Z",
         "role": "support",
         "kind": "support_turn",
-        "text": "telegram project_intake: 我想做一个帮我整理 VN 剧情结构的项目",
-        "query": "我想做一个帮我整理 VN 剧情结构的项目"
+        "text": "telegram project_intake: 我想做一个帮我整理剧情结构的项目",
+        "query": "我想做一个帮我整理剧情结构的项目"
       },
       {
         "ts": "2026-03-22T10:30:46Z",
         "role": "librarian",
         "kind": "support_lookup",
         "text": "lookup completed with 4 hits",
-        "query": "我想做一个帮我整理 VN 剧情结构的项目",
+        "query": "我想做一个帮我整理剧情结构的项目",
         "hits": [
           {"path": "tools/scaffold.py", "start_line": 1}
         ],
@@ -216,4 +216,5 @@ Regression tests:
 - `docs/architecture/contracts/frontend_session_contract.md` — support session state
 - `docs/10_team_mode.md` — support bot behavior
 - `ai_context/problem_registry.md` Example 7 — whiteboard wiring fix history
+
 

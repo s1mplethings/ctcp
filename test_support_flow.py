@@ -91,7 +91,7 @@ def main():
     print("\n\n" + "="*60)
     print("测试 2: 提出项目需求")
     print("="*60)
-    send_message("我想做一个简单的视觉小说游戏，有剧情分支")
+    send_message("我想做一个简单的剧情推理游戏，有剧情分支")
 
     input("\n按回车继续下一步...")
 

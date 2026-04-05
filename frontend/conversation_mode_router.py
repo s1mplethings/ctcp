@@ -104,8 +104,8 @@ _STATUS_PATTERNS = (
     ),
 )
 _PROJECT_INTENT_PATTERNS = (
-    re.compile(r"(做一个|做个|新建|创建|搭建|开发|实现).{0,20}(项目|流程|系统|工具|机器人|bot|游戏|应用)"),
-    re.compile(r"\b(build|create|start|implement|develop)\b.{0,24}\b(project|workflow|pipeline|system|tool|bot|game|app)\b", re.IGNORECASE),
+    re.compile(r"(做一个|做个|新建|创建|搭建|开发|实现|生成).{0,20}(项目|流程|系统|工具|机器人|bot|游戏|应用|助手)"),
+    re.compile(r"\b(build|create|start|implement|develop|generate)\b.{0,24}\b(project|workflow|pipeline|system|tool|bot|game|app|assistant)\b", re.IGNORECASE),
 )
 _PROJECT_DOMAIN_TOKENS = (
     "项目",
@@ -122,7 +122,7 @@ _PROJECT_DOMAIN_TOKENS = (
     "剧情",
     "角色",
     "故事",
-    "视觉小说",
+    "叙事设计",
     "workflow",
     "pipeline",
     "point cloud",
@@ -136,7 +136,7 @@ _PROJECT_DOMAIN_TOKENS = (
     "las",
     "pcd",
     "game",
-    "visual novel",
+    "narrative design",
     "storyline",
     "character",
 )
@@ -283,10 +283,10 @@ def _looks_project_intent(text: str) -> bool:
         return False
     if any(p.search(raw) for p in _PROJECT_INTENT_PATTERNS):
         return True
-    if raw.startswith(("我想做", "我要做", "我想要做", "帮我做", "请帮我做")) and len(raw) >= 6:
+    if raw.startswith(("我想做", "我要做", "我想要做", "帮我做", "请帮我做", "请生成", "帮我生成", "生成一个")) and len(raw) >= 6:
         return True
     low = raw.lower()
-    if low.startswith(("i want to build", "i need to build", "build ", "create ", "start ")) and len(low) >= 12:
+    if low.startswith(("i want to build", "i need to build", "build ", "create ", "start ", "generate ")) and len(low) >= 12:
         return True
     return False
 
@@ -434,8 +434,6 @@ def route_conversation_mode(
 
     if is_greeting_only(latest):
         return "GREETING"
-    if _is_status_query(latest):
-        return "STATUS_QUERY"
     if is_capability_query(latest):
         return "CAPABILITY_QUERY"
     if _is_smalltalk(latest):
@@ -444,6 +442,9 @@ def route_conversation_mode(
     has_active_task = has_valid_task_summary(active_task_state)
     has_active_binding = has_active_project_binding(active_task_state)
     has_project_context = has_active_task or has_active_binding
+    explicit_project_intent = _looks_project_intent(latest)
+    if _is_status_query(latest) and not (explicit_project_intent and not has_project_context):
+        return "STATUS_QUERY"
     if _is_decision_reply(latest) and has_project_context:
         return "PROJECT_DECISION_REPLY"
     if has_project_context and is_project_execution_followup(latest):

@@ -156,9 +156,9 @@ class FrontdeskStateMachineTests(unittest.TestCase):
             {
                 "state": "showing_result",
                 "interrupt_kind": "result_query",
-                "current_goal": "继续推进 VN 前台",
+                "current_goal": "继续推进剧情前台",
                 "current_scope": "收敛前后台边界",
-                "active_task_id": "run-vn",
+                "active_task_id": "run-story",
                 "resumable_state": "showing_progress",
                 "user_style_profile": {
                     "language": "zh",
@@ -177,8 +177,8 @@ class FrontdeskStateMachineTests(unittest.TestCase):
         strategy = reply_strategy_from_frontdesk_state(
             {
                 "state": "showing_progress",
-                "active_task_id": "run-vn",
-                "current_goal": "继续推进 VN 前台",
+                "active_task_id": "run-story",
+                "current_goal": "继续推进剧情前台",
                 "interrupt_kind": "status_query",
             },
             conversation_mode="STATUS_QUERY",
@@ -190,3 +190,4 @@ class FrontdeskStateMachineTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

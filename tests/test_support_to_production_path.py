@@ -15,7 +15,9 @@ if str(ROOT) not in sys.path:
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
+from apps.cs_frontend.dialogue.requirement_collector import collect_frontend_constraints
 import ctcp_front_bridge
+from frontend import support_reply_policy
 import scripts.ctcp_support_bot as support_bot
 
 
@@ -161,6 +163,120 @@ def _make_fake_orchestrate_runtime(run_dir: Path, *, run_id: str, goal: str) -> 
 
 
 class SupportToProductionPathTests(unittest.TestCase):
+    def test_runtime_state_clears_stale_error_once_verify_passes(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_runtime_pass_") as td:
+            run_dir = Path(td)
+            _write_json(
+                run_dir / "artifacts" / "support_runtime_state.json",
+                {
+                    "schema_version": "ctcp-support-runtime-state-v1",
+                    "run_id": "r-pass",
+                    "run_dir": str(run_dir),
+                    "phase": "RECOVER",
+                    "run_status": "fail",
+                    "blocking_reason": "old failure",
+                    "error": {"has_error": True, "code": "fail", "message": "old failure"},
+                    "recovery": {"needed": True, "hint": "inspect verify report", "status": "required"},
+                    "verify_result": "FAIL",
+                    "verify_gate": "lite",
+                },
+            )
+            _write_json(
+                run_dir / "artifacts" / "verify_report.json",
+                {
+                    "result": "PASS",
+                    "gate": "lite",
+                    "iteration": 2,
+                    "max_iterations": 3,
+                },
+            )
+
+            def _fake_run_cmd(cmd: list[str], cwd: Path) -> dict[str, Any]:
+                del cwd
+                self.assertEqual(str(cmd[2]), "status")
+                return {
+                    "cmd": " ".join(cmd),
+                    "exit_code": 0,
+                    "stdout": "\n".join(
+                        [
+                            f"[ctcp_orchestrate] run_dir={run_dir}",
+                            "[ctcp_orchestrate] run_status=pass",
+                            "[ctcp_orchestrate] next=pass",
+                            "[ctcp_orchestrate] owner=",
+                            "[ctcp_orchestrate] path=",
+                            "[ctcp_orchestrate] reason=run already pass",
+                        ]
+                    )
+                    + "\n",
+                    "stderr": "",
+                }
+
+            with mock.patch.object(ctcp_front_bridge, "_resolve_run_dir", return_value=run_dir), mock.patch.object(
+                ctcp_front_bridge,
+                "_run_cmd",
+                side_effect=_fake_run_cmd,
+            ):
+                context = ctcp_front_bridge.ctcp_get_support_context("r-pass")
+
+            runtime = dict(context.get("runtime_state", {}))
+            self.assertEqual(str(runtime.get("run_status", "")), "pass")
+            self.assertEqual(str(runtime.get("verify_result", "")), "PASS")
+            self.assertFalse(bool(dict(runtime.get("error", {})).get("has_error", False)))
+            self.assertEqual(str(runtime.get("recovery", {}).get("status", "")), "none")
+
+    def test_reply_policy_prefers_deliver_result_when_pass_truth_exists_even_if_provider_failed(self) -> None:
+        project_context = {
+            "status": {"run_status": "pass", "verify_result": "PASS", "gate": {"state": "pass", "reason": ""}},
+            "runtime_state": {"run_status": "pass", "verify_result": "PASS", "error": {"has_error": False}},
+            "render_snapshot": {"visible_state": "DONE"},
+            "project_manifest": {
+                "project_root": "project_output/demo-project",
+                "startup_entrypoint": "project_output/demo-project/scripts/run_project_cli.py",
+                "startup_readme": "project_output/demo-project/README.md",
+            },
+            "output_artifacts": {
+                "artifacts": [
+                    {"path": "artifacts/project_manifest.json"},
+                    {"path": "artifacts/deliverable_index.json"},
+                ]
+            },
+        }
+
+        intent = support_reply_policy.infer_reply_intent(
+            conversation_mode="PROJECT_DETAIL",
+            project_context=project_context,
+            next_question="",
+            provider_status="exec_failed",
+        )
+        self.assertEqual(intent, "deliver_result")
+        fallback = support_reply_policy.render_fallback_reply(
+            intent="deliver_result",
+            lang_hint="zh",
+            project_context=project_context,
+        )
+        self.assertIn("启动入口", str(fallback.get("reply_text", "")))
+
+    def test_support_constraint_extraction_marks_explicit_benchmark_mode_without_fixture_payload(self) -> None:
+        constraints = collect_frontend_constraints(
+            mode="PROJECT_DETAIL",
+            latest_user_text="这是一次 benchmark regression 请求，请按 benchmark mode 处理，生成一个叙事助手项目。",
+            history=[],
+        )
+
+        self.assertEqual(str(constraints.get("project_generation_mode", "")), "benchmark_regression")
+        self.assertNotIn("benchmark_case", constraints)
+
+    def test_support_mode_detection_keeps_new_project_request_with_state_requirement_on_project_lane(self) -> None:
+        session_state = support_bot.default_support_session_state("6092527665")
+
+        mode = support_bot.detect_conversation_mode(
+            Path("."),
+            "请生成一个可运行的剧情助手项目，能保存项目状态，并导出结构化结果。",
+            session_state,
+        )
+
+        self.assertIn(mode, {"PROJECT_INTAKE", "PROJECT_DETAIL"})
+
     def test_level1_bridge_writes_support_turn_into_production_artifacts(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_path_level1_") as td:
             run_dir = Path(td)
@@ -171,7 +287,7 @@ class SupportToProductionPathTests(unittest.TestCase):
             ):
                 result = ctcp_front_bridge.ctcp_record_support_turn(
                     "r-progressive",
-                    text="我想做一个帮我理顺 VN 剧情结构的项目。",
+                    text="我想做一个帮我理顺剧情结构的项目。",
                     source="support_bot",
                     chat_id="demo-chat",
                     conversation_mode="PROJECT_DETAIL",
@@ -194,7 +310,7 @@ class SupportToProductionPathTests(unittest.TestCase):
             state, fake_run_cmd = _make_fake_orchestrate_runtime(
                 run_dir,
                 run_id="r-progressive",
-                goal="VN 剧情结构项目",
+                goal="剧情结构项目",
             )
             with mock.patch.object(ctcp_front_bridge, "_resolve_run_dir", return_value=run_dir), mock.patch.object(
                 ctcp_front_bridge,
@@ -207,17 +323,17 @@ class SupportToProductionPathTests(unittest.TestCase):
             ):
                 ctcp_front_bridge.ctcp_record_support_turn(
                     "r-progressive",
-                    text="先把 VN 剧情主线梳理清楚。",
+                    text="先把剧情主线梳理清楚。",
                     source="support_bot",
                     chat_id="demo-chat",
                     conversation_mode="PROJECT_DETAIL",
                 )
                 context = ctcp_front_bridge.ctcp_get_support_context("r-progressive")
 
-            self.assertEqual(str(context.get("goal", "")), "VN 剧情结构项目")
+            self.assertEqual(str(context.get("goal", "")), "剧情结构项目")
             self.assertEqual(str(context.get("status", {}).get("run_status", "")), "running")
             self.assertEqual(str(context.get("status", {}).get("gate", {}).get("state", "")), str(state["gate_state"]))
-            self.assertEqual(str(context.get("frontend_request", {}).get("goal", "")), "VN 剧情结构项目")
+            self.assertEqual(str(context.get("frontend_request", {}).get("goal", "")), "剧情结构项目")
             self.assertEqual(str(context.get("whiteboard", {}).get("path", "")), SUPPORT_WHITEBOARD_REL.as_posix())
             self.assertEqual(len(list(context.get("whiteboard", {}).get("hits", []))), 1)
 
@@ -267,7 +383,7 @@ class SupportToProductionPathTests(unittest.TestCase):
             ):
                 doc, support_session_dir = support_bot.process_message(
                     chat_id="progressive-demo",
-                    user_text="我想做一个帮我整理 VN 剧情结构的项目。",
+                    user_text="我想做一个帮我整理剧情结构的项目。",
                     source="stdin",
                 )
 
@@ -333,7 +449,7 @@ class SupportToProductionPathTests(unittest.TestCase):
             ):
                 support_bot.process_message(
                     chat_id="progressive-status-demo",
-                    user_text="我想做一个帮我整理 VN 剧情结构的项目。",
+                    user_text="我想做一个帮我整理剧情结构的项目。",
                     source="stdin",
                 )
                 doc, _support_session_dir = support_bot.process_message(
@@ -586,3 +702,4 @@ class SupportToProductionPathTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

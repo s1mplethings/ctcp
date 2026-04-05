@@ -1,20 +1,18 @@
 diff --git a/README.md b/README.md
-index fb2b7e3..7bf0347 100644
 --- a/README.md
 +++ b/README.md
-@@ -130,6 +130,7 @@ python scripts\ctcp_orchestrate.py scaffold-pointcloud --out D:\v2p_projects\dem
+@@ -128,5 +128,6 @@
  - [ai_context/00_AI_CONTRACT.md](ai_context/00_AI_CONTRACT.md)
  - [ai_context/CTCP_FAST_RULES.md](ai_context/CTCP_FAST_RULES.md)
  - [ai_context/problem_registry.md](ai_context/problem_registry.md)
 +- [ai_context/decision_log.md](ai_context/decision_log.md)
  
  <!-- CTCP:DOC_INDEX:END -->
- 
 diff --git a/meta/tasks/CURRENT.md b/meta/tasks/CURRENT.md
 --- a/meta/tasks/CURRENT.md
 +++ b/meta/tasks/CURRENT.md
 @@ -1,3 +1,4 @@
- # Task - project-generation-mainline-closure
+ # Task - support-pass-runtime-and-benchmark-mode-isolation
 +<!-- simlab-s16-touch-current -->
  
  ## Queue Binding
@@ -25,4 +23,4 @@ diff --git a/meta/reports/LAST.md b/meta/reports/LAST.md
  # Demo Report - LAST
 +<!-- simlab-s16-touch-report -->
  
- ### Readlist
+ ## Latest Report

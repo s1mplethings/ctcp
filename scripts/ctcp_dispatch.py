@@ -28,7 +28,7 @@ except ModuleNotFoundError:
 KNOWN_PROVIDERS = {"manual_outbox", "ollama_agent", "api_agent", "codex_agent", "mock_agent", "local_exec"}
 STEP_META_PATH = Path("step_meta.jsonl")
 HARD_ROLE_PROVIDERS = {
-    "librarian": "local_exec",
+    "librarian": "ollama_agent",
 }
 
 # BEHAVIOR_ID: B017
@@ -118,8 +118,21 @@ def _brief_text(value: str, *, max_chars: int = 260) -> str:
     if len(text) <= limit:
         return text
     return text[: limit - 3].rstrip() + "..."
-
-
+def _provider_mode(provider: str) -> str:
+    value = str(provider or "").strip().lower()
+    return "local" if value in {"ollama_agent", "local_exec"} else "remote" if value in {"api_agent", "codex_agent"} else "manual" if value == "manual_outbox" else "mock" if value == "mock_agent" else "unknown"
+def _apply_dispatch_evidence(payload: dict[str, Any], *, request: dict[str, Any], provider: str, note: str) -> dict[str, Any]:
+    role = str(request.get("role", "")).strip().lower()
+    action = str(request.get("action", "")).strip().lower()
+    payload["provider"] = payload["chosen_provider"] = provider
+    payload["provider_mode"] = str(payload.get("provider_mode", "")).strip() or _provider_mode(provider)
+    model_name = str(payload.get("model_name", "")).strip() or str(payload.get("ollama_model", "")).strip()
+    if model_name:
+        payload["model_name"] = model_name
+    if role == "librarian" and action == "context_pack":
+        payload["provider_mode"] = "local"
+        payload["fallback_blocked"] = bool(payload.get("fallback_blocked", False)) or bool(str(note).strip())
+    return payload
 def _safe_whiteboard_hits(rows: Any, *, max_items: int = 5) -> list[dict[str, Any]]:
     """Sanitize and limit librarian search hits for whiteboard storage.
 
@@ -282,7 +295,8 @@ def _latest_librarian_context(entries: list[dict[str, Any]]) -> dict[str, Any]:
     lookup_error = ""
     hits: list[dict[str, Any]] = []
     for item in reversed(entries):
-        if str(item.get("role", "")).strip().lower() != "librarian":
+        kind = str(item.get("kind", "")).strip().lower()
+        if kind not in {"support_lookup", "dispatch_lookup"}:
             continue
         if not query:
             query = _brief_text(str(item.get("query", "")), max_chars=220)
@@ -299,16 +313,8 @@ def _latest_librarian_context(entries: list[dict[str, Any]]) -> dict[str, Any]:
         "hits": hits,
         "lookup_error": lookup_error,
     }
-
-
 def get_support_whiteboard_context(run_dir: Path) -> dict[str, Any]:
-    """Get whiteboard snapshot for support bot consumption.
-
-    WHITEBOARD READ: Loads full whiteboard, returns snapshot (last 5 entries) + latest librarian context
-    CONSUMED BY: ctcp_front_bridge.ctcp_get_support_context() → ctcp_support_bot.build_progress_binding()
-
-    Returns dict with path, query, hits, lookup_error, and snapshot (last 5 entries).
-    """
+    """Return whiteboard snapshot plus latest lookup context for support consumption."""
     board = _load_support_whiteboard(run_dir)
     entries = _safe_whiteboard_entries(board.get("entries", []), max_items=120)
     latest = _latest_librarian_context(entries)
@@ -330,22 +336,12 @@ def record_support_turn_whiteboard(
     conversation_mode: str,
     chat_id: str = "",
 ) -> dict[str, Any]:
-    """Record support turn and librarian lookup to whiteboard.
-
-    WHITEBOARD WRITE: Appends support_turn + support_lookup entries to whiteboard
-    CALLED BY: ctcp_front_bridge.ctcp_record_support_turn() → ctcp_support_bot.sync_project_context()
-    CONSUMED BY: ctcp_support_bot.build_progress_binding() extracts done_items from these entries
-
-    Writes two entries:
-    1. support_turn: records user message
-    2. support_lookup: records librarian search results (if query changed)
-    """
+    """Append support turn and helper lookup entries to the shared whiteboard."""
     board = _load_support_whiteboard(run_dir)
     entries = _safe_whiteboard_entries(board.get("entries", []), max_items=120)
     query = _brief_text(str(text or ""), max_chars=220)
     last_query = _last_librarian_query(entries)
     should_lookup = bool(query) and query.lower() != last_query.lower()
-
     hits: list[dict[str, Any]] = []
     lookup_error = ""
     if should_lookup:
@@ -373,7 +369,7 @@ def record_support_turn_whiteboard(
     if should_lookup:
         librarian_entry: dict[str, Any] = {
             "ts": _now_iso(),
-            "role": "librarian",
+            "role": "local_search",
             "kind": "support_lookup",
             "text": (
                 f"lookup error: {lookup_error}"
@@ -422,7 +418,8 @@ def _dispatch_whiteboard_query(request: dict[str, Any]) -> str:
 
 def _last_librarian_query(entries: list[dict[str, Any]]) -> str:
     for item in reversed(entries):
-        if str(item.get("role", "")).strip().lower() != "librarian":
+        kind = str(item.get("kind", "")).strip().lower()
+        if kind not in {"support_lookup", "dispatch_lookup"}:
             continue
         query = str(item.get("query", "")).strip()
         if query:
@@ -436,15 +433,7 @@ def _prepare_dispatch_whiteboard_context(
     repo_root: Path,
     request: dict[str, Any],
 ) -> dict[str, Any]:
-    """Prepare whiteboard context before agent dispatch execution.
-
-    WHITEBOARD WRITE: Appends dispatch_request entry + performs librarian lookup if query changed
-    CALLED BY: dispatch_once() before every agent execution
-    CONSUMED BY: Agent receives hits in context; support_bot sees dispatch_request in whiteboard
-
-    Writes dispatch_request entry with role/action/target/reason, runs librarian search if needed.
-    Returns dict with hits, lookup_error, and compact snapshot for agent context injection.
-    """
+    """Append dispatch request plus helper lookup context before provider execution."""
     board = _load_support_whiteboard(run_dir)
     entries = _safe_whiteboard_entries(board.get("entries", []), max_items=120)
     role = _brief_text(str(request.get("role", "")).lower(), max_chars=32) or "agent"
@@ -454,7 +443,6 @@ def _prepare_dispatch_whiteboard_context(
     query = _dispatch_whiteboard_query(request)
     last_query = _last_librarian_query(entries)
     should_lookup = bool(query) and query.lower() != last_query.lower()
-
     hits: list[dict[str, Any]] = []
     lookup_error = ""
     if should_lookup:
@@ -481,7 +469,7 @@ def _prepare_dispatch_whiteboard_context(
     if should_lookup:
         librarian_entry: dict[str, Any] = {
             "ts": _now_iso(),
-            "role": "librarian",
+            "role": "local_search",
             "kind": "dispatch_lookup",
             "text": (
                 f"lookup error: {lookup_error}"
@@ -661,7 +649,9 @@ def _append_step_meta(
         },
         "role": str(request.get("role", "")).strip(),
         "action": str(request.get("action", "")).strip(),
-        "provider": provider,
+        "provider": provider, "chosen_provider": str(result.get("chosen_provider", provider)).strip() or provider,
+        "provider_mode": str(result.get("provider_mode", "")).strip() or _provider_mode(provider), "model_name": str(result.get("model_name", "")).strip() or str(result.get("ollama_model", "")).strip(),
+        "fallback_blocked": bool(result.get("fallback_blocked", False)),
         "inputs": inputs,
         "inputs_ready": all(bool(x.get("exists")) for x in inputs) if inputs else True,
         "outputs": _output_paths(request, result),
@@ -946,6 +936,11 @@ def _resolve_provider(config: dict[str, Any], role: str, action: str) -> tuple[s
     if not isinstance(role_providers, dict):
         role_providers = {}
     provider = _normalize_provider(str(role_providers.get(role, config.get("mode", "manual_outbox"))))
+    if (role, action) == ("librarian", "context_pack"):
+        locked = hard_provider or "ollama_agent"
+        if provider != locked:
+            return (locked, f"blocked configured provider={provider or 'unknown'} for hard-local-model role={role}; using {locked}")
+        return locked, ""
     if provider == "local_exec" and (role, action) != ("librarian", "context_pack"):
         return (
             "api_agent",
@@ -977,7 +972,9 @@ def dispatch_preview(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str
         note=note,
     )
     if violation is not None:
-        return violation
+        if note:
+            violation["note"] = note
+        return _apply_dispatch_evidence(violation, request=request, provider=provider, note=note)
 
     preview: dict[str, Any]
     if provider == "manual_outbox":
@@ -995,15 +992,12 @@ def dispatch_preview(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str
     else:
         preview = {"status": "unsupported_provider", "reason": provider}
 
-    preview["provider"] = provider
     preview["role"] = request["role"]
     preview["action"] = request["action"]
     preview["target_path"] = request["target_path"]
     if note:
         preview["note"] = note
-    return preview
-
-
+    return _apply_dispatch_evidence(preview, request=request, provider=provider, note=note)
 def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], repo_root: Path) -> dict[str, Any]:
     # BEHAVIOR_ID: B027
     config, cfg_msg = load_dispatch_config(run_dir)
@@ -1036,6 +1030,9 @@ def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], 
         note=note,
     )
     if violation is not None:
+        if note:
+            violation["note"] = note
+        _apply_dispatch_evidence(violation, request=request, provider=provider, note=note)
         violation_snapshot = _append_dispatch_result_whiteboard(
             run_dir=run_dir,
             request=request,
@@ -1106,10 +1103,10 @@ def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], 
     else:
         result = {"status": "unsupported_provider", "reason": provider}
 
-    result["provider"] = provider
     result["role"] = request["role"]
     result["action"] = request["action"]
     result["target_path"] = request["target_path"]
+    _apply_dispatch_evidence(result, request=request, provider=provider, note=note)
     result_snapshot = _append_dispatch_result_whiteboard(
         run_dir=run_dir,
         request=request,

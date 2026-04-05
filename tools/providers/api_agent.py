@@ -17,6 +17,7 @@ if str(ROOT) not in sys.path:
 
 from tools import contrast_rules, contract_guard, local_librarian
 from tools.providers.project_generation_artifacts import (
+    build_default_context_request,
     normalize_deliverable_index,
     normalize_docs_generation,
     normalize_output_contract_freeze,
@@ -25,7 +26,6 @@ from tools.providers.project_generation_artifacts import (
     normalize_source_generation,
     normalize_workflow_generation,
 )
-
 
 def _sanitize(value: str) -> str:
     text = re.sub(r"[^a-z0-9_]+", "_", (value or "").strip().lower())
@@ -104,6 +104,29 @@ def _normalize_line_ranges(raw: Any) -> list[list[int]]:
             a, b = b, a
         out.append([a, b])
     return out
+
+
+def _render_snippets(text: str, ranges: list[list[int]]) -> str:
+    if not ranges:
+        return ""
+    lines = text.splitlines()
+    out: list[str] = []
+    for pair in ranges:
+        if not isinstance(pair, list) or len(pair) != 2:
+            continue
+        try:
+            start = int(pair[0])
+            end = int(pair[1])
+        except Exception:
+            continue
+        s = max(1, min(start, end))
+        e = min(len(lines), max(start, end))
+        if s > e:
+            continue
+        out.append(f"# lines {s}-{e}")
+        for idx in range(s, e + 1):
+            out.append(f"{idx:>6}: {lines[idx - 1]}")
+    return "\n".join(out).strip()
 def _extract_json_dict(text: str) -> dict[str, Any] | None:
     raw = (text or "").strip()
     if not raw:
@@ -142,41 +165,41 @@ def _to_json_text(doc: dict[str, Any]) -> str:
 def _normalize_file_request(doc: dict[str, Any] | None, *, goal: str) -> dict[str, Any]:
     src = doc if isinstance(doc, dict) else {}
     goal_text = str(src.get("goal", "")).strip() or goal.strip() or "dispatch-goal"
+    defaults = build_default_context_request(goal_text)
+    default_budget = dict(defaults.get("budget", {}))
 
     needs_out: list[dict[str, Any]] = []
-    raw_needs = src.get("needs")
-    if isinstance(raw_needs, list):
-        for item in raw_needs:
-            if not isinstance(item, dict):
-                continue
-            path = str(item.get("path", "")).strip().replace("\\", "/")
-            if not path:
-                continue
-            mode = str(item.get("mode", "snippets")).strip().lower()
-            if mode not in {"full", "snippets"}:
-                mode = "snippets"
-            entry: dict[str, Any] = {"path": path, "mode": mode}
-            if mode == "snippets":
-                ranges = _normalize_line_ranges(item.get("line_ranges"))
-                entry["line_ranges"] = ranges or [[1, 80]]
-            needs_out.append(entry)
-    if not needs_out:
-        needs_out = [{"path": "README.md", "mode": "snippets", "line_ranges": [[1, 80]]}]
+    seed_needs = src.get("needs")
+    if not isinstance(seed_needs, list) or not seed_needs:
+        seed_needs = list(defaults.get("needs", []))
+    for item in seed_needs:
+        if not isinstance(item, dict):
+            continue
+        path = str(item.get("path", "")).strip().replace("\\", "/")
+        if not path:
+            continue
+        mode = str(item.get("mode", "snippets")).strip().lower()
+        if mode not in {"full", "snippets"}:
+            mode = "snippets"
+        entry: dict[str, Any] = {"path": path, "mode": mode}
+        if mode == "snippets":
+            entry["line_ranges"] = _normalize_line_ranges(item.get("line_ranges")) or [[1, 120]]
+        needs_out.append(entry)
 
     budget_raw = src.get("budget")
     budget = budget_raw if isinstance(budget_raw, dict) else {}
     try:
-        max_files = int(budget.get("max_files", 6))
+        max_files = int(budget.get("max_files", default_budget.get("max_files", 6)))
     except Exception:
-        max_files = 6
+        max_files = int(default_budget.get("max_files", 6))
     try:
-        max_total_bytes = int(budget.get("max_total_bytes", 48000))
+        max_total_bytes = int(budget.get("max_total_bytes", default_budget.get("max_total_bytes", 48000)))
     except Exception:
-        max_total_bytes = 48000
+        max_total_bytes = int(default_budget.get("max_total_bytes", 48000))
     max_files = max(1, min(max_files, 50))
     max_total_bytes = max(512, min(max_total_bytes, 2_000_000))
 
-    reason = str(src.get("reason", "")).strip() or "chair file request for downstream context pack"
+    reason = str(src.get("reason", "")).strip() or str(defaults.get("reason", "")).strip() or "chair file request for downstream context pack"
 
     return {
         "schema_version": "ctcp-file-request-v1",
@@ -187,7 +210,90 @@ def _normalize_file_request(doc: dict[str, Any] | None, *, goal: str) -> dict[st
     }
 
 
-def _normalize_context_pack(doc: dict[str, Any] | None, *, goal: str, repo_root: Path) -> dict[str, Any]:
+def _fallback_context_pack_from_file_request(*, run_dir: Path, repo_root: Path, goal: str, repo_slug: str) -> dict[str, Any]:
+    request_path = run_dir / "artifacts" / "file_request.json"
+    if not request_path.exists():
+        return {
+            "schema_version": "ctcp-context-pack-v1",
+            "goal": goal,
+            "repo_slug": repo_slug,
+            "summary": "included=0 omitted=0",
+            "files": [],
+            "omitted": [],
+        }
+    try:
+        request = json.loads(request_path.read_text(encoding="utf-8", errors="replace"))
+    except Exception:
+        request = {}
+    if not isinstance(request, dict):
+        request = {}
+
+    needs = request.get("needs", [])
+    if not isinstance(needs, list):
+        needs = []
+    budget = request.get("budget", {})
+    if not isinstance(budget, dict):
+        budget = {}
+    try:
+        max_files = max(1, int(budget.get("max_files", 6) or 6))
+    except Exception:
+        max_files = 6
+    try:
+        max_total_bytes = max(1024, int(budget.get("max_total_bytes", 48000) or 48000))
+    except Exception:
+        max_total_bytes = 48000
+
+    files_out: list[dict[str, str]] = []
+    omitted_out: list[dict[str, str]] = []
+    used_bytes = 0
+    for item in needs:
+        if not isinstance(item, dict):
+            continue
+        path = str(item.get("path", "")).strip().replace("\\", "/")
+        if not path:
+            continue
+        src = (repo_root / path).resolve()
+        try:
+            src.relative_to(repo_root.resolve())
+        except ValueError:
+            omitted_out.append({"path": path, "reason": "denied"})
+            continue
+        if not src.exists() or not src.is_file():
+            omitted_out.append({"path": path, "reason": "missing"})
+            continue
+        mode = str(item.get("mode", "snippets")).strip().lower()
+        raw = src.read_text(encoding="utf-8", errors="replace")
+        if mode == "full":
+            content = raw
+        else:
+            content = _render_snippets(raw, _normalize_line_ranges(item.get("line_ranges")))
+            if not content:
+                omitted_out.append({"path": path, "reason": "irrelevant"})
+                continue
+        size = len(content.encode("utf-8", errors="replace"))
+        if len(files_out) >= max_files or (used_bytes + size) > max_total_bytes:
+            omitted_out.append({"path": path, "reason": "too_large"})
+            continue
+        used_bytes += size
+        files_out.append(
+            {
+                "path": path,
+                "why": str(item.get("why", "")).strip() or f"fallback materialized from file_request mode={mode or 'snippets'}",
+                "content": content,
+            }
+        )
+
+    return {
+        "schema_version": "ctcp-context-pack-v1",
+        "goal": str(request.get("goal", "")).strip() or goal,
+        "repo_slug": repo_slug,
+        "summary": f"included={len(files_out)} omitted={len(omitted_out)} used_bytes={used_bytes}",
+        "files": files_out,
+        "omitted": omitted_out,
+    }
+
+
+def _normalize_context_pack(doc: dict[str, Any] | None, *, goal: str, repo_root: Path, run_dir: Path) -> dict[str, Any]:
     src = doc if isinstance(doc, dict) else {}
     goal_text = str(src.get("goal", "")).strip() or goal.strip()
     repo_slug = str(src.get("repo_slug", "")).strip() or repo_root.name
@@ -216,6 +322,17 @@ def _normalize_context_pack(doc: dict[str, Any] | None, *, goal: str, repo_root:
                 continue
             reason = str(item.get("reason", "")).strip() or "unspecified"
             omitted_out.append({"path": path, "reason": reason})
+
+    if not files_out:
+        fallback = _fallback_context_pack_from_file_request(
+            run_dir=run_dir,
+            repo_root=repo_root,
+            goal=goal_text,
+            repo_slug=repo_slug,
+        )
+        fallback_files = fallback.get("files", [])
+        if isinstance(fallback_files, list) and fallback_files:
+            return fallback
 
     summary = str(src.get("summary", "")).strip()
     if not summary:
@@ -389,7 +506,7 @@ def _normalize_json_artifact(*, repo_root: Path, run_dir: Path, request: dict[st
         return _to_json_text(_normalize_file_request(doc, goal=goal)), ""
     if role == "chair":
         chair_builders: dict[str, Any] = {
-            "output_contract_freeze": lambda: normalize_output_contract_freeze(doc, goal=goal),
+            "output_contract_freeze": lambda: normalize_output_contract_freeze(doc, goal=goal, run_dir=run_dir),
             "source_generation": lambda: normalize_source_generation(doc, goal=goal, run_dir=run_dir),
             "docs_generation": lambda: normalize_docs_generation(doc, goal=goal, run_dir=run_dir),
             "workflow_generation": lambda: normalize_workflow_generation(doc, goal=goal, run_dir=run_dir),
@@ -399,7 +516,7 @@ def _normalize_json_artifact(*, repo_root: Path, run_dir: Path, request: dict[st
         if action in chair_builders:
             return _to_json_text(chair_builders[action]()), ""
     if role == "librarian" and action == "context_pack":
-        return _to_json_text(_normalize_context_pack(doc, goal=goal, repo_root=repo_root)), ""
+        return _to_json_text(_normalize_context_pack(doc, goal=goal, repo_root=repo_root, run_dir=run_dir)), ""
     if role == "researcher" and action == "find_web":
         return _to_json_text(_normalize_find_web(doc)), ""
 
@@ -814,6 +931,11 @@ def _format_cmd_template(template: str, values: dict[str, str]) -> tuple[str, st
         return "", f"command template formatting failed: {exc}"
 
 
+def _shell_safe_template_text(value: Any) -> str:
+    text = str(value or "").replace('"', "'")
+    return re.sub(r"\s+", " ", text).strip()
+
+
 def _decode_subprocess_score(text: str) -> tuple[int, int, int, int]:
     raw = str(text or "")
     replacement = raw.count("\ufffd")
@@ -1021,8 +1143,8 @@ def execute(
         "CONSTRAINTS_PATH": str(evidence["constraints"]),
         "FIX_BRIEF_PATH": str(evidence["fix_brief"]),
         "EXTERNALS_PATH": str(evidence["externals"]),
-        "GOAL": str(request.get("goal", "")),
-        "REASON": str(request.get("reason", "")),
+        "GOAL": _shell_safe_template_text(request.get("goal", "")),
+        "REASON": _shell_safe_template_text(request.get("reason", "")),
         "ROLE": role,
         "ACTION": action,
         "RUN_DIR": str(run_dir),

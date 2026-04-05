@@ -85,7 +85,7 @@ def main():
     time.sleep(1)
 
     print("\n步骤2: 提出项目需求")
-    send_message("我想做一个简单的视觉小说游戏，有剧情分支", chat_id)
+    send_message("我想做一个简单的剧情推理游戏，有剧情分支", chat_id)
     time.sleep(2)
     check_status(chat_id)
 

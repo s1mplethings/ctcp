@@ -556,10 +556,8 @@ def _read_runtime_state(run_dir: Path) -> dict[str, Any]:
         return {}
     return doc
 
-
 def _write_runtime_state(run_dir: Path, state: dict[str, Any]) -> None:
     _write_json(_runtime_state_path(run_dir), state)
-
 
 def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
     # Backend-interface-first refresh:
@@ -582,7 +580,6 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
     }
     now_ts = _now_utc_iso()
     previous_state = _read_runtime_state(run_dir)
-
     previous_iterations = previous_state.get("iterations", {}) if isinstance(previous_state.get("iterations", {}), dict) else {}
     iterations = {
         "current": int(previous_iterations.get("current", 0) or 0),
@@ -594,7 +591,11 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
         run_status = str(previous_state.get("run_status", "")).strip().lower()
     verify_result = str(previous_state.get("verify_result", "")).strip().upper()
     verify_gate = str(previous_state.get("verify_gate", "")).strip().lower()
-
+    if verify_doc := _read_json(run_dir / "artifacts" / "verify_report.json"):
+        verify_result = str(verify_doc.get("result", "")).strip().upper() or verify_result
+        verify_gate = str(verify_doc.get("gate", "")).strip().lower() or verify_gate
+        iterations["current"], iterations["max"] = int(verify_doc.get("iteration", iterations.get("current", 0)) or 0), int(verify_doc.get("max_iterations", iterations.get("max", 0)) or 0)
+        if verify_doc.get("max_iterations") is not None: iterations["source"] = str(iterations.get("source", "")).strip() or "verify_report.json"
     raw_decisions = previous_state.get("decisions", [])
     if not isinstance(raw_decisions, list):
         raw_decisions = []
@@ -611,12 +612,14 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
     open_decisions = [row for row in decision_registry if str(row.get("status", "")).strip().lower() in _USER_DECISION_STATUSES]
     submitted_open = [row for row in decision_registry if str(row.get("status", "")).strip().lower() == "submitted"]
     needs_user_decision = bool(pending_user_decisions)
-
-    has_error = run_status in _ERROR_RUN_STATUSES or gate_state in _ERROR_GATE_STATES or verify_result == "FAIL"
+    final_ready = run_status in _FINAL_RUN_STATUSES and verify_result == "PASS" and not needs_user_decision
     previous_error = previous_state.get("error", {})
-    if isinstance(previous_error, dict) and bool(previous_error.get("has_error", False)):
-        has_error = True
-
+    has_error = not final_ready and (
+        run_status in _ERROR_RUN_STATUSES
+        or gate_state in _ERROR_GATE_STATES
+        or verify_result == "FAIL"
+        or (isinstance(previous_error, dict) and bool(previous_error.get("has_error", False)))
+    )
     phase = _derive_runtime_phase(
         run_status=run_status,
         verify_result=verify_result,
@@ -626,7 +629,6 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
     )
     if submitted_open and phase in {"PLAN", "RECOVER"} and not has_error:
         phase = "EXECUTE"
-
     blocking_reason = "none"
     if pending_user_decisions:
         first = pending_user_decisions[0]
@@ -639,17 +641,13 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
         blocking_reason = str(gate.get("reason", "")).strip() or "blocked"
     elif str(previous_state.get("blocking_reason", "")).strip():
         blocking_reason = str(previous_state.get("blocking_reason", "")).strip()
-
+    if final_ready: blocking_reason = "none"
     error_doc = {
         "has_error": bool(has_error),
         "code": run_status if run_status in _ERROR_RUN_STATUSES else (gate_state if gate_state in _ERROR_GATE_STATES else ""),
         "message": str(gate.get("reason", "")).strip() if has_error else "",
     }
-    recovery_doc = {
-        "needed": bool(has_error or submitted_open),
-        "hint": "run ctcp_advance after decision consumption" if submitted_open else ("inspect verify report and failure bundle" if has_error else ""),
-        "status": "required" if (has_error or submitted_open) else "none",
-    }
+    recovery_doc = {"needed": False, "hint": "", "status": "none"} if final_ready else {"needed": bool(has_error or submitted_open), "hint": "run ctcp_advance after decision consumption" if submitted_open else ("inspect verify report and failure bundle" if has_error else ""), "status": "required" if (has_error or submitted_open) else "none"}
     latest_result = {
         "verify_result": verify_result,
         "verify_gate": verify_gate,
@@ -668,7 +666,6 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
             "decisions": decision_registry,
         }
     )
-
     snapshot = {
         "schema_version": "ctcp-support-runtime-state-v1",
         "run_id": _run_id_from_dir(run_dir),
@@ -695,7 +692,6 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
     }
     _write_runtime_state(run_dir, snapshot)
     return snapshot
-
 
 def _load_runtime_state(run_dir: Path, *, refresh: bool = True) -> dict[str, Any]:
     state = _read_runtime_state(run_dir)
@@ -823,6 +819,9 @@ def ctcp_new_run(goal: str, constraints: dict[str, Any] | None = None, attachmen
     goal_text = str(goal or "").strip()
     if not goal_text:
         raise BridgeError("goal is required")
+    if not isinstance(constraints, dict):
+        try: from apps.cs_frontend.dialogue.requirement_collector import collect_frontend_constraints as _collect; constraints = _collect(mode="PROJECT_DETAIL", latest_user_text=goal_text, history=[])
+        except Exception: constraints = {}
 
     cmd = [sys.executable, str(ORCHESTRATE_PATH), "new-run", "--goal", goal_text]
     created = _run_cmd(cmd, ROOT)

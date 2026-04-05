@@ -226,11 +226,11 @@ Rules:
 1. Local Orchestrator
    - MUST: create run_dir, emit events, gate on artifacts, run verify gate, trigger failure bundle flow.
    - MUST NOT: decide workflow strategy, write patch content, sign plan.
-2. Local Librarian (read-only, deterministic)
-   - MUST: transform `artifacts/file_request.json` -> `artifacts/context_pack.json` deterministically.
-   - MUST: inject mandatory contracts first (see `docs/30_artifact_contracts.md` B.1), then process `needs[]` in order.
-   - MUST: copy verbatim repo content only; no invented/summarized content.
-   - MUST: remain local, repo-scoped, read-only (no network, no repo writes).
+2. Local Librarian (hard-local-model, repo-scoped)
+   - MUST: transform `artifacts/file_request.json` -> `artifacts/context_pack.json` through the local-model provider path (default `ollama_agent`).
+   - MUST: fail fast when the local model is unavailable, returns empty output, or cannot be normalized into the context-pack contract.
+   - MUST NOT: silently fall back to remote `api_agent` or report fake `context_pack` success.
+   - MUST: keep evidence local to run artifacts (`step_meta.jsonl`, logs, target artifact) and surface the chosen provider/model in that evidence.
 3. Local Verifier
    - MUST: execute gates and emit verify evidence.
    - MUST NOT: make planning decisions.

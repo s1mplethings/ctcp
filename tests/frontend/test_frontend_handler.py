@@ -66,7 +66,7 @@ class FrontendHandlerTests(unittest.TestCase):
         self.assertIsInstance(requirement_summary, dict)
         constraints = requirement_summary.get("constraints", {})
         self.assertIsInstance(constraints, dict)
-        self.assertEqual(str(constraints.get("project_domain", "")), "vn_reasoning_game")
+        self.assertEqual(str(constraints.get("project_domain", "")), "story_reasoning_game")
         self.assertEqual(str(constraints.get("worldline_management", "")), "required")
         self.assertEqual(str(constraints.get("diagram_support", "")), "required")
         self.assertIn("need one decision", event.reply_text)

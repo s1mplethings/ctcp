@@ -4,8 +4,8 @@
 
 - repo: `s1mplethings/ctcp`
 - branch: `main`
-- baseline commit: `7777ebd2b46bcd334d14bc872bfbf184c9c93d78`
-- version: `3.2.0`
+- baseline commit: `faeaedbd419aeb9de182c606cd7ce27eaa091e89`
+- version: `3.3.4`
 
 This contract defines backend interfaces used for:
 
@@ -168,12 +168,20 @@ Tests must not rely only on ad-hoc directory scanning.
 
 - `run_id`
 - `project_id`
+- `project_type`
+- `project_profile`
+- `generation_mode`
 - `source_files`
 - `doc_files`
 - `workflow_files`
+- `business_files_generated`
+- `business_files_missing`
 - `generated_files`
 - `missing_files`
 - `acceptance_files`
+- `business_codegen_used`
+- `consumed_context_pack`
+- `consumed_context_files`
 - `reference_project_mode`
 - `reference_style_applied`
 - `artifacts` (enumerable refs for source/doc/workflow/image/resource outputs)

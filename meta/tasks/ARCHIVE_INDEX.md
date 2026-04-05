@@ -7,6 +7,12 @@
 
 | Date | Topic | File |
 |------|-------|------|
+| 2026-04-05 | librarian 本地模型固定化（归档） | [→](archive/20260405-librarian-local-model-lock.md) |
+| 2026-04-04 | narrative/story 清理（归档，后续切换到固定 VN benchmark 真实接口验证） | [→](archive/20260404-remove-vn-test-remnants.md) |
+| 2026-04-04 | 项目生成代码对齐（归档，后续切换到 narrative/story 清理） | [→](archive/20260404-project-generation-code-align-md-rules.md) |
+| 2026-04-04 | 项目生成 contract 生产/benchmark 规则拆分（归档，后续切换到代码实现对齐） | [→](archive/20260404-project-generation-contract-mode-separation.md) |
+| 2026-04-04 | VN 业务项目生成主链（归档，后续切换到 production/benchmark 规则拆分文档修正） | [→](archive/20260404-vn-business-project-generation-mainline.md) |
+| 2026-04-03 | 项目生成主链收口（归档，后续切换到 VN 业务代码生成主链） | [→](archive/20260403-project-generation-mainline-closure.md) |
 | 2026-04-01 | 代码健康治理（检测器 + 禁扩张门禁 + 拆分积压） | [→](archive/20260401-code-health-governance-guard.md) |
 | 2026-04-01 | 基线 c224a08 前后端解耦与接口对齐收口 | [→](archive/20260401-c224a08-decoupling-interface-closure.md) |
 | 2026-04-01 | MD 导航锚点与 CURRENT/LAST 薄指针对齐 | [→](archive/20260401-md-navigation-pointer-alignment.md) |

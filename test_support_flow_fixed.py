@@ -135,7 +135,7 @@ def main():
     print("\n" + "="*60)
     print("TEST 2: Request project")
     print("="*60)
-    send_message("我想做一个简单的视觉小说游戏，有剧情分支", chat_id=chat_id, step_num=2)
+    send_message("我想做一个简单的剧情推理游戏，有剧情分支", chat_id=chat_id, step_num=2)
     check_session_state(chat_id, 2)
 
     # Test 3: Add details

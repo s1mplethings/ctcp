@@ -12,6 +12,8 @@ def _is_backend_test_default_output_request(raw: str) -> bool:
 def _extract_constraints(text: str) -> dict[str, Any]:
     raw = str(text or "").lower()
     constraints: dict[str, Any] = {}
+    if "benchmark" in raw or "regression" in raw or "基准" in raw or "回归" in raw:
+        constraints["project_generation_mode"] = "benchmark_regression"
     if "离线" in raw or "offline" in raw:
         constraints["runtime_target"] = "offline"
     if "实时" in raw or "real-time" in raw or "realtime" in raw:
@@ -20,8 +22,8 @@ def _extract_constraints(text: str) -> dict[str, Any]:
         constraints["ui"] = "qt"
     if "telegram" in raw:
         constraints["channel"] = "telegram"
-    if "vn" in raw or "视觉小说" in raw or "visual novel" in raw:
-        constraints["project_domain"] = "vn_reasoning_game"
+    if "剧情" in raw or "叙事" in raw or "故事线" in raw or "storyline" in raw or "narrative" in raw:
+        constraints["project_domain"] = "story_reasoning_game"
     if "推理" in raw or "deduction" in raw or "mystery" in raw:
         constraints["gameplay_focus"] = "reasoning"
     if "世界线" in raw or "worldline" in raw or "时间线" in raw or "timeline" in raw:
@@ -47,3 +49,12 @@ class RequirementCollector:
         }
         summary["is_project_like"] = summary["mode"].startswith("PROJECT")
         return summary
+
+
+def collect_frontend_constraints(*, mode: str, latest_user_text: str, history: list[str]) -> dict[str, Any]:
+    try:
+        summary = RequirementCollector().collect(mode=mode, latest_user_text=latest_user_text, history=history)
+    except Exception:
+        return {}
+    constraints = summary.get("constraints", {}) if isinstance(summary, dict) else {}
+    return dict(constraints) if isinstance(constraints, dict) else {}
