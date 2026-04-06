@@ -1,0 +1,43 @@
+{
+  "schema_version": "ctcp-project-stage-report-v1",
+  "stage": "docs_generation",
+  "goal": "生成一个本地 HTTP 服务 MVP：接收模糊项目目标，返回结构化 spec、workflow plan、acceptance 摘要 JSON，并提供 health 检查。",
+  "project_root": "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal",
+  "required_files": [
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/README.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/docs/00_CORE.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/docs/web_workflow.md"
+  ],
+  "generated_files": [
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/docs/00_CORE.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/docs/web_workflow.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/meta/manifest.json",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/meta/reports/LAST.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/meta/tasks/CURRENT.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/pyproject.toml",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/README.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/scripts/run_project_web.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/scripts/verify_repo.ps1",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/__init__.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/__pycache__/__init__.cpython-312.pyc",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/__pycache__/app.cpython-312.pyc",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/__pycache__/exporter.cpython-312.pyc",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/__pycache__/models.cpython-312.pyc",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/__pycache__/seed.cpython-312.pyc",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/__pycache__/service.cpython-312.pyc",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/__pycache__/service_contract.cpython-312.pyc",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/__pycache__/spec_builder.cpython-312.pyc",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/app.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/exporter.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/models.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/seed.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/service.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/service_contract.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/spec_builder.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/tests/test_http_mvp_spec_workflow_plan_acceptance_json_heal_service.py"
+  ],
+  "missing_files": [],
+  "status": "pass",
+  "project_id": "http-mvp-spec-workflow-plan-acceptance-json-heal",
+  "project_type": "generic_copilot"
+}

@@ -13,6 +13,18 @@ class ContractValidationTests(unittest.TestCase):
             {
                 "request_id": "req-1",
                 "user_goal": "build project backend",
+                "project_intent": {
+                    "goal_summary": "build project backend",
+                    "target_user": "internal operator",
+                    "problem_to_solve": "turn a vague request into a runnable MVP backend",
+                    "mvp_scope": ["submit jobs", "track status"],
+                    "required_inputs": ["user goal"],
+                    "required_outputs": ["runnable backend"],
+                    "hard_constraints": [],
+                    "assumptions": ["default local runtime"],
+                    "open_questions": [],
+                    "acceptance_criteria": ["backend starts and handles one job"],
+                },
                 "constraints": {"runtime_target": "offline"},
                 "attachments": ["a.txt"],
                 "requirement_summary": {"mode": "PROJECT_DETAIL"},
@@ -20,6 +32,7 @@ class ContractValidationTests(unittest.TestCase):
         )
         self.assertEqual(request.request_id, "req-1")
         self.assertEqual(request.user_goal, "build project backend")
+        self.assertEqual(request.project_intent.goal_summary, "build project backend")
 
     def test_job_create_rejects_full_chat_history_field(self) -> None:
         with self.assertRaises(ValidationContractError):

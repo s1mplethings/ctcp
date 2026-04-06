@@ -17,10 +17,11 @@
 
 ## 1. Purpose
 
-CTCP is a contract-first execution repo. Agents should make the smallest scoped change that satisfies the bound task, preserve auditability, and close through the canonical verify gate.
+CTCP is a goal-to-MVP generation repo. Its main product promise is to turn vague user goals into structured intent, runnable MVP projects, and verifiable delivery packages. Contracts, auditability, and verify still matter, but they exist to support the generation mainline instead of replacing it.
 
 Default operating stance:
-- spec-first when behavior or contract meaning changes
+- intent-first when understanding the user goal
+- MVP-first when choosing implementation scope
 - verify-gated before claiming completion
 - local-by-default unless the task explicitly requires a broader contract update
 
@@ -53,7 +54,7 @@ Use one visible mainline only:
 4. `Change`
    Make the minimal patch for the current topic; update docs/spec/meta first when the behavior contract changes, and prefer existing repo workflows, docs, and skills over inventing a new flow.
 5. `Verify/Close`
-   Run the canonical verify entrypoint, record the first failure point and minimal fix when needed, update `meta/reports/LAST.md`, and close the task with explicit evidence.
+   Run the canonical verify entrypoint after the runnable MVP path exists, record the first failure point and minimal fix when needed, update `meta/reports/LAST.md`, and close the task with explicit evidence.
 
 The repository still keeps a finer-grained internal workflow; see `docs/04_execution_flow.md` only when detailed step mapping or profile behavior matters.
 Do not pull that expanded detail into the root contract unless the root contract itself is being changed.
@@ -97,6 +98,7 @@ When the task creates or advances an external run, keep runtime evidence outside
 - Prefer existing repo skills and documented local rules over inventing a parallel workflow.
 - Do not reintroduce frontend/support style contracts into the root agent contract; route them to their own docs.
 - If older docs conflict with the new rule, mark them `deprecated`, `superseded`, or `replaced by`; do not silently leave duplicate authorities in place.
+- Do not let verify, manifest, or evidence artifacts masquerade as successful MVP generation when the project still lacks real runnable user flow.
 
 ## 7. Routing
 

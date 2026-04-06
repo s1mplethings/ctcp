@@ -5,7 +5,7 @@ Status: `done`
 
 ## Summary
 
-- Scoped support-lane task for a real Telegram regression where greeting turns in an old chat still referenced an old VN project and zip delivery.
+- Scoped support-lane task for a real Telegram regression where greeting turns in an old chat still referenced an old story project and zip delivery.
 - Focuses on `ctcp_support_bot` prompt/action gating plus a live runtime restart.
 - Requires both repo evidence and runtime confirmation against the actual chat session.
 

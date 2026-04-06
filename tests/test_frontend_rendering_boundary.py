@@ -192,7 +192,7 @@ class FrontendRenderingBoundaryTests(unittest.TestCase):
                 "stage": "executing",
                 "run_status": "blocked",
                 "progress_binding": {
-                    "current_task_goal": "我想要你继续优化我的vn项目",
+                    "current_task_goal": "我想要你继续优化我的剧情项目",
                     "current_phase": "方案整理",
                     "last_confirmed_items": ["项目已接到后台流程"],
                     "current_blocker": "none",
@@ -202,7 +202,7 @@ class FrontendRenderingBoundaryTests(unittest.TestCase):
                     "proof_refs": ["run_id=demo"],
                 },
             },
-            task_summary="我想要你继续优化我的vn项目",
+            task_summary="我想要你继续优化我的剧情项目",
             raw_reply_text="你是否方便提供最新的规划文档？",
             raw_next_question="",
             notes={

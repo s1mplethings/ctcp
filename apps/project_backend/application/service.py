@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from apps.project_backend.application.delivery_evidence import fallback_delivery_evidence
 from apps.project_backend.config import BackendConfig
 from apps.project_backend.domain.job import JobRecord
 from apps.project_backend.orchestrator.event_bus import EventBus
@@ -11,6 +12,7 @@ from apps.project_backend.orchestrator.phase_machine import phase_from_bridge_st
 from apps.project_backend.orchestrator.question_bus import QuestionBus
 from apps.project_backend.storage.job_store import JobStore
 from contracts.enums import JobPhase
+from contracts.schemas.project_intent import ProjectIntent
 from contracts.schemas.event_question import QuestionEvent
 from contracts.schemas.event_result import ResultEvent
 from contracts.schemas.event_status import StatusEvent
@@ -27,6 +29,37 @@ def _should_emit_backend_test_default_output(constraints: dict[str, Any]) -> boo
     return text in {"1", "true", "yes", "on"}
 
 
+def _build_project_spec(intent: ProjectIntent, constraints: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_version": "ctcp-project-spec-v1",
+        "goal_summary": intent.goal_summary,
+        "target_user": intent.target_user,
+        "problem_to_solve": intent.problem_to_solve,
+        "mvp_scope": list(intent.mvp_scope),
+        "required_inputs": list(intent.required_inputs),
+        "required_outputs": list(intent.required_outputs),
+        "hard_constraints": list(intent.hard_constraints),
+        "assumptions": list(intent.assumptions),
+        "open_questions": list(intent.open_questions),
+        "acceptance_criteria": list(intent.acceptance_criteria),
+        "constraint_snapshot": dict(constraints),
+    }
+
+
+def _build_pipeline_summary(intent: ProjectIntent, spec: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_version": "ctcp-project-generation-pipeline-v1",
+        "stages": [
+            {"name": "project_intent", "status": "ready", "summary": intent.goal_summary},
+            {"name": "spec", "status": "ready", "summary": str(spec.get("problem_to_solve", ""))},
+            {"name": "scaffold", "status": "pending", "summary": "project layout and runnable entrypoint"},
+            {"name": "core_feature_implementation", "status": "pending", "summary": "business logic for one core user flow"},
+            {"name": "smoke_run", "status": "pending", "summary": "prove README + startup path works"},
+            {"name": "delivery_package", "status": "pending", "summary": "assemble deliverables for the user"},
+        ]
+    }
+
+
 class ProjectBackendService:
     def __init__(self, *, config: BackendConfig, bridge: BridgeAdapter | None = None) -> None:
         self.config = config
@@ -36,10 +69,14 @@ class ProjectBackendService:
         self.runner = JobRunner(bridge=bridge)
 
     def create_job(self, request: JobCreateRequest) -> StatusEvent:
+        project_spec = _build_project_spec(request.project_intent, request.constraints)
+        pipeline_summary = _build_pipeline_summary(request.project_intent, project_spec)
         created = self.runner.create_run(
-            goal=request.user_goal,
+            goal=request.project_intent.goal_summary or request.user_goal,
             constraints=request.constraints,
             attachments=request.attachments,
+            project_intent=request.project_intent.to_payload(),
+            project_spec=project_spec,
         )
         run_id = str(created.get("run_id", "")).strip()
         if not run_id:
@@ -51,6 +88,9 @@ class ProjectBackendService:
             run_id=run_id,
             run_dir=run_dir,
             user_goal=request.user_goal,
+            project_intent=request.project_intent.to_payload(),
+            project_spec=project_spec,
+            pipeline_summary=pipeline_summary,
             constraints=dict(request.constraints),
             phase=JobPhase.CREATED,
         )
@@ -60,9 +100,18 @@ class ProjectBackendService:
             event_id=new_event_id(),
             job_id=record.job_id,
             phase=JobPhase.CREATED,
-            summary="job created",
+            summary=f"project intent accepted: {request.project_intent.goal_summary}",
         )
         self.event_bus.publish(record.job_id, status_event.to_payload())
+        self.event_bus.publish(
+            record.job_id,
+            StatusEvent(
+                event_id=new_event_id(),
+                job_id=record.job_id,
+                phase=JobPhase.PLANNING,
+                summary="project spec ready; scaffold/core/smoke/delivery pipeline prepared",
+            ).to_payload(),
+        )
         if _should_emit_backend_test_default_output(record.constraints):
             done_event = StatusEvent(
                 event_id=new_event_id(),
@@ -96,15 +145,24 @@ class ProjectBackendService:
     def get_result(self, job_id: str) -> ResultEvent:
         record = self.job_store.get(job_id)
         report = self.runner.report(run_id=record.run_id)
+        try:
+            delivery_evidence = self.runner.delivery_evidence(run_id=record.run_id)
+        except Exception:
+            delivery_evidence = fallback_delivery_evidence(record=record, report=report)
+        record.delivery_evidence = dict(delivery_evidence)
         event = ResultEvent(
             event_id=new_event_id(),
             job_id=job_id,
             summary="job result ready",
             artifacts={
                 "run_dir": record.run_dir,
+                "project_intent": dict(record.project_intent),
+                "project_spec": dict(record.project_spec),
+                "pipeline_summary": dict(record.pipeline_summary),
                 "verify_report": dict(report.get("verify_report", {}) if isinstance(report.get("verify_report", {}), dict) else {}),
                 "repo_report_tail": str(report.get("repo_report_tail", "")),
             },
+            delivery_evidence=dict(delivery_evidence),
         )
         self.event_bus.publish(job_id, event.to_payload())
         return event

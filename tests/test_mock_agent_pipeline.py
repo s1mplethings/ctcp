@@ -607,7 +607,9 @@ class MockAgentPipelineTests(unittest.TestCase):
                 mode = fault_modes[idx % len(fault_modes)]
                 role = fault_roles[idx % len(fault_roles)]
                 run_dir = base / f"fault_run_{idx:02d}"
-                _prepare_run_dir(run_dir, _dispatch_config_all_mock())
+                cfg = _dispatch_config_all_mock()
+                cfg["role_providers"]["librarian"] = "mock_agent"
+                _prepare_run_dir(run_dir, cfg)
                 run_doc = {"goal": f"fault-injection-{idx:02d}"}
                 result = _run_flow_with_fault(
                     run_dir=run_dir,

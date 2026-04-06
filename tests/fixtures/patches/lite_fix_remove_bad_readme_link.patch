@@ -1,21 +1,23 @@
 diff --git a/README.md b/README.md
 --- a/README.md
 +++ b/README.md
-@@ -128,5 +128,6 @@
+@@ -150,6 +150,7 @@
  - [ai_context/00_AI_CONTRACT.md](ai_context/00_AI_CONTRACT.md)
  - [ai_context/CTCP_FAST_RULES.md](ai_context/CTCP_FAST_RULES.md)
  - [ai_context/problem_registry.md](ai_context/problem_registry.md)
 +- [ai_context/decision_log.md](ai_context/decision_log.md)
  
  <!-- CTCP:DOC_INDEX:END -->
+ 
 diff --git a/meta/tasks/CURRENT.md b/meta/tasks/CURRENT.md
 --- a/meta/tasks/CURRENT.md
 +++ b/meta/tasks/CURRENT.md
 @@ -1,3 +1,4 @@
- # Task - support-pass-runtime-and-benchmark-mode-isolation
+ # Task - support-delivery-evidence-surface
 +<!-- simlab-s16-touch-current -->
  
  ## Queue Binding
+ 
 diff --git a/meta/reports/LAST.md b/meta/reports/LAST.md
 --- a/meta/reports/LAST.md
 +++ b/meta/reports/LAST.md

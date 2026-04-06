@@ -11,8 +11,22 @@ class BridgeAdapter:
 
         self._bridge = ctcp_front_bridge
 
-    def new_run(self, *, goal: str, constraints: dict[str, Any], attachments: list[str]) -> dict[str, Any]:
-        return self._bridge.ctcp_new_run(goal=goal, constraints=constraints, attachments=attachments)
+    def new_run(
+        self,
+        *,
+        goal: str,
+        constraints: dict[str, Any],
+        attachments: list[str],
+        project_intent: dict[str, Any] | None = None,
+        project_spec: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        return self._bridge.ctcp_new_run(
+            goal=goal,
+            constraints=constraints,
+            attachments=attachments,
+            project_intent=project_intent,
+            project_spec=project_spec,
+        )
 
     def advance(self, *, run_id: str, max_steps: int) -> dict[str, Any]:
         return self._bridge.ctcp_advance(run_id, max_steps=max_steps)
@@ -29,13 +43,30 @@ class BridgeAdapter:
     def get_last_report(self, *, run_id: str) -> dict[str, Any]:
         return self._bridge.ctcp_get_last_report(run_id)
 
+    def get_delivery_evidence(self, *, run_id: str) -> dict[str, Any]:
+        return self._bridge.ctcp_get_delivery_evidence_manifest(run_id)
+
 
 class JobRunner:
     def __init__(self, bridge: BridgeAdapter | None = None) -> None:
         self.bridge = bridge or BridgeAdapter()
 
-    def create_run(self, *, goal: str, constraints: dict[str, Any], attachments: list[str]) -> dict[str, Any]:
-        return self.bridge.new_run(goal=goal, constraints=constraints, attachments=attachments)
+    def create_run(
+        self,
+        *,
+        goal: str,
+        constraints: dict[str, Any],
+        attachments: list[str],
+        project_intent: dict[str, Any] | None = None,
+        project_spec: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        return self.bridge.new_run(
+            goal=goal,
+            constraints=constraints,
+            attachments=attachments,
+            project_intent=project_intent,
+            project_spec=project_spec,
+        )
 
     def advance(self, *, run_id: str, max_steps: int) -> dict[str, Any]:
         return self.bridge.advance(run_id=run_id, max_steps=max_steps)
@@ -51,3 +82,6 @@ class JobRunner:
 
     def report(self, *, run_id: str) -> dict[str, Any]:
         return self.bridge.get_last_report(run_id=run_id)
+
+    def delivery_evidence(self, *, run_id: str) -> dict[str, Any]:
+        return self.bridge.get_delivery_evidence(run_id=run_id)

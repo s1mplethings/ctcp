@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>VTuber Highlight MVP Report</title>
+  <style>
+    body { font-family: "Segoe UI", sans-serif; margin: 24px; background: #f6f7fb; color: #1f2430; }
+    .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 18px; box-shadow: 0 10px 30px rgba(31,36,48,0.08); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #e6e8ef; padding: 10px 8px; text-align: left; vertical-align: top; }
+    th { background: #f2f5ff; }
+    .metric { display: inline-block; margin-right: 18px; font-weight: 600; }
+    img { max-width: 100%; border-radius: 12px; }
+    code { background: #eef2ff; padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>VTuber Highlight Local MVP</h1>
+    <p>输入视频：<code>D:/.c_projects/adc/ctcp/generated_projects/vtuber_highlight_local_mvp/demo_assets/sample_vtuber_replay.mp4</code></p>
+    <p>
+      <span class="metric">模式：rule_based_audio_plus_keywords</span>
+      <span class="metric">时长：14.00s</span>
+      <span class="metric">候选数：3</span>
+    </p>
+  </div>
+  <div class="card">
+    <h2>时间轴</h2>
+    <img src="timeline.png" alt="timeline">
+  </div>
+  <div class="card">
+    <h2>候选清单</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>开始</th><th>结束</th><th>时长</th><th>分数</th><th>理由</th><th>关键词/文本</th><th>导出 clip</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+            <tr>
+              <td>1</td>
+              <td>2.58</td>
+              <td>4.70</td>
+              <td>2.12</td>
+              <td>88.2</td>
+              <td>音量突增<br>峰值明显<br>关键词增强</td>
+              <td>笑崩了，直接怪叫</td>
+              <td>clips/clip_01_2.58_4.70.mp4</td>
+            </tr>
+            
+            <tr>
+              <td>2</td>
+              <td>6.70</td>
+              <td>8.95</td>
+              <td>2.25</td>
+              <td>100.0</td>
+              <td>音量突增<br>峰值明显<br>高频尖锐反应<br>关键词增强</td>
+              <td>这段是鬼叫级反应</td>
+              <td>clips/clip_02_6.70_8.95.mp4</td>
+            </tr>
+            
+            <tr>
+              <td>3</td>
+              <td>10.57</td>
+              <td>13.07</td>
+              <td>2.50</td>
+              <td>86.7</td>
+              <td>音量突增<br>峰值明显<br>关键词增强</td>
+              <td>高能收尾</td>
+              <td>clips/clip_03_10.57_13.07.mp4</td>
+            </tr>
+            
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

@@ -24,7 +24,7 @@
 ## Context
 
 - Why this item now?
-  用户在同一个 Telegram support session 里先给出 VN 项目目标，随后补了 `window开发，然后ui可以使用qt6` 和 `你先做出第一版给我看，然后我在做调整`。实际运行里，长期项目目标被实现细节覆盖，最后一条执行指令落成 `SMALLTALK`，没有真正进入 backend bridge；同时前台还向用户承诺“会开始做第一版”，与已 `blocked` 的 backend 状态矛盾。
+  用户在同一个 Telegram support session 里先给出 剧情项目目标，随后补了 `window开发，然后ui可以使用qt6` 和 `你先做出第一版给我看，然后我在做调整`。实际运行里，长期项目目标被实现细节覆盖，最后一条执行指令落成 `SMALLTALK`，没有真正进入 backend bridge；同时前台还向用户承诺“会开始做第一版”，与已 `blocked` 的 backend 状态矛盾。
 - Dependency check:
   - `ADHOC-20260312-support-bot-backend-bridge-wiring`: `done`
   - `ADHOC-20260312-support-memory-isolation-and-api-route-lock`: `done`

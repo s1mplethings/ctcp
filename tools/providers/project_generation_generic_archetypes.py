@@ -1,0 +1,997 @@
+from __future__ import annotations
+
+import json
+import re
+import textwrap
+from typing import Any
+def _goal_excerpt(goal: str) -> str:
+    cleaned = re.sub(r"\s+", " ", str(goal or "")).strip()
+    return cleaned[:220] if cleaned else "Goal-driven MVP project generation request"
+def _context_lines(context_used: list[str]) -> str:
+    return "\n".join(f"- {row}" for row in context_used) or "- contract-driven repo context"
+def _launcher_script(*, package_name: str, startup_rel: str, mode_label: str) -> str:
+    run_mode = "web" if "web" in startup_rel else ("gui" if "gui" in startup_rel else "cli")
+    serve_lines = ["pass"]
+    if run_mode == "web":
+        serve_lines = [
+            "if args.serve:",
+            "    from importlib import import_module",
+            f"    payload = import_module('{package_name}.app').health_payload()",
+            "    print(json.dumps(payload, ensure_ascii=False, indent=2))",
+            "    return 0",
+        ]
+    lines = [
+        "from __future__ import annotations",
+        "import argparse",
+        "import json",
+        "import sys",
+        "from pathlib import Path",
+        "",
+        "ROOT = Path(__file__).resolve().parents[1]",
+        'SRC = ROOT / "src"',
+        "if str(SRC) not in sys.path:",
+        "    sys.path.insert(0, str(SRC))",
+        "",
+        f"from {package_name}.service import generate_project",
+        "",
+        "def main() -> int:",
+        f'    parser = argparse.ArgumentParser(description="{mode_label}")',
+        '    parser.add_argument("--goal", default="project generation request")',
+        '    parser.add_argument("--project-name", default="Project Copilot")',
+        '    parser.add_argument("--out", default=str(ROOT / "generated_output"))',
+        '    parser.add_argument("--serve", action="store_true")',
+        "    args = parser.parse_args()",
+    ]
+    lines.extend(f"    {row}" for row in serve_lines)
+    lines.extend(
+        [
+            "    result = generate_project(goal=args.goal, project_name=args.project_name, out_dir=Path(args.out))",
+            "    print(json.dumps(result, ensure_ascii=False, indent=2))",
+            "    return 0",
+            "",
+            'if __name__ == "__main__":',
+            "    raise SystemExit(main())",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
+def _intent_seed(project_intent: dict[str, Any], project_spec: dict[str, Any]) -> str:
+    return (
+        "from __future__ import annotations\n"
+        "import json\n\n"
+        f"DEFAULT_PROJECT_INTENT = json.loads(r'''{json.dumps(project_intent, ensure_ascii=False, indent=2)}''')\n"
+        f"DEFAULT_PROJECT_SPEC = json.loads(r'''{json.dumps(project_spec, ensure_ascii=False, indent=2)}''')\n"
+    )
+
+
+def _quickstart_command(*, startup_rel: str, package_name: str, project_name: str) -> str:
+    if startup_rel.startswith("scripts/run_project_web.py"):
+        return f"python {startup_rel} --serve"
+    if startup_rel.startswith("scripts/"):
+        return f"python {startup_rel} --goal \"{project_name}\" --project-name \"{project_name}\" --out generated_output"
+    return (
+        "python -c \"from pathlib import Path; "
+        f"import sys; sys.path.insert(0, r'src'); from {package_name}.service import generate_project; "
+        f"print(generate_project(goal='{project_name}', project_name='{project_name}', out_dir=Path('generated_output')))\""
+    )
+
+
+def _seed_builder_module(*, module_name: str, extra_plan_logic: str) -> str:
+    lines = [
+        "from __future__ import annotations",
+        "",
+        "from copy import deepcopy",
+        "from .seed import DEFAULT_PROJECT_INTENT, DEFAULT_PROJECT_SPEC",
+        "",
+        "",
+        f"def build_{module_name}(goal: str, project_name: str) -> dict[str, object]:",
+        "    spec = deepcopy(DEFAULT_PROJECT_SPEC)",
+        "    intent = deepcopy(DEFAULT_PROJECT_INTENT)",
+        '    spec["goal_summary"] = goal or spec.get("goal_summary", project_name)',
+        '    spec["project_name"] = project_name',
+        '    spec["project_intent"] = intent',
+    ]
+    lines.extend(f"    {row}" for row in extra_plan_logic.strip().splitlines() if row.strip())
+    lines.append("    return spec")
+    return "\n".join(lines) + "\n"
+
+
+def _common_files(
+    *,
+    goal_text: str,
+    project_id: str,
+    project_root: str,
+    package_name: str,
+    startup_rel: str,
+    workflow_doc_rel: str,
+    context_used: list[str],
+    project_archetype: str,
+    project_intent: dict[str, Any],
+    project_spec: dict[str, Any],
+    readme_body: str,
+    workflow_title: str,
+    mode_label: str,
+) -> dict[str, str]:
+    goal_excerpt = _goal_excerpt(goal_text)
+    command = _quickstart_command(startup_rel=startup_rel, package_name=package_name, project_name=goal_excerpt)
+    files = {
+        f"{project_root}/pyproject.toml": (
+            f"[project]\nname = \"{project_id}\"\nversion = \"0.1.0\"\n"
+            f"description = \"{project_archetype} generated by CTCP\"\nrequires-python = \">=3.11\"\n\n"
+            "[tool.pytest.ini_options]\npythonpath = [\"src\"]\n"
+        ),
+        f"{project_root}/src/{package_name}/__init__.py": "from .service import generate_project\n",
+        f"{project_root}/src/{package_name}/seed.py": _intent_seed(project_intent, project_spec),
+        f"{project_root}/README.md": (
+            f"# {goal_excerpt}\n\n"
+            f"{readme_body}\n\n"
+            "## Quick Start\n\n"
+            f"`{command}`\n\n"
+            "## Repo Context Consumed\n\n"
+            f"{_context_lines(context_used)}\n"
+        ),
+        f"{project_root}/docs/00_CORE.md": (
+            "# Core Runtime Notes\n\n"
+            f"- archetype: {project_archetype}\n"
+            "- mainline: ProjectIntent -> Spec -> Scaffold -> Core Feature -> Smoke Run -> Delivery Package\n"
+            "- generation is spec-driven first, templates only provide bootstrap structure\n"
+        ),
+        f"{project_root}/{workflow_doc_rel}": (
+            f"# {workflow_title}\n\n"
+            "1. Resolve ProjectIntent and project spec.\n"
+            "2. Turn the spec into an executable workflow plan.\n"
+            "3. Materialize core feature files and delivery artifacts.\n"
+            "4. Run smoke export and inspect acceptance outputs.\n"
+        ),
+        f"{project_root}/scripts/verify_repo.ps1": (
+            "$ErrorActionPreference = 'Stop'\n"
+            "$root = Split-Path -Parent $PSScriptRoot\n"
+            "$required = @(\n"
+            "  (Join-Path $root 'README.md'),\n"
+            f"  (Join-Path $root '{startup_rel.replace('/', '\\')}')\n"
+            ")\n"
+            "$missing = @($required | Where-Object { -not (Test-Path $_) })\n"
+            "if ($missing.Count -gt 0) {\n"
+            "  Write-Output ('missing: ' + ($missing -join ', '))\n"
+            "  exit 1\n"
+            "}\n"
+            "Write-Output 'PASS'\n"
+        ),
+        f"{project_root}/meta/tasks/CURRENT.md": "# Generated Task Card\n\n- Topic: Generated MVP delivery\n",
+        f"{project_root}/meta/reports/LAST.md": "# Generated Report\n\n- Goal-driven MVP output generated.\n",
+        f"{project_root}/meta/manifest.json": json.dumps(
+            {
+                "schema_version": "ctcp-generated-project-manifest-v1",
+                "project_type": "generic_copilot",
+                "project_archetype": project_archetype,
+                "goal": goal_excerpt,
+                "mainline": [
+                    "ProjectIntent",
+                    "Spec",
+                    "Scaffold",
+                    "Core Feature",
+                    "Smoke Run",
+                    "Delivery Package",
+                ],
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+    }
+    if startup_rel.startswith("scripts/"):
+        files[f"{project_root}/{startup_rel}"] = _launcher_script(
+            package_name=package_name,
+            startup_rel=startup_rel,
+            mode_label=mode_label,
+        )
+    return files
+
+
+def _merge_file_maps(*maps: dict[str, str]) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for mapping in maps:
+        out.update(mapping)
+    return out
+
+
+def _generic_pipeline_module_map(project_root: str, package_name: str) -> dict[str, str]:
+    return {
+        f"{project_root}/src/{package_name}/models.py": textwrap.dedent(
+            """
+            from __future__ import annotations
+
+            from dataclasses import asdict, dataclass, field
+            from typing import Any
+
+
+            @dataclass
+            class WorkflowStep:
+                step_id: str
+                objective: str
+                deliverable: str
+                checks: list[str] = field(default_factory=list)
+
+                def to_dict(self) -> dict[str, Any]:
+                    return asdict(self)
+            """
+        ).lstrip(),
+        f"{project_root}/src/{package_name}/spec_builder.py": _seed_builder_module(
+            module_name="spec",
+            extra_plan_logic=(
+                "spec['workflow_plan'] = [\n"
+                "    {'step_id': 'intent', 'objective': 'ground user intent', 'deliverable': 'intent snapshot'},\n"
+                "    {'step_id': 'spec', 'objective': 'freeze MVP scope', 'deliverable': 'spec document'},\n"
+                "    {'step_id': 'delivery', 'objective': 'export smoke-ready package', 'deliverable': 'acceptance report'},\n"
+                "]"
+            ),
+        ),
+        f"{project_root}/src/{package_name}/planner.py": textwrap.dedent(
+            """
+            from __future__ import annotations
+
+            from .models import WorkflowStep
+
+
+            def build_plan(spec: dict[str, object]) -> list[WorkflowStep]:
+                scope = list(spec.get("mvp_scope", []))
+                return [
+                    WorkflowStep("clarify", "Summarize the goal into a runnable MVP scope", "mvp_spec.json", scope[:3] or ["scope captured"]),
+                    WorkflowStep("implement", "Materialize the minimum feature path", "workflow_plan.json", ["runnable entrypoint", "export path"]),
+                    WorkflowStep("accept", "Check smoke run and delivery evidence", "acceptance_report.json", list(spec.get("acceptance_criteria", []))),
+                ]
+            """
+        ).lstrip(),
+        f"{project_root}/src/{package_name}/exporter.py": textwrap.dedent(
+            """
+            from __future__ import annotations
+
+            import json
+            from pathlib import Path
+
+
+            def export_bundle(*, spec: dict[str, object], workflow_plan: list[dict[str, object]], out_dir: Path) -> dict[str, str]:
+                out_dir.mkdir(parents=True, exist_ok=True)
+                deliver_dir = out_dir / "deliverables"
+                deliver_dir.mkdir(parents=True, exist_ok=True)
+                spec_path = deliver_dir / "project_bundle.json"
+                plan_path = deliver_dir / "workflow_plan.json"
+                acceptance_path = deliver_dir / "acceptance_report.json"
+                spec_path.write_text(json.dumps(spec, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+                plan_path.write_text(json.dumps({"workflow_plan": workflow_plan}, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+                acceptance_path.write_text(
+                    json.dumps(
+                        {
+                            "status": "pass",
+                            "checks": spec.get("acceptance_criteria", []),
+                            "core_user_flow": ["build spec", "export workflow", "review acceptance output"],
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    )
+                    + "\\n",
+                    encoding="utf-8",
+                )
+                return {
+                    "project_bundle_json": str(spec_path),
+                    "workflow_plan_json": str(plan_path),
+                    "acceptance_report_json": str(acceptance_path),
+                }
+            """
+        ).lstrip(),
+        f"{project_root}/src/{package_name}/service.py": textwrap.dedent(
+            """
+            from __future__ import annotations
+
+            from pathlib import Path
+
+            from .exporter import export_bundle
+            from .planner import build_plan
+            from .spec_builder import build_spec
+
+
+            def generate_project(*, goal: str, project_name: str, out_dir: Path) -> dict[str, str]:
+                spec = build_spec(goal, project_name)
+                workflow_plan = [row.to_dict() for row in build_plan(spec)]
+                return export_bundle(spec=spec, workflow_plan=workflow_plan, out_dir=out_dir)
+            """
+        ).lstrip(),
+    }
+
+
+def _generic_pipeline_test_map(project_root: str, package_name: str) -> dict[str, str]:
+    return {
+        f"{project_root}/tests/test_{package_name}_service.py": textwrap.dedent(
+            f"""
+            from __future__ import annotations
+
+            import json
+            import sys
+            import tempfile
+            import unittest
+            from pathlib import Path
+
+            ROOT = Path(__file__).resolve().parents[1]
+            SRC = ROOT / "src"
+            if str(SRC) not in sys.path:
+                sys.path.insert(0, str(SRC))
+
+            from {package_name}.service import generate_project
+
+
+            class GenericPipelineTests(unittest.TestCase):
+                def test_generate_project_exports_spec_and_acceptance(self) -> None:
+                    with tempfile.TemporaryDirectory(prefix="generic_pipeline_") as td:
+                        result = generate_project(goal="generic smoke", project_name="Generic Copilot", out_dir=Path(td))
+                        spec_doc = json.loads(Path(result["project_bundle_json"]).read_text(encoding="utf-8"))
+                        self.assertIn("workflow_plan", spec_doc)
+                        self.assertTrue(Path(result["workflow_plan_json"]).exists())
+                        self.assertTrue(Path(result["acceptance_report_json"]).exists())
+
+
+            if __name__ == "__main__":
+                unittest.main()
+            """
+        ).lstrip()
+    }
+
+
+def _cli_toolkit_module_map(project_root: str, package_name: str) -> dict[str, str]:
+    return {
+        f"{project_root}/src/{package_name}/models.py": textwrap.dedent(
+            """
+            from __future__ import annotations
+
+            from dataclasses import asdict, dataclass, field
+            from typing import Any
+
+
+            @dataclass
+            class CommandStep:
+                command_id: str
+                purpose: str
+                input_hint: str
+                output_hint: str
+                checks: list[str] = field(default_factory=list)
+
+                def to_dict(self) -> dict[str, Any]:
+                    return asdict(self)
+            """
+        ).lstrip(),
+        f"{project_root}/src/{package_name}/spec_builder.py": _seed_builder_module(
+            module_name="spec",
+            extra_plan_logic=(
+                "spec['command_contract'] = {\n"
+                "    'entrypoint': 'generate_project',\n"
+                "    'primary_input': 'goal',\n"
+                "    'primary_outputs': ['mvp_spec.json', 'cli_command_plan.json', 'acceptance_report.json'],\n"
+                "}"
+            ),
+        ),
+        f"{project_root}/src/{package_name}/commands.py": textwrap.dedent(
+            """
+            from __future__ import annotations
+
+            from .models import CommandStep
+
+
+            def build_command_plan(spec: dict[str, object]) -> list[CommandStep]:
+                scope = list(spec.get("mvp_scope", []))
+                return [
+                    CommandStep("capture_goal", "Summarize goal into a frozen MVP spec", "raw goal", "mvp_spec.json", scope[:2] or ["goal summary"]),
+                    CommandStep("emit_workflow", "Emit operator-facing command workflow", "spec snapshot", "cli_command_plan.json", ["command sequence", "owner checklist"]),
+                    CommandStep("review_acceptance", "Check that the toolkit exported the expected files", "deliverables", "acceptance_report.json", list(spec.get("acceptance_criteria", []))),
+                ]
+            """
+        ).lstrip(),
+        f"{project_root}/src/{package_name}/exporter.py": textwrap.dedent(
+            """
+            from __future__ import annotations
+
+            import json
+            from pathlib import Path
+
+
+            def export_bundle(*, spec: dict[str, object], command_plan: list[dict[str, object]], out_dir: Path) -> dict[str, str]:
+                out_dir.mkdir(parents=True, exist_ok=True)
+                deliver_dir = out_dir / "deliverables"
+                deliver_dir.mkdir(parents=True, exist_ok=True)
+                spec_path = deliver_dir / "mvp_spec.json"
+                plan_path = deliver_dir / "cli_command_plan.json"
+                checklist_path = deliver_dir / "operator_checklist.md"
+                acceptance_path = deliver_dir / "acceptance_report.json"
+                spec_path.write_text(json.dumps(spec, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+                plan_path.write_text(json.dumps({"command_plan": command_plan}, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+                checklist_path.write_text("# Operator Checklist\\n\\n- Review mvp_spec.json\\n- Run command plan\\n- Confirm acceptance report\\n", encoding="utf-8")
+                acceptance_path.write_text(json.dumps({"status": "pass", "checks": spec.get("acceptance_criteria", [])}, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+                return {
+                    "mvp_spec_json": str(spec_path),
+                    "cli_command_plan_json": str(plan_path),
+                    "operator_checklist_md": str(checklist_path),
+                    "acceptance_report_json": str(acceptance_path),
+                }
+            """
+        ).lstrip(),
+        f"{project_root}/src/{package_name}/service.py": textwrap.dedent(
+            """
+            from __future__ import annotations
+
+            from pathlib import Path
+
+            from .commands import build_command_plan
+            from .exporter import export_bundle
+            from .spec_builder import build_spec
+
+
+            def generate_project(*, goal: str, project_name: str, out_dir: Path) -> dict[str, str]:
+                spec = build_spec(goal, project_name)
+                command_plan = [row.to_dict() for row in build_command_plan(spec)]
+                return export_bundle(spec=spec, command_plan=command_plan, out_dir=out_dir)
+            """
+        ).lstrip(),
+    }
+
+
+def _cli_toolkit_test_map(project_root: str, package_name: str) -> dict[str, str]:
+    return {
+        f"{project_root}/tests/test_{package_name}_service.py": textwrap.dedent(
+            f"""
+            from __future__ import annotations
+
+            import json
+            import sys
+            import tempfile
+            import unittest
+            from pathlib import Path
+
+            ROOT = Path(__file__).resolve().parents[1]
+            SRC = ROOT / "src"
+            if str(SRC) not in sys.path:
+                sys.path.insert(0, str(SRC))
+
+            from {package_name}.service import generate_project
+
+
+            class CliToolkitTests(unittest.TestCase):
+                def test_generate_project_exports_cli_plan(self) -> None:
+                    with tempfile.TemporaryDirectory(prefix="cli_toolkit_") as td:
+                        result = generate_project(goal="cli smoke", project_name="CLI Copilot", out_dir=Path(td))
+                        plan_doc = json.loads(Path(result["cli_command_plan_json"]).read_text(encoding="utf-8"))
+                        self.assertTrue(plan_doc["command_plan"])
+                        self.assertTrue(Path(result["operator_checklist_md"]).exists())
+
+
+            if __name__ == "__main__":
+                unittest.main()
+            """
+        ).lstrip()
+    }
+
+
+def _web_service_module_map(project_root: str, package_name: str) -> dict[str, str]:
+    return {
+        f"{project_root}/src/{package_name}/models.py": textwrap.dedent(
+            """
+            from __future__ import annotations
+
+            from dataclasses import asdict, dataclass, field
+            from typing import Any
+
+
+            @dataclass
+            class EndpointContract:
+                route: str
+                method: str
+                description: str
+                outputs: list[str] = field(default_factory=list)
+
+                def to_dict(self) -> dict[str, Any]:
+                    return asdict(self)
+            """
+        ).lstrip(),
+        f"{project_root}/src/{package_name}/spec_builder.py": _seed_builder_module(
+            module_name="spec",
+            extra_plan_logic=(
+                "spec['http_contract'] = {\n"
+                "    'health_route': '/health',\n"
+                "    'generate_route': '/generate',\n"
+                "    'response_payloads': ['service_contract.json', 'sample_response.json', 'acceptance_report.json'],\n"
+                "}"
+            ),
+        ),
+        f"{project_root}/src/{package_name}/service_contract.py": textwrap.dedent(
+            """
+            from __future__ import annotations
+
+            from .models import EndpointContract
+
+
+            def build_contract(spec: dict[str, object]) -> list[EndpointContract]:
+                outputs = list(spec.get("required_outputs", []))
+                return [
+                    EndpointContract("/health", "GET", "Return service health and archetype metadata", ["status", "archetype"]),
+                    EndpointContract("/generate", "POST", "Return spec/workflow/acceptance payload summary", outputs or ["spec", "workflow", "acceptance"]),
+                ]
+            """
+        ).lstrip(),
+        f"{project_root}/src/{package_name}/app.py": textwrap.dedent(
+            """
+            from __future__ import annotations
+
+            from .service_contract import build_contract
+            from .spec_builder import build_spec
+
+
+            def health_payload() -> dict[str, object]:
+                return {"status": "ok", "archetype": "web_service"}
+
+
+            def generate_payload(goal: str, project_name: str) -> dict[str, object]:
+                spec = build_spec(goal, project_name)
+                return {
+                    "project_name": project_name,
+                    "goal_summary": spec.get("goal_summary", ""),
+                    "contract": [row.to_dict() for row in build_contract(spec)],
+                    "acceptance": list(spec.get("acceptance_criteria", [])),
+                }
+            """
+        ).lstrip(),
+        f"{project_root}/src/{package_name}/exporter.py": textwrap.dedent(
+            """
+            from __future__ import annotations
+
+            import json
+            from pathlib import Path
+
+
+            def export_bundle(*, spec: dict[str, object], service_contract: list[dict[str, object]], sample_response: dict[str, object], out_dir: Path) -> dict[str, str]:
+                out_dir.mkdir(parents=True, exist_ok=True)
+                deliver_dir = out_dir / "deliverables"
+                deliver_dir.mkdir(parents=True, exist_ok=True)
+                spec_path = deliver_dir / "mvp_spec.json"
+                contract_path = deliver_dir / "service_contract.json"
+                sample_path = deliver_dir / "sample_response.json"
+                acceptance_path = deliver_dir / "acceptance_report.json"
+                summary_path = deliver_dir / "delivery_summary.md"
+                spec_path.write_text(json.dumps(spec, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+                contract_path.write_text(json.dumps({"routes": service_contract}, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+                sample_path.write_text(json.dumps(sample_response, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+                acceptance_path.write_text(json.dumps({"status": "pass", "checks": spec.get("acceptance_criteria", [])}, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+                summary_path.write_text("# Delivery Summary\\n\\n- /health\\n- /generate\\n- sample_response.json\\n", encoding="utf-8")
+                return {
+                    "mvp_spec_json": str(spec_path),
+                    "service_contract_json": str(contract_path),
+                    "sample_response_json": str(sample_path),
+                    "acceptance_report_json": str(acceptance_path),
+                    "delivery_summary_md": str(summary_path),
+                }
+            """
+        ).lstrip(),
+        f"{project_root}/src/{package_name}/service.py": textwrap.dedent(
+            """
+            from __future__ import annotations
+
+            from pathlib import Path
+
+            from .app import generate_payload
+            from .exporter import export_bundle
+            from .service_contract import build_contract
+            from .spec_builder import build_spec
+
+
+            def generate_project(*, goal: str, project_name: str, out_dir: Path) -> dict[str, str]:
+                spec = build_spec(goal, project_name)
+                contract = [row.to_dict() for row in build_contract(spec)]
+                sample_response = generate_payload(goal, project_name)
+                return export_bundle(spec=spec, service_contract=contract, sample_response=sample_response, out_dir=out_dir)
+            """
+        ).lstrip(),
+    }
+
+
+def _web_service_test_map(project_root: str, package_name: str) -> dict[str, str]:
+    return {
+        f"{project_root}/tests/test_{package_name}_service.py": textwrap.dedent(
+            f"""
+            from __future__ import annotations
+
+            import json
+            import sys
+            import tempfile
+            import unittest
+            from pathlib import Path
+
+            ROOT = Path(__file__).resolve().parents[1]
+            SRC = ROOT / "src"
+            if str(SRC) not in sys.path:
+                sys.path.insert(0, str(SRC))
+
+            from {package_name}.app import generate_payload, health_payload
+            from {package_name}.service import generate_project
+
+
+            class WebServiceTests(unittest.TestCase):
+                def test_generate_project_exports_service_contract(self) -> None:
+                    with tempfile.TemporaryDirectory(prefix="web_service_") as td:
+                        result = generate_project(goal="web smoke", project_name="Web Copilot", out_dir=Path(td))
+                        self.assertEqual(health_payload()["status"], "ok")
+                        payload = generate_payload("goal", "Web Copilot")
+                        self.assertTrue(payload["contract"])
+                        self.assertTrue(Path(result["service_contract_json"]).exists())
+                        json.loads(Path(result["sample_response_json"]).read_text(encoding="utf-8"))
+
+
+            if __name__ == "__main__":
+                unittest.main()
+            """
+        ).lstrip()
+    }
+
+
+def _data_pipeline_module_map(project_root: str, package_name: str) -> dict[str, str]:
+    return {
+        f"{project_root}/src/{package_name}/models.py": textwrap.dedent(
+            """
+            from __future__ import annotations
+
+            from dataclasses import asdict, dataclass, field
+            from typing import Any
+
+
+            @dataclass
+            class TransformStep:
+                step_id: str
+                source_field: str
+                destination_field: str
+                rationale: str
+                checks: list[str] = field(default_factory=list)
+
+                def to_dict(self) -> dict[str, Any]:
+                    return asdict(self)
+            """
+        ).lstrip(),
+        f"{project_root}/src/{package_name}/spec_builder.py": _seed_builder_module(
+            module_name="spec",
+            extra_plan_logic=(
+                "spec['pipeline_contract'] = {\n"
+                "    'input_file': 'sample_input.json',\n"
+                "    'output_file': 'sample_output.json',\n"
+                "    'artifacts': ['pipeline_plan.json', 'acceptance_report.json'],\n"
+                "}"
+            ),
+        ),
+        f"{project_root}/src/{package_name}/transforms.py": textwrap.dedent(
+            """
+            from __future__ import annotations
+
+            from .models import TransformStep
+
+
+            def build_transforms(spec: dict[str, object]) -> list[TransformStep]:
+                return [
+                    TransformStep("goal_summary", "goal", "goal_summary", "normalize the fuzzy goal into an actionable summary", ["summary is non-empty"]),
+                    TransformStep("scope_snapshot", "mvp_scope", "scope_snapshot", "capture MVP scope for downstream checks", ["at least one scope item"]),
+                    TransformStep("acceptance_snapshot", "acceptance_criteria", "acceptance_snapshot", "carry acceptance criteria into the export", ["criteria exported"]),
+                ]
+
+
+            def apply_transforms(goal: str, spec: dict[str, object]) -> dict[str, object]:
+                return {
+                    "goal_summary": spec.get("goal_summary", goal),
+                    "scope_snapshot": list(spec.get("mvp_scope", [])),
+                    "acceptance_snapshot": list(spec.get("acceptance_criteria", [])),
+                }
+            """
+        ).lstrip(),
+        f"{project_root}/src/{package_name}/pipeline.py": textwrap.dedent(
+            """
+            from __future__ import annotations
+
+            from .transforms import apply_transforms, build_transforms
+
+
+            def run_pipeline(goal: str, project_name: str, spec: dict[str, object]) -> tuple[list[dict[str, object]], dict[str, object], dict[str, object]]:
+                transform_steps = [row.to_dict() for row in build_transforms(spec)]
+                sample_input = {"goal": goal, "project_name": project_name}
+                sample_output = apply_transforms(goal, spec)
+                return transform_steps, sample_input, sample_output
+            """
+        ).lstrip(),
+        f"{project_root}/src/{package_name}/exporter.py": textwrap.dedent(
+            """
+            from __future__ import annotations
+
+            import json
+            from pathlib import Path
+
+
+            def export_bundle(*, spec: dict[str, object], pipeline_plan: list[dict[str, object]], sample_input: dict[str, object], sample_output: dict[str, object], out_dir: Path) -> dict[str, str]:
+                out_dir.mkdir(parents=True, exist_ok=True)
+                deliver_dir = out_dir / "deliverables"
+                deliver_dir.mkdir(parents=True, exist_ok=True)
+                spec_path = deliver_dir / "mvp_spec.json"
+                plan_path = deliver_dir / "pipeline_plan.json"
+                input_path = deliver_dir / "sample_input.json"
+                output_path = deliver_dir / "sample_output.json"
+                acceptance_path = deliver_dir / "acceptance_report.json"
+                spec_path.write_text(json.dumps(spec, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+                plan_path.write_text(json.dumps({"pipeline_plan": pipeline_plan}, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+                input_path.write_text(json.dumps(sample_input, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+                output_path.write_text(json.dumps(sample_output, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+                acceptance_path.write_text(json.dumps({"status": "pass", "checks": spec.get("acceptance_criteria", [])}, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+                return {
+                    "mvp_spec_json": str(spec_path),
+                    "pipeline_plan_json": str(plan_path),
+                    "sample_input_json": str(input_path),
+                    "sample_output_json": str(output_path),
+                    "acceptance_report_json": str(acceptance_path),
+                }
+            """
+        ).lstrip(),
+        f"{project_root}/src/{package_name}/service.py": textwrap.dedent(
+            """
+            from __future__ import annotations
+
+            from pathlib import Path
+
+            from .exporter import export_bundle
+            from .pipeline import run_pipeline
+            from .spec_builder import build_spec
+
+
+            def generate_project(*, goal: str, project_name: str, out_dir: Path) -> dict[str, str]:
+                spec = build_spec(goal, project_name)
+                pipeline_plan, sample_input, sample_output = run_pipeline(goal, project_name, spec)
+                return export_bundle(
+                    spec=spec,
+                    pipeline_plan=pipeline_plan,
+                    sample_input=sample_input,
+                    sample_output=sample_output,
+                    out_dir=out_dir,
+                )
+            """
+        ).lstrip(),
+    }
+
+
+def _data_pipeline_test_map(project_root: str, package_name: str) -> dict[str, str]:
+    return {
+        f"{project_root}/tests/test_{package_name}_service.py": textwrap.dedent(
+            f"""
+            from __future__ import annotations
+
+            import json
+            import sys
+            import tempfile
+            import unittest
+            from pathlib import Path
+
+            ROOT = Path(__file__).resolve().parents[1]
+            SRC = ROOT / "src"
+            if str(SRC) not in sys.path:
+                sys.path.insert(0, str(SRC))
+
+            from {package_name}.service import generate_project
+
+
+            class DataPipelineTests(unittest.TestCase):
+                def test_generate_project_exports_pipeline_samples(self) -> None:
+                    with tempfile.TemporaryDirectory(prefix="data_pipeline_") as td:
+                        result = generate_project(goal="pipeline smoke", project_name="Pipeline Copilot", out_dir=Path(td))
+                        output_doc = json.loads(Path(result["sample_output_json"]).read_text(encoding="utf-8"))
+                        self.assertIn("goal_summary", output_doc)
+                        self.assertTrue(Path(result["pipeline_plan_json"]).exists())
+
+
+            if __name__ == "__main__":
+                unittest.main()
+            """
+        ).lstrip()
+    }
+
+
+def _generic_pipeline_files(
+    *,
+    goal_text: str,
+    project_id: str,
+    project_root: str,
+    package_name: str,
+    startup_rel: str,
+    workflow_doc_rel: str,
+    context_used: list[str],
+    project_archetype: str,
+    project_intent: dict[str, Any],
+    project_spec: dict[str, Any],
+) -> dict[str, str]:
+    readme_body = (
+        "This package turns a fuzzy goal into a lightweight MVP spec, a workflow plan, and an acceptance report. "
+        "It is a generic pipeline fallback, not a domain-default narrative scaffold."
+    )
+    return _merge_file_maps(
+        _common_files(
+            goal_text=goal_text,
+            project_id=project_id,
+            project_root=project_root,
+            package_name=package_name,
+            startup_rel=startup_rel,
+            workflow_doc_rel=workflow_doc_rel,
+            context_used=context_used,
+            project_archetype=project_archetype,
+            project_intent=project_intent,
+            project_spec=project_spec,
+            readme_body=readme_body,
+            workflow_title="Generic Workflow",
+            mode_label="Generic MVP pipeline launcher.",
+        ),
+        _generic_pipeline_module_map(project_root, package_name),
+        _generic_pipeline_test_map(project_root, package_name),
+    )
+
+
+def _cli_toolkit_files(
+    *,
+    goal_text: str,
+    project_id: str,
+    project_root: str,
+    package_name: str,
+    startup_rel: str,
+    workflow_doc_rel: str,
+    context_used: list[str],
+    project_archetype: str,
+    project_intent: dict[str, Any],
+    project_spec: dict[str, Any],
+) -> dict[str, str]:
+    return _merge_file_maps(
+        _common_files(
+            goal_text=goal_text,
+            project_id=project_id,
+            project_root=project_root,
+            package_name=package_name,
+            startup_rel=startup_rel,
+            workflow_doc_rel=workflow_doc_rel,
+            context_used=context_used,
+            project_archetype=project_archetype,
+            project_intent=project_intent,
+            project_spec=project_spec,
+            readme_body="This CLI toolkit turns a project goal into a command plan, operator checklist, and acceptance report.",
+            workflow_title="CLI Toolkit Workflow",
+            mode_label="CLI toolkit launcher.",
+        ),
+        _cli_toolkit_module_map(project_root, package_name),
+        _cli_toolkit_test_map(project_root, package_name),
+    )
+
+
+def _web_service_files(
+    *,
+    goal_text: str,
+    project_id: str,
+    project_root: str,
+    package_name: str,
+    startup_rel: str,
+    workflow_doc_rel: str,
+    context_used: list[str],
+    project_archetype: str,
+    project_intent: dict[str, Any],
+    project_spec: dict[str, Any],
+) -> dict[str, str]:
+    return _merge_file_maps(
+        _common_files(
+            goal_text=goal_text,
+            project_id=project_id,
+            project_root=project_root,
+            package_name=package_name,
+            startup_rel=startup_rel,
+            workflow_doc_rel=workflow_doc_rel,
+            context_used=context_used,
+            project_archetype=project_archetype,
+            project_intent=project_intent,
+            project_spec=project_spec,
+            readme_body="This web service MVP exposes a local HTTP-style response contract and returns spec/workflow/acceptance JSON payloads. Use `--serve` for a health preview.",
+            workflow_title="Web Service Workflow",
+            mode_label="Web service launcher.",
+        ),
+        _web_service_module_map(project_root, package_name),
+        _web_service_test_map(project_root, package_name),
+    )
+
+
+def _data_pipeline_files(
+    *,
+    goal_text: str,
+    project_id: str,
+    project_root: str,
+    package_name: str,
+    startup_rel: str,
+    workflow_doc_rel: str,
+    context_used: list[str],
+    project_archetype: str,
+    project_intent: dict[str, Any],
+    project_spec: dict[str, Any],
+) -> dict[str, str]:
+    return _merge_file_maps(
+        _common_files(
+            goal_text=goal_text,
+            project_id=project_id,
+            project_root=project_root,
+            package_name=package_name,
+            startup_rel=startup_rel,
+            workflow_doc_rel=workflow_doc_rel,
+            context_used=context_used,
+            project_archetype=project_archetype,
+            project_intent=project_intent,
+            project_spec=project_spec,
+            readme_body="This data pipeline MVP turns a goal into transform steps, pipeline outputs, and sample input/output JSON for smoke verification.",
+            workflow_title="Data Pipeline Workflow",
+            mode_label="Data pipeline launcher.",
+        ),
+        _data_pipeline_module_map(project_root, package_name),
+        _data_pipeline_test_map(project_root, package_name),
+    )
+
+
+def materialize_generic_archetype_files(
+    *,
+    goal_text: str,
+    project_id: str,
+    project_root: str,
+    package_name: str,
+    startup_rel: str,
+    workflow_doc_rel: str,
+    context_used: list[str],
+    project_archetype: str,
+    project_intent: dict[str, Any],
+    project_spec: dict[str, Any],
+) -> dict[str, str]:
+    if project_archetype == "cli_toolkit":
+        return _cli_toolkit_files(
+            goal_text=goal_text,
+            project_id=project_id,
+            project_root=project_root,
+            package_name=package_name,
+            startup_rel=startup_rel,
+            workflow_doc_rel=workflow_doc_rel,
+            context_used=context_used,
+            project_archetype=project_archetype,
+            project_intent=project_intent,
+            project_spec=project_spec,
+        )
+    if project_archetype == "web_service":
+        return _web_service_files(
+            goal_text=goal_text,
+            project_id=project_id,
+            project_root=project_root,
+            package_name=package_name,
+            startup_rel=startup_rel,
+            workflow_doc_rel=workflow_doc_rel,
+            context_used=context_used,
+            project_archetype=project_archetype,
+            project_intent=project_intent,
+            project_spec=project_spec,
+        )
+    if project_archetype == "data_pipeline":
+        return _data_pipeline_files(
+            goal_text=goal_text,
+            project_id=project_id,
+            project_root=project_root,
+            package_name=package_name,
+            startup_rel=startup_rel,
+            workflow_doc_rel=workflow_doc_rel,
+            context_used=context_used,
+            project_archetype=project_archetype,
+            project_intent=project_intent,
+            project_spec=project_spec,
+        )
+    return _generic_pipeline_files(
+        goal_text=goal_text,
+        project_id=project_id,
+        project_root=project_root,
+        package_name=package_name,
+        startup_rel=startup_rel,
+        workflow_doc_rel=workflow_doc_rel,
+        context_used=context_used,
+        project_archetype=project_archetype,
+        project_intent=project_intent,
+        project_spec=project_spec,
+    )

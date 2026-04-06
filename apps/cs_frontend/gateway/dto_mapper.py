@@ -12,6 +12,7 @@ class DtoMapper:
         payload = {
             "request_id": new_request_id(),
             "user_goal": str(user_goal or "").strip(),
+            "project_intent": dict(requirement_summary.get("project_intent", {})),
             "constraints": dict(requirement_summary.get("constraints", {})),
             "attachments": [],
             "requirement_summary": dict(requirement_summary),

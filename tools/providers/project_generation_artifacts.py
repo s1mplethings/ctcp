@@ -2,42 +2,40 @@ from __future__ import annotations
 
 import json
 import re
-import subprocess
-import sys
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[2]
-ORCH_SCRIPT = ROOT / "scripts" / "ctcp_orchestrate.py"
-POINTCLOUD_DIALOGUE_SCRIPT = ROOT / "tests" / "fixtures" / "dialogues" / "scaffold_pointcloud.jsonl"
-
 from tools.providers.project_generation_business_templates import materialize_business_files
 from tools.providers.project_generation_decisions import (
-    BENCHMARK_HINTS,
     BENCHMARK_MODE,
     CLI_SHAPE,
-    FLOW_NODES,
-    GUI_KEYWORDS,
-    GUI_SHAPE,
     PRODUCTION_MODE,
-    STRONG_DECISION_NODES,
-    TOOL_KEYWORDS,
-    TOOL_SHAPE,
     NARRATIVE_KEYWORDS,
-    WEB_KEYWORDS,
-    WEB_SHAPE,
     contains_any as _contains_any,
     decide_project_generation,
     default_package_name,
     default_project_id,
-    detect_project_type,
-    normalize_mode as _normalize_mode,
     shape_contract,
 )
 from tools.providers.project_generation_source_helpers import (
     build_missing_context_extra,
     build_runtime_checks,
     build_success_extra,
+)
+from tools.providers.project_generation_validation import (
+    domain_validation as _domain_validation,
+    generic_validation as _generic_validation,
+    pipeline_contract as _pipeline_contract,
+    resolve_project_intent as _resolve_project_intent,
+    resolve_project_spec as _resolve_project_spec,
+)
+from tools.providers.project_generation_runtime_support import (
+    _collect_project_files,
+    _collect_run_output_refs,
+    _context_consumption,
+    _load_context_pack,
+    _run_pointcloud_scaffold,
+    _stage_report,
 )
 PROJECT_GENERATION_KEYWORDS = (
     "generate",
@@ -193,12 +191,9 @@ def _benchmark_narrative_defaults() -> dict[str, Any]:
     }
 
 
-def _production_project_defaults(project_type: str, package_name: str, delivery_shape: str) -> dict[str, Any]:
-    shape_info = shape_contract(delivery_shape, package_name)
-    startup_rel = str(shape_info["startup_rel"])
-    workflow_doc_rel = str(shape_info["workflow_doc_rel"])
-    if project_type == "narrative_copilot":
-        source_rel = [
+def _narrative_production_defaults(package_name: str) -> dict[str, Any]:
+    return {
+        "source_rel": [
             "pyproject.toml",
             f"src/{package_name}/__init__.py",
             f"src/{package_name}/models.py",
@@ -213,9 +208,8 @@ def _production_project_defaults(project_type: str, package_name: str, delivery_
             f"src/{package_name}/exporters/deliver.py",
             f"src/{package_name}/service.py",
             f"tests/test_{package_name}_service.py",
-        ]
-        business_rel = [
-            startup_rel,
+        ],
+        "business_rel": [
             f"src/{package_name}/models.py",
             f"src/{package_name}/story/outline.py",
             f"src/{package_name}/story/stage_planner.py",
@@ -224,44 +218,177 @@ def _production_project_defaults(project_type: str, package_name: str, delivery_
             f"src/{package_name}/exporters/deliver.py",
             f"src/{package_name}/service.py",
             f"tests/test_{package_name}_service.py",
-        ]
-        capabilities = [
+        ],
+        "capabilities": [
             "story_outline",
             "stage_planning",
             "role_schema",
             "prompt_export",
-            str(shape_info["shape_capability"]),
             "business_tests",
-        ]
-        project_profile = "narrative_copilot"
-        generation_mode = "production_narrative_deliverable_first"
-    else:
-        source_rel = [
+        ],
+        "project_profile": "narrative_copilot",
+        "generation_mode": "production_narrative_deliverable_first",
+    }
+
+
+def _web_service_defaults(package_name: str) -> dict[str, Any]:
+    return {
+        "source_rel": [
             "pyproject.toml",
             f"src/{package_name}/__init__.py",
             f"src/{package_name}/models.py",
-            f"src/{package_name}/planner.py",
+            f"src/{package_name}/seed.py",
+            f"src/{package_name}/spec_builder.py",
+            f"src/{package_name}/service_contract.py",
+            f"src/{package_name}/app.py",
             f"src/{package_name}/exporter.py",
             f"src/{package_name}/service.py",
             f"tests/test_{package_name}_service.py",
-        ]
-        business_rel = [
-            startup_rel,
+        ],
+        "business_rel": [
             f"src/{package_name}/models.py",
+            f"src/{package_name}/seed.py",
+            f"src/{package_name}/spec_builder.py",
+            f"src/{package_name}/service_contract.py",
+            f"src/{package_name}/app.py",
+            f"src/{package_name}/exporter.py",
+            f"src/{package_name}/service.py",
+            f"tests/test_{package_name}_service.py",
+        ],
+        "capabilities": [
+            "service_contract_seed",
+            "http_request_shape",
+            "sample_response_export",
+            "business_tests",
+        ],
+        "project_profile": "web_service_copilot",
+        "generation_mode": "production_web_service_deliverable_first",
+    }
+
+
+def _data_pipeline_defaults(package_name: str) -> dict[str, Any]:
+    return {
+        "source_rel": [
+            "pyproject.toml",
+            f"src/{package_name}/__init__.py",
+            f"src/{package_name}/models.py",
+            f"src/{package_name}/seed.py",
+            f"src/{package_name}/spec_builder.py",
+            f"src/{package_name}/transforms.py",
+            f"src/{package_name}/pipeline.py",
+            f"src/{package_name}/exporter.py",
+            f"src/{package_name}/service.py",
+            f"tests/test_{package_name}_service.py",
+        ],
+        "business_rel": [
+            f"src/{package_name}/models.py",
+            f"src/{package_name}/seed.py",
+            f"src/{package_name}/spec_builder.py",
+            f"src/{package_name}/transforms.py",
+            f"src/{package_name}/pipeline.py",
+            f"src/{package_name}/exporter.py",
+            f"src/{package_name}/service.py",
+            f"tests/test_{package_name}_service.py",
+        ],
+        "capabilities": [
+            "pipeline_spec_seed",
+            "sample_transform_flow",
+            "acceptance_export",
+            "business_tests",
+        ],
+        "project_profile": "data_pipeline_copilot",
+        "generation_mode": "production_data_pipeline_deliverable_first",
+    }
+
+
+def _cli_toolkit_defaults(package_name: str) -> dict[str, Any]:
+    return {
+        "source_rel": [
+            "pyproject.toml",
+            f"src/{package_name}/__init__.py",
+            f"src/{package_name}/models.py",
+            f"src/{package_name}/seed.py",
+            f"src/{package_name}/spec_builder.py",
+            f"src/{package_name}/commands.py",
+            f"src/{package_name}/exporter.py",
+            f"src/{package_name}/service.py",
+            f"tests/test_{package_name}_service.py",
+        ],
+        "business_rel": [
+            f"src/{package_name}/models.py",
+            f"src/{package_name}/seed.py",
+            f"src/{package_name}/spec_builder.py",
+            f"src/{package_name}/commands.py",
+            f"src/{package_name}/exporter.py",
+            f"src/{package_name}/service.py",
+            f"tests/test_{package_name}_service.py",
+        ],
+        "capabilities": [
+            "command_plan_seed",
+            "operator_workflow_export",
+            "deliver_export",
+            "business_tests",
+        ],
+        "project_profile": "cli_toolkit_copilot",
+        "generation_mode": "production_cli_toolkit_deliverable_first",
+    }
+
+
+def _generic_copilot_defaults(package_name: str) -> dict[str, Any]:
+    return {
+        "source_rel": [
+            "pyproject.toml",
+            f"src/{package_name}/__init__.py",
+            f"src/{package_name}/models.py",
+            f"src/{package_name}/seed.py",
+            f"src/{package_name}/spec_builder.py",
             f"src/{package_name}/planner.py",
             f"src/{package_name}/exporter.py",
             f"src/{package_name}/service.py",
             f"tests/test_{package_name}_service.py",
-        ]
-        capabilities = [
-            "domain_model",
-            "planning_logic",
+        ],
+        "business_rel": [
+            f"src/{package_name}/models.py",
+            f"src/{package_name}/seed.py",
+            f"src/{package_name}/spec_builder.py",
+            f"src/{package_name}/planner.py",
+            f"src/{package_name}/exporter.py",
+            f"src/{package_name}/service.py",
+            f"tests/test_{package_name}_service.py",
+        ],
+        "capabilities": [
+            "project_spec_seed",
+            "mvp_pipeline_planning",
             "deliver_export",
-            str(shape_info["shape_capability"]),
             "business_tests",
-        ]
-        project_profile = "business_copilot"
-        generation_mode = "production_business_deliverable_first"
+        ],
+        "project_profile": "business_copilot",
+        "generation_mode": "production_business_deliverable_first",
+    }
+
+
+def _archetype_defaults(project_type: str, project_archetype: str, package_name: str) -> dict[str, Any]:
+    if project_type == "narrative_copilot":
+        return _narrative_production_defaults(package_name)
+    if project_archetype == "web_service":
+        return _web_service_defaults(package_name)
+    if project_archetype == "data_pipeline":
+        return _data_pipeline_defaults(package_name)
+    if project_archetype == "cli_toolkit":
+        return _cli_toolkit_defaults(package_name)
+    return _generic_copilot_defaults(package_name)
+
+
+def _production_project_defaults(project_type: str, project_archetype: str, package_name: str, delivery_shape: str) -> dict[str, Any]:
+    shape_info = shape_contract(delivery_shape, package_name)
+    startup_rel = str(shape_info["startup_rel"])
+    workflow_doc_rel = str(shape_info["workflow_doc_rel"])
+    defaults = _archetype_defaults(project_type, project_archetype, package_name)
+    source_rel = list(defaults["source_rel"])
+    business_rel = [startup_rel] + list(defaults["business_rel"])
+    capabilities = list(defaults["capabilities"]) + [str(shape_info["shape_capability"])]
+    project_profile = str(defaults["project_profile"])
+    generation_mode = str(defaults["generation_mode"])
     if startup_rel.startswith("scripts/"):
         source_rel.insert(1, startup_rel)
     return {
@@ -281,6 +408,7 @@ def _assemble_project_file_lists(
     project_id: str,
     project_type: str,
     package_name: str,
+    project_archetype: str,
     decision: dict[str, Any],
     defaults: dict[str, Any],
 ) -> dict[str, Any]:
@@ -299,6 +427,7 @@ def _assemble_project_file_lists(
         "project_id": project_id,
         "project_root": project_root,
         "project_type": project_type,
+        "project_archetype": project_archetype,
         "package_name": package_name,
         "project_profile": str(defaults["project_profile"]),
         "generation_mode": str(defaults["generation_mode"]),
@@ -306,6 +435,7 @@ def _assemble_project_file_lists(
         "benchmark_case": str(decision["benchmark_case"]),
         "delivery_shape": str(decision["delivery_shape"]),
         "project_type_decision_source": str(decision["project_type_decision_source"]),
+        "project_archetype_decision_source": str(decision.get("project_archetype_decision_source", "")),
         "shape_decision_source": str(decision["shape_decision_source"]),
         "target_files": sorted(set(source_files + doc_files + workflow_files)),
         "source_files": source_files,
@@ -343,18 +473,20 @@ def _default_project_file_lists(
     execution_mode = str(decision["execution_mode"])
     benchmark_case = str(decision["benchmark_case"])
     project_type = str(decision["project_type"])
+    project_archetype = str(decision.get("project_archetype", "generic_copilot"))
     project_id = default_project_id(_slug(goal), project_type, execution_mode)
     package_name = default_package_name(project_id, project_type, execution_mode, benchmark_case)
     project_root = f"project_output/{project_id}"
     if execution_mode == BENCHMARK_MODE and project_type == "narrative_copilot":
         defaults = _benchmark_narrative_defaults()
     else:
-        defaults = _production_project_defaults(project_type, package_name, str(decision["delivery_shape"]))
+        defaults = _production_project_defaults(project_type, project_archetype, package_name, str(decision["delivery_shape"]))
     return _assemble_project_file_lists(
         project_root=project_root,
         project_id=project_id,
         project_type=project_type,
         package_name=package_name,
+        project_archetype=project_archetype,
         decision=decision,
         defaults=defaults,
     )
@@ -364,9 +496,12 @@ def normalize_output_contract_freeze(doc: dict[str, Any] | None, *, goal: str, r
     src = doc if isinstance(doc, dict) else {}
     goal_text = str(src.get("goal", "")).strip() or goal.strip()
     defaults = _default_project_file_lists(goal_text, run_dir=run_dir, src=src)
+    project_intent = _resolve_project_intent(goal_text, run_dir=run_dir, src=src)
+    project_spec = _resolve_project_spec(goal_text, run_dir=run_dir, src=src, project_intent=project_intent)
     project_root = str(defaults["project_root"])
     project_id = str(defaults["project_id"])
     project_type = str(defaults["project_type"])
+    project_archetype = str(defaults.get("project_archetype", "generic_copilot"))
     package_name = str(defaults["package_name"])
     project_profile = str(defaults["project_profile"])
 
@@ -389,13 +524,24 @@ def normalize_output_contract_freeze(doc: dict[str, Any] | None, *, goal: str, r
     )
 
     normalized_target = sorted(set(_normalize_rel_list([str(x) for x in target_files])))
+    pipeline_contract = _pipeline_contract(
+        project_root=project_root,
+        startup_entrypoint=str(defaults["startup_entrypoint"]),
+        startup_readme=str(defaults["startup_readme"]),
+        business_files=_normalize_rel_list([str(x) for x in business_files]),
+        acceptance_files=_normalize_rel_list([str(x) for x in acceptance_files]),
+    )
     return {
         "schema_version": "ctcp-project-output-contract-v1",
         "stage": "output_contract_freeze",
         "goal": goal_text,
+        "project_intent": project_intent,
+        "project_spec": project_spec,
+        "pipeline_contract": pipeline_contract,
         "project_id": project_id,
         "project_root": project_root,
         "project_type": project_type,
+        "project_archetype": project_archetype,
         "package_name": package_name,
         "project_profile": project_profile,
         "generation_mode": str(defaults["generation_mode"]),
@@ -403,6 +549,7 @@ def normalize_output_contract_freeze(doc: dict[str, Any] | None, *, goal: str, r
         "benchmark_case": str(defaults["benchmark_case"]),
         "delivery_shape": str(defaults["delivery_shape"]),
         "project_type_decision_source": str(defaults["project_type_decision_source"]),
+        "project_archetype_decision_source": str(defaults.get("project_archetype_decision_source", "")),
         "shape_decision_source": str(defaults["shape_decision_source"]),
         "target_files": normalized_target,
         "source_files": _normalize_rel_list([str(x) for x in source_files]),
@@ -445,11 +592,13 @@ def _load_output_contract_lists(run_dir: Path, *, goal: str = "") -> dict[str, A
         "project_profile",
         "project_type",
         "package_name",
+        "project_archetype",
         "generation_mode",
         "execution_mode",
         "benchmark_case",
         "delivery_shape",
         "project_type_decision_source",
+        "project_archetype_decision_source",
         "shape_decision_source",
         "startup_entrypoint",
         "startup_readme",
@@ -478,203 +627,13 @@ def _load_output_contract_lists(run_dir: Path, *, goal: str = "") -> dict[str, A
     for key in ("demo_required", "visual_evidence_required", "screenshot_required", "benchmark_sample_applied"):
         if key in doc:
             out[key] = bool(doc.get(key))
+    for key in ("project_intent", "project_spec", "pipeline_contract"):
+        value = doc.get(key)
+        if isinstance(value, dict) and value:
+            out[key] = value
     mode = doc.get("reference_project_mode")
     if isinstance(mode, dict) and "enabled" in mode and "mode" in mode:
         out["reference_project_mode"] = mode
-    return out
-
-
-def _collect_run_output_refs(run_dir: Path) -> list[dict[str, Any]]:
-    refs: list[dict[str, Any]] = []
-    for path in sorted(run_dir.rglob("*")):
-        if not path.is_file():
-            continue
-        rel = path.resolve().relative_to(run_dir.resolve()).as_posix()
-        if rel.startswith("outbox/"):
-            continue
-        refs.append({"rel_path": rel, "size_bytes": int(path.stat().st_size)})
-    return refs
-
-
-def _runs_root_for(run_dir: Path) -> Path:
-    if run_dir.parent.name.lower() == "ctcp":
-        return run_dir.parent.parent
-    return run_dir.parent
-
-
-def _extract_run_dir_from_stdout(text: str) -> str:
-    for raw in str(text or "").splitlines():
-        line = raw.strip()
-        if line.startswith("[ctcp_orchestrate] run_dir="):
-            return line.split("=", 1)[1].strip()
-    return ""
-
-
-def _collect_project_files(run_dir: Path, project_root: str) -> list[str]:
-    root = (run_dir / project_root).resolve()
-    if not root.exists():
-        return []
-    rows: list[str] = []
-    for path in sorted(root.rglob("*")):
-        if not path.is_file():
-            continue
-        rows.append(path.resolve().relative_to(run_dir.resolve()).as_posix())
-    return rows
-
-
-def _run_pointcloud_scaffold(*, run_dir: Path, goal: str, project_root: str, profile: str) -> dict[str, Any]:
-    out_dir = (run_dir / project_root).resolve()
-    manifest = out_dir / "meta" / "manifest.json"
-    if manifest.exists():
-        return {
-            "status": "pass",
-            "result": "reused",
-            "project_root": project_root,
-            "out_dir": str(out_dir),
-            "generated_files": _collect_project_files(run_dir, project_root),
-            "scaffold_run_dir": "",
-            "command": "",
-            "rc": 0,
-            "stdout_tail": "",
-            "stderr_tail": "",
-            "error": "",
-        }
-
-    out_dir.parent.mkdir(parents=True, exist_ok=True)
-    project_type = "narrative_copilot" if profile == "narrative_copilot" else "generic_copilot"
-    project_name = _project_slug(goal or run_dir.name, project_type)
-    bootstrap_profile = "standard" if profile not in {"minimal"} else "minimal"
-    cmd = [
-        sys.executable,
-        str(ORCH_SCRIPT),
-        "scaffold-pointcloud",
-        "--out",
-        str(out_dir),
-        "--name",
-        project_name,
-        "--profile",
-        bootstrap_profile,
-        "--source-mode",
-        "template",
-        "--force",
-        "--runs-root",
-        str(_runs_root_for(run_dir)),
-        "--dialogue-script",
-        str(POINTCLOUD_DIALOGUE_SCRIPT),
-    ]
-    proc = subprocess.run(
-        cmd,
-        cwd=str(ROOT),
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
-    stdout = str(proc.stdout or "")
-    stderr = str(proc.stderr or "")
-    generated = _collect_project_files(run_dir, project_root)
-    scaffold_run_dir = _extract_run_dir_from_stdout(stdout)
-    failed = int(proc.returncode) != 0 or not manifest.exists()
-    return {
-        "status": "blocked" if failed else "pass",
-        "result": "failed" if failed else "generated",
-        "project_root": project_root,
-        "out_dir": str(out_dir),
-        "generated_files": generated,
-        "scaffold_run_dir": scaffold_run_dir,
-        "command": " ".join(cmd),
-        "rc": int(proc.returncode),
-        "stdout_tail": "\n".join(stdout.splitlines()[-12:]),
-        "stderr_tail": "\n".join(stderr.splitlines()[-12:]),
-        "error": "" if not failed else ("scaffold-pointcloud generation failed"),
-    }
-
-
-def _load_context_pack(run_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    path = run_dir / "artifacts" / "context_pack.json"
-    if not path.exists():
-        return {}, []
-    try:
-        doc = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {}, []
-    if not isinstance(doc, dict):
-        return {}, []
-    files: list[dict[str, Any]] = []
-    for item in doc.get("files", []):
-        if not isinstance(item, dict):
-            continue
-        path_value = str(item.get("path", "")).strip().replace("\\", "/")
-        if not path_value:
-            continue
-        files.append(
-            {
-                "path": path_value,
-                "why": str(item.get("why", "")).strip(),
-                "content": str(item.get("content", "")),
-            }
-        )
-    return doc, files
-
-
-def _context_consumption(goal: str, context_files: list[dict[str, Any]], *, decision: dict[str, Any]) -> dict[str, Any]:
-    used_paths: list[str] = []
-    influence_summary: list[str] = []
-    path_map = {str(item.get("path", "")).strip().replace("\\", "/"): item for item in context_files}
-    for path in sorted(path_map):
-        content = str(path_map[path].get("content", ""))
-        if path == "docs/41_low_capability_project_generation.md":
-            used_paths.append(path)
-            influence_summary.append("docs/41_low_capability_project_generation.md reinforced production/benchmark split and layered gate semantics")
-        elif path == "docs/backend_interface_contract.md":
-            used_paths.append(path)
-            influence_summary.append("docs/backend_interface_contract.md reinforced manifest and deliver bridge fields")
-        elif path == "workflow_registry/wf_project_generation_manifest/recipe.yaml":
-            used_paths.append(path)
-            influence_summary.append("workflow recipe preserved fixed stage ordering for output_contract/source_generation/deliver")
-        elif path == "scripts/project_generation_gate.py":
-            used_paths.append(path)
-            influence_summary.append("project_generation_gate rules influenced structural/behavioral/result gate reporting")
-        elif path == "scripts/project_manifest_bridge.py":
-            used_paths.append(path)
-            influence_summary.append("project_manifest_bridge shaped bridge-readable manifest fields")
-        elif path.startswith("artifacts/frontend_uploads/") and _contains_any(content, GUI_KEYWORDS + WEB_KEYWORDS + TOOL_KEYWORDS + NARRATIVE_KEYWORDS):
-            used_paths.append(path)
-            influence_summary.append(f"{path} contributed user-context signals to type/shape resolution")
-    if "context:" in str(decision.get("shape_decision_source", "")):
-        influence_summary.append(f"context influenced delivery_shape via {decision.get('shape_decision_source', '')}")
-    return {
-        "consumed_context_pack": bool(influence_summary),
-        "consumed_context_files": _normalize_rel_list(used_paths),
-        "context_influence_summary": influence_summary,
-        "reference_style_applied": ["repo_script_layout", "workflow_manifest_stage_chain", "bridge_readable_manifest"] if influence_summary else [],
-    }
-
-
-def _stage_report(
-    *,
-    stage: str,
-    goal: str,
-    project_root: str,
-    required_files: list[str],
-    generated_files: list[str],
-    extra: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    normalized_required = _normalize_rel_list(required_files)
-    normalized_generated = _normalize_rel_list(generated_files)
-    missing = sorted(set(normalized_required) - set(normalized_generated))
-    out: dict[str, Any] = {
-        "schema_version": "ctcp-project-stage-report-v1",
-        "stage": stage,
-        "goal": goal,
-        "project_root": project_root,
-        "required_files": normalized_required,
-        "generated_files": normalized_generated,
-        "missing_files": missing,
-        "status": "pass" if not missing else "blocked",
-    }
-    if isinstance(extra, dict):
-        out.update(extra)
     return out
 
 
@@ -682,8 +641,12 @@ def normalize_source_generation(doc: dict[str, Any] | None, *, goal: str, run_di
     src = doc if isinstance(doc, dict) else {}
     goal_text = str(src.get("goal", "")).strip() or goal.strip()
     lists = _load_output_contract_lists(run_dir, goal=goal_text)
+    project_intent = dict(lists.get("project_intent", {})) if isinstance(lists.get("project_intent", {}), dict) else _resolve_project_intent(goal_text, run_dir=run_dir, src=src)
+    project_spec = dict(lists.get("project_spec", {})) if isinstance(lists.get("project_spec", {}), dict) else _resolve_project_spec(goal_text, run_dir=run_dir, src=src, project_intent=project_intent)
+    pipeline_contract = dict(lists.get("pipeline_contract", {})) if isinstance(lists.get("pipeline_contract", {}), dict) else {}
     project_root = str(lists.get("project_root", "")).strip() or f"project_output/{_project_slug(goal_text, str(lists.get('project_type', 'generic_copilot')))}"
     project_type = str(lists.get("project_type", "")).strip() or "generic_copilot"
+    project_archetype = str(lists.get("project_archetype", "")).strip() or "generic_copilot"
     package_name = str(lists.get("package_name", "")).strip() or "project_copilot"
     profile = str(lists.get("project_profile", "business_copilot")).strip().lower() or "business_copilot"
     context_doc, context_files = _load_context_pack(run_dir)
@@ -708,10 +671,19 @@ def normalize_source_generation(doc: dict[str, Any] | None, *, goal: str, run_di
                 entry_script=entry_script,
             ),
         )
+        report["project_intent"] = project_intent
+        report["project_spec"] = project_spec
+        report["pipeline_contract"] = pipeline_contract
         report["status"] = "blocked"
         return report
 
-    scaffold = _run_pointcloud_scaffold(run_dir=run_dir, goal=goal_text, project_root=project_root, profile=profile)
+    scaffold = _run_pointcloud_scaffold(
+        run_dir=run_dir,
+        goal=goal_text,
+        project_root=project_root,
+        profile=profile,
+        project_slug=_project_slug(goal_text, project_type),
+    )
     generated_business_files = materialize_business_files(run_dir, goal_text, lists, consumed_files)
     generated_files = _collect_project_files(run_dir, project_root)
     business_expected = list(lists.get("business_files", []))
@@ -733,6 +705,24 @@ def normalize_source_generation(doc: dict[str, Any] | None, *, goal: str, run_di
         generated_business_files=generated_business_files,
         scaffold_status=str(scaffold.get("status", "")).strip().lower(),
         consumed_context=consumed_context,
+    )
+    generic_validation = _generic_validation(
+        run_dir=run_dir,
+        startup_entrypoint=entry_script,
+        startup_readme=str(lists.get("startup_readme", "")),
+        generated_business_files=business_generated,
+        behavior_probe=behavior_probe,
+        export_probe=export_probe,
+        acceptance_files=list(lists.get("acceptance_files", [])),
+    )
+    domain_validation = _domain_validation(
+        project_type=project_type,
+        project_archetype=project_archetype,
+        business_generated=business_generated,
+        business_missing=business_missing,
+        startup_entrypoint=entry_script,
+        startup_readme=str(lists.get("startup_readme", "")),
+        run_dir=run_dir,
     )
 
     report = _stage_report(
@@ -759,11 +749,18 @@ def normalize_source_generation(doc: dict[str, Any] | None, *, goal: str, run_di
             scaffold=scaffold,
         ),
     )
+    report["project_intent"] = project_intent
+    report["project_spec"] = project_spec
+    report["pipeline_contract"] = pipeline_contract
+    report["generic_validation"] = generic_validation
+    report["domain_validation"] = domain_validation
     if (
         not gate_layers["structural"]["passed"]
         or not gate_layers["behavioral"]["passed"]
         or not gate_layers["result"]["passed"]
         or str(scaffold.get("status", "")).strip().lower() != "pass"
+        or not bool(generic_validation.get("passed", False))
+        or not bool(domain_validation.get("passed", False))
     ):
         report["status"] = "blocked"
     return report
@@ -855,15 +852,34 @@ def normalize_project_manifest(doc: dict[str, Any] | None, *, goal: str, run_dir
                 source_stage_doc = raw
         except Exception:
             source_stage_doc = {}
+    project_intent = source_stage_doc.get("project_intent") if isinstance(source_stage_doc.get("project_intent"), dict) else lists.get("project_intent", {})
+    if not isinstance(project_intent, dict) or not project_intent:
+        project_intent = _resolve_project_intent(goal_text, run_dir=run_dir, src=src)
+    project_spec = source_stage_doc.get("project_spec") if isinstance(source_stage_doc.get("project_spec"), dict) else lists.get("project_spec", {})
+    if not isinstance(project_spec, dict) or not project_spec:
+        project_spec = _resolve_project_spec(goal_text, run_dir=run_dir, src=src, project_intent=project_intent)
+    pipeline_contract = source_stage_doc.get("pipeline_contract") if isinstance(source_stage_doc.get("pipeline_contract"), dict) else lists.get("pipeline_contract", {})
+    if not isinstance(pipeline_contract, dict):
+        pipeline_contract = {}
+    generic_validation = source_stage_doc.get("generic_validation") if isinstance(source_stage_doc.get("generic_validation"), dict) else {}
+    if not isinstance(generic_validation, dict):
+        generic_validation = {}
+    domain_validation = source_stage_doc.get("domain_validation") if isinstance(source_stage_doc.get("domain_validation"), dict) else {}
+    if not isinstance(domain_validation, dict):
+        domain_validation = {}
 
     return {
         "schema_version": "ctcp-project-manifest-v1",
         "stage": "artifact_manifest_build",
         "goal": goal_text,
+        "project_intent": project_intent,
+        "project_spec": project_spec,
+        "pipeline_contract": pipeline_contract,
         "run_id": str(src.get("run_id", "")).strip() or run_id,
         "project_id": str(src.get("project_id", "")).strip() or str(lists.get("project_id", "")).strip() or _slug(goal_text or run_id),
         "project_root": project_root,
         "project_type": str(lists.get("project_type", "")),
+        "project_archetype": str(lists.get("project_archetype", "")),
         "project_profile": str(lists.get("project_profile", "")),
         "generation_mode": str(source_stage_doc.get("generation_mode", "")).strip() or str(lists.get("generation_mode", "")),
         "execution_mode": str(source_stage_doc.get("execution_mode", "")).strip() or str(lists.get("execution_mode", PRODUCTION_MODE)),
@@ -871,6 +887,8 @@ def normalize_project_manifest(doc: dict[str, Any] | None, *, goal: str, run_dir
         "delivery_shape": str(source_stage_doc.get("delivery_shape", "")).strip() or str(lists.get("delivery_shape", CLI_SHAPE)),
         "project_type_decision_source": str(source_stage_doc.get("project_type_decision_source", "")).strip()
         or str(lists.get("project_type_decision_source", "")),
+        "project_archetype_decision_source": str(source_stage_doc.get("project_archetype_decision_source", "")).strip()
+        or str(lists.get("project_archetype_decision_source", "")),
         "shape_decision_source": str(source_stage_doc.get("shape_decision_source", "")).strip()
         or str(lists.get("shape_decision_source", "")),
         "source_files": source_files,
@@ -899,6 +917,8 @@ def normalize_project_manifest(doc: dict[str, Any] | None, *, goal: str, run_dir
         "flow_nodes": _normalize_rel_list([str(x) for x in source_stage_doc.get("flow_nodes", lists.get("flow_nodes", []))]),
         "gate_layers": source_stage_doc.get("gate_layers") if isinstance(source_stage_doc.get("gate_layers"), dict) else {},
         "behavioral_checks": source_stage_doc.get("behavioral_checks") if isinstance(source_stage_doc.get("behavioral_checks"), dict) else {},
+        "generic_validation": generic_validation,
+        "domain_validation": domain_validation,
         "artifacts": output_refs,
     }
 
@@ -931,21 +951,30 @@ def normalize_deliverable_index(doc: dict[str, Any] | None, *, goal: str, run_di
         "schema_version": "ctcp-deliverable-index-v1",
         "stage": "deliver",
         "goal": str(src.get("goal", "")).strip() or goal.strip(),
+        "project_intent": manifest_doc.get("project_intent", {}) if isinstance(manifest_doc.get("project_intent"), dict) else {},
+        "project_spec": manifest_doc.get("project_spec", {}) if isinstance(manifest_doc.get("project_spec"), dict) else {},
+        "pipeline_contract": manifest_doc.get("pipeline_contract", {}) if isinstance(manifest_doc.get("pipeline_contract"), dict) else {},
         "run_id": str(src.get("run_id", "")).strip() or run_dir.name,
         "project_id": str(src.get("project_id", "")).strip() or str(manifest_doc.get("project_id", "")).strip() or _slug(goal or run_dir.name),
         "project_manifest_path": "artifacts/project_manifest.json",
         "project_root": str(manifest_doc.get("project_root", "")).strip(),
         "project_type": str(manifest_doc.get("project_type", "")).strip(),
+        "project_archetype": str(manifest_doc.get("project_archetype", "")).strip(),
         "generation_mode": str(manifest_doc.get("generation_mode", "")).strip(),
         "execution_mode": str(manifest_doc.get("execution_mode", PRODUCTION_MODE)).strip(),
         "benchmark_case": str(manifest_doc.get("benchmark_case", "")).strip(),
         "delivery_shape": str(manifest_doc.get("delivery_shape", CLI_SHAPE)).strip(),
+        "project_type_decision_source": str(manifest_doc.get("project_type_decision_source", "")).strip(),
+        "project_archetype_decision_source": str(manifest_doc.get("project_archetype_decision_source", "")).strip(),
+        "shape_decision_source": str(manifest_doc.get("shape_decision_source", "")).strip(),
         "startup_entrypoint": str(manifest_doc.get("startup_entrypoint", "")).strip(),
         "startup_readme": str(manifest_doc.get("startup_readme", "")).strip(),
         "demo_required": bool(manifest_doc.get("demo_required", False)),
         "visual_evidence_required": bool(manifest_doc.get("visual_evidence_required", False)),
         "screenshot_required": bool(manifest_doc.get("screenshot_required", False)),
         "visual_evidence_status": str(manifest_doc.get("visual_evidence_status", "not_requested")).strip(),
+        "generic_validation": manifest_doc.get("generic_validation", {}) if isinstance(manifest_doc.get("generic_validation"), dict) else {},
+        "domain_validation": manifest_doc.get("domain_validation", {}) if isinstance(manifest_doc.get("domain_validation"), dict) else {},
         "business_deliverables": _normalize_rel_list([str(x) for x in manifest_doc.get("business_files_generated", [])]) if isinstance(manifest_doc.get("business_files_generated"), list) else [],
         "deliverables": sorted(set(deliverables)),
         "delivery_note": str(src.get("delivery_note", "")).strip() or "deliver artifacts are indexed for bridge consumption and mode-aware verify handoff",

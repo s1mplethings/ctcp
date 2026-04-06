@@ -1,3 +1,4 @@
+from .delivery_evidence import DeliveryEvidenceManifest
 from .event_failure import FailureEvent
 from .event_question import QuestionEvent
 from .event_result import ResultEvent
@@ -6,6 +7,7 @@ from .job_answer import JobAnswerRequest
 from .job_create import JobCreateRequest
 
 __all__ = [
+    "DeliveryEvidenceManifest",
     "FailureEvent",
     "QuestionEvent",
     "ResultEvent",

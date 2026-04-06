@@ -1,0 +1,14 @@
+{
+  "schema_version": "ctcp-generated-project-manifest-v1",
+  "project_type": "generic_copilot",
+  "project_archetype": "web_service",
+  "goal": "生成一个本地 HTTP 服务 MVP：接收模糊项目目标，返回结构化 spec、workflow plan、acceptance 摘要 JSON，并提供 health 检查。",
+  "mainline": [
+    "ProjectIntent",
+    "Spec",
+    "Scaffold",
+    "Core Feature",
+    "Smoke Run",
+    "Delivery Package"
+  ]
+}

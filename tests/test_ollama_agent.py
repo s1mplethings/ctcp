@@ -18,6 +18,30 @@ from tools.providers import ollama_agent
 
 
 class OllamaAgentTests(unittest.TestCase):
+    def test_start_ollama_service_on_windows_avoids_run_dir_log_handle_lock(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            run_dir = Path(td)
+            with mock.patch("tools.providers.ollama_agent.os.name", "nt"), mock.patch.object(
+                ollama_agent.subprocess,
+                "CREATE_NEW_PROCESS_GROUP",
+                0x200,
+                create=True,
+            ), mock.patch.object(
+                ollama_agent.subprocess,
+                "DETACHED_PROCESS",
+                0x008,
+                create=True,
+            ), mock.patch.object(ollama_agent.subprocess, "Popen") as popen:
+                ok, err = ollama_agent._start_ollama_service(cmd="ollama serve", run_dir=run_dir)
+                log_text = (run_dir / "logs" / "ollama_serve.log").read_text(encoding="utf-8")
+
+        self.assertTrue(ok, msg=err)
+        self.assertEqual(err, "")
+        kwargs = dict(popen.call_args.kwargs)
+        self.assertIs(kwargs.get("stdout"), ollama_agent.subprocess.DEVNULL)
+        self.assertIs(kwargs.get("stderr"), ollama_agent.subprocess.DEVNULL)
+        self.assertIn("avoid locking the run directory on Windows", log_text)
+
     def test_preview_librarian_context_pack_reports_local_model_metadata(self) -> None:
         request = {
             "role": "librarian",

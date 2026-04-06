@@ -1,151 +1,161 @@
-# Task - support-pass-runtime-and-benchmark-mode-isolation
+# Task - support-delivery-evidence-surface
 
 ## Queue Binding
 
-- Queue Item: `ADHOC-20260405-support-pass-runtime-and-benchmark-mode-isolation`
+- Queue Item: `ADHOC-20260406-support-delivery-evidence-surface`
 - Layer/Priority: `L1 / P0`
 - Source Queue File: `meta/backlog/execution_queue.json`
 
 ## Context
 
-- Why this item now: customer-facing support still misreports final state after runtime PASS, and explicit benchmark/regression requests need stronger benchmark-mode delivery without leaking fixture logic into production defaults.
-- Dependency check: `ADHOC-20260405-temp-trace-cleanup` = `done`.
-- Scope boundary: only common support/runtime/result-consumption fixes plus explicit benchmark-mode isolation/wiring; do not write fixed VN sample content, benchmark acceptance rules, or benchmark reply text into production logic.
+- Why this item now: the repo can generate and package project outputs, but the frontend/support result path still collapses completion into generic text and raw paths instead of directly showing user-facing delivery evidence.
+- Dependency check:
+  - `ADHOC-20260406-vtuber-highlight-local-mvp` = `done`
+  - `ADHOC-20260405-project-intent-mvp-mainline-shift` = `done`
+- Scope boundary: make delivery evidence a first-class backend/frontend artifact so the support-facing completion path can directly present reports, screenshots, demo media, structured outputs, verification summary, limitations, and next actions.
 
-## Task Truth Source (single source for current task)
+## Task Truth Source
 
-- task_purpose: repair generic support PASS-state delivery and keep benchmark-only project-generation strengthening isolated to explicit benchmark mode.
+- task_purpose: add a stable delivery evidence manifest and wire it through the backend result object, bridge payloads, and frontend completion rendering so users can see delivery results directly in support/frontend replies.
 - allowed_behavior_change:
+  - `contracts/schemas/`
   - `scripts/ctcp_front_bridge.py`
-  - `scripts/ctcp_support_bot.py`
-  - `frontend/support_reply_policy.py`
-  - `apps/cs_frontend/dialogue/requirement_collector.py`
-  - `tools/providers/project_generation_business_templates.py`
-  - `tests/test_support_to_production_path.py`
-  - `tests/test_project_generation_artifacts.py`
-  - `tests/test_support_bot_humanization.py`
-  - `tests/test_runtime_wiring_contract.py`
+  - `scripts/project_delivery_evidence_bridge.py`
+  - `apps/project_backend/`
+  - `apps/cs_frontend/`
+  - `tests/backend/test_backend_service.py`
+  - `tests/frontend/test_frontend_handler.py`
+  - `tests/test_frontend_rendering_boundary.py`
   - `meta/backlog/execution_queue.json`
+  - `meta/tasks/ARCHIVE_INDEX.md`
   - `meta/tasks/CURRENT.md`
   - `meta/reports/LAST.md`
-- forbidden_goal_shift: do not write benchmark sample names, fixed VN roles/chapters, benchmark acceptance rules, or benchmark-specific customer reply wording into production default logic.
+  - `meta/tasks/archive/20260406-vtuber-highlight-local-mvp.md`
+  - `meta/reports/archive/20260406-vtuber-highlight-local-mvp.md`
+- forbidden_goal_shift:
+  - do not focus this patch on producing more packaged project assets
+  - do not leave frontend completion as generic free text with hidden evidence buried in raw artifacts
+  - do not make the frontend scan directories ad hoc to guess which files are important
 - in_scope_modules:
-  - `scripts/ctcp_front_bridge.py`
-  - `scripts/ctcp_support_bot.py`
-  - `frontend/support_reply_policy.py`
-  - `apps/cs_frontend/dialogue/requirement_collector.py`
-  - `tools/providers/project_generation_business_templates.py`
-  - focused regression tests listed above
-  - task/report/queue metadata for this topic
+  - backend delivery result assembly
+  - bridge result/evidence capabilities
+  - frontend result object and completion rendering
+  - focused tests for evidence propagation and user-facing rendering
 - out_of_scope_modules:
-  - production default templates carrying fixed benchmark content
-  - production verify gates carrying benchmark acceptance rules
-  - benchmark-case literals in default support reply logic
-  - manual deliverable injection or bypass paths
-- completion_evidence: support PASS truth is consumed into readable delivery fallback; explicit benchmark mode remains opt-in; focused regressions plus canonical verify record the first failure and minimal fix.
+  - generating new sample projects
+  - broad support bot delivery packaging heuristics outside the active frontend/backend mainline
+  - top-level north-star or README rewrites
+- completion_evidence: backend emits a structured delivery evidence manifest, the frontend completion object explicitly carries it, customer-facing completion text shows evidence summary/user next steps, focused tests pass, and canonical verify closes.
 
-## Analysis / Find (before plan)
+## Analysis / Find
 
-- Entrypoint analysis: the user-visible entrypoint remains `scripts/ctcp_support_bot.py`, which creates/binds runs through `scripts/ctcp_front_bridge.py` and then renders fallback replies from `frontend/support_reply_policy.py`.
-- Downstream consumer analysis: pass-state truth flows into `support_reply_policy`, while explicit benchmark mode flows into project-generation contract resolution and then benchmark-only export templates.
-- Source of truth: `artifacts/support_runtime_state.json`, `artifacts/verify_report.json`, and `artifacts/project_manifest.json`.
-- Current break point / missing wiring: support fallback could still render stale failure language after PASS truth, and benchmark-mode ingress/egress needed explicit mode plumbing without fixture injection.
+- Entrypoint analysis: the active mainline is `apps/cs_frontend/* -> apps/project_backend/* -> scripts/ctcp_front_bridge.py`, not the older free-form `frontend/response_composer.py` path.
+- Downstream consumer analysis: the support/frontend lane needs a user-facing evidence block, not just `run_dir`, `repo_report_tail`, or raw `artifacts` dictionaries.
+- Source of truth:
+  - user request in this turn
+  - `AGENTS.md`
+  - `docs/03_quality_gates.md`
+  - current frontend/backend bridge code
+- Current break point / missing wiring:
+  - backend result event contains only developer-oriented artifacts
+  - frontend `PresentableEvent` has no dedicated delivery evidence field
+  - `ResponseRenderer` compresses completion into “任务已完成，结果已准备好。”
 - Repo-local search sufficient: `yes`
-- If no, external research artifact: `N/A`
 
-## Integration Check (before implementation)
+## Integration Check
 
-- upstream: `scripts/ctcp_support_bot.py` conversation handling and `scripts/ctcp_front_bridge.py` runtime-state refresh.
-- current_module: support reply policy plus explicit frontend constraint extraction and benchmark-only business template branch.
-- downstream: customer-visible reply text, generated benchmark-mode deliverables, and runtime/contract regression suites.
-- source_of_truth: canonical runtime status + verify result + manifest delivery fields.
-- fallback: if canonical verify fails, repair only the first gate failure and keep scope bounded to this topic.
+- upstream: project generation/delivery already produces reports, screenshots, demo media, and structured outputs.
+- current_module: backend service and bridge must consolidate those artifacts into one explicit evidence manifest before the frontend renders completion.
+- downstream: the frontend completion path should be able to show result summary, report path, screenshot paths, demo media paths, verification status, limitations, and next actions without scanning directories or inventing summaries.
+- source_of_truth: bridge-delivered manifest, result events, and frontend rendering output.
+- fallback: if a run lacks some evidence categories, emit them as empty lists/strings in the manifest and keep user-facing copy honest about what is available now.
 - acceptance_test:
-  - `python -m unittest discover -s tests -p "test_support_to_production_path.py" -v`
-  - `python -m unittest discover -s tests -p "test_project_generation_artifacts.py" -v`
-  - `python -m unittest discover -s tests -p "test_api_agent_templates.py" -v`
-  - `python -m unittest discover -s tests -p "test_support_reply_policy_regression.py" -v`
-  - `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v`
-  - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
-  - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
-  - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
-  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
+  - `python -m unittest tests/backend/test_backend_service.py -v`
+  - `python -m unittest tests/frontend/test_frontend_handler.py -v`
+  - `python -m unittest tests/test_frontend_rendering_boundary.py -v`
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code`
 - forbidden_bypass:
-  - do not hardcode benchmark content into production template/gate/reply paths
-  - do not bypass support entrypoint by injecting deliverables into run_dir
-  - do not claim benchmark completion from benchmark-only intermediate artifacts
-  - do not skip canonical verify
-- user_visible_effect: PASS/VERIFY_PASSED can now produce readable delivery messaging from generic runtime truth, while benchmark-mode stronger exports remain explicit and isolated.
+  - do not hardcode evidence summaries in frontend copy without backend evidence input
+  - do not expose only raw repo-internal paths and claim that frontend evidence display is done
+  - do not rely on docs-only guidance instead of executable evidence propagation
+- user_visible_effect: completion replies directly show user-facing delivery evidence and next actions instead of sending the user to inspect zip/output folders manually.
 
-## DoD Mapping (from execution_queue.json)
+## DoD Mapping
 
-- [x] DoD-1: customer-facing support replies prefer runtime PASS truth over stale provider failure state and return readable delivery info
-- [x] DoD-2: explicit benchmark/regression requests can attach benchmark_regression mode through frontend constraints without injecting fixture payload into production defaults
-- [x] DoD-3: benchmark-only stronger export shape remains isolated to benchmark_regression mode while production narrative generation stays goal-driven and generic
+- [x] DoD-1: Backend completion paths emit a stable delivery evidence manifest with user-facing fields including summary, view-now items, screenshots, demo media, structured outputs, verification summary, limitations, and next actions
+- [x] DoD-2: Frontend result objects explicitly carry delivery evidence and completion replies render it as a user-facing evidence block instead of generic “done” text
+- [x] DoD-3: Focused tests and canonical verify pass from the updated task/report state
 
-## Acceptance (must be checkable)
+## Acceptance
 
 - [x] DoD written (this file complete)
 - [x] Research logged (repo-local search only)
 - [x] Code changes allowed
-- [x] Patch applies cleanly
+- [x] Patch applies cleanly (`git apply ...`) OR overlay zip applies cleanly
 - [x] `scripts/verify_repo.*` passes (or first failure + minimal fix recorded)
 - [x] Demo report updated: `meta/reports/LAST.md`
 
 ## Plan
 
-1) Rebind task/report metadata to this topic and preserve baseline evidence.
-2) Repair generic support PASS-state delivery and stale-error clearing.
-3) Keep benchmark-mode ingress explicit and benchmark-only export strengthening isolated from production defaults.
-4) Run focused regressions.
-5) `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
-6) `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
-7) `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
-8) Record the first failure and minimal fix strategy.
-9) Canonical verify gate: `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
-10) Completion criteria: prove `connected + accumulated + consumed`.
+1. Add a first-class delivery evidence schema plus a bridge-side manifest builder/writer.
+2. Thread that manifest through backend result assembly and frontend presentable events.
+3. Render user-facing evidence summary in completion replies while keeping engineering/debug details secondary.
+4. Add focused tests for backend evidence emission and frontend evidence rendering.
+5. Run focused tests and canonical verify, then close the task with evidence.
 
 ## Check / Contrast / Fix Loop Evidence
 
-- check-1: `test_support_to_production_path.py` first failed because `render_fallback_reply()` returned English delivery text for `lang_hint="zh"`.
-- contrast-1: delivery fallback must remain language-aware while consuming the same generic PASS truth.
-- fix-1: move `deliver_result` handling back under the language branch and keep manifest/artifact consumption generic.
-- check-2: support/humanization/runtime-wiring tests still asserted the old `ctcp_new_run(goal=...)` signature.
-- contrast-2: the repaired support entrypoint should forward generic constraints, but must not forward benchmark fixture payload fields by default.
-- fix-2: update those regressions to assert preserved `goal`, allowed generic `constraints`, and absence of `benchmark_case`.
-- check-3: canonical verify first failed at workflow gate because `CURRENT.md` lacked the mandatory 10-step evidence sections.
-- contrast-3: task metadata must carry analysis/integration/plan/fix-loop/completion/issue-memory evidence for code patches.
-- fix-3: expand `meta/tasks/CURRENT.md` and `meta/reports/LAST.md` to satisfy workflow evidence requirements without changing runtime logic.
+- check-1: completion evidence currently lives in project directories, zips, and raw artifact paths, but the frontend mainline only returns a generic completion sentence.
+- contrast-1: this task requires the frontend to directly surface delivery evidence without forcing the user to inspect zip/output trees manually.
+- fix-1: add a backend-generated delivery evidence manifest and thread it into the completion event/result object.
+- check-2: even if the backend exposes raw artifacts, the frontend can still fail this task by rendering only generic text.
+- contrast-2: the reply must organize evidence around user-facing summary, what can be viewed now, verification state, and next actions.
+- fix-2: add an evidence-aware renderer and dedicated result field in the frontend presentable event.
+- check-3: user-facing evidence should not be polluted by developer-only detail.
+- contrast-3: users should see outcome, previewable assets, and next steps first; engineering internals stay secondary/debug.
+- fix-3: keep the evidence manifest user-oriented and relegate raw run/debug values to secondary artifacts rather than the primary reply.
 
 ## Completion Criteria Evidence
 
 - connected + accumulated + consumed:
-  - connected: support entrypoint forwards explicit benchmark-mode constraints through the normal frontend bridge; PASS truth is wired from bridge runtime state into reply intent/rendering.
-  - accumulated: runtime PASS state, verify result, manifest delivery fields, and explicit benchmark-mode constraint are accumulated into one bounded decision path.
-  - consumed: fallback reply rendering, benchmark-only export materialization, and focused regression tests consume that state and prove the repaired path.
+- connected: backend completion state, bridge manifest, result event, and frontend reply are wired through one evidence path.
+- accumulated: screenshots, reports, demo media, structured outputs, verification summary, limitations, and next actions are normalized into one stable manifest.
+- consumed: the frontend result object and completion copy consume that manifest directly instead of reconstructing delivery evidence from raw paths.
 
 ## Notes / Decisions
 
-- Default choices made: keep production reply/template logic generic; use only explicit `project_generation_mode=benchmark_regression` as the benchmark switch.
-- Alternatives considered: writing fixed benchmark payload names or acceptance checks into production branches; rejected because it would contaminate defaults.
-- Any contract exception reference (must also log in `ai_context/decision_log.md`): none.
-- Issue memory decision: no new issue_memory entry for this round; the observed failures were closed as bounded runtime wiring/test-contract regressions inside the existing support/project-generation path.
-- Skill decision (`skillized: yes` or `skillized: no, because ...`): skillized: no, because this is a bounded runtime hardening and mode-isolation repair inside existing support/project-generation paths, not a new reusable workflow asset.
+- Default choices made: treat bridge-side evidence assembly as backend truth for the current mainline, then serialize that into result events and frontend display blocks.
+- Alternatives considered: adding evidence logic only in the frontend; rejected because it would keep the frontend guessing which outputs matter.
+- Any contract exception reference:
+  - None
+- Issue memory decision: none; this is a scoped delivery-surface implementation task, not a recurring runtime defect class.
+- Skill decision (`skillized: yes` or `skillized: no, because ...`): `skillized: yes` using `ctcp-workflow` for repo-standard execution and `ctcp-verify` for canonical closure.
 
 ## Results
 
 - Files changed:
+  - `contracts/schemas/delivery_evidence.py`
+  - `contracts/schemas/event_result.py`
+  - `scripts/project_delivery_evidence_bridge.py`
   - `scripts/ctcp_front_bridge.py`
-  - `frontend/support_reply_policy.py`
-  - `apps/cs_frontend/dialogue/requirement_collector.py`
-  - `tools/providers/project_generation_business_templates.py`
-  - `tests/test_support_to_production_path.py`
-  - `tests/test_project_generation_artifacts.py`
-  - `tests/test_support_bot_humanization.py`
-  - `tests/test_runtime_wiring_contract.py`
-  - `meta/backlog/execution_queue.json`
-  - `meta/tasks/CURRENT.md`
-  - `meta/reports/LAST.md`
--  `tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch`
-- Verification summary: focused suites passed; standalone `python simlab/run.py --suite lite --json-out <tmp>` passed (`14/14`); canonical `verify_repo.ps1` passed with repo-supported `CTCP_SKIP_LITE_REPLAY=1` after the standalone lite replay proof was captured.
-- Queue status update suggestion (`todo/doing/done/blocked`): done
+  - `apps/project_backend/application/delivery_evidence.py`
+  - `apps/project_backend/application/service.py`
+  - `apps/project_backend/domain/job.py`
+  - `apps/project_backend/orchestrator/job_runner.py`
+  - `apps/cs_frontend/domain/presentable_event.py`
+  - `apps/cs_frontend/dialogue/delivery_evidence_renderer.py`
+  - `apps/cs_frontend/dialogue/response_renderer.py`
+  - `apps/cs_frontend/application/handle_user_message.py`
+  - `scripts/ctcp_dispatch.py`
+  - `tools/providers/ollama_agent.py`
+  - `tests/backend/test_backend_service.py`
+  - `tests/frontend/test_frontend_handler.py`
+  - `tests/test_delivery_evidence_bridge.py`
+  - `tests/test_ollama_agent.py`
+  - `tests/test_provider_selection.py`
+  - `tests/test_mock_agent_pipeline.py`
+- Verification summary:
+  - focused evidence tests passed for backend/frontend/bridge propagation
+  - `python -m unittest discover -s tests -p "test_mock_agent_pipeline.py" -v` -> `0`
+  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` -> `0`
+- Queue status update suggestion (`todo/doing/done/blocked`): `done`

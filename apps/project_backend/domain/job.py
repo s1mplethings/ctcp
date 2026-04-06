@@ -13,5 +13,9 @@ class JobRecord:
     run_id: str
     run_dir: str
     user_goal: str
+    project_intent: dict[str, Any] = field(default_factory=dict)
+    project_spec: dict[str, Any] = field(default_factory=dict)
+    pipeline_summary: dict[str, Any] = field(default_factory=dict)
+    delivery_evidence: dict[str, Any] = field(default_factory=dict)
     constraints: dict[str, Any] = field(default_factory=dict)
     phase: JobPhase = JobPhase.CREATED

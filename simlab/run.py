@@ -34,6 +34,43 @@ SCENARIOS_DIR = ROOT / "simlab" / "scenarios"
 DEFAULT_RUNS_ROOT = default_simlab_runs_root(ROOT)
 DEFAULT_CTCPP_RUNS_ROOT = DEFAULT_RUNS_ROOT.parent / "simlab_external_runs"
 DEFAULT_SANDBOX_MODE = "auto"
+SANDBOX_IGNORED_NAMES = {
+    ".git",
+    ".venv",
+    "runs",
+    "build",
+    "build_lite",
+    "build_verify",
+    "build_gui",
+    "dist",
+    "__pycache__",
+    ".pytest_cache",
+}
+SANDBOX_IGNORED_PREFIXES = (
+    "tests/fixtures/adlc_forge_full_bundle/runs/",
+    "simlab/_runs",
+    "meta/runs/",
+    "artifacts/backend_interface_e2e/",
+    "artifacts/backend_interface_narrative/",
+    "artifacts/backend_interface_non_narrative/",
+    "artifacts/history/",
+    "artifacts/tmp_backend_interface_check/",
+)
+SANDBOX_IGNORED_ARTIFACT_FILES = {
+    "artifacts/simlab_lite_debug.json",
+    "artifacts/test_analysis.json",
+    "artifacts/test_flow_analysis.md",
+    "artifacts/test_output_1.txt",
+    "artifacts/test_step_1_output.txt",
+    "artifacts/test_step_1_session.json",
+    "artifacts/test_step_2_output.txt",
+    "artifacts/test_step_2_session.json",
+    "artifacts/test_step_3_output.txt",
+    "artifacts/test_step_3_session.json",
+    "artifacts/test_step_4_output.txt",
+    "artifacts/test_step_4_session.json",
+    "artifacts/verify_report.json",
+}
 
 
 @dataclass
@@ -84,46 +121,47 @@ def _on_rm_error(func, path, exc_info) -> None:
     func(path)
 
 
+def _should_ignore_sandbox_child(child: str, name: str) -> bool:
+    if name in SANDBOX_IGNORED_NAMES:
+        return True
+    if child in SANDBOX_IGNORED_ARTIFACT_FILES:
+        return True
+    return any(child == prefix.rstrip("/") or child.startswith(prefix) for prefix in SANDBOX_IGNORED_PREFIXES)
+
+
 def copy_repo(src: Path, dst: Path) -> None:
     if dst.exists():
         shutil.rmtree(dst, onerror=_on_rm_error)
 
     def ignore(dir_path: str, names: list[str]) -> set[str]:
-        rel = Path(dir_path).resolve().relative_to(src.resolve())
+        try:
+            rel = Path(os.path.relpath(dir_path, src)).as_posix()
+        except Exception:
+            rel = ""
         ignored: set[str] = set()
         for name in names:
-            child = (rel / name).as_posix()
-            if name in {
-                ".git",
-                ".venv",
-                "runs",
-                "build",
-                "build_lite",
-                "build_verify",
-                "build_gui",
-                "dist",
-                "__pycache__",
-                ".pytest_cache",
-            }:
+            child = name if rel in (".", "") else f"{rel}/{name}"
+            if _should_ignore_sandbox_child(child, name):
                 ignored.add(name)
-                continue
-            if child.startswith("tests/fixtures/adlc_forge_full_bundle/runs/"):
-                ignored.add(name)
-                continue
-            if child.startswith("simlab/_runs"):
-                ignored.add(name)
-                continue
         return ignored
 
     shutil.copytree(src, dst, ignore=ignore)
 
 
 def git_baseline(repo: Path) -> None:
-    run_cmd("git init", repo)
-    run_cmd("git config user.email simlab@example.local", repo)
-    run_cmd("git config user.name simlab-runner", repo)
-    run_cmd("git add -A", repo)
-    run_cmd("git commit -m baseline", repo)
+    commands = [
+        "git init",
+        "git config core.longpaths true",
+        "git config user.email simlab@example.local",
+        "git config user.name simlab-runner",
+        "git add -A",
+        "git commit -m baseline",
+    ]
+    for cmd in commands:
+        res = run_cmd(cmd, repo)
+        if res.rc != 0:
+            detail = (res.stderr or res.stdout).strip()
+            raise RuntimeError(f"simlab git baseline failed: {cmd}: {detail}")
 
 
 def _git_available(repo: Path) -> bool:

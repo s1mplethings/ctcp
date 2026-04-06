@@ -533,16 +533,32 @@ def _start_ollama_service(*, cmd: str, run_dir: Path) -> tuple[bool, str]:
             getattr(subprocess, "DETACHED_PROCESS", 0)
         )
     try:
-        with log_path.open("a", encoding="utf-8") as fh:
+        if os.name == "nt":
+            log_path.write_text(
+                "ollama service bootstrap started in detached mode; "
+                "stdout/stderr redirected to os.devnull to avoid locking the run directory on Windows.\n",
+                encoding="utf-8",
+            )
             subprocess.Popen(
                 cmd,
                 cwd=str(ROOT),
                 shell=True,
-                stdout=fh,
-                stderr=fh,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
                 creationflags=creationflags,
-                start_new_session=(os.name != "nt"),
+                start_new_session=False,
             )
+        else:
+            with log_path.open("a", encoding="utf-8") as fh:
+                subprocess.Popen(
+                    cmd,
+                    cwd=str(ROOT),
+                    shell=True,
+                    stdout=fh,
+                    stderr=fh,
+                    creationflags=creationflags,
+                    start_new_session=True,
+                )
     except Exception as exc:
         return False, f"failed to start ollama service: {exc}"
     return True, ""

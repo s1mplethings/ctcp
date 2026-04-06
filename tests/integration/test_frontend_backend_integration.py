@@ -16,12 +16,22 @@ class _BridgeIntegrationStub:
         self._decision_done = False
         self.created_runs: list[dict[str, object]] = []
 
-    def new_run(self, *, goal: str, constraints: dict[str, object], attachments: list[str]) -> dict[str, object]:
+    def new_run(
+        self,
+        *,
+        goal: str,
+        constraints: dict[str, object],
+        attachments: list[str],
+        project_intent: dict[str, object] | None = None,
+        project_spec: dict[str, object] | None = None,
+    ) -> dict[str, object]:
         self.created_runs.append(
             {
                 "goal": goal,
                 "constraints": dict(constraints),
                 "attachments": list(attachments),
+                "project_intent": dict(project_intent or {}),
+                "project_spec": dict(project_spec or {}),
             }
         )
         return {"run_id": "job-int", "run_dir": "D:/tmp/job-int"}
@@ -104,15 +114,18 @@ class FrontendBackendIntegrationTests(unittest.TestCase):
 
         first = handler.handle_user_message(
             session_id="int",
-            text="我想做一个VN推理游戏工具，能记录整理世界线并支持画图。",
+            text="我想做一个剧情推理游戏工具，能记录整理世界线并支持画图。",
             source="cli",
         )
         self.assertIn("pick one", first.reply_text)
         self.assertTrue(bridge.created_runs)
         first_constraints = bridge.created_runs[0].get("constraints", {})
+        first_intent = bridge.created_runs[0].get("project_intent", {})
         self.assertEqual(str(first_constraints.get("project_domain", "")), "story_reasoning_game")
         self.assertEqual(str(first_constraints.get("worldline_management", "")), "required")
         self.assertEqual(str(first_constraints.get("diagram_support", "")), "required")
+        self.assertTrue(bool(dict(first_intent).get("mvp_scope", [])))
+        self.assertIn("我当前的理解是", first.reply_text)
 
         second = handler.handle_user_message(session_id="int", text="选择默认方案", source="cli")
         self.assertTrue(

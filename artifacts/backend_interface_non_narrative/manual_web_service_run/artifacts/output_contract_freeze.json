@@ -1,0 +1,251 @@
+{
+  "schema_version": "ctcp-project-output-contract-v1",
+  "stage": "output_contract_freeze",
+  "goal": "生成一个本地 HTTP 服务 MVP：接收模糊项目目标，返回结构化 spec、workflow plan、acceptance 摘要 JSON，并提供 health 检查。",
+  "project_intent": {
+    "goal_summary": "生成一个本地 HTTP 服务 MVP",
+    "target_user": "内部项目发起人",
+    "problem_to_solve": "把模糊项目目标转成结构化 spec/workflow/acceptance JSON 响应",
+    "mvp_scope": [
+      "提供 health 路径",
+      "提供 generate 路径",
+      "导出 spec、workflow、acceptance 结果"
+    ],
+    "required_inputs": [
+      "用户目标"
+    ],
+    "required_outputs": [
+      "service contract",
+      "sample response",
+      "acceptance report"
+    ],
+    "hard_constraints": [
+      "delivery_shape=web_first"
+    ],
+    "assumptions": [
+      "先做本地可运行的 JSON 服务 MVP"
+    ],
+    "open_questions": [],
+    "acceptance_criteria": [
+      "health 路径可用",
+      "generate 路径返回结构化 JSON",
+      "README 可指导启动"
+    ]
+  },
+  "project_spec": {
+    "schema_version": "ctcp-project-spec-v1",
+    "goal_summary": "生成一个本地 HTTP 服务 MVP",
+    "target_user": "内部项目发起人",
+    "problem_to_solve": "把模糊项目目标转成结构化 spec/workflow/acceptance JSON 响应",
+    "mvp_scope": [
+      "提供 health 路径",
+      "提供 generate 路径",
+      "导出 spec、workflow、acceptance 结果"
+    ],
+    "required_inputs": [
+      "用户目标"
+    ],
+    "required_outputs": [
+      "service contract",
+      "sample response",
+      "acceptance report"
+    ],
+    "hard_constraints": [
+      "delivery_shape=web_first"
+    ],
+    "assumptions": [
+      "先做本地可运行的 JSON 服务 MVP"
+    ],
+    "open_questions": [],
+    "acceptance_criteria": [
+      "health 路径可用",
+      "generate 路径返回结构化 JSON",
+      "README 可指导启动"
+    ],
+    "constraint_snapshot": {
+      "delivery_shape": "web_first"
+    }
+  },
+  "pipeline_contract": {
+    "schema_version": "ctcp-project-generation-pipeline-v1",
+    "stages": [
+      {
+        "name": "project_intent",
+        "artifact": "project_intent",
+        "status": "ready"
+      },
+      {
+        "name": "spec",
+        "artifact": "project_spec",
+        "status": "ready"
+      },
+      {
+        "name": "scaffold",
+        "artifact": "project_root",
+        "status": "planned",
+        "project_root": "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal"
+      },
+      {
+        "name": "core_feature_implementation",
+        "artifact": "core_feature_files",
+        "status": "planned",
+        "core_feature_files": [
+          "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/scripts/run_project_web.py",
+          "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/app.py",
+          "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/exporter.py",
+          "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/models.py",
+          "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/seed.py",
+          "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/service.py",
+          "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/service_contract.py",
+          "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/spec_builder.py",
+          "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/tests/test_http_mvp_spec_workflow_plan_acceptance_json_heal_service.py"
+        ]
+      },
+      {
+        "name": "smoke_run",
+        "artifact": "startup_entrypoint",
+        "status": "planned",
+        "startup_entrypoint": "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/scripts/run_project_web.py"
+      },
+      {
+        "name": "delivery_package",
+        "artifact": "acceptance_files",
+        "status": "planned",
+        "acceptance_files": [
+          "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/README.md",
+          "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/scripts/run_project_web.py",
+          "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/tests/test_http_mvp_spec_workflow_plan_acceptance_json_heal_service.py"
+        ],
+        "startup_readme": "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/README.md"
+      }
+    ]
+  },
+  "project_id": "http-mvp-spec-workflow-plan-acceptance-json-heal",
+  "project_root": "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal",
+  "project_type": "generic_copilot",
+  "project_archetype": "web_service",
+  "package_name": "http_mvp_spec_workflow_plan_acceptance_json_heal",
+  "project_profile": "web_service_copilot",
+  "generation_mode": "production_web_service_deliverable_first",
+  "execution_mode": "production",
+  "benchmark_case": "",
+  "delivery_shape": "web_first",
+  "project_type_decision_source": "goal_or_context",
+  "project_archetype_decision_source": "project_intent:web_service",
+  "shape_decision_source": "constraints.delivery_shape",
+  "target_files": [
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/README.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/docs/00_CORE.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/docs/web_workflow.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/meta/manifest.json",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/meta/reports/LAST.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/meta/tasks/CURRENT.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/pyproject.toml",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/scripts/run_project_web.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/scripts/verify_repo.ps1",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/__init__.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/app.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/exporter.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/models.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/seed.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/service.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/service_contract.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/spec_builder.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/tests/test_http_mvp_spec_workflow_plan_acceptance_json_heal_service.py"
+  ],
+  "source_files": [
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/pyproject.toml",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/scripts/run_project_web.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/__init__.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/models.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/seed.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/spec_builder.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/service_contract.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/app.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/exporter.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/service.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/tests/test_http_mvp_spec_workflow_plan_acceptance_json_heal_service.py"
+  ],
+  "doc_files": [
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/README.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/docs/00_CORE.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/docs/web_workflow.md"
+  ],
+  "workflow_files": [
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/meta/tasks/CURRENT.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/meta/reports/LAST.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/meta/manifest.json",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/scripts/verify_repo.ps1"
+  ],
+  "business_files": [
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/scripts/run_project_web.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/models.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/seed.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/spec_builder.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/service_contract.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/app.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/exporter.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/service.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/tests/test_http_mvp_spec_workflow_plan_acceptance_json_heal_service.py"
+  ],
+  "business_capabilities": [
+    "service_contract_seed",
+    "http_request_shape",
+    "sample_response_export",
+    "business_tests",
+    "web_launcher"
+  ],
+  "generated_files": [],
+  "missing_files": [
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/README.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/docs/00_CORE.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/docs/web_workflow.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/meta/manifest.json",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/meta/reports/LAST.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/meta/tasks/CURRENT.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/pyproject.toml",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/scripts/run_project_web.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/scripts/verify_repo.ps1",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/__init__.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/app.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/exporter.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/models.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/seed.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/service.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/service_contract.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/src/http_mvp_spec_workflow_plan_acceptance_json_heal/spec_builder.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/tests/test_http_mvp_spec_workflow_plan_acceptance_json_heal_service.py"
+  ],
+  "acceptance_files": [
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/README.md",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/scripts/run_project_web.py",
+    "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/tests/test_http_mvp_spec_workflow_plan_acceptance_json_heal_service.py"
+  ],
+  "startup_entrypoint": "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/scripts/run_project_web.py",
+  "startup_readme": "project_output/http-mvp-spec-workflow-plan-acceptance-json-heal/README.md",
+  "reference_project_mode": {
+    "enabled": true,
+    "mode": "structure_workflow_docs"
+  },
+  "reference_style_applied": [
+    "repo_script_layout",
+    "workflow_manifest_stage_chain",
+    "bridge_readable_manifest"
+  ],
+  "demo_required": true,
+  "visual_evidence_required": true,
+  "screenshot_required": true,
+  "visual_evidence_status": "placeholder_only",
+  "benchmark_sample_applied": false,
+  "decision_nodes": [
+    "chair.output_contract_freeze",
+    "chair.source_generation"
+  ],
+  "flow_nodes": [
+    "librarian.context_pack",
+    "chair.docs_generation",
+    "chair.workflow_generation",
+    "chair.artifact_manifest_build",
+    "chair.deliver"
+  ]
+}

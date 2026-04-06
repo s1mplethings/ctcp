@@ -16,7 +16,7 @@
 ## Context
 
 - Why this item now?
-  用户明确指出当前交付出去的 `vn_story_organizer` 只是 `main.py + README.md` 的薄壳，不是他要的“像 CTCP 一样有一套 MD 和项目结构”的项目。继续把 repo 内 `generated_projects/` 这种占位目录直接打包发给 Telegram，会导致客服对外承诺的项目形态和真实内容不一致。
+  用户明确指出当前交付出去的 `story_organizer` 只是 `main.py + README.md` 的薄壳，不是他要的“像 CTCP 一样有一套 MD 和项目结构”的项目。继续把 repo 内 `generated_projects/` 这种占位目录直接打包发给 Telegram，会导致客服对外承诺的项目形态和真实内容不一致。
 - Dependency check:
   - `ADHOC-20260313-support-api-first-local-degrade`: `blocked`
   - `ADHOC-20260309-scaffold-live-reference-mode`: `done`
@@ -157,9 +157,9 @@
   - `python scripts/workflow_checks.py` => `0`
   - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => `1`
     - first failure point: `patch check (scope from PLAN)`
-    - failure detail: `generated_projects/vn_story_organizer/README.md` remains out-of-scope under the repo PLAN `Scope-Allow/Scope-Deny` contract
+    - failure detail: `generated_projects/story_organizer/README.md` remains out-of-scope under the repo PLAN `Scope-Allow/Scope-Deny` contract
     - minimal fix strategy: keep customer delivery on external scaffold exports and either remove/relocate the repo-local `generated_projects/` tree or open an explicit scope change before rerunning canonical verify
 - Real-session demo:
   - support session `6092527664` now resolves `package_delivery_mode=materialize_ctcp_scaffold`
-  - generated package path: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\support_sessions\6092527664\artifacts\support_exports\vn_story_organizer_ctcp_project.zip`
+  - generated package path: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\support_sessions\6092527664\artifacts\support_exports\story_organizer_ctcp_project.zip`
   - zip head contains `README.md`, `docs/00_CORE.md`, `meta/tasks/CURRENT.md`, `scripts/verify_repo.ps1`, `workflow_registry/README.md`, `simlab/scenarios/S00_smoke.yaml`

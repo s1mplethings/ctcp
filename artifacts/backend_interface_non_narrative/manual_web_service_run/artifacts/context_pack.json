@@ -1,0 +1,34 @@
+{
+  "schema_version": "ctcp-context-pack-v1",
+  "goal": "生成一个本地 HTTP 服务 MVP：接收模糊项目目标，返回结构化 spec、workflow plan、acceptance 摘要 JSON，并提供 health 检查。",
+  "repo_slug": "ctcp",
+  "summary": "non-narrative web service project generation acceptance",
+  "files": [
+    {
+      "path": "docs/backend_interface_contract.md",
+      "why": "contract",
+      "content": "project manifest readable api"
+    },
+    {
+      "path": "workflow_registry/wf_project_generation_manifest/recipe.yaml",
+      "why": "workflow",
+      "content": "source_generation deliver"
+    },
+    {
+      "path": "scripts/project_generation_gate.py",
+      "why": "gate",
+      "content": "web_service validation"
+    },
+    {
+      "path": "scripts/project_manifest_bridge.py",
+      "why": "bridge",
+      "content": "manifest fields"
+    },
+    {
+      "path": "artifacts/frontend_uploads/brief.txt",
+      "why": "input",
+      "content": "local HTTP service, health route, generate route, acceptance json"
+    }
+  ],
+  "omitted": []
+}

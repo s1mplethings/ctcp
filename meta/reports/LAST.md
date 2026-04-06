@@ -3,96 +3,81 @@
 ## Latest Report
 
 - File: `meta/reports/LAST.md`
-- Date: `2026-04-05`
-- Topic: `Support PASS delivery + benchmark-mode isolation`
+- Date: `2026-04-06`
+- Topic: `support delivery evidence surface`
 
 ### Readlist
 
 - `AGENTS.md`
 - `ai_context/00_AI_CONTRACT.md`
-- `docs/00_CORE.md`
 - `docs/03_quality_gates.md`
 - `PATCH_README.md`
 - `meta/backlog/execution_queue.json`
 - `meta/tasks/CURRENT.md`
+- `apps/project_backend/application/service.py`
+- `apps/project_backend/orchestrator/job_runner.py`
 - `scripts/ctcp_front_bridge.py`
-- `scripts/ctcp_support_bot.py`
-- `frontend/support_reply_policy.py`
-- `apps/cs_frontend/dialogue/requirement_collector.py`
-- `tools/providers/project_generation_business_templates.py`
-- `tests/test_support_to_production_path.py`
-- `tests/test_project_generation_artifacts.py`
+- `scripts/project_manifest_bridge.py`
+- `apps/cs_frontend/dialogue/response_renderer.py`
+- `apps/cs_frontend/application/handle_user_message.py`
+- `apps/cs_frontend/domain/presentable_event.py`
+- repo-local search for `event_result`, `project_manifest`, `output_artifacts`, and delivery-related rendering paths
 
 ### Plan
 
-1. Rebind the active task/report to this runtime hardening topic and preserve the fixed baseline + current working tree constraint.
-2. Repair generic support reply fallback so PASS truth yields readable delivery output instead of stale failure wording.
-3. Keep benchmark-mode ingress and stronger export shape isolated to explicit benchmark mode, with no benchmark fixture content added to production defaults.
-4. Run focused regressions and record the first failure plus the minimal repair.
+1. Rebind the repo task from local project generation to delivery-evidence surfacing.
+2. Add a stable backend/bridge delivery evidence manifest.
+3. Thread that manifest through backend result objects and frontend presentable events.
+4. Render user-facing delivery evidence in completion replies.
+5. Run focused tests and canonical verify, then close with evidence.
 
 ### Changes
 
-- `scripts/ctcp_front_bridge.py`
-  - production/common fix: clear stale runtime error/recovery state when canonical runtime truth is final PASS and no user decision is pending.
-  - non-pollution reason: logic depends only on run status / verify truth, not on any benchmark payload or VN-specific field.
-- `frontend/support_reply_policy.py`
-  - production/common fix: prefer `deliver_result` when PASS truth exists even if provider status is stale-failed; render delivery fallback from manifest/artifact/runtime truth.
-  - production/common fix: restore language-aware `deliver_result` fallback so Chinese requests do not fall through to English delivery text.
-  - non-pollution reason: reply logic consumes generic runtime/manifest fields and contains no benchmark-case literals or benchmark-only reply branch.
-- `apps/cs_frontend/dialogue/requirement_collector.py`
-  - benchmark-only ingress plumbing: explicit benchmark/regression wording now maps to `project_generation_mode=benchmark_regression`.
-  - non-pollution reason: it sets only a mode flag; it does not inject benchmark sample names, fixed角色/章节, or benchmark acceptance fields.
-- `scripts/ctcp_support_bot.py`
-  - benchmark-only ingress plumbing: pass frontend-derived constraints into `ctcp_new_run()` so explicit benchmark mode can be honored through the normal support entrypoint.
-  - non-pollution reason: support bot forwards generic constraints; it does not synthesize benchmark payloads or hardcode VN content.
-- `tools/providers/project_generation_business_templates.py`
-  - benchmark-only generation fix: strengthen only the `benchmark_regression + narrative_copilot` branch to export structured benchmark deliverables (`story_bible/characters/outline/scene_cards/art_prompts/demo_script`) in addition to legacy files.
-  - non-pollution reason: production narrative and generic branches are unchanged; the stronger shape is isolated behind explicit benchmark execution mode.
-- `tests/test_support_to_production_path.py`
-  - regression coverage for stale-error clearing, PASS-truth reply intent, and explicit benchmark-mode constraint extraction without fixture payload injection.
-- `tests/test_project_generation_artifacts.py`
-  - regression coverage proving production narrative requests stay non-benchmark by default and benchmark-mode export strengthening remains isolated to explicit benchmark mode.
-- `meta/backlog/execution_queue.json`
-  - rebound the active queue item to this repair topic.
-- `meta/tasks/CURRENT.md`
-  - replaced cleanup scope with the current support/runtime/mode-isolation scope and acceptance.
-- `meta/reports/LAST.md`
-  - replaced cleanup report with current task evidence.
+- Added a first-class delivery evidence contract at `contracts/schemas/delivery_evidence.py`.
+- Added `scripts/project_delivery_evidence_bridge.py` so the bridge can explicitly build and write `artifacts/delivery_evidence_manifest.json`.
+- Updated `scripts/ctcp_front_bridge.py` to expose delivery evidence as a stable backend-facing bridge capability and include it in support context.
+- Updated backend result assembly so `event_result` now carries `delivery_evidence` explicitly instead of only developer-oriented artifacts.
+- Updated frontend presentable results and renderer so completion replies show user-facing evidence summary, report path, view-now items, verification summary, limitations, and next actions.
+- Added focused tests for backend evidence propagation, frontend evidence rendering, integration compatibility, and bridge manifest writing.
+- Fixed a provider-resolution inconsistency in `scripts/ctcp_dispatch.py` so `mock_agent` mode can actually keep `librarian/context_pack` on `mock_agent` during deterministic mock-pipeline tests instead of being silently forced back to `ollama_agent`.
+- Hardened `tools/providers/ollama_agent.py` Windows bootstrap behavior so detached `ollama serve` startup no longer hands a run-dir log handle to the child process and lock temp cleanup.
 
 ### Verify
 
-- `git rev-parse HEAD` -> `faeaedbd419aeb9de182c606cd7ce27eaa091e89`
-- `git branch --show-current` -> `main`
-- `git diff --shortstat faeaedbd419aeb9de182c606cd7ce27eaa091e89` -> `89 files changed, 2377 insertions(+), 5161 deletions(-)` before this round continued; work proceeded against baseline commit + current working tree.
-- `python -m unittest discover -s tests -p "test_support_to_production_path.py" -v` -> first run failed at `test_reply_policy_prefers_deliver_result_when_pass_truth_exists_even_if_provider_failed` because `render_fallback_reply()` returned English delivery text for `lang_hint="zh"`; minimal fix was to move `deliver_result` handling back under the language branch and keep the Chinese fallback path active.
-- `python -m unittest discover -s tests -p "test_support_to_production_path.py" -v` -> `0` (10 tests)
-- `python -m unittest discover -s tests -p "test_project_generation_artifacts.py" -v` -> `0` (5 tests)
-- `python -m unittest discover -s tests -p "test_api_agent_templates.py" -v` -> `0` (14 tests)
-- `python -m unittest discover -s tests -p "test_support_reply_policy_regression.py" -v` -> `0` (9 tests)
-- `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v` -> first rerun failed in 3 tests because mocks still asserted the old `ctcp_new_run(goal=...)` signature after generic constraints started flowing into the same support entrypoint; minimal fix strategy: move default benchmark-mode constraint derivation into the bridge so the support entrypoint signature stays stable, then restore the legacy assertions.
-- `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v` -> `0` (58 tests)
-- `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` -> first rerun failed at `test_support_bot_project_turn_calls_bridge_entrypoints_and_consumes_whiteboard_context` for the same old-signature assertion; minimal fix strategy: keep the signature stable and move default constraint derivation to `ctcp_front_bridge.ctcp_new_run()`.
-- `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` -> `0` (23 tests)
-- `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` -> `0` (3 tests)
-- `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` -> `0` (3 tests)
-- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` -> `1`
-  - first failure point: `workflow gate (workflow checks)`
-  - first failing reason: `meta/tasks/CURRENT.md` missing mandatory 10-step evidence sections and task-truth fields.
-  - minimal fix strategy: expand `CURRENT.md` and `LAST.md` to carry the required workflow evidence, then rerun canonical verify.
-- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` -> `1`
-  - first failure point: `code health growth-guard`
-  - first failing reason: `scripts/ctcp_front_bridge.py`, `scripts/ctcp_support_bot.py`, and large regression files exceeded growth limits after the initial support/benchmark-mode wiring changes.
-  - minimal fix strategy: keep support-bot signature stable, move default constraint derivation to bridge, collapse equivalent bridge logic, and remove oversized repeated test assertion helpers from large files.
-- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` -> `1`
-  - first failure point: `lite scenario replay`
-  - first failing reason: SimLab `S16_lite_fixer_loop_pass` used `tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch`, whose `meta/tasks/CURRENT.md` hunk still targeted the old task header and then became corrupt after manual adjustment.
-  - minimal fix strategy: refresh the fixture hunk to current repo headers and fix the unified diff format so `git apply --check` succeeds again inside the scenario sandbox.
-- `python simlab/run.py --suite lite --json-out %TEMP%\\simlab-lite-final.json` -> `0`
-  - result: `passed=14, failed=0`
-  - proof: `C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260405-195806`
-- `$env:CTCP_SKIP_LITE_REPLAY='1'; powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` -> `0`
-  - rationale: repo-supported path after standalone lite replay proof was already captured
-  - summary: workflow/plan/patch/contract/doc-index/growth-guard/triplet/python-unit/plan-evidence all passed
+- `python -m unittest discover -s tests -p "test_delivery_evidence_bridge.py" -v` -> `0`
+  - result: bridge evidence builder writes a stable manifest file and returns the expected user-facing fields
+- `python -m unittest discover -s tests/backend -p "test_backend_service.py" -v` -> `0`
+  - result: backend completion events now carry explicit `delivery_evidence`
+- `python -m unittest discover -s tests/frontend -p "test_frontend_handler.py" -v` -> `0`
+  - result: frontend completion replies surface delivery evidence directly and preserve the structured field on `PresentableEvent`
+- `python -m unittest discover -s tests/integration -p "test_frontend_backend_integration.py" -v` -> `0`
+  - result: frontend/backend mainline remains compatible after evidence propagation
+- `python -m unittest discover -s tests -p "test_frontend_rendering_boundary.py" -v` -> `0`
+  - result: older frontend rendering boundary regressions remain stable
+- `python -m unittest discover -s tests -p "test_provider_selection.py" -v` -> `0`
+  - result: provider resolution now keeps mock-mode librarian dispatch deterministic without weakening the hard local-model rule for non-mock modes
+- `python -m unittest discover -s tests -p "test_ollama_agent.py" -v` -> `0`
+  - result: Windows detached bootstrap path is covered and verified to avoid run-dir log-handle inheritance
+- `python -m unittest discover -s tests -p "test_mock_agent_pipeline.py" -v` -> `0`
+  - result: mock fault-injection replay is deterministic again and no longer hangs/locks temp runs on local-model startup
+- `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` -> `covered by canonical verify`
+- `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` -> `covered by canonical verify`
+- `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` -> `covered by canonical verify`
+- first failure point: `workflow gate (workflow checks)` during canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code`
+  - reason: `meta/reports/LAST.md` was still missing mandatory workflow evidence strings for first failure/minimal fix/triplet command evidence
+- minimal fix strategy: update `meta/reports/LAST.md` with the required failure evidence and triplet command references, then rerun canonical verify before touching code again
+- second failure point: `lite scenario replay` during canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code`
+  - reason: `S16_lite_fixer_loop_pass` still used a stale fixer patch fixture that no longer matched the current README doc-index and active `CURRENT/LAST` headers
+- minimal fix strategy: rebase `tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch` to the current README doc-index plus current task/report headers, rerun `python simlab\run.py --suite lite --json-out artifacts\delivery_evidence_simlab.json`, then rerun canonical verify
+- `python simlab\run.py --suite lite --json-out artifacts\delivery_evidence_simlab.json` -> `0`
+  - result: `14` scenarios passed, `0` failed
+- third failure point: `python unit tests` during canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code`
+  - reason: `tests/test_mock_agent_pipeline.py::test_robustness_fault_injection` left local-model startup behavior mixed into mock-mode replay and, on Windows, temp run cleanup could fail behind a lingering `ollama_serve.log` handle
+- minimal fix strategy: make `mock_agent` mode respect its configured librarian provider in `_resolve_provider`, keep the robustness test on deterministic mock dispatch, and remove detached child inheritance of run-dir log handles in `ollama_agent`
+- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` -> `0`
+  - result: canonical verify passed end-to-end after delivery-evidence wiring plus provider/bootstrap cleanup
+- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` (post-close rerun after CURRENT/LAST/queue finalization) -> `0`
+  - result: final repo closure state still passes canonical verify, so the completed task/report metadata does not regress workflow gating
 
 ### Questions
 
@@ -100,8 +85,11 @@
 
 ### Demo
 
-- connected: support entrypoint can forward explicit benchmark-mode constraints through the normal frontend bridge without introducing production fixture payloads.
-- accumulated: runtime PASS truth, verify truth, manifest delivery fields, and artifact labels are accumulated into one generic delivery decision path.
-- consumed: customer-facing fallback reply now consumes that truth to return readable delivery output instead of stale failure wording.
-- pollution boundary: benchmark-specific stronger deliverables remain isolated to explicit `benchmark_regression` narrative generation and do not alter production default templates, verify gates, or reply wording.
-- skillized: no, because this round is a bounded runtime hardening and mode-isolation repair inside existing flows, not a new reusable workflow asset.
+- Goal: users should be able to see project delivery evidence directly in the frontend/support completion result, without browsing zip/output directories manually.
+- User-facing result shape now includes:
+  - one-line delivery summary
+  - “现在可以直接看” evidence items
+  - primary report path
+  - verification summary
+  - limitations
+  - next actions

@@ -922,6 +922,7 @@ def _resolve_provider(config: dict[str, Any], role: str, action: str) -> tuple[s
     # BEHAVIOR_ID: B027
     forced = _forced_provider()
     hard_provider = HARD_ROLE_PROVIDERS.get(role, "")
+    mode_norm = str(config.get("mode", "")).strip().lower()
     if forced:
         if hard_provider:
             if forced != hard_provider:
@@ -937,6 +938,8 @@ def _resolve_provider(config: dict[str, Any], role: str, action: str) -> tuple[s
         role_providers = {}
     provider = _normalize_provider(str(role_providers.get(role, config.get("mode", "manual_outbox"))))
     if (role, action) == ("librarian", "context_pack"):
+        if mode_norm == "mock_agent":
+            return provider, ""
         locked = hard_provider or "ollama_agent"
         if provider != locked:
             return (locked, f"blocked configured provider={provider or 'unknown'} for hard-local-model role={role}; using {locked}")

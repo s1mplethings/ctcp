@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from contracts.schemas.project_intent import ProjectIntent
 from contracts.validation import (
     ensure_no_full_chat_history,
     optional_dict,
@@ -16,6 +17,7 @@ from contracts.validation import (
 class JobCreateRequest:
     request_id: str
     user_goal: str
+    project_intent: ProjectIntent
     constraints: dict[str, Any]
     attachments: list[str]
     requirement_summary: dict[str, Any]
@@ -27,6 +29,7 @@ class JobCreateRequest:
         return cls(
             request_id=require_non_empty_string(doc, "request_id"),
             user_goal=require_non_empty_string(doc, "user_goal"),
+            project_intent=ProjectIntent.from_payload(doc.get("project_intent", {}), user_goal=str(doc.get("user_goal", ""))),
             constraints=optional_dict(doc, "constraints"),
             attachments=optional_string_list(doc, "attachments"),
             requirement_summary=optional_dict(doc, "requirement_summary"),
@@ -36,6 +39,7 @@ class JobCreateRequest:
         return {
             "request_id": self.request_id,
             "user_goal": self.user_goal,
+            "project_intent": self.project_intent.to_payload(),
             "constraints": dict(self.constraints),
             "attachments": list(self.attachments),
             "requirement_summary": dict(self.requirement_summary),

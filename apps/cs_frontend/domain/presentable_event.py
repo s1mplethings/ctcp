@@ -8,3 +8,5 @@ from typing import Any
 class PresentableEvent:
     reply_text: str
     events: list[dict[str, Any]] = field(default_factory=list)
+    delivery_evidence: dict[str, Any] = field(default_factory=dict)
+    developer_details: dict[str, Any] = field(default_factory=dict)

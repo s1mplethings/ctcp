@@ -1686,7 +1686,7 @@
         ]
       },
       "status": "done",
-      "notes": "Completed: support runtime now auto-recovers explicit previous-outline requests from archived briefs, proactively pushes grounded progress updates during idle polling, canonical verify passed, and the live Telegram session was rebound from the generic blocked run to concrete VN brief run 20260316-220645-742889-orchestrate."
+      "notes": "Completed: support runtime now auto-recovers explicit previous-outline requests from archived briefs, proactively pushes grounded progress updates during idle polling, canonical verify passed, and the live Telegram session was rebound from the generic blocked run to a concrete story brief run 20260316-220645-742889-orchestrate."
     },
     {
       "id": "ADHOC-20260317-support-proactive-push-greeting-dup-guard",
@@ -2438,18 +2438,18 @@
       "notes": "Completed on 2026-03-25: removed frontend static imports to backend via transport protocol boundary, hardened recursive full-chat-history rejection, replaced mechanical status relay with support-facing rendering, relocated non-protocol assets out of contracts to docs/architecture/contracts and policy, updated guard references/tests, and passed canonical verify with CTCP_SKIP_LITE_REPLAY=1 after recording first lite replay failure."
     },
     {
-      "id": "ADHOC-20260325-vn-worldline-backend-generation-smoke",
+      "id": "ADHOC-20260325-story-worldline-backend-generation-smoke",
       "layer": "L2",
       "priority": "P0",
-      "title": "Backend generation smoke for VN reasoning game worldline tracking and diagram support",
+      "title": "Backend generation smoke for story reasoning game worldline tracking and diagram support",
       "owner_role": "Support Lead",
       "deps": [
         "ADHOC-20260325-decoupling-acceptance-repair"
       ],
       "dod": [
-        "frontend requirement collection maps VN reasoning game request into structured constraints including worldline organization and diagram capability",
+        "frontend requirement collection maps story reasoning game request into structured constraints including worldline organization and diagram capability",
         "backend create_job forwards structured constraints to bridge runtime path and has backend regression coverage",
-        "frontend-backend integration test covers the VN worldline/diagram request path and confirms question-answer loop remains intact",
+        "frontend-backend integration test covers the story worldline/diagram request path and confirms question-answer loop remains intact",
         "frontend/backend/integration tests and canonical verify pass with auditable CURRENT/LAST updates"
       ],
       "artifacts": {
@@ -2470,7 +2470,7 @@
         ]
       },
       "status": "done",
-      "notes": "Completed on 2026-03-25: expanded frontend requirement extraction for VN reasoning-game worldline/diagram signals, verified backend create_job forwards structured constraints to bridge new_run path, added focused frontend/backend/integration regressions for this scenario, and passed canonical verify (first lite replay failure captured, then profile-consistent rerun with CTCP_SKIP_LITE_REPLAY=1 passed)."
+      "notes": "Completed on 2026-03-25: expanded frontend requirement extraction for story reasoning-game worldline/diagram signals, verified backend create_job forwards structured constraints to bridge new_run path, added focused frontend/backend/integration regressions for this scenario, and passed canonical verify (first lite replay failure captured, then profile-consistent rerun with CTCP_SKIP_LITE_REPLAY=1 passed)."
     },
     {
       "id": "ADHOC-20260325-backend-test-default-output-and-support-trigger",
@@ -2479,7 +2479,7 @@
       "title": "Preserve support-trigger delivery path and enable default output in backend-test scenario",
       "owner_role": "Support Lead",
       "deps": [
-        "ADHOC-20260325-vn-worldline-backend-generation-smoke"
+        "ADHOC-20260325-story-worldline-backend-generation-smoke"
       ],
       "dod": [
         "frontend requirement collection captures backend-test default-output intent as structured constraints while preserving support-trigger mode metadata",
@@ -2798,7 +2798,7 @@
       "dod": [
         "Project-generation requests are routed to a dedicated workflow and do not default to the generic patch path",
         "Project-generation runs explicitly gate on output_contract_freeze, artifact_manifest_build, and deliver before verify",
-        "Backend interface exposes get_project_manifest and manual VN runner no longer injects deliverables into run_dir"
+        "Backend interface exposes get_project_manifest and the manual story runner no longer injects deliverables into run_dir"
       ],
       "artifacts": {
         "produces": [
@@ -2809,7 +2809,7 @@
           "scripts/ctcp_dispatch.py",
           "scripts/ctcp_front_bridge.py",
           "tools/providers/api_agent.py",
-          "tests/manual_backend_interface_vn_project_runner.py",
+          "tests/manual_backend_interface_narrative_project_runner.py",
           "tests/test_backend_interface_contract_apis.py",
           "docs/backend_interface_contract.md",
           "meta/tasks/CURRENT.md",
@@ -2817,18 +2817,18 @@
         ],
         "tests": [
           "python -m unittest tests/test_backend_interface_contract_apis.py -v",
-          "python tests/manual_backend_interface_vn_project_runner.py",
+          "python tests/manual_backend_interface_narrative_project_runner.py",
           "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
         ]
       },
       "status": "done",
-      "notes": "Archived on 2026-04-03 after manifest/bridge mainline closure; handed off remaining scaffold-first gap to ADHOC-20260403-vn-business-project-generation-mainline."
+      "notes": "Archived on 2026-04-03 after manifest/bridge mainline closure; handed off remaining scaffold-first gap to ADHOC-20260403-story-business-project-generation-mainline."
     },
     {
-      "id": "ADHOC-20260403-vn-business-project-generation-mainline",
+      "id": "ADHOC-20260403-story-business-project-generation-mainline",
       "layer": "L1",
       "priority": "P0",
-      "title": "Turn project generation into VN business-code delivery with consumed librarian context",
+      "title": "Turn project generation into story business-code delivery with consumed librarian context",
       "owner_role": "Chair/Planner",
       "deps": [
         "L1-ORCH-001",
@@ -2837,9 +2837,9 @@
         "ADHOC-20260402-project-generation-mainline-closure"
       ],
       "dod": [
-        "output_contract_freeze identifies VN / visual novel / galgame / 剧情辅助 goals and freezes a business-deliverable file contract including story, cast, prompt, export, service, and business tests",
+        "output_contract_freeze identifies story / narrative / 剧情辅助 goals and freezes a business-deliverable file contract including story, cast, prompt, export, service, and business tests",
         "source_generation consumes context_pack.json and materializes real business code under project_output/<project_id>/..., reporting generation_mode, scaffold bootstrap usage, business codegen usage, consumed context files, and business file coverage",
-        "project_generation_gate and the fixed VN manual regression both require business code presence, consumed librarian context, and deliverable_index coverage beyond generic scaffold files"
+        "project_generation_gate and the fixed story manual regression both require business code presence, consumed librarian context, and deliverable_index coverage beyond generic scaffold files"
       ],
       "artifacts": {
         "produces": [
@@ -2848,7 +2848,7 @@
           "tools/providers/api_agent.py",
           "scripts/project_generation_gate.py",
           "scripts/project_manifest_bridge.py",
-          "tests/manual_backend_interface_vn_project_runner.py",
+          "tests/manual_backend_interface_narrative_project_runner.py",
           "tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch",
           "tests/test_backend_interface_contract_apis.py",
           "tests/test_api_agent_templates.py",
@@ -2862,26 +2862,26 @@
           "python -m unittest tests/test_api_agent_templates.py -v",
           "python -m unittest tests/test_project_generation_artifacts.py -v",
           "python -m unittest tests/test_backend_interface_contract_apis.py -v",
-          "python tests/manual_backend_interface_vn_project_runner.py",
+          "python tests/manual_backend_interface_narrative_project_runner.py",
           "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
         ]
       },
       "status": "done",
-      "notes": "Completed on 2026-04-03 against baseline faeaedbd419aeb9de182c606cd7ce27eaa091e89 (3.3.4): output_contract_freeze now emits VN business deliverables, source_generation consumes librarian context_pack and materializes real VN modules/tests, gate/bridge/manual regression require business delivery semantics, S16 lite fixer-loop fixture was refreshed for current CURRENT/LAST headers, and canonical verify_repo.ps1 returned 0."
+      "notes": "Completed on 2026-04-03 against baseline faeaedbd419aeb9de182c606cd7ce27eaa091e89 (3.3.4): output_contract_freeze now emits story business deliverables, source_generation consumes librarian context_pack and materializes real story modules/tests, gate/bridge/manual regression require business delivery semantics, S16 lite fixer-loop fixture was refreshed for current CURRENT/LAST headers, and canonical verify_repo.ps1 returned 0."
     },
     {
       "id": "ADHOC-20260404-project-generation-contract-mode-separation",
       "layer": "L1",
       "priority": "P0",
-      "title": "Separate production defaults from benchmark VN samples in project-generation contracts",
+      "title": "Separate production defaults from benchmark sample content in project-generation contracts",
       "owner_role": "Chair/Planner",
       "deps": [
-        "ADHOC-20260403-vn-business-project-generation-mainline"
+        "ADHOC-20260403-story-business-project-generation-mainline"
       ],
       "dod": [
-        "Authoritative project-generation contract text clearly separates production mode from benchmark/regression mode and forbids fixed VN samples from defining production defaults",
+        "Authoritative project-generation contract text clearly separates production mode from benchmark/regression mode and forbids fixed benchmark samples from defining production defaults",
         "Project-generation contract requires project-type classification before workflow or agent selection and defines effective context_pack consumption as provable downstream impact rather than file presence",
-        "Contract gate language distinguishes structural, behavioral, and result completion, and fixed VN sample rules are documented as benchmark-only acceptance inputs"
+        "Contract gate language distinguishes structural, behavioral, and result completion, and fixed benchmark-sample rules are documented as benchmark-only acceptance inputs"
       ],
       "artifacts": {
         "produces": [
@@ -2889,9 +2889,9 @@
           "meta/backlog/execution_queue.json",
           "meta/tasks/CURRENT.md",
           "meta/tasks/ARCHIVE_INDEX.md",
-          "meta/tasks/archive/20260404-vn-business-project-generation-mainline.md",
+          "meta/tasks/archive/20260404-story-business-project-generation-mainline.md",
           "meta/reports/LAST.md",
-          "meta/reports/archive/20260404-vn-business-project-generation-mainline.md"
+          "meta/reports/archive/20260404-story-business-project-generation-mainline.md"
         ],
         "tests": [
           "python scripts/sync_doc_links.py --check",
@@ -2899,7 +2899,7 @@
         ]
       },
       "status": "done",
-      "notes": "Completed on 2026-04-04: docs/41 now distinguishes production mode from benchmark/regression mode, fixed VN samples are benchmark-only, project-type decision and effective context_pack consumption are explicit, gate layering is separated into structural/behavioral/result completion, and contract-profile verify returned 0."
+      "notes": "Completed on 2026-04-04: docs/41 now distinguishes production mode from benchmark/regression mode, fixed benchmark samples are benchmark-only, project-type decision and effective context_pack consumption are explicit, gate layering is separated into structural/behavioral/result completion, and contract-profile verify returned 0."
     },
     {
       "id": "ADHOC-20260404-project-generation-code-align-md-rules",
@@ -2911,7 +2911,7 @@
         "ADHOC-20260404-project-generation-contract-mode-separation"
       ],
       "dod": [
-        "Production code path no longer treats fixed VN benchmark content as the default project target, and benchmark VN content is isolated to benchmark/regression mode only",
+        "Production code path no longer treats fixed benchmark sample content as the default project target, and benchmark sample content is isolated to benchmark/regression mode only",
         "Project generation has one explicit project-type plus delivery-shape decision point whose result affects output contract, source generation, startup entry, and verify/gate semantics",
         "Runtime artifacts and gates record effective context_pack influence plus structural/behavioral/result completion without mixing production acceptance with benchmark acceptance"
       ],
@@ -2923,7 +2923,7 @@
           "scripts/project_generation_gate.py",
           "scripts/project_manifest_bridge.py",
           "workflow_registry/wf_project_generation_manifest/recipe.yaml",
-          "tests/manual_backend_interface_vn_project_runner.py",
+          "tests/manual_backend_interface_narrative_project_runner.py",
           "tests/test_project_generation_artifacts.py",
           "tests/test_backend_interface_contract_apis.py",
           "tests/test_api_agent_templates.py",
@@ -2934,26 +2934,26 @@
         "tests": [
           "python -m unittest tests/test_project_generation_artifacts.py -v",
           "python -m unittest tests/test_backend_interface_contract_apis.py -v",
-          "python tests/manual_backend_interface_vn_project_runner.py",
+          "python tests/manual_backend_interface_narrative_project_runner.py",
           "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
         ]
       },
       "status": "done",
-      "notes": "Completed on 2026-04-04 against baseline faeaedbd419aeb9de182c606cd7ce27eaa091e89: production and benchmark project-generation paths are now explicit, fixed VN sample content is benchmark-only, unified project-type and delivery-shape decisions flow into output/source/manifest/gate artifacts, effective context influence plus structural/behavioral/result gate layers are recorded, focused project-generation regressions passed, lite simlab replay returned 14/14, and canonical powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 returned 0."
+      "notes": "Completed on 2026-04-04 against baseline faeaedbd419aeb9de182c606cd7ce27eaa091e89: production and benchmark project-generation paths are now explicit, fixed benchmark sample content is benchmark-only, unified project-type and delivery-shape decisions flow into output/source/manifest/gate artifacts, effective context influence plus structural/behavioral/result gate layers are recorded, focused project-generation regressions passed, lite simlab replay returned 14/14, and canonical powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 returned 0."
     },
     {
-      "id": "ADHOC-20260404-remove-vn-test-remnants",
+      "id": "ADHOC-20260404-remove-benchmark-sample-remnants",
       "layer": "L1",
       "priority": "P0",
-      "title": "Remove VN-only test remnants and replace active naming with narrative/story equivalents",
+      "title": "Remove benchmark-sample test remnants and replace active naming with narrative/story equivalents",
       "owner_role": "Chair/Planner",
       "deps": [
         "ADHOC-20260404-project-generation-code-align-md-rules"
       ],
       "dod": [
-        "Active runtime/test/demo paths no longer rely on `vn`-named benchmark/sample identifiers",
+        "Active runtime/test/demo paths no longer rely on benchmark-sample identifiers that previously used old sample naming",
         "Necessary semantics are preserved via `narrative` / `story` naming instead of deleting connected behavior",
-        "Repo-tracked `artifacts/backend_interface_vn*` runtime outputs are removed, and remaining `vn` hits are limited to archive history or false positives"
+        "Repo-tracked benchmark-sample runtime outputs are removed, and remaining legacy hits are limited to archive history or false positives"
       ],
       "artifacts": {
         "produces": [
@@ -3004,7 +3004,7 @@
         ]
       },
       "status": "done",
-      "notes": "Completed on 2026-04-04: active code/tests now use narrative/story naming, repo-tracked `artifacts/backend_interface_vn*` residue was removed, active scan hit files dropped to 0 outside legacy/history scope, canonical verify exposed sequential minimal blockers (workflow evidence, PLAN scope, code-health growth-guard, then SimLab S16 drift), and final canonical rerun with repo-supported `CTCP_SKIP_LITE_REPLAY=1` returned 0 while preserving all other gates. The legacy `generated_projects/vn_story_organizer` sample remains untouched because current PLAN marks `generated_projects/**` as scope-deny."
+      "notes": "Completed on 2026-04-04: active code/tests now use narrative/story naming, repo-tracked benchmark-sample residue was removed, active scan hit files dropped to 0 outside legacy/history scope, canonical verify exposed sequential minimal blockers (workflow evidence, PLAN scope, code-health growth-guard, then SimLab S16 drift), and final canonical rerun with repo-supported `CTCP_SKIP_LITE_REPLAY=1` returned 0 while preserving all other gates. The legacy generated sample remained untouched at that time because current PLAN marked `generated_projects/**` as scope-deny."
     },
     {
       "id": "ADHOC-20260404-librarian-local-model-lock",
@@ -3014,7 +3014,7 @@
       "owner_role": "Local Orchestrator",
       "deps": [
         "L1-DISP-001",
-        "ADHOC-20260403-vn-business-project-generation-mainline",
+        "ADHOC-20260403-story-business-project-generation-mainline",
         "ADHOC-20260404-project-generation-code-align-md-rules"
       ],
       "dod": [
@@ -3121,6 +3121,239 @@
       },
       "status": "done",
       "notes": "Completed on 2026-04-05 against baseline faeaedbd419aeb9de182c606cd7ce27eaa091e89 + current working tree: repaired generic support PASS-state delivery, kept benchmark-mode routing explicit and isolated, refreshed the S16 simlab patch fixture to current repo headers, ran standalone lite replay to PASS, and passed verify_repo.ps1 with CTCP_SKIP_LITE_REPLAY=1 after replay proof was captured separately."
+    },
+    {
+      "id": "ADHOC-20260405-md-frontend-backend-api-connectivity-verify",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "MD-driven frontend/backend and formal interface connectivity verification",
+      "owner_role": "Local Verifier",
+      "deps": [
+        "ADHOC-20260405-support-pass-runtime-and-benchmark-mode-isolation"
+      ],
+      "dod": [
+        "The MD-defined contract/backend/frontend/integration test layers run and show whether frontend and backend are connected through structured contracts",
+        "Formal backend interface checks cover run creation, status, advance, decisions, uploads, reports, snapshots, and output artifact readability instead of ad-hoc file peeking",
+        "Canonical verify_repo runs in code profile and records pass or the first failing gate with a minimal repair path"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260405-support-pass-runtime-and-benchmark-mode-isolation.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260405-support-pass-runtime-and-benchmark-mode-isolation.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests/contracts -p \"test_*.py\" -v",
+          "python -m unittest discover -s tests/backend -p \"test_*.py\" -v",
+          "python -m unittest discover -s tests/frontend -p \"test_*.py\" -v",
+          "python -m unittest discover -s tests/integration -p \"test_*.py\" -v",
+          "python tests/test_backend_interface_contract_apis.py",
+          "python tests/manual_backend_interface_e2e_runner.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-05 as a verification-only task: contract/backend/interface/support acceptance layers passed, frontend and integration failed on missing `project_domain` extraction for story reasoning-game requests, manual backend interface e2e was blocked by a repo-local writable-path PermissionError, and canonical verify in code profile failed first at the triplet runtime wiring contract because telegram delivery runtime test hit a `%LocalAppData%` access-denied path."
+    },
+    {
+      "id": "ADHOC-20260405-remove-all-legacy-story-domain-references",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Remove remaining legacy story-domain repo references from active surface and sanitize history labels",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260405-md-frontend-backend-api-connectivity-verify"
+      ],
+      "dod": [
+        "Active tests, current task/report state, and repo-tracked runtime/generated artifacts no longer contain legacy story-domain wording or identifiers",
+        "Backlog and archive labels previously carrying legacy wording are renamed or rewritten to neutral narrative or benchmark-sample terminology where repo policy permits",
+        "Focused regressions and canonical verify record whether the cleanup preserved current repo behavior and surface the first remaining blocker if any"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260405-md-frontend-backend-api-connectivity-verify.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260405-md-frontend-backend-api-connectivity-verify.md",
+          "tests/frontend/test_frontend_handler.py",
+          "tests/integration/test_frontend_backend_integration.py",
+          "tests/test_frontend_rendering_boundary.py"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests/frontend -p \"test_*.py\" -v",
+          "python -m unittest discover -s tests/integration -p \"test_*.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-05: removed the remaining legacy story-domain wording from active tests/current task-report state, sanitized queue/archive labels where policy permitted, deleted disposable runtime artifacts plus the old generated sample project, and confirmed the cleanup with a zero-hit legacy scan plus passing frontend/integration regressions; canonical verify's first remaining blocker is the pre-existing telegram runtime wiring permission failure under `%LocalAppData%`."
+    },
+    {
+      "id": "ADHOC-20260405-project-intent-mvp-mainline-shift",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Shift repo mainline from contract-first shell behavior to ProjectIntent-driven MVP generation",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260405-remove-all-legacy-story-domain-references"
+      ],
+      "dod": [
+        "Frontend main path produces a first-class structured ProjectIntent instead of only a loose goal string plus ad-hoc constraints",
+        "Backend main path executes an explicit ProjectIntent -> Spec -> Scaffold -> Core Feature Implementation -> Smoke Run -> Delivery Package pipeline with readable outputs",
+        "Project-generation validation is split into generic MVP validation and domain-specific validation, and top-level docs/state describe goal understanding and MVP delivery as the primary product promise"
+      ],
+      "artifacts": {
+        "produces": [
+          "contracts/schemas/job_create.py",
+          "contracts/schemas/project_intent.py",
+          "apps/cs_frontend/dialogue/requirement_collector.py",
+          "apps/cs_frontend/application/handle_user_message.py",
+          "apps/cs_frontend/gateway/dto_mapper.py",
+          "apps/project_backend/application/service.py",
+          "apps/project_backend/domain/job.py",
+          "apps/project_backend/orchestrator/job_runner.py",
+          "scripts/ctcp_front_bridge.py",
+          "tools/providers/project_generation_decisions.py",
+          "tools/providers/project_generation_artifacts.py",
+          "scripts/project_generation_gate.py",
+          "docs/01_north_star.md",
+          "docs/03_quality_gates.md",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests/frontend -p \"test_*.py\" -v",
+          "python -m unittest discover -s tests/backend -p \"test_*.py\" -v",
+          "python -m unittest discover -s tests/integration -p \"test_*.py\" -v",
+          "python -m unittest tests/test_project_generation_artifacts.py -v",
+          "python tests/test_backend_interface_contract_apis.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-06: ProjectIntent now flows through the live frontend/backend/bridge path, generation artifacts expose spec+pipeline+generic/domain validation, oversized mainline files were split without breaking the pipeline, and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` passed for the structural mainline-shift topic."
+    },
+    {
+      "id": "ADHOC-20260406-generic-archetype-mainline-and-nonnarrative-e2e",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Reduce generic template dominance, deepen non-narrative validation, and close one real end-to-end MVP acceptance",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260405-project-intent-mvp-mainline-shift"
+      ],
+      "dod": [
+        "Generic generation paths are more spec-driven and archetype-specific instead of relying on one shared business-file materialization path",
+        "At least two non-narrative project archetypes have explicit domain validation and gate coverage without defaulting to narrative structure",
+        "One real non-narrative goal-to-project acceptance run reaches smoke and delivery with evidence that the generated result is a credible MVP rather than only a scaffold"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/providers/project_generation_generic_archetypes.py",
+          "tools/providers/project_generation_business_templates.py",
+          "tools/providers/project_generation_decisions.py",
+          "tools/providers/project_generation_validation.py",
+          "tools/providers/project_generation_artifacts.py",
+          "scripts/project_generation_gate.py",
+          "scripts/project_manifest_bridge.py",
+          "tests/test_project_generation_artifacts.py",
+          "tests/test_backend_interface_contract_apis.py",
+          "tests/manual_backend_interface_non_narrative_project_runner.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_project_generation_artifacts.py\" -v",
+          "python -m unittest discover -s tests -p \"test_backend_interface_contract_apis.py\" -v",
+          "python tests/manual_backend_interface_non_narrative_project_runner.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-06: generic generation now routes through archetype-specific spec-driven builders, CLI/web/data validation paths are explicit, a real non-narrative web-service goal reached smoke+delivery acceptance, SimLab sandbox baseline handling was hardened against runtime-artifact/long-path pollution, and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` passed."
+    },
+    {
+      "id": "ADHOC-20260406-vtuber-highlight-local-mvp",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Deliver a runnable local MVP that detects VTuber high-energy highlight clips from local replay videos",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260406-generic-archetype-mainline-and-nonnarrative-e2e"
+      ],
+      "dod": [
+        "A local runnable project exists under generated_projects with clear structure, README, dependency file, config, tests, sample assets, and one smoke path from local video to results",
+        "The project can analyze a local sample video, emit scored candidate segments with reasons, export at least one clip, and produce a human-viewable report",
+        "Repo evidence is updated and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` passes from the task closure state"
+      ],
+      "artifacts": {
+        "produces": [
+          "generated_projects/vtuber_highlight_local_mvp/",
+          "tests/test_generated_vtuber_highlight_local_mvp.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_generated_vtuber_highlight_local_mvp.py\" -v",
+          "python generated_projects/vtuber_highlight_local_mvp/src/vtuber_highlight_mvp/cli.py --help",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-06: landed `generated_projects/vtuber_highlight_local_mvp/` as a runnable local replay-to-highlight MVP with sample video, rule-based audio+keyword scoring, clips export, HTML/JSON/CSV review outputs, fixed screenshots, project/internal plus repo-level smoke tests, and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` passed after rebasing the S16 fixer-loop fixture to the new task/report state."
+    },
+    {
+      "id": "ADHOC-20260406-support-delivery-evidence-surface",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Expose delivery evidence manifests so support/frontend can directly show project results",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260406-vtuber-highlight-local-mvp",
+        "ADHOC-20260405-project-intent-mvp-mainline-shift"
+      ],
+      "dod": [
+        "Backend completion paths emit a stable structured delivery evidence manifest with user-facing summary, screenshots, demo media, structured outputs, verification summary, limitations, and next actions",
+        "Frontend/backend result objects and bridge payloads explicitly carry delivery evidence instead of only raw run/output paths or verify fragments",
+        "Customer-facing completion replies render delivery evidence as a user-facing result display block that highlights what the user can open now, what passed, and what to do next"
+      ],
+      "artifacts": {
+        "produces": [
+          "contracts/schemas/delivery_evidence.py",
+          "scripts/ctcp_front_bridge.py",
+          "scripts/project_delivery_evidence_bridge.py",
+          "apps/project_backend/application/service.py",
+          "apps/project_backend/domain/job.py",
+          "apps/project_backend/orchestrator/job_runner.py",
+          "apps/cs_frontend/domain/presentable_event.py",
+          "apps/cs_frontend/dialogue/response_renderer.py",
+          "apps/cs_frontend/application/handle_backend_event.py",
+          "tests/backend/test_backend_service.py",
+          "tests/frontend/test_frontend_handler.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/reports/LAST.md",
+          "meta/tasks/archive/20260406-vtuber-highlight-local-mvp.md",
+          "meta/reports/archive/20260406-vtuber-highlight-local-mvp.md"
+        ],
+        "tests": [
+          "python -m unittest tests/backend/test_backend_service.py -v",
+          "python -m unittest tests/frontend/test_frontend_handler.py -v",
+          "python -m unittest tests/test_frontend_rendering_boundary.py -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-06: backend now emits a structured delivery evidence manifest, result objects and bridge payloads carry it explicitly, frontend completion replies render user-facing evidence blocks directly, and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` passed after closing a mock-mode librarian provider inconsistency plus Windows detached-ollama temp-log handle cleanup."
     }
   ]
 }

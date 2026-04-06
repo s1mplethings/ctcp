@@ -1,6 +1,6 @@
 # Task - project-generation-mainline-closure
 
-Archived because the active topic moved from “manifest mainline closure” to “VN business project generation mainline”.
+Archived because the active topic moved from “manifest mainline closure” to “story business project generation mainline”.
 
 ## Queue Binding
 
@@ -12,7 +12,7 @@ Archived because the active topic moved from “manifest mainline closure” to 
 
 - Baseline previously bound: `7777ebd2b46bcd334d14bc872bfbf184c9c93d78` / `3.2.0`
 - Previous scope: dedicated project-generation workflow routing, manifest closure, and bridge readability.
-- Archived reason: this scope explicitly excluded VN business-code delivery and left source generation scaffold-first, which conflicts with the new `faeaedbd419aeb9de182c606cd7ce27eaa091e89` request.
+- Archived reason: this scope explicitly excluded story business-code delivery and left source generation scaffold-first, which conflicts with the new `faeaedbd419aeb9de182c606cd7ce27eaa091e89` request.
 
 ## Prior Evidence Snapshot
 

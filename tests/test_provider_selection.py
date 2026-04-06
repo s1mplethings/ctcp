@@ -142,6 +142,18 @@ class ProviderSelectionTests(unittest.TestCase):
             self.assertEqual(role_providers.get("librarian"), "ollama_agent")
             self.assertEqual(role_providers.get("patchmaker"), "manual_outbox")
 
+    def test_mock_agent_mode_allows_mock_librarian_context_pack_provider(self) -> None:
+        cfg = {
+            "schema_version": "ctcp-dispatch-config-v1",
+            "mode": "mock_agent",
+            "role_providers": {
+                "librarian": "mock_agent",
+            },
+        }
+        provider, note = ctcp_dispatch._resolve_provider(cfg, "librarian", "context_pack")
+        self.assertEqual(provider, "mock_agent")
+        self.assertEqual(note, "")
+
     def test_api_agent_preview_disabled_without_env_or_cmd(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             run_dir = Path(td)

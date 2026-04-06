@@ -8,14 +8,14 @@
 
 ## Context
 
-- Why this item now: 权威 MD 已经明确 production 与 benchmark 的边界，但当前 project-generation 代码主链仍保留 benchmark VN 内容、弱项目类型判断和未分层 gate，需要按新 MD 对齐实现。
+- Why this item now: 权威 MD 已经明确 production 与 benchmark 的边界，但当前 project-generation 代码主链仍保留 benchmark sample 内容、弱项目类型判断和未分层 gate，需要按新 MD 对齐实现。
 - Dependency check: `ADHOC-20260404-project-generation-contract-mode-separation = done`.
 - Scope boundary: 只修 project-generation 主链相关代码、测试与本轮 meta 绑定；不做无关重构。
 - Baseline lock: `repo=D:/.c_projects/adc/ctcp`, `branch=main`, `commit=faeaedbd419aeb9de182c606cd7ce27eaa091e89`, `subject=3.3.4`.
 
 ## Task Truth Source (single source for current task)
 
-- task_purpose: 让现有 project-generation 代码主链对齐新的 `docs/41_low_capability_project_generation.md`，把固定 VN benchmark 样题从 production 默认逻辑中剥离，并落实 mode、项目类型/交付形态决策、有效 `context_pack` 消费与分层 gate。
+- task_purpose: 让现有 project-generation 代码主链对齐新的 `docs/41_low_capability_project_generation.md`，把固定 benchmark sample 样题从 production 默认逻辑中剥离，并落实 mode、项目类型/交付形态决策、有效 `context_pack` 消费与分层 gate。
 - allowed_behavior_change:
   - `tools/providers/project_generation_artifacts.py`
   - `tools/providers/project_generation_business_templates.py`
@@ -47,14 +47,14 @@
 - out_of_scope_modules:
   - unrelated support/frontend flows
   - broad workflow refactors
-- completion_evidence: 主链 artifacts/manifest/gate/test 都能证明 production 与 benchmark 已分离，固定 VN 样题不再充当 production 默认内容，项目类型与交付形态决策能真实影响生成与验收。
+- completion_evidence: 主链 artifacts/manifest/gate/test 都能证明 production 与 benchmark 已分离，固定 benchmark 样例 样题不再充当 production 默认内容，项目类型与交付形态决策能真实影响生成与验收。
 
 ## Analysis / Find (before plan)
 
 - Entrypoint analysis: `tools/providers/project_generation_artifacts.py`、`tools/providers/project_generation_business_templates.py`、`scripts/project_generation_gate.py` 和 `scripts/project_manifest_bridge.py` 共同定义了 project-generation 主链的输出契约、业务生成与 gate 语义。
 - Downstream consumer analysis: `api_agent` 的 chair action、bridge 的 `get_project_manifest`、manual runner 与 backend 接口测试都会消费这些 artifacts。
 - Source of truth: `docs/41_low_capability_project_generation.md` + 当前工作树中的 project-generation 主链代码。
-- Current break point / missing wiring: 生产路径里仍有 VN 特化模板与弱判断耦合，mode 未显式入链，`context_pack` 影响和 gate 分层也没有被完整编码。
+- Current break point / missing wiring: 生产路径里仍有旧样例特化模板与弱判断耦合，mode 未显式入链，`context_pack` 影响和 gate 分层也没有被完整编码。
 - Repo-local search sufficient: `yes`
 
 ## Integration Check (before implementation)
@@ -73,11 +73,11 @@
   - 不只改测试和报告字段却保留原来的 production 默认逻辑。
   - 不把 benchmark 样题继续留在 production 默认语义里。
   - 不用硬编码新的默认项目类型伪装类型决策已实现。
-- user_visible_effect: 真实请求会先做项目类型与交付形态决策，benchmark VN 样题只在 benchmark/regression mode 运行，bridge/manifest/gate 会公开反映这些决策与证据。
+- user_visible_effect: 真实请求会先做项目类型与交付形态决策，benchmark sample 样题只在 benchmark/regression mode 运行，bridge/manifest/gate 会公开反映这些决策与证据。
 
 ## DoD Mapping (from execution_queue.json)
 
-- [x] DoD-1: Production code path no longer treats fixed narrative benchmark content as the default project target, and benchmark VN content is isolated to benchmark/regression mode only.
+- [x] DoD-1: Production code path no longer treats fixed narrative benchmark content as the default project target, and benchmark sample content is isolated to benchmark/regression mode only.
 - [x] DoD-2: Project generation has one explicit project-type plus delivery-shape decision point whose result affects output contract, source generation, startup entry, and verify/gate semantics.
 - [x] DoD-3: Runtime artifacts and gates record effective `context_pack` influence plus structural/behavioral/result completion without mixing production acceptance with benchmark acceptance.
 
@@ -103,7 +103,7 @@
 
 - check-1: current runtime code still resolves project type mostly as `narrative_copilot` vs `generic_copilot`, with no explicit production/benchmark mode in artifacts.
 - contrast-1: required target is a runtime mainline where fixed narrative benchmark logic only appears under benchmark/regression mode.
-- fix-1: request-derived `execution_mode` / `benchmark_case` became authoritative inside `output_contract_freeze`, so benchmark VN sample no longer leaks into production path and production no longer inherits benchmark defaults.
+- fix-1: request-derived `execution_mode` / `benchmark_case` became authoritative inside `output_contract_freeze`, so benchmark benchmark sample no longer leaks into production path and production no longer inherits benchmark defaults.
 - check-2: current mainline has no unified delivery-shape decision and `context_pack` influence is mostly path-presence gating.
 - contrast-2: required target is one explicit decision point whose output affects contract, generation, startup, and verify semantics.
 - fix-2: added a unified decision structure in `tools/providers/project_generation_artifacts.py` for `execution_mode + project_type + delivery_shape`, and wired it into output contract, source generation, manifest, deliver, and bridge-visible fields.

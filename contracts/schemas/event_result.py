@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from contracts.enums import EventType
@@ -11,7 +11,8 @@ class ResultEvent:
     event_id: str
     job_id: str
     summary: str
-    artifacts: dict[str, Any]
+    artifacts: dict[str, Any] = field(default_factory=dict)
+    delivery_evidence: dict[str, Any] = field(default_factory=dict)
 
     @property
     def event_type(self) -> EventType:
@@ -24,4 +25,5 @@ class ResultEvent:
             "job_id": self.job_id,
             "summary": self.summary,
             "artifacts": dict(self.artifacts),
+            "delivery_evidence": dict(self.delivery_evidence),
         }

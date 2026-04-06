@@ -4,21 +4,22 @@ This file is the only authoritative source for repository purpose.
 
 ## Repo Purpose
 
-CTCP is a contract-first execution system that turns change requests into auditable delivery.
-Its core value is deterministic execution evidence. User-visible dialogue, tests, demos, and persona regressions exist to expose that evidence, not to replace it.
+CTCP is a goal-to-MVP generation system that turns vague user requests into structured intent, runnable projects, and verifiable delivery.
+Its core value is not “process correctness by itself”, but a trustworthy mainline:
+`goal understanding -> project generation -> runnable validation -> evidence retention`.
 
 ## What This Repository Is
 
-- A repository-level operating system for planning, implementation, verification, test design, and evidence closure.
-- A runtime that advances project execution through explicit artifacts, fixed mainline stages, and user-visible demo outputs.
-- A contract-governed environment where completion is proven, explained, and shown from the same truth sources.
+- A repository-level system for understanding user goals, shaping them into `ProjectIntent`, generating runnable MVP projects, and validating delivery.
+- A runtime that advances project generation through explicit stages instead of pretending that manifests/gates are the product.
+- A contract-governed environment where evidence supports generation truth instead of replacing it.
 - A system that keeps production execution persona, test user personas, and scoring/judge logic separated so style regressions can be reproduced and scored.
 
 ## What This Repository Is Not
 
 - Not a chat-memory-driven engineering tracker.
 - Not a frontend-only product prototype.
-- Not a collection of independent flows where each module redefines project goals.
+- Not an artifact-first shell where verify/manifest can impersonate a generated MVP.
 
 ## Delivery Qualities
 
@@ -30,7 +31,7 @@ Its core value is deterministic execution evidence. User-visible dialogue, tests
 
 ## Default Operating Mode
 
-- Headless-first, contract-first, verify-gated.
+- Intent-first, MVP-first, verify-supported.
 - Repository work enters through [AGENTS.md](../AGENTS.md) and uses [docs/04_execution_flow.md](docs/04_execution_flow.md) only as the expanded workflow reference.
 
 ## Workflow Reference
@@ -40,8 +41,8 @@ Its core value is deterministic execution evidence. User-visible dialogue, tests
 
 ## Product Lanes / Subsystem Map
 
-- Core execution lane: orchestrator, verification gates, run artifact contracts.
-- Frontend interaction lane: conversation classification and user-facing rendering.
+- Core generation lane: `ProjectIntent -> Spec -> Scaffold -> Core Feature -> Smoke Run -> Delivery Package`.
+- Frontend interaction lane: intent modeling and user-facing understanding summary.
 - Shared state workspace lane: append-only cross-layer state hub (`events -> current -> render`) with runtime-authoritative ownership.
 - Frontend bridge lane: frontend-to-execution API boundary.
 - Support lane: user support interaction shell over runtime truth.

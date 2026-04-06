@@ -79,8 +79,8 @@
 - `python scripts/workflow_checks.py` => `0`
 - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => `1`
   - first failure point: `patch check (scope from PLAN)`
-  - failure detail: `generated_projects/vn_story_organizer/README.md` is still reported out-of-scope by `scripts/patch_check.py` under the repo-wide current PLAN gate
-  - minimal fix strategy: bind an explicit contract/scope update for `generated_projects/vn_story_organizer/` or move delivery outputs out of the repo worktree before rerunning canonical verify; do not silently let Telegram delivery wiring widen patch scope
+  - failure detail: `generated_projects/story_organizer/README.md` is still reported out-of-scope by `scripts/patch_check.py` under the repo-wide current PLAN gate
+  - minimal fix strategy: bind an explicit contract/scope update for `generated_projects/story_organizer/` or move delivery outputs out of the repo worktree before rerunning canonical verify; do not silently let Telegram delivery wiring widen patch scope
 
 ### Questions
 - None.

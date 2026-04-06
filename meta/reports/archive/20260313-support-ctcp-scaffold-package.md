@@ -66,7 +66,7 @@
 - `python scripts/workflow_checks.py` => `0`
 - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1` => `1`
   - first failure point: `patch check (scope from PLAN)`
-  - failure detail: `generated_projects/vn_story_organizer/README.md` remains out-of-scope under the repo PLAN contract
+  - failure detail: `generated_projects/story_organizer/README.md` remains out-of-scope under the repo PLAN contract
   - minimal fix strategy: keep delivery artifacts on external scaffold exports and either remove/relocate the repo-local `generated_projects/` tree or open an explicit scope change before rerunning canonical verify
 
 ### Questions
@@ -78,7 +78,7 @@
 - `meta/tasks/archive/20260313-support-ctcp-scaffold-package.md`
 - `meta/reports/archive/20260313-support-ctcp-scaffold-package.md`
 - real support session `6092527664` resolves `package_delivery_mode=materialize_ctcp_scaffold`
-- generated package: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\support_sessions\6092527664\artifacts\support_exports\vn_story_organizer_ctcp_project.zip`
+- generated package: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\support_sessions\6092527664\artifacts\support_exports\story_organizer_ctcp_project.zip`
 - zip head contains `README.md`, `docs/00_CORE.md`, `meta/tasks/CURRENT.md`, `scripts/verify_repo.ps1`, `workflow_registry/README.md`, `simlab/scenarios/S00_smoke.yaml`
 
 ### Integration Proof
@@ -101,4 +101,4 @@
   - editing repo-local `generated_projects/` to fake a richer deliverable
   - continuing to zip placeholder dirs while describing them as complete projects
 - user_visible_effect:
-  - 用户现在收到的 VN 项目 zip 是 CTCP 风格多文档脚手架，而不是单 `main.py` 占位目录；客服也会按 scaffold 如实描述这个包的结构。
+  - 用户现在收到的 剧情项目 zip 是 CTCP 风格多文档脚手架，而不是单 `main.py` 占位目录；客服也会按 scaffold 如实描述这个包的结构。

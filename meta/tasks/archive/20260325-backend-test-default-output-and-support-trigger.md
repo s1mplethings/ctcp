@@ -9,7 +9,7 @@
 ## Context
 
 - Why this item now: 用户要求保留后续“客服触发”能力，同时当前后端测试阶段默认直接输出结果。
-- Dependency check: `ADHOC-20260325-vn-worldline-backend-generation-smoke` = `done`
+- Dependency check: `ADHOC-20260325-story-worldline-backend-generation-smoke` = `done`
 - Scope boundary: 仅改前端约束提取与后端 create_job 默认输出分支，不改 support 主流程和桥接脚本。
 
 ## Task Truth Source (single source for current task)

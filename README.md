@@ -1,4 +1,4 @@
-# CTCP — ADLC + Multi-Agent Execution Engine
+# CTCP — Goal To MVP Project Generator
 
 Human navigation map:
 
@@ -10,6 +10,19 @@ Human navigation map:
 - Frontend/backend separation boundary: `docs/42_frontend_backend_separation_contract.md`
 
 This README is human-oriented quickstart and navigation. It does not act as the root agent contract.
+
+---
+
+## Product Promise
+
+CTCP 的核心不是“把流程、合约、证据跑正确”，而是：
+
+`模糊目标 -> ProjectIntent -> Spec -> Scaffold -> Core Feature -> Smoke Run -> Delivery Package`
+
+仓库里的 audit、manifest、verify、run artifacts 仍然保留，但它们现在明确属于支撑层：
+- 用来证明生成链路真的走通
+- 用来暴露首个失败点
+- 不再冒充“项目已经生成完成”本身
 
 ---
 
@@ -27,7 +40,7 @@ python scripts\ctcp_orchestrate.py new-run --goal "your-goal"
 python scripts\ctcp_orchestrate.py advance --max-steps 8
 ```
 
-验收入口（Windows）：
+验收入口（Windows，作为支撑验证，不是生成本身）：
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
 ```
@@ -43,8 +56,25 @@ bash scripts/verify_repo.sh
 - 运行级机器可读验收主产物是 `artifacts/verify_report.json`（位于外部 run_dir）。
 - `proof.json` 不是当前硬规则验收产物，仅可作为兼容遗留项。
 - `verify_report.md` 是可选的人类可读总结，不是权威 gate 判据。
+- verify 负责回答“项目是否真的可运行、可交付、可追溯”，而不是替代 ProjectIntent 和 generation pipeline。
 
 ---
+
+## Mainline Outputs
+
+主链输出分为两层：
+
+- 产品主链：
+  - `ProjectIntent`
+  - `Project Spec`
+  - runnable scaffold
+  - core feature implementation
+  - smoke-run evidence
+  - delivery package
+- 支撑层：
+  - verify report
+  - run artifacts
+  - task/report pointers
 
 ## What Orchestrator Produces
 
@@ -138,5 +168,6 @@ python scripts\ctcp_orchestrate.py scaffold-pointcloud --out D:\v2p_projects\dem
 
 ## Notes
 
-- 本仓库默认 **Spec-first**：先改 docs/spec/meta，再改代码。
+- 本仓库默认先澄清 `ProjectIntent`，再推进最小可运行实现。
+- docs/spec/meta 仍然重要，但它们不能替代真实生成与可运行交付。
 - “禁止代码”由 `scripts/workflow_checks.py` 强制执行（不满足直接 fail）。

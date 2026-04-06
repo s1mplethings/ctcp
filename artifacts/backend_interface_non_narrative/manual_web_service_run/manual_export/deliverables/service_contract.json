@@ -1,0 +1,23 @@
+{
+  "routes": [
+    {
+      "route": "/health",
+      "method": "GET",
+      "description": "Return service health and archetype metadata",
+      "outputs": [
+        "status",
+        "archetype"
+      ]
+    },
+    {
+      "route": "/generate",
+      "method": "POST",
+      "description": "Return spec/workflow/acceptance payload summary",
+      "outputs": [
+        "service contract",
+        "sample response",
+        "acceptance report"
+      ]
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -7,7 +8,19 @@ _SOURCE_EXTS = {".py", ".ts", ".tsx", ".js", ".jsx", ".html", ".css", ".java", "
 _WORKFLOW_HINT_FILES = {"TRACE.md", "events.jsonl", "RUN.json", "step_meta.jsonl", "repo_ref.json"}
 
 
-def _infer_project_manifest(run_id: str, artifacts: list[dict[str, Any]]) -> dict[str, Any]:
+def _read_frontend_request(run_dir: Path) -> dict[str, Any]:
+    path = run_dir / "artifacts" / "frontend_request.json"
+    if not path.exists():
+        return {}
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return raw if isinstance(raw, dict) else {}
+
+
+def _infer_project_manifest(run_id: str, run_dir: Path, artifacts: list[dict[str, Any]]) -> dict[str, Any]:
+    frontend_request = _read_frontend_request(run_dir)
     source_files: list[str] = []
     doc_files: list[str] = []
     workflow_files: list[str] = []
@@ -31,14 +44,29 @@ def _infer_project_manifest(run_id: str, artifacts: list[dict[str, Any]]) -> dic
     return {
         "run_id": run_id,
         "project_id": run_id,
+        "project_intent": dict(frontend_request.get("project_intent", {}) if isinstance(frontend_request.get("project_intent", {}), dict) else {}),
+        "project_spec": dict(frontend_request.get("project_spec", {}) if isinstance(frontend_request.get("project_spec", {}), dict) else {}),
+        "pipeline_contract": {
+            "schema_version": "ctcp-project-generation-pipeline-v1",
+            "stages": [
+                {"name": "project_intent", "artifact": "project_intent", "status": "ready"},
+                {"name": "spec", "artifact": "project_spec", "status": "ready"},
+                {"name": "scaffold", "artifact": "project_root", "status": "unknown"},
+                {"name": "core_feature_implementation", "artifact": "core_feature_files", "status": "unknown"},
+                {"name": "smoke_run", "artifact": "startup_entrypoint", "status": "unknown"},
+                {"name": "delivery_package", "artifact": "acceptance_files", "status": "unknown"},
+            ],
+        },
         "project_root": "",
         "project_type": "",
+        "project_archetype": "",
         "project_profile": "",
         "generation_mode": "",
         "execution_mode": "production",
         "benchmark_case": "",
         "delivery_shape": "cli_first",
         "project_type_decision_source": "",
+        "project_archetype_decision_source": "",
         "shape_decision_source": "",
         "source_files": sorted(set(source_files)),
         "doc_files": sorted(set(doc_files)),
@@ -66,6 +94,17 @@ def _infer_project_manifest(run_id: str, artifacts: list[dict[str, Any]]) -> dic
         "flow_nodes": [],
         "gate_layers": {},
         "behavioral_checks": {},
+        "generic_validation": {
+            "passed": False,
+            "has_runnable_entrypoint": False,
+            "readme_startup_ready": False,
+            "core_user_flow": [],
+            "core_feature_files": [],
+            "placeholder_hits": [],
+            "delivery_package": [],
+            "smoke_run": {"passed": False},
+        },
+        "domain_validation": {"kind": "generic", "passed": False, "checks": []},
         "artifacts": artifacts,
     }
 
@@ -77,18 +116,24 @@ def resolve_project_manifest(
     artifacts: list[dict[str, Any]],
     declared: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    inferred = _infer_project_manifest(run_id, artifacts)
+    inferred = _infer_project_manifest(run_id, run_dir, artifacts)
     if isinstance(declared, dict):
         out = dict(inferred)
+        for field in ("project_intent", "project_spec", "pipeline_contract", "generic_validation", "domain_validation"):
+            value = declared.get(field)
+            if isinstance(value, dict):
+                out[field] = value
         out["project_id"] = str(declared.get("project_id", "")).strip() or str(out.get("project_id", ""))
         out["project_root"] = str(declared.get("project_root", "")).strip() or str(out.get("project_root", ""))
         out["project_type"] = str(declared.get("project_type", "")).strip() or str(out.get("project_type", ""))
+        out["project_archetype"] = str(declared.get("project_archetype", "")).strip() or str(out.get("project_archetype", ""))
         out["project_profile"] = str(declared.get("project_profile", "")).strip() or str(out.get("project_profile", ""))
         out["generation_mode"] = str(declared.get("generation_mode", "")).strip() or str(out.get("generation_mode", ""))
         out["execution_mode"] = str(declared.get("execution_mode", "")).strip() or str(out.get("execution_mode", ""))
         out["benchmark_case"] = str(declared.get("benchmark_case", "")).strip() or str(out.get("benchmark_case", ""))
         out["delivery_shape"] = str(declared.get("delivery_shape", "")).strip() or str(out.get("delivery_shape", ""))
         out["project_type_decision_source"] = str(declared.get("project_type_decision_source", "")).strip() or str(out.get("project_type_decision_source", ""))
+        out["project_archetype_decision_source"] = str(declared.get("project_archetype_decision_source", "")).strip() or str(out.get("project_archetype_decision_source", ""))
         out["shape_decision_source"] = str(declared.get("shape_decision_source", "")).strip() or str(out.get("shape_decision_source", ""))
         out["startup_entrypoint"] = str(declared.get("startup_entrypoint", "")).strip() or str(out.get("startup_entrypoint", ""))
         out["startup_readme"] = str(declared.get("startup_readme", "")).strip() or str(out.get("startup_readme", ""))

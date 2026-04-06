@@ -27,6 +27,44 @@ SIMLAB_RUNS_DIR = RUNS_DIR / "simlab_runs"
 SANDBOX = RUNS_DIR / "_gate_matrix_sandbox"
 ENTRY_SUITE_GATE = Path("tools/checks/suite_gate.py")
 ENTRY_LIVE_SUITE = Path("tests/fixtures/adlc_forge_full_bundle/suites/forge_full_suite.live.yaml")
+SANDBOX_IGNORED_NAMES = {
+    ".git",
+    ".venv",
+    "build",
+    "build_lite",
+    "build_verify",
+    "build_gui",
+    "dist",
+    "__pycache__",
+    ".pytest_cache",
+}
+SANDBOX_IGNORED_PREFIXES = (
+    "runs/",
+    "meta/runs/",
+    "simlab/_runs",
+    "tests/fixtures/adlc_forge_full_bundle/runs/",
+    "artifacts/verify/",
+    "artifacts/backend_interface_e2e/",
+    "artifacts/backend_interface_narrative/",
+    "artifacts/backend_interface_non_narrative/",
+    "artifacts/history/",
+    "artifacts/tmp_backend_interface_check/",
+)
+SANDBOX_IGNORED_ARTIFACT_FILES = {
+    "artifacts/simlab_lite_debug.json",
+    "artifacts/test_analysis.json",
+    "artifacts/test_flow_analysis.md",
+    "artifacts/test_output_1.txt",
+    "artifacts/test_step_1_output.txt",
+    "artifacts/test_step_1_session.json",
+    "artifacts/test_step_2_output.txt",
+    "artifacts/test_step_2_session.json",
+    "artifacts/test_step_3_output.txt",
+    "artifacts/test_step_3_session.json",
+    "artifacts/test_step_4_output.txt",
+    "artifacts/test_step_4_session.json",
+    "artifacts/verify_report.json",
+}
 
 
 @dataclass
@@ -151,6 +189,14 @@ def _on_rm_error(func, path, exc_info) -> None:
     func(path)
 
 
+def _should_ignore_sandbox_child(child: str, name: str) -> bool:
+    if name in SANDBOX_IGNORED_NAMES:
+        return True
+    if child in SANDBOX_IGNORED_ARTIFACT_FILES:
+        return True
+    return any(child == prefix.rstrip("/") or child.startswith(prefix) for prefix in SANDBOX_IGNORED_PREFIXES)
+
+
 def copy_repo_for_sandbox(dst: Path) -> Path:
     target = dst
     if target.exists():
@@ -178,31 +224,8 @@ def copy_repo_for_sandbox(dst: Path) -> Path:
                 child = name
             else:
                 child = f"{rel_posix}/{name}"
-            if name in {
-                ".git",
-                ".venv",
-                "build",
-                "build_lite",
-                "build_verify",
-                "build_gui",
-                "dist",
-                "__pycache__",
-                ".pytest_cache",
-            }:
+            if _should_ignore_sandbox_child(child, name):
                 ignored.add(name)
-                continue
-            if (
-                child.startswith("runs/")
-                or child.startswith("meta/runs/")
-                or child.startswith("simlab/_runs")
-                or child.startswith("tests/fixtures/adlc_forge_full_bundle/runs/")
-                or child.startswith("artifacts/verify/")
-            ):
-                ignored.add(name)
-                continue
-            if name == "__pycache__":
-                ignored.add(name)
-                continue
         return ignored
 
     shutil.copytree(ROOT, target, ignore=ignore)
@@ -210,13 +233,18 @@ def copy_repo_for_sandbox(dst: Path) -> Path:
 
 
 def git_init_clean_repo(repo: Path) -> None:
-    run_cmd(["git", "init"], repo)
-    run_cmd(["git", "config", "user.email", "matrix@example.local"], repo)
-    run_cmd(["git", "config", "user.name", "matrix-runner"], repo)
-    run_cmd(["git", "add", "-A"], repo)
-    c = run_cmd(["git", "commit", "-m", "baseline"], repo)
-    if c.rc != 0:
-        raise RuntimeError(f"git baseline commit failed:\n{c.stdout}\n{c.stderr}")
+    commands = [
+        ["git", "init"],
+        ["git", "config", "core.longpaths", "true"],
+        ["git", "config", "user.email", "matrix@example.local"],
+        ["git", "config", "user.name", "matrix-runner"],
+        ["git", "add", "-A"],
+        ["git", "commit", "-m", "baseline"],
+    ]
+    for cmd in commands:
+        res = run_cmd(cmd, repo)
+        if res.rc != 0:
+            raise RuntimeError(f"git baseline step failed ({' '.join(cmd)}):\n{res.stdout}\n{res.stderr}")
 
 
 @contextlib.contextmanager

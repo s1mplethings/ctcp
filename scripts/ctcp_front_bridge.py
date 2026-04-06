@@ -24,8 +24,6 @@ _FINAL_RUN_STATUSES = {"pass", "done", "completed", "success"}
 _RUNNING_STATUSES = {"running", "in_progress", "working"}
 _ERROR_RUN_STATUSES = {"fail", "failed", "error", "aborted"}
 _ERROR_GATE_STATES = {"error", "failed"}
-_USER_DECISION_STATUSES = {"pending", "submitted"}
-_DECISION_STATUSES = {"pending", "submitted", "consumed", "rejected", "expired"}
 
 STATUS_LINE_RE = re.compile(r"^\[ctcp_orchestrate\]\s*([^=]+)=(.*)$")
 
@@ -48,6 +46,44 @@ except ModuleNotFoundError:
     if str(SCRIPTS_DIR) not in sys.path:
         sys.path.insert(0, str(SCRIPTS_DIR))
     from project_manifest_bridge import resolve_project_manifest
+try:
+    from project_delivery_evidence_bridge import (
+        MANIFEST_REL_PATH as DELIVERY_EVIDENCE_REL_PATH,
+        build_delivery_evidence_manifest,
+        write_delivery_evidence_manifest,
+    )
+except ModuleNotFoundError:
+    if str(SCRIPTS_DIR) not in sys.path:
+        sys.path.insert(0, str(SCRIPTS_DIR))
+    from project_delivery_evidence_bridge import (
+        MANIFEST_REL_PATH as DELIVERY_EVIDENCE_REL_PATH,
+        build_delivery_evidence_manifest,
+        write_delivery_evidence_manifest,
+    )
+try:
+    from ctcp_front_bridge_decisions import (
+        _canonical_decisions_from_runtime_state,
+        _decision_registry_with_fallback,
+        _normalize_decision_row,
+    )
+    from ctcp_front_bridge_views import (
+        _build_current_state_snapshot,
+        _build_render_state_snapshot,
+        _collect_output_artifacts,
+    )
+except ModuleNotFoundError:
+    if str(SCRIPTS_DIR) not in sys.path:
+        sys.path.insert(0, str(SCRIPTS_DIR))
+    from ctcp_front_bridge_decisions import (
+        _canonical_decisions_from_runtime_state,
+        _decision_registry_with_fallback,
+        _normalize_decision_row,
+    )
+    from ctcp_front_bridge_views import (
+        _build_current_state_snapshot,
+        _build_render_state_snapshot,
+        _collect_output_artifacts,
+    )
 
 
 class BridgeError(RuntimeError):
@@ -243,212 +279,6 @@ def _file_ts_iso(path: Path) -> str:
         return _now_utc_iso()
 
 
-def _decision_default_target(decision_id: str) -> str:
-    safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(decision_id or "").strip()).strip("_")
-    safe = safe or "decision"
-    return f"artifacts/support_decisions/{safe}.md"
-
-
-def _decision_format(target_path: str) -> tuple[str, dict[str, Any]]:
-    suffix = Path(str(target_path or "").strip()).suffix.lower()
-    if suffix == ".json":
-        return "json", {"type": "object"}
-    if suffix == ".md":
-        return "markdown", {"type": "string"}
-    return "text", {"type": "string"}
-
-
-def _normalize_decision_status(value: str, *, fallback: str = "pending") -> str:
-    status = str(value or "").strip().lower()
-    if status in _DECISION_STATUSES:
-        return status
-    return fallback
-
-
-def _normalize_decision_row(raw: dict[str, Any], *, now_ts: str, status_fallback: str = "pending") -> dict[str, Any]:
-    decision_id = str(raw.get("decision_id", "")).strip()
-    question = str(raw.get("question", "") or raw.get("question_hint", "") or raw.get("reason", "")).strip()
-    target_path = str(raw.get("target_path", "")).strip()
-    if not target_path and decision_id:
-        target_path = _decision_default_target(decision_id)
-    expected_format = str(raw.get("expected_format", "")).strip()
-    schema = raw.get("schema", {})
-    if not expected_format:
-        expected_format, default_schema = _decision_format(target_path)
-        if not isinstance(schema, dict) or not schema:
-            schema = default_schema
-    if not isinstance(schema, dict):
-        schema = {}
-
-    status = _normalize_decision_status(str(raw.get("status", "")), fallback=status_fallback)
-    created_at = str(raw.get("created_at", "")).strip() or now_ts
-    submitted_at = str(raw.get("submitted_at", "")).strip()
-    consumed_at = str(raw.get("consumed_at", "")).strip()
-    rejected_at = str(raw.get("rejected_at", "")).strip()
-    expired_at = str(raw.get("expired_at", "")).strip()
-    submission_state_hash = str(raw.get("submission_state_hash", "")).strip()
-    prompt_path = str(raw.get("prompt_path", "")).strip()
-    role = str(raw.get("role", "")).strip()
-    action = str(raw.get("action", "")).strip()
-    reason = str(raw.get("reason", "")).strip() or question
-    kind = str(raw.get("kind", "")).strip() or "decision"
-    source = str(raw.get("source", "")).strip() or "canonical"
-
-    return {
-        "decision_id": decision_id,
-        "kind": kind,
-        "question": question,
-        "question_hint": question,
-        "target_path": target_path,
-        "prompt_path": prompt_path,
-        "role": role,
-        "action": action,
-        "reason": reason,
-        "expected_format": expected_format,
-        "schema": schema,
-        "status": status,
-        "created_at": created_at,
-        "submitted_at": submitted_at,
-        "consumed_at": consumed_at,
-        "rejected_at": rejected_at,
-        "expired_at": expired_at,
-        "submission_state_hash": submission_state_hash,
-        "source": source,
-    }
-
-
-def _scan_pending_decisions_from_legacy(run_dir: Path) -> list[dict[str, Any]]:
-    decisions: list[dict[str, Any]] = []
-    outbox_dir = run_dir / "outbox"
-    for prompt in sorted(outbox_dir.glob("*.md")) if outbox_dir.exists() else []:
-        parsed = _parse_outbox_prompt(prompt)
-        target_rel = str(parsed.get("target_path", "")).strip()
-        if not target_rel:
-            target_rel = _decision_default_target(f"outbox:{prompt.stem}")
-        target_abs = (run_dir / target_rel).resolve()
-        _ensure_within_run_dir(run_dir, target_abs)
-        if target_abs.exists():
-            continue
-        expected_format, schema = _decision_format(target_rel)
-        question = str(parsed.get("question_hint", "")).strip() or str(parsed.get("reason", "")).strip()
-        decision_id = f"outbox:{prompt.stem}"
-        decisions.append(
-            _normalize_decision_row(
-                {
-                    "decision_id": decision_id,
-                    "kind": "outbox_prompt",
-                    "source": "fallback_legacy",
-                    "prompt_path": prompt.relative_to(run_dir).as_posix(),
-                    "role": str(parsed.get("role", "")).strip(),
-                    "action": str(parsed.get("action", "")).strip(),
-                    "target_path": target_rel,
-                    "reason": str(parsed.get("reason", "")).strip(),
-                    "question": question,
-                    "expected_format": expected_format,
-                    "schema": schema,
-                    "status": "pending",
-                    "created_at": _file_ts_iso(prompt),
-                },
-                now_ts=_now_utc_iso(),
-            )
-        )
-
-    questions_path = run_dir / "QUESTIONS.md"
-    if questions_path.exists():
-        created_at = _file_ts_iso(questions_path)
-        rows = [ln.strip() for ln in _read_text(questions_path).splitlines() if ln.strip()]
-        for idx, row in enumerate(rows, start=1):
-            if row.startswith("#"):
-                continue
-            if row.startswith("-"):
-                row = row.lstrip("-").strip()
-            if not row:
-                continue
-            decision_id = f"questions:{idx}"
-            target_rel = _decision_default_target(decision_id)
-            target_abs = (run_dir / target_rel).resolve()
-            _ensure_within_run_dir(run_dir, target_abs)
-            if target_abs.exists():
-                continue
-            decisions.append(
-                _normalize_decision_row(
-                    {
-                        "decision_id": decision_id,
-                        "kind": "questions_md",
-                        "source": "fallback_legacy",
-                        "prompt_path": "QUESTIONS.md",
-                        "role": "chair/planner",
-                        "action": "question",
-                        "target_path": target_rel,
-                        "reason": row,
-                        "question": row,
-                        "expected_format": "markdown",
-                        "schema": {"type": "string"},
-                        "status": "pending",
-                        "created_at": created_at,
-                    },
-                    now_ts=_now_utc_iso(),
-                )
-            )
-    return decisions
-
-
-def _canonical_decisions_from_runtime_state(state_doc: dict[str, Any], *, now_ts: str) -> tuple[list[dict[str, Any]], bool]:
-    rows: list[dict[str, Any]] = []
-    has_explicit = False
-    for key in ("decisions", "pending_decisions"):
-        if key in state_doc:
-            has_explicit = True
-        value = state_doc.get(key, [])
-        if not isinstance(value, list):
-            continue
-        for item in value:
-            if not isinstance(item, dict):
-                continue
-            normalized = _normalize_decision_row(item, now_ts=now_ts, status_fallback="pending")
-            decision_id = str(normalized.get("decision_id", "")).strip()
-            if not decision_id:
-                continue
-            if not str(normalized.get("source", "")).strip():
-                normalized["source"] = "canonical"
-            rows.append(normalized)
-    merged: dict[str, dict[str, Any]] = {}
-    for row in rows:
-        decision_id = str(row.get("decision_id", "")).strip()
-        if not decision_id:
-            continue
-        merged[decision_id] = row
-    deduped = list(merged.values())
-    deduped.sort(key=_decision_sort_key)
-    return deduped, has_explicit
-
-
-def _decision_registry_with_fallback(
-    *,
-    run_dir: Path,
-    previous_state: dict[str, Any],
-    now_ts: str,
-    core_hash_seed: str,
-) -> tuple[list[dict[str, Any]], str, bool]:
-    canonical_rows, canonical_explicit = _canonical_decisions_from_runtime_state(previous_state, now_ts=now_ts)
-    if canonical_explicit:
-        return canonical_rows, "canonical", False
-
-    legacy_rows = _scan_pending_decisions_from_legacy(run_dir)
-    if legacy_rows:
-        merged = _merge_decision_registry(
-            previous_state=previous_state,
-            pending_from_legacy=legacy_rows,
-            core_hash=core_hash_seed,
-            now_ts=now_ts,
-        )
-        for item in merged:
-            if not str(item.get("source", "")).strip():
-                item["source"] = "fallback_legacy"
-        return merged, "fallback_legacy", True
-    return canonical_rows, "canonical", False
-
-
 def _runtime_core_hash(payload: dict[str, Any]) -> str:
     raw = json.dumps(payload, ensure_ascii=False, sort_keys=True)
     return hashlib.sha1(raw.encode("utf-8", errors="replace")).hexdigest()
@@ -479,72 +309,81 @@ def _derive_runtime_phase(
     return "PLAN"
 
 
-def _decision_sort_key(row: dict[str, Any]) -> str:
-    for key in ("consumed_at", "submitted_at", "created_at"):
-        value = str(row.get(key, "")).strip()
-        if value:
-            return value
-    return ""
+def _load_verify_progress(run_dir: Path, previous_state: dict[str, Any], iterations: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
+    verify_result = str(previous_state.get("verify_result", "")).strip().upper()
+    verify_gate = str(previous_state.get("verify_gate", "")).strip().lower()
+    if verify_doc := _read_json(run_dir / "artifacts" / "verify_report.json"):
+        verify_result = str(verify_doc.get("result", "")).strip().upper() or verify_result
+        verify_gate = str(verify_doc.get("gate", "")).strip().lower() or verify_gate
+        iterations["current"] = int(verify_doc.get("iteration", iterations.get("current", 0)) or 0)
+        iterations["max"] = int(verify_doc.get("max_iterations", iterations.get("max", 0)) or 0)
+        if verify_doc.get("max_iterations") is not None:
+            iterations["source"] = str(iterations.get("source", "")).strip() or "verify_report.json"
+    return verify_result, verify_gate, iterations
 
 
-def _merge_decision_registry(
+def _resolve_decision_runtime(
     *,
+    run_dir: Path,
     previous_state: dict[str, Any],
-    pending_from_legacy: list[dict[str, Any]],
-    core_hash: str,
     now_ts: str,
-) -> list[dict[str, Any]]:
-    previous_rows_raw = previous_state.get("decisions", [])
-    if not isinstance(previous_rows_raw, list):
-        previous_rows_raw = []
-    previous_rows = {}
-    for item in previous_rows_raw:
-        if not isinstance(item, dict):
-            continue
-        normalized = _normalize_decision_row(item, now_ts=now_ts, status_fallback="pending")
-        decision_id = str(normalized.get("decision_id", "")).strip()
-        if decision_id:
-            previous_rows[decision_id] = normalized
+    run_status: str,
+    verify_result: str,
+    verify_gate: str,
+    gate: dict[str, Any],
+    iterations: dict[str, Any],
+    latest_status_raw: dict[str, Any],
+) -> tuple[list[dict[str, Any]], str, bool, list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    core_hash_seed = _runtime_core_hash(
+        {
+            "run_status": run_status,
+            "verify_result": verify_result,
+            "verify_gate": verify_gate,
+            "gate": gate,
+            "iterations": iterations,
+            "latest_status_raw": latest_status_raw,
+        }
+    )
+    decision_registry, decision_source, legacy_fallback_used = _decision_registry_with_fallback(
+        run_dir=run_dir,
+        previous_state=previous_state,
+        now_ts=now_ts,
+        core_hash_seed=core_hash_seed,
+        ensure_within_run_dir=_ensure_within_run_dir,
+        file_ts_iso=_file_ts_iso,
+        now_utc_iso=_now_utc_iso,
+        parse_outbox_prompt=_parse_outbox_prompt,
+        read_text=_read_text,
+    )
+    pending_user_decisions = [row for row in decision_registry if str(row.get("status", "")).strip().lower() == "pending"]
+    open_decisions = [row for row in decision_registry if str(row.get("status", "")).strip().lower() in {"pending", "submitted"}]
+    submitted_open = [row for row in decision_registry if str(row.get("status", "")).strip().lower() == "submitted"]
+    return decision_registry, decision_source, legacy_fallback_used, pending_user_decisions, open_decisions, submitted_open
 
-    pending_rows = {}
-    for item in pending_from_legacy:
-        normalized = _normalize_decision_row(item, now_ts=now_ts, status_fallback="pending")
-        decision_id = str(normalized.get("decision_id", "")).strip()
-        if decision_id:
-            pending_rows[decision_id] = normalized
 
-    merged: dict[str, dict[str, Any]] = {}
-    for decision_id, current in pending_rows.items():
-        prev = previous_rows.get(decision_id)
-        if prev and str(prev.get("status", "")).strip().lower() == "submitted":
-            current["status"] = "submitted"
-            current["submitted_at"] = str(prev.get("submitted_at", "")).strip()
-            current["submission_state_hash"] = str(prev.get("submission_state_hash", "")).strip()
-        elif prev:
-            current["created_at"] = str(prev.get("created_at", "")).strip() or str(current.get("created_at", "")).strip() or now_ts
-        merged[decision_id] = current
-
-    for decision_id, prev in previous_rows.items():
-        if decision_id in merged:
-            continue
-        status = str(prev.get("status", "")).strip().lower()
-        if status == "submitted":
-            submit_hash = str(prev.get("submission_state_hash", "")).strip()
-            if submit_hash and submit_hash != core_hash:
-                prev["status"] = "consumed"
-                prev["consumed_at"] = str(prev.get("consumed_at", "")).strip() or now_ts
-            else:
-                prev["status"] = "submitted"
-        elif status == "pending":
-            prev["status"] = "expired"
-            prev["expired_at"] = str(prev.get("expired_at", "")).strip() or now_ts
-        merged[decision_id] = prev
-
-    unresolved = [row for row in merged.values() if str(row.get("status", "")).strip().lower() in _USER_DECISION_STATUSES]
-    resolved = [row for row in merged.values() if str(row.get("status", "")).strip().lower() not in _USER_DECISION_STATUSES]
-    unresolved.sort(key=_decision_sort_key)
-    resolved.sort(key=_decision_sort_key, reverse=True)
-    return unresolved + resolved[:32]
+def _runtime_blocking_reason(
+    *,
+    pending_user_decisions: list[dict[str, Any]],
+    submitted_open: list[dict[str, Any]],
+    has_error: bool,
+    gate_state: str,
+    gate: dict[str, Any],
+    previous_state: dict[str, Any],
+    run_status: str,
+    final_ready: bool,
+) -> str:
+    if pending_user_decisions:
+        first = pending_user_decisions[0]
+        return str(first.get("question", "") or first.get("reason", "")).strip() or str(gate.get("reason", "")).strip() or "decision_required"
+    if submitted_open:
+        return "decision_submitted_waiting_backend_consume"
+    if has_error:
+        return str(gate.get("reason", "")).strip() or f"run_status={run_status or 'error'}"
+    if gate_state == "blocked":
+        return str(gate.get("reason", "")).strip() or "blocked"
+    if str(previous_state.get("blocking_reason", "")).strip():
+        return str(previous_state.get("blocking_reason", "")).strip()
+    return "none" if final_ready else "none"
 
 
 def _read_runtime_state(run_dir: Path) -> dict[str, Any]:
@@ -589,28 +428,18 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
     run_status = str(parsed.get("run_status", "")).strip().lower()
     if not run_status:
         run_status = str(previous_state.get("run_status", "")).strip().lower()
-    verify_result = str(previous_state.get("verify_result", "")).strip().upper()
-    verify_gate = str(previous_state.get("verify_gate", "")).strip().lower()
-    if verify_doc := _read_json(run_dir / "artifacts" / "verify_report.json"):
-        verify_result = str(verify_doc.get("result", "")).strip().upper() or verify_result
-        verify_gate = str(verify_doc.get("gate", "")).strip().lower() or verify_gate
-        iterations["current"], iterations["max"] = int(verify_doc.get("iteration", iterations.get("current", 0)) or 0), int(verify_doc.get("max_iterations", iterations.get("max", 0)) or 0)
-        if verify_doc.get("max_iterations") is not None: iterations["source"] = str(iterations.get("source", "")).strip() or "verify_report.json"
-    raw_decisions = previous_state.get("decisions", [])
-    if not isinstance(raw_decisions, list):
-        raw_decisions = []
-    decision_registry: list[dict[str, Any]] = []
-    for item in raw_decisions:
-        if not isinstance(item, dict):
-            continue
-        normalized = _normalize_decision_row(item, now_ts=now_ts, status_fallback="pending")
-        if not str(normalized.get("decision_id", "")).strip():
-            continue
-        decision_registry.append(normalized)
-
-    pending_user_decisions = [row for row in decision_registry if str(row.get("status", "")).strip().lower() == "pending"]
-    open_decisions = [row for row in decision_registry if str(row.get("status", "")).strip().lower() in _USER_DECISION_STATUSES]
-    submitted_open = [row for row in decision_registry if str(row.get("status", "")).strip().lower() == "submitted"]
+    verify_result, verify_gate, iterations = _load_verify_progress(run_dir, previous_state, iterations)
+    decision_registry, decision_source, legacy_fallback_used, pending_user_decisions, open_decisions, submitted_open = _resolve_decision_runtime(
+        run_dir=run_dir,
+        previous_state=previous_state,
+        now_ts=now_ts,
+        run_status=run_status,
+        verify_result=verify_result,
+        verify_gate=verify_gate,
+        gate=gate,
+        iterations=iterations,
+        latest_status_raw=latest_status_raw,
+    )
     needs_user_decision = bool(pending_user_decisions)
     final_ready = run_status in _FINAL_RUN_STATUSES and verify_result == "PASS" and not needs_user_decision
     previous_error = previous_state.get("error", {})
@@ -620,6 +449,19 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
         or verify_result == "FAIL"
         or (isinstance(previous_error, dict) and bool(previous_error.get("has_error", False)))
     )
+    if has_error and not pending_user_decisions:
+        normalized_registry: list[dict[str, Any]] = []
+        for row in decision_registry:
+            if not isinstance(row, dict):
+                continue
+            current = dict(row)
+            if str(current.get("status", "")).strip().lower() == "submitted":
+                current["status"] = "consumed"
+                current["consumed_at"] = str(current.get("consumed_at", "")).strip() or now_ts
+            normalized_registry.append(current)
+        decision_registry = normalized_registry
+        open_decisions = []
+        submitted_open = []
     phase = _derive_runtime_phase(
         run_status=run_status,
         verify_result=verify_result,
@@ -629,19 +471,16 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
     )
     if submitted_open and phase in {"PLAN", "RECOVER"} and not has_error:
         phase = "EXECUTE"
-    blocking_reason = "none"
-    if pending_user_decisions:
-        first = pending_user_decisions[0]
-        blocking_reason = str(first.get("question", "") or first.get("reason", "")).strip() or str(gate.get("reason", "")).strip() or "decision_required"
-    elif submitted_open:
-        blocking_reason = "decision_submitted_waiting_backend_consume"
-    elif has_error:
-        blocking_reason = str(gate.get("reason", "")).strip() or f"run_status={run_status or 'error'}"
-    elif gate_state == "blocked":
-        blocking_reason = str(gate.get("reason", "")).strip() or "blocked"
-    elif str(previous_state.get("blocking_reason", "")).strip():
-        blocking_reason = str(previous_state.get("blocking_reason", "")).strip()
-    if final_ready: blocking_reason = "none"
+    blocking_reason = _runtime_blocking_reason(
+        pending_user_decisions=pending_user_decisions,
+        submitted_open=submitted_open,
+        has_error=has_error,
+        gate_state=gate_state,
+        gate=gate,
+        previous_state=previous_state,
+        run_status=run_status,
+        final_ready=final_ready,
+    )
     error_doc = {
         "has_error": bool(has_error),
         "code": run_status if run_status in _ERROR_RUN_STATUSES else (gate_state if gate_state in _ERROR_GATE_STATES else ""),
@@ -676,6 +515,8 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
         "needs_user_decision": bool(needs_user_decision),
         "pending_decisions": open_decisions[:32],
         "decisions": decision_registry[:64],
+        "decision_source": decision_source,
+        "legacy_decision_fallback_used": legacy_fallback_used,
         "latest_result": latest_result,
         "error": error_doc,
         "recovery": recovery_doc,
@@ -702,67 +543,10 @@ def _load_runtime_state(run_dir: Path, *, refresh: bool = True) -> dict[str, Any
     return state
 
 
-def _classify_artifact(rel_path: str) -> str:
-    suffix = Path(rel_path).suffix.lower()
-    rel_l = str(rel_path).lower()
-    if suffix in {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"}:
-        return "image"
-    if suffix in {".zip", ".tar", ".gz", ".tgz"}:
-        return "archive"
-    if suffix in {".html", ".css", ".js", ".ts", ".py", ".md", ".txt", ".json", ".yaml", ".yml"}:
-        return "code"
-    if "report" in rel_l or rel_l.endswith("trace.md"):
-        return "report"
-    return "other"
-
-
-def _is_output_artifact_rel(rel_path: str) -> bool:
-    rel = str(rel_path).strip().replace("\\", "/")
-    if not rel:
-        return False
-    if rel.startswith("outbox/"):
-        return False
-    if rel in {"RUN.json", "events.jsonl"}:
-        return False
-    if rel.startswith("artifacts/frontend_uploads/"):
-        # uploaded user inputs are not backend-produced output artifacts
-        return False
-    if rel.startswith("artifacts/support_decisions/"):
-        # user decision payloads are not output deliverables
-        return False
-    return True
-
-
-def _artifact_row(run_dir: Path, file_path: Path) -> dict[str, Any]:
-    rel_path = file_path.resolve().relative_to(run_dir.resolve()).as_posix()
-    artifact_id = hashlib.sha1(rel_path.encode("utf-8", errors="replace")).hexdigest()
-    mime_type = _guess_mime_type(file_path)
-    return {
-        "artifact_id": artifact_id,
-        "rel_path": rel_path,
-        "kind": _classify_artifact(rel_path),
-        "mime_type": mime_type,
-        "size_bytes": int(file_path.stat().st_size),
-        "created_at": _file_ts_iso(file_path),
-    }
-
-
-def _collect_output_artifacts(run_dir: Path) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    for path in sorted(run_dir.rglob("*")):
-        if not path.is_file():
-            continue
-        rel_path = path.resolve().relative_to(run_dir.resolve()).as_posix()
-        if not _is_output_artifact_rel(rel_path):
-            continue
-        rows.append(_artifact_row(run_dir, path))
-    return rows
-
-
 def ctcp_get_project_manifest(run_id: str = "") -> dict[str, Any]:
     run_dir = _resolve_run_dir(run_id)
     rid = _run_id_from_dir(run_dir)
-    artifacts = _collect_output_artifacts(run_dir)
+    artifacts = _collect_output_artifacts(run_dir, guess_mime_type=_guess_mime_type, file_ts_iso=_file_ts_iso)
     manifest_path = run_dir / "artifacts" / "project_manifest.json"
     declared = _read_json(manifest_path) if manifest_path.exists() else None
     if not isinstance(declared, dict) or not declared:
@@ -770,11 +554,31 @@ def ctcp_get_project_manifest(run_id: str = "") -> dict[str, Any]:
     return resolve_project_manifest(run_id=rid, run_dir=run_dir, artifacts=artifacts, declared=declared)
 
 
+def ctcp_get_delivery_evidence_manifest(run_id: str = "") -> dict[str, Any]:
+    run_dir = _resolve_run_dir(run_id)
+    rid = _run_id_from_dir(run_dir)
+    artifacts = _collect_output_artifacts(run_dir, guess_mime_type=_guess_mime_type, file_ts_iso=_file_ts_iso)
+    project_manifest = ctcp_get_project_manifest(rid)
+    verify_report = _read_json(run_dir / "artifacts" / "verify_report.json")
+    manifest = build_delivery_evidence_manifest(
+        run_id=rid,
+        run_dir=run_dir,
+        project_manifest=project_manifest,
+        artifacts=artifacts,
+        verify_report=verify_report if isinstance(verify_report, dict) else {},
+    )
+    rel_path = write_delivery_evidence_manifest(run_dir, manifest)
+    out = dict(manifest)
+    out["manifest_path"] = rel_path
+    out["manifest_abs_path"] = str((run_dir / DELIVERY_EVIDENCE_REL_PATH).resolve())
+    return out
+
+
 def _resolve_artifact_path(run_dir: Path, artifact_ref: str) -> tuple[Path, dict[str, Any]]:
     ref = str(artifact_ref or "").strip()
     if not ref:
         raise BridgeError("artifact_ref is required")
-    rows = _collect_output_artifacts(run_dir)
+    rows = _collect_output_artifacts(run_dir, guess_mime_type=_guess_mime_type, file_ts_iso=_file_ts_iso)
     row: dict[str, Any] | None = None
     for item in rows:
         if str(item.get("artifact_id", "")).strip() == ref:
@@ -815,13 +619,29 @@ def _orchestrate_status(run_dir: Path) -> dict[str, Any]:
     return result
 
 
-def ctcp_new_run(goal: str, constraints: dict[str, Any] | None = None, attachments: list[str] | None = None) -> dict[str, Any]:
+def ctcp_new_run(
+    goal: str,
+    constraints: dict[str, Any] | None = None,
+    attachments: list[str] | None = None,
+    project_intent: dict[str, Any] | None = None,
+    project_spec: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     goal_text = str(goal or "").strip()
     if not goal_text:
         raise BridgeError("goal is required")
-    if not isinstance(constraints, dict):
-        try: from apps.cs_frontend.dialogue.requirement_collector import collect_frontend_constraints as _collect; constraints = _collect(mode="PROJECT_DETAIL", latest_user_text=goal_text, history=[])
-        except Exception: constraints = {}
+    if not isinstance(constraints, dict) or not isinstance(project_intent, dict):
+        try:
+            from apps.cs_frontend.dialogue.requirement_collector import collect_frontend_request_context as _collect_request_context
+
+            request_context = _collect_request_context(latest_user_text=goal_text)
+        except Exception:
+            request_context = {}
+        if not isinstance(constraints, dict):
+            constraints = dict(request_context.get("constraints", {})) if isinstance(request_context.get("constraints", {}), dict) else {}
+        if not isinstance(project_intent, dict):
+            project_intent = dict(request_context.get("project_intent", {})) if isinstance(request_context.get("project_intent", {}), dict) else {}
+    if not isinstance(project_spec, dict):
+        project_spec = {}
 
     cmd = [sys.executable, str(ORCHESTRATE_PATH), "new-run", "--goal", goal_text]
     created = _run_cmd(cmd, ROOT)
@@ -840,6 +660,8 @@ def ctcp_new_run(goal: str, constraints: dict[str, Any] | None = None, attachmen
         "ts": _now_utc_iso(),
         "goal": goal_text,
         "constraints": constraints if isinstance(constraints, dict) else {},
+        "project_intent": project_intent if isinstance(project_intent, dict) else {},
+        "project_spec": project_spec if isinstance(project_spec, dict) else {},
         "attachments": uploaded,
     }
     _write_json(run_dir / "artifacts" / "frontend_request.json", request_doc)
@@ -918,6 +740,7 @@ def ctcp_get_support_context(run_id: str = "") -> dict[str, Any]:
     render_snapshot = ctcp_get_render_state_snapshot(rid)
     output_artifacts = ctcp_list_output_artifacts(rid)
     project_manifest = ctcp_get_project_manifest(rid)
+    delivery_evidence = ctcp_get_delivery_evidence_manifest(rid)
     whiteboard = ctcp_dispatch.get_support_whiteboard_context(run_dir)
     frontend_request = _read_json(run_dir / "artifacts" / "frontend_request.json")
     return {
@@ -930,6 +753,7 @@ def ctcp_get_support_context(run_id: str = "") -> dict[str, Any]:
         "decisions": decisions,
         "output_artifacts": output_artifacts,
         "project_manifest": project_manifest,
+        "delivery_evidence": delivery_evidence,
         "whiteboard": whiteboard,
         "frontend_request": frontend_request,
         "goal": str(frontend_request.get("goal", "")).strip(),
@@ -1025,7 +849,7 @@ def ctcp_get_last_report(run_id: str = "") -> dict[str, Any]:
 
 def ctcp_list_output_artifacts(run_id: str = "") -> dict[str, Any]:
     run_dir = _resolve_run_dir(run_id)
-    rows = _collect_output_artifacts(run_dir)
+    rows = _collect_output_artifacts(run_dir, guess_mime_type=_guess_mime_type, file_ts_iso=_file_ts_iso)
     return {
         "run_id": _run_id_from_dir(run_dir),
         "run_dir": str(run_dir),
@@ -1079,19 +903,6 @@ def ctcp_read_output_artifact(run_id: str, artifact_ref: str, *, max_text_bytes:
     return out
 
 
-def _runtime_to_visible_state(runtime_state: dict[str, Any]) -> str:
-    phase = str(runtime_state.get("phase", "")).strip().upper()
-    if phase == "WAIT_USER_DECISION":
-        return "WAITING_FOR_DECISION"
-    if phase == "RECOVER":
-        return "BLOCKED_NEEDS_INPUT"
-    if phase in {"FINALIZE", "DELIVER", "DELIVERED"}:
-        return "DONE"
-    if phase in {"EXECUTE", "VERIFY"}:
-        return "EXECUTING"
-    return "UNDERSTOOD"
-
-
 def ctcp_get_current_state_snapshot(run_id: str = "") -> dict[str, Any]:
     run_dir = _resolve_run_dir(run_id)
     status = ctcp_get_status(_run_id_from_dir(run_dir))
@@ -1100,44 +911,7 @@ def ctcp_get_current_state_snapshot(run_id: str = "") -> dict[str, Any]:
         runtime_state = {}
     frontend_request = _read_json(run_dir / "artifacts" / "frontend_request.json")
     goal = str(frontend_request.get("goal", "")).strip() or str(runtime_state.get("goal", "")).strip()
-    gate = runtime_state.get("gate", {})
-    if not isinstance(gate, dict):
-        gate = {}
-    pending = runtime_state.get("pending_decisions", [])
-    if not isinstance(pending, list):
-        pending = []
-    blocking_question = ""
-    for item in pending:
-        if not isinstance(item, dict):
-            continue
-        if str(item.get("status", "")).strip().lower() != "pending":
-            continue
-        blocking_question = str(item.get("question", "") or item.get("question_hint", "") or item.get("reason", "")).strip()
-        if blocking_question:
-            break
-    if not blocking_question:
-        blocking_question = str(runtime_state.get("blocking_reason", "")).strip()
-    proof_refs = runtime_state.get("proof_refs", [])
-    if not isinstance(proof_refs, list):
-        proof_refs = []
-    authoritative_stage = str(runtime_state.get("phase", "")).strip().upper() or "EXECUTE"
-    return {
-        "task_id": _run_id_from_dir(run_dir),
-        "authoritative_stage": authoritative_stage,
-        "visible_state": _runtime_to_visible_state(runtime_state),
-        "conversation_mode": "",
-        "current_task_goal": goal,
-        "known_facts": [],
-        "missing_fields": [],
-        "last_confirmed_items": [],
-        "current_blocker": str(runtime_state.get("blocking_reason", "")).strip() or str(gate.get("reason", "")).strip(),
-        "blocking_question": blocking_question,
-        "next_action": str(gate.get("reason", "")).strip(),
-        "proof_refs": proof_refs,
-        "verify_result": str(runtime_state.get("verify_result", "")).strip().upper(),
-        "snapshot_source": "bridge_runtime_mapping",
-        "updated_at": str(runtime_state.get("updated_at", "")).strip(),
-    }
+    return _build_current_state_snapshot(run_id=_run_id_from_dir(run_dir), goal=goal, runtime_state=runtime_state)
 
 
 def ctcp_get_render_state_snapshot(run_id: str = "") -> dict[str, Any]:
@@ -1147,48 +921,7 @@ def ctcp_get_render_state_snapshot(run_id: str = "") -> dict[str, Any]:
     runtime_state = status.get("runtime_state", {})
     if not isinstance(runtime_state, dict):
         runtime_state = {}
-    pending = runtime_state.get("pending_decisions", [])
-    if not isinstance(pending, list):
-        pending = []
-    decision_cards: list[dict[str, Any]] = []
-    followups: list[str] = []
-    for item in pending:
-        if not isinstance(item, dict):
-            continue
-        if str(item.get("status", "")).strip().lower() != "pending":
-            continue
-        question = str(item.get("question", "") or item.get("question_hint", "") or item.get("reason", "")).strip()
-        if question and question not in followups and len(followups) < 3:
-            followups.append(question)
-        decision_cards.append(
-            {
-                "decision_id": str(item.get("decision_id", "")).strip(),
-                "question": question,
-                "target_path": str(item.get("target_path", "")).strip(),
-                "status": str(item.get("status", "")).strip().lower(),
-            }
-        )
-    visible_state = str(current.get("visible_state", "")).strip() or "UNDERSTOOD"
-    ui_badge = "in_progress"
-    if visible_state == "WAITING_FOR_DECISION":
-        ui_badge = "needs_decision"
-    elif visible_state == "DONE":
-        ui_badge = "done"
-    elif visible_state == "BLOCKED_NEEDS_INPUT":
-        ui_badge = "blocked"
-    progress_summary = str(current.get("current_blocker", "")).strip() or "runtime progressing"
-    return {
-        "task_id": str(current.get("task_id", "")).strip(),
-        "ui_badge": ui_badge,
-        "reply_style": "progressive",
-        "followup_questions": followups,
-        "decision_cards": decision_cards[:8],
-        "visible_state": visible_state,
-        "progress_summary": progress_summary,
-        "proof_refs": list(current.get("proof_refs", [])) if isinstance(current.get("proof_refs", []), list) else [],
-        "snapshot_source": "bridge_runtime_mapping",
-        "updated_at": str(current.get("updated_at", "")).strip(),
-    }
+    return _build_render_state_snapshot(current_snapshot=current, runtime_state=runtime_state)
 
 
 def ctcp_list_decisions_needed(run_id: str = "") -> dict[str, Any]:
@@ -1390,8 +1123,20 @@ def ctcp_upload_artifact(run_id: str, file: str | dict[str, Any]) -> dict[str, A
 
 
 # Backend interface aliases (contract-facing names)
-def create_run(goal: str, constraints: dict[str, Any] | None = None, attachments: list[str] | None = None) -> dict[str, Any]:
-    return ctcp_new_run(goal=goal, constraints=constraints, attachments=attachments)
+def create_run(
+    goal: str,
+    constraints: dict[str, Any] | None = None,
+    attachments: list[str] | None = None,
+    project_intent: dict[str, Any] | None = None,
+    project_spec: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return ctcp_new_run(
+        goal=goal,
+        constraints=constraints,
+        attachments=attachments,
+        project_intent=project_intent,
+        project_spec=project_spec,
+    )
 
 
 def get_run_status(run_id: str = "") -> dict[str, Any]:
@@ -1455,6 +1200,10 @@ def get_project_manifest(run_id: str = "") -> dict[str, Any]:
     return ctcp_get_project_manifest(run_id=run_id)
 
 
+def get_delivery_evidence_manifest(run_id: str = "") -> dict[str, Any]:
+    return ctcp_get_delivery_evidence_manifest(run_id=run_id)
+
+
 def get_current_state_snapshot(run_id: str = "") -> dict[str, Any]:
     return ctcp_get_current_state_snapshot(run_id=run_id)
 
@@ -1477,6 +1226,7 @@ __all__ = [
     "ctcp_get_output_artifact_meta",
     "ctcp_read_output_artifact",
     "ctcp_get_project_manifest",
+    "ctcp_get_delivery_evidence_manifest",
     "ctcp_get_current_state_snapshot",
     "ctcp_get_render_state_snapshot",
     "ctcp_upload_artifact",
@@ -1493,6 +1243,7 @@ __all__ = [
     "get_output_artifact_meta",
     "read_output_artifact",
     "get_project_manifest",
+    "get_delivery_evidence_manifest",
     "get_current_state_snapshot",
     "get_render_state_snapshot",
 ]

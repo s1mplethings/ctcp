@@ -11,6 +11,10 @@ Only these commands are valid acceptance gate entrypoints:
 
 No alternative `scripts/verify.*` family is authoritative for DoD in this repo.
 
+Verify is the canonical acceptance entrypoint, but it is not the product mainline. The product mainline is:
+`ProjectIntent -> Spec -> Scaffold -> Core Feature Implementation -> Smoke Run -> Delivery Package`.
+The job of verify is to prove that this chain really produced a runnable MVP, not to substitute for that chain.
+
 ## 2) Verify Evidence Naming (Unified Contract)
 
 - Canonical machine verify artifact (run_dir): `artifacts/verify_report.json`.
@@ -72,7 +76,11 @@ The following rule classes are part of contract acceptance and MUST be owned by 
    - Blocking when a patch changes task-progress dialogue, support reply style, or style-regression acceptance but does not update persona-lab rubrics/cases or explicitly record `persona_lab_impact: none`.
 6. Project output completeness lint (project-generation tasks)
    - Authority: `docs/41_low_capability_project_generation.md`, `docs/30_artifact_contracts.md`, `docs/backend_interface_contract.md`
-   - Blocking when project generation claims completion without all three layers (source/doc/workflow), explicit `target/generated/missing/acceptance` file lists, or formal artifact interface readability (`list_output_artifacts`, `get_output_artifact_meta`, `read_output_artifact`, `get_project_manifest`).
+   - Blocking when project generation claims completion without explicit `ProjectIntent`, `Project Spec`, runnable scaffold/core-feature/smoke/delivery evidence, all three layers (source/doc/workflow), explicit `target/generated/missing/acceptance` file lists, or formal artifact interface readability (`list_output_artifacts`, `get_output_artifact_meta`, `read_output_artifact`, `get_project_manifest`).
+7. Generic MVP validation lint
+   - Blocking when a generated project lacks a runnable entrypoint, usable startup README, one core user flow, passing smoke-run evidence, or when it still looks like a placeholder skeleton.
+8. Domain-specific validation lint
+   - Domain rules must be isolated by project/domain type and must not silently redefine the generic MVP gate.
 7. Output freeze sequencing lint (project-generation tasks)
    - Authority: `docs/04_execution_flow.md`, `docs/41_low_capability_project_generation.md`
    - Blocking when generated files are produced before `output_contract_freeze` artifacts are defined.
@@ -85,6 +93,8 @@ The following rule classes are part of contract acceptance and MUST be owned by 
 - Persona regression asset drift is blocking when the patch changes style contracts, support lane style behavior, or style acceptance criteria.
 - Conflicting legacy docs must be marked `deprecated` / `superseded` in the same patch rather than silently removed.
 - Project-generation completion is blocking if any required layer/interface/manifest field is missing or unreadable.
+- Generic MVP validation is blocking even when manifest/verify artifacts exist.
+- Domain-specific validation may strengthen checks for a matched domain, but it must not leak into the generic gate for all projects.
 
 ## 6) Optional Full Gate
 

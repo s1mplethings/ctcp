@@ -67,7 +67,7 @@
 - live bot process before fix: `pythonw scripts\ctcp_support_bot.py telegram --poll-seconds 2 --allowlist 6092527664`, created `2026-03-16 17:20:06`
 - live session state before fix: `support_sessions\6092527664\artifacts\support_session_state.json` shows `bound_run_id=20260313-123848-141809-orchestrate`
 - live session state before fix: `latest_support_context.package_ready=true`
-- live reply before fix: greeting turn returned old VN package wording and `send_project_package(zip)`
+- live reply before fix: greeting turn returned old story package wording and `send_project_package(zip)`
 - live session backup after fix: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\support_sessions\6092527664.backup-20260316-182553`
 - live bot process after fix: `PID 45900`, created `2026-03-16 18:26:10`
 - canonical verify result: `[verify_repo] OK`

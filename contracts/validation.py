@@ -45,6 +45,11 @@ def require_non_empty_string(payload: dict[str, Any], key: str) -> str:
     return value
 
 
+def optional_string(payload: dict[str, Any], key: str) -> str:
+    value = payload.get(key, "")
+    return str(value or "").strip()
+
+
 def optional_dict(payload: dict[str, Any], key: str) -> dict[str, Any]:
     value = payload.get(key, {})
     if value is None:
@@ -66,6 +71,13 @@ def optional_string_list(payload: dict[str, Any], key: str) -> list[str]:
         if text:
             out.append(text)
     return out
+
+
+def require_string_list(payload: dict[str, Any], key: str) -> list[str]:
+    rows = optional_string_list(payload, key)
+    if not rows:
+        raise ValidationContractError(f"{key} must be a non-empty list")
+    return rows
 
 
 def ensure_no_full_chat_history(payload: dict[str, Any]) -> None:
