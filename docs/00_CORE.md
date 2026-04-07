@@ -194,8 +194,8 @@ Rules:
 ## 1) Core Positioning (Headless First)
 
 - Core path is headless and offline-first.
-- GUI/Inspector/graph visualization are optional add-ons.
-- Optional GUI paths MUST NOT be required by the default DoD gate.
+- Repository runtime/build surface does not ship a dedicated GUI target.
+- Legacy GUI-era docs may remain only as deprecated historical material and are not runtime/build authority.
 
 ## 2) Canonical Entrypoints (MUST)
 
@@ -331,7 +331,7 @@ When guardrails sets `find_mode: resolver_plus_web`:
 Current required gate classes are:
 
 1. Anti-pollution gate for tracked/unignored in-repo build/run outputs.
-2. Headless lite build path (`CTCP_ENABLE_GUI=OFF`) when CMake is available.
+2. Headless lite build path (default target) when CMake is available.
 3. Workflow gate (`scripts/workflow_checks.py`).
 4. PLAN/patch/behavior contract gates:
    - `scripts/plan_check.py`

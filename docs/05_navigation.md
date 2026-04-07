@@ -1,6 +1,9 @@
 
 # Navigation（树 / 入口索引）
 
+> Deprecated: legacy GUI-lane documentation retained for historical context only.
+> CTCP no longer ships a repo GUI target; use `README.md`, `BUILD.md`, and `docs/00_CORE.md` for active build/runtime guidance.
+
 > 目标：把 docs、specs、contracts 的“入口”都连起来，让你从一个页面就能跳到所有关键点。
 > 你后续做 GUI 的 Tree View 也可以直接用这份结构做演示。
 

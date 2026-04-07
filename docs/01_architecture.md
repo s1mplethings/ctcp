@@ -1,6 +1,9 @@
 
 # 架构
 
+> Deprecated: legacy GUI-lane documentation retained for historical context only.
+> CTCP no longer ships a repo GUI target; use `README.md`, `BUILD.md`, and `docs/00_CORE.md` for active build/runtime guidance.
+
 ## 总体：C++ 后端 + Web 图渲染
 - C++（Qt Widgets）负责：扫描工程、解析 spec/contract、构图、读取 runs、写回 meta
 - Web（Cytoscape.js）负责：布局、缩放、拖拽、选择、过滤、边编辑交互

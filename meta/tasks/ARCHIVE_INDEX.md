@@ -7,6 +7,7 @@
 
 | Date | Topic | File |
 |------|-------|------|
+| 2026-04-07 | support/frontend 交付证据直出（归档，后续切换到移除残留 GUI lane） | [→](archive/20260406-support-delivery-evidence-surface.md) |
 | 2026-04-06 | VTuber 高能片段本地 MVP 项目（归档，后续切换到客服直接展示交付证据） | [→](archive/20260406-vtuber-highlight-local-mvp.md) |
 | 2026-04-06 | generic archetype 去模板化与非 narrative 验收（归档，后续切换到 VTuber 高能片段本地 MVP 项目） | [→](archive/20260406-generic-archetype-mainline-and-nonnarrative-e2e.md) |
 | 2026-04-06 | ProjectIntent 主链重构（归档，后续切换到 generic archetype 去模板化与非 narrative 验收） | [→](archive/20260406-project-intent-mvp-mainline-shift.md) |

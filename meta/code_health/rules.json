@@ -53,7 +53,6 @@
     "scripts/ctcp_*.py",
     "apps/**/main.py",
     "apps/**/bootstrap.py",
-    "src/main.cpp",
     "src/headless_main.cpp"
   ],
   "thresholds": {
@@ -66,4 +65,3 @@
     "churn_90d_hot": 12
   }
 }
-

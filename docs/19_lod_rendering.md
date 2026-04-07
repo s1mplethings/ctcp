@@ -1,5 +1,8 @@
 # Line Drawing & Display Optimization（画线与显示优化，不影响性能）
 
+> Deprecated: legacy GUI-lane documentation retained for historical context only.
+> CTCP no longer ships a repo GUI target; use `README.md`, `BUILD.md`, and `docs/00_CORE.md` for active build/runtime guidance.
+
 目标：线/标签太多时不“堆成一坨”、不卡、还能看清结构。
 
 ## 规则（默认启用）

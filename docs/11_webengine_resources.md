@@ -1,6 +1,9 @@
 
 # QtWebEngine 资源加载（必读）
 
+> Deprecated: legacy GUI-lane documentation retained for historical context only.
+> CTCP no longer ships a repo GUI target; use `README.md`, `BUILD.md`, and `docs/00_CORE.md` for active build/runtime guidance.
+
 如果你看到：
 - 页面显示 `ERR_FILE_NOT_FOUND`
 - 控制台打印 `QResource '/web/index.html' not found or is empty`

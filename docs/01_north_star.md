@@ -46,7 +46,6 @@ Its core value is not “process correctness by itself”, but a trustworthy mai
 - Shared state workspace lane: append-only cross-layer state hub (`events -> current -> render`) with runtime-authoritative ownership.
 - Frontend bridge lane: frontend-to-execution API boundary.
 - Support lane: user support interaction shell over runtime truth.
-- Optional GUI lane: visualization and operator convenience only.
 
 ## Goal Freeze Rule
 

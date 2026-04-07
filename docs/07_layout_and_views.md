@@ -1,6 +1,9 @@
 
 # Layout & Views（效果硬规则）
 
+> Deprecated: legacy GUI-lane documentation retained for historical context only.
+> CTCP no longer ships a repo GUI target; use `README.md`, `BUILD.md`, and `docs/00_CORE.md` for active build/runtime guidance.
+
 > 默认启动必须是 Summary（大类网状图），避免全量加载导致卡顿与叠在一起。
 
 你选的是 **A：类型固定顺序**，所以 Pipeline View 必须：

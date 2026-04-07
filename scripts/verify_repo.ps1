@@ -79,7 +79,6 @@ function Invoke-ExternalChecked {
     if ($Label -like "*cmake configure*") {
       Write-Host "[verify_repo] Hints for cmake configure failure:"
       Write-Host "  - Check CMakeLists.txt for syntax errors"
-      Write-Host "  - Verify Qt6 is installed: cmake --version, qmake -version"
       Write-Host "  - Check compiler: cl.exe (MSVC) or g++ --version"
       Write-Host "  - Try: cmake -S . -B build_lite -DCMAKE_BUILD_TYPE=Release"
     }
@@ -297,7 +296,6 @@ if ($CmakeExe) {
     "-S", $Root,
     "-B", $BuildDirLite,
     "-DCMAKE_BUILD_TYPE=$Configuration",
-    "-DCTCP_ENABLE_GUI=OFF",
     "-DBUILD_TESTING=ON"
   )
   if ($UseNinja) {

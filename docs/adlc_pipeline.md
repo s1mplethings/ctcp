@@ -13,7 +13,7 @@ This repository enforces an executable ADLC loop:
 
 `doc -> analysis -> find -> plan -> build <-> verify -> contrast -> fix -> merge/deploy`
 
-Default execution path is headless. GUI is optional and not part of mandatory Lite gate.
+Default execution path is headless.
 
 ## Stage Outputs
 
@@ -43,7 +43,6 @@ Default execution path is headless. GUI is optional and not part of mandatory Li
 
 8. `merge/deploy`
 - Merge only if gate passes and evidence exists
-- Optional GUI/full checks run only in Full gate mode.
 
 ## Gate Conditions
 

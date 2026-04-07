@@ -1,6 +1,9 @@
 
 # Graph Map（图示：Doc ↔ Spec ↔ Contract）
 
+> Deprecated: legacy GUI-lane documentation retained for historical context only.
+> CTCP no longer ships a repo GUI target; use `README.md`, `BUILD.md`, and `docs/00_CORE.md` for active build/runtime guidance.
+
 ## A) 关系图（概念层）
 ```mermaid
 graph TD

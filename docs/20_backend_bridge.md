@@ -1,5 +1,8 @@
 # Backend Bridge: readTextFile + Rendered Preview Window
 
+> Deprecated: legacy GUI-lane documentation retained for historical context only.
+> CTCP no longer ships a repo GUI target; use `README.md`, `BUILD.md`, and `docs/00_CORE.md` for active build/runtime guidance.
+
 你需要后端提供 `readTextFile(path)`，让前端能渲染预览（Markdown/文本），而不是直接 txt 打开。
 
 本补丁提供了可直接拷贝进项目的 C++ 代码：

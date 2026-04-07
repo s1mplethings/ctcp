@@ -31,7 +31,7 @@ The job of verify is to prove that this chain really produced a runnable MVP, no
    - Fail if tracked/unignored build outputs exist in repo (`build*/**`).
    - Fail if tracked/unignored run outputs exist in repo (`simlab/_runs*/**`, `meta/runs/**`).
 2. Headless lite build path (if CMake exists)
-   - Configure/build with `CTCP_ENABLE_GUI=OFF` and `BUILD_TESTING=ON`.
+   - Configure/build the default headless target with `BUILD_TESTING=ON`.
    - Run lite `ctest` selector when test files exist.
 3. Workflow gate
    - Run `python scripts/workflow_checks.py`.

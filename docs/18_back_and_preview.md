@@ -1,5 +1,8 @@
 # Back Navigation + Rendered Preview（返回上一层 + 渲染预览）
 
+> Deprecated: legacy GUI-lane documentation retained for historical context only.
+> CTCP no longer ships a repo GUI target; use `README.md`, `BUILD.md`, and `docs/00_CORE.md` for active build/runtime guidance.
+
 你反馈的问题：
 - 点进下一层后**回不到上一级**
 - 打开文件只是 txt，不是渲染后的内容

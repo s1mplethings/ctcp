@@ -91,18 +91,11 @@ bash scripts/verify_repo.sh
 默认 headless 构建：
 
 ```powershell
-cmake -S . -B build_lite -DCTCP_ENABLE_GUI=OFF
+cmake -S . -B build_lite
 cmake --build build_lite --config Release
 ```
 
-GUI 示例构建（可选）：
-
-```powershell
-cmake -S . -B build_gui -DCTCP_ENABLE_GUI=ON -DCMAKE_PREFIX_PATH="<Qt path>"
-cmake --build build_gui --config Release
-```
-
-更多见 `BUILD.md`。
+当前仓库只保留 headless 可执行目标：`ctcp_headless`。更多见 `BUILD.md`。
 
 ---
 

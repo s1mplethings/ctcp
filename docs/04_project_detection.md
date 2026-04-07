@@ -1,6 +1,9 @@
 
 # Project Detection（工程识别规则）
 
+> Deprecated: legacy GUI-lane documentation retained for historical context only.
+> CTCP no longer ships a repo GUI target; use `README.md`, `BUILD.md`, and `docs/00_CORE.md` for active build/runtime guidance.
+
 本 GUI 的核心能力之一是：用户选择一个目录后，自动识别该目录是否为“SDDAI 工程根”，并定位：
 - docs_root / specs_root / scripts_root / ai_context_root / runs_root
 

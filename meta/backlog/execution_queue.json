@@ -3354,6 +3354,49 @@
       },
       "status": "done",
       "notes": "Completed on 2026-04-06: backend now emits a structured delivery evidence manifest, result objects and bridge payloads carry it explicitly, frontend completion replies render user-facing evidence blocks directly, and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` passed after closing a mock-mode librarian provider inconsistency plus Windows detached-ollama temp-log handle cleanup."
+    },
+    {
+      "id": "ADHOC-20260407-remove-legacy-gui-lane",
+      "layer": "L1",
+      "priority": "P1",
+      "title": "Remove the stale GUI lane and keep CTCP headless-only",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260406-support-delivery-evidence-surface"
+      ],
+      "dod": [
+        "CMake and verify scripts expose only the headless build target and no stale GUI build option remains",
+        "GUI-only source/resources are removed and active docs/meta stop advertising a repo GUI path",
+        "Focused workflow coverage and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` pass from the updated task/report state"
+      ],
+      "artifacts": {
+        "produces": [
+          "CMakeLists.txt",
+          "README.md",
+          "BUILD.md",
+          "scripts/verify_repo.ps1",
+          "scripts/verify_repo.sh",
+          "docs/00_CORE.md",
+          "docs/01_north_star.md",
+          "docs/03_quality_gates.md",
+          "docs/12_modules_index.md",
+          "meta/code_health/rules.json",
+          "meta/sddai_project.json",
+          "src/",
+          "include/",
+          "resources/",
+          "tests/test_workflow_checks.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_workflow_checks.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-07 after the user clarified the project has no dedicated GUI: removed the stale Qt GUI lane from build/code/resources, aligned active docs and verify to a headless-only surface, rebased the S16 fixer-loop fixture to the new task header, passed `python -m unittest discover -s tests -p \"test_workflow_checks.py\" -v`, passed `python simlab/run.py --suite lite --json-out artifacts/gui_removal_simlab.json`, and final canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` returned 0."
     }
   ]
 }

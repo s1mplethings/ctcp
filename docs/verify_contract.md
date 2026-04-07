@@ -42,12 +42,12 @@ Optional contrast:
 ## Gate Levels
 
 - Lite (default in `verify_repo`):
-  - headless build (`CTCP_ENABLE_GUI=OFF`)
+  - headless build (default target)
   - workflow/contract/doc-index checks
   - 1-2 minimal replay scenarios (suite=`lite`)
 - Full (opt-in):
   - enabled by `CTCP_FULL_GATE=1` or explicit `--full`
-  - can include heavier checks (GUI/example build, broader tests)
+  - can include broader checks and tests
 
 ## Artifact Layout
 
@@ -80,12 +80,11 @@ And `artifacts/verify/latest_proof_path.txt` points to latest run directory.
 - `tools/adlc_gate.py`: `0` only when proof is complete and PASS, else non-zero.
 - `scripts/verify.*`: return gate exit code.
 
-## GUI Headless Strategy
+## Smoke Strategy
 
 Smoke mode is required (`<app> --smoke`).
 
-- Linux: prefer `xvfb-run -a` wrapper in CI or set `QT_QPA_PLATFORM=offscreen`.
-- Windows: run `--smoke` with minimal startup/close path; no manual interaction required.
+- Run the headless target with a minimal startup/close path; no manual interaction is required.
 
 Smoke must fail non-zero when app cannot initialize required runtime/plugins/resources.
 

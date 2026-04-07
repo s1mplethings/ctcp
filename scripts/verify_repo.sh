@@ -238,7 +238,7 @@ elif command -v cmake >/dev/null 2>&1; then
     echo "[verify_repo] compiler launcher: none"
   fi
 
-  CMAKE_ARGS=(-S "${ROOT}" -B "${BUILD_DIR_LITE}" -DCMAKE_BUILD_TYPE=Release -DCTCP_ENABLE_GUI=OFF -DBUILD_TESTING=ON)
+  CMAKE_ARGS=(-S "${ROOT}" -B "${BUILD_DIR_LITE}" -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON)
   if [[ "${USE_NINJA}" == "1" ]]; then
     CMAKE_ARGS=(-G Ninja "${CMAKE_ARGS[@]}")
   fi

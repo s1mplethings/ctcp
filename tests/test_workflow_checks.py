@@ -129,7 +129,7 @@ class WorkflowChecksTests(unittest.TestCase):
             _set_changed_files(
                 module,
                 [
-                    "src/main.cpp",
+                    "src/headless_main.cpp",
                     "meta/reports/LAST.md",
                 ],
             )
@@ -148,8 +148,8 @@ class WorkflowChecksTests(unittest.TestCase):
             _set_changed_files(
                 module,
                 [
-                    "src/main.cpp",
-                    "docs/00_overview.md",
+                    "src/headless_main.cpp",
+                    "docs/01_north_star.md",
                     "meta/tasks/CURRENT.md",
                     "meta/reports/LAST.md",
                 ],

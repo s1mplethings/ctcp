@@ -1,90 +1,140 @@
-# Task - support-delivery-evidence-surface
+# Task - remove-legacy-gui-lane
 
 ## Queue Binding
 
-- Queue Item: `ADHOC-20260406-support-delivery-evidence-surface`
-- Layer/Priority: `L1 / P0`
+- Queue Item: `ADHOC-20260407-remove-legacy-gui-lane`
+- Layer/Priority: `L1 / P1`
 - Source Queue File: `meta/backlog/execution_queue.json`
 
 ## Context
 
-- Why this item now: the repo can generate and package project outputs, but the frontend/support result path still collapses completion into generic text and raw paths instead of directly showing user-facing delivery evidence.
-- Dependency check:
-  - `ADHOC-20260406-vtuber-highlight-local-mvp` = `done`
-  - `ADHOC-20260405-project-intent-mvp-mainline-shift` = `done`
-- Scope boundary: make delivery evidence a first-class backend/frontend artifact so the support-facing completion path can directly present reports, screenshots, demo media, structured outputs, verification summary, limitations, and next actions.
+- Why this item now: the user clarified that this project does not have its own GUI, but the repo still exposes a stale Qt GUI target and GUI-era docs that can be mistaken for a real startup path.
+- Dependency check: `ADHOC-20260406-support-delivery-evidence-surface` = `done`.
+- Scope boundary: remove the repo-shipped GUI build target and GUI-only source/resources, then align active docs/meta/verify to a headless-only surface without widening into unrelated frontend/support/product work.
 
 ## Task Truth Source
 
-- task_purpose: add a stable delivery evidence manifest and wire it through the backend result object, bridge payloads, and frontend completion rendering so users can see delivery results directly in support/frontend replies.
+- task_purpose: remove the stale GUI lane so the repository only presents a headless executable/build path and no longer ships or advertises a dedicated GUI target.
 - allowed_behavior_change:
-  - `contracts/schemas/`
-  - `scripts/ctcp_front_bridge.py`
-  - `scripts/project_delivery_evidence_bridge.py`
-  - `apps/project_backend/`
-  - `apps/cs_frontend/`
-  - `tests/backend/test_backend_service.py`
-  - `tests/frontend/test_frontend_handler.py`
-  - `tests/test_frontend_rendering_boundary.py`
+  - `CMakeLists.txt`
+  - `README.md`
+  - `BUILD.md`
+  - `artifacts/PLAN.md`
+  - `scripts/verify_repo.ps1`
+  - `scripts/verify_repo.sh`
+  - `docs/00_CORE.md`
+  - `docs/01_north_star.md`
+  - `docs/03_quality_gates.md`
+  - `docs/12_modules_index.md`
+  - `docs/verify_contract.md`
+  - `docs/adlc_pipeline.md`
+  - `docs/00_overview.md`
+  - `docs/01_architecture.md`
+  - `docs/04_project_detection.md`
+  - `docs/05_navigation.md`
+  - `docs/06_graph_map.md`
+  - `docs/07_layout_and_views.md`
+  - `docs/10_workflow.md`
+  - `docs/11_webengine_resources.md`
+  - `docs/18_back_and_preview.md`
+  - `docs/19_lod_rendering.md`
+  - `docs/20_backend_bridge.md`
+  - `meta/code_health/rules.json`
+  - `meta/sddai_project.json`
+  - `include/Bridge.h`
+  - `include/DocPreviewer.h`
+  - `include/FileIndexer.h`
+  - `include/GraphBuilder.h`
+  - `include/GraphTypes.h`
+  - `include/GraphViewProjector.h`
+  - `include/LayoutEngine.h`
+  - `include/MainWindow.h`
+  - `include/MetaStore.h`
+  - `include/ProjectScanner.h`
+  - `include/RunLoader.h`
+  - `include/SchemaLoader.h`
+  - `include/SpecExtractor.h`
+  - `resources/app.qrc`
+  - `resources/qt_style.qss`
+  - `src/Bridge.cpp`
+  - `src/DocPreviewer.cpp`
+  - `src/FileIndexer.cpp`
+  - `src/GraphBuilder.cpp`
+  - `src/GraphViewProjector.cpp`
+  - `src/LayoutEngine.cpp`
+  - `src/MainWindow.cpp`
+  - `src/MetaStore.cpp`
+  - `src/ProjectScanner.cpp`
+  - `src/RunLoader.cpp`
+  - `src/SchemaLoader.cpp`
+  - `src/SpecExtractor.cpp`
+  - `src/main.cpp`
+  - `src/preview_window.cpp`
+  - `src/preview_window.h`
+  - `src/sddai_bridge.cpp`
+  - `src/sddai_bridge.h`
+  - `tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch`
+  - `tests/test_workflow_checks.py`
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/ARCHIVE_INDEX.md`
   - `meta/tasks/CURRENT.md`
   - `meta/reports/LAST.md`
-  - `meta/tasks/archive/20260406-vtuber-highlight-local-mvp.md`
-  - `meta/reports/archive/20260406-vtuber-highlight-local-mvp.md`
+  - `meta/tasks/archive/20260406-support-delivery-evidence-surface.md`
+  - `meta/reports/archive/20260406-support-delivery-evidence-surface.md`
 - forbidden_goal_shift:
-  - do not focus this patch on producing more packaged project assets
-  - do not leave frontend completion as generic free text with hidden evidence buried in raw artifacts
-  - do not make the frontend scan directories ad hoc to guess which files are important
+  - do not introduce a replacement GUI or web UI path in this patch
+  - do not refactor unrelated headless/runtime/support modules
+  - do not turn this into a broad docs rewrite beyond GUI-lane removal and deprecation notes
 - in_scope_modules:
-  - backend delivery result assembly
-  - bridge result/evidence capabilities
-  - frontend result object and completion rendering
-  - focused tests for evidence propagation and user-facing rendering
+  - build entrypoints and verify commands
+  - GUI-only C++ source/resources
+  - active docs/meta that currently advertise or depend on the GUI lane
+  - focused workflow regression coverage for the new headless-only path
 - out_of_scope_modules:
-  - generating new sample projects
-  - broad support bot delivery packaging heuristics outside the active frontend/backend mainline
-  - top-level north-star or README rewrites
-- completion_evidence: backend emits a structured delivery evidence manifest, the frontend completion object explicitly carries it, customer-facing completion text shows evidence summary/user next steps, focused tests pass, and canonical verify closes.
+  - project generation mainline logic
+  - frontend/support conversation behavior
+  - generated projects and benchmark fixtures unless verify proves a direct dependency
+- completion_evidence: the repo no longer defines a GUI build target, GUI-only code/resources are removed, active docs point only to headless startup/build paths, focused checks pass, and canonical verify closes.
 
 ## Analysis / Find
 
-- Entrypoint analysis: the active mainline is `apps/cs_frontend/* -> apps/project_backend/* -> scripts/ctcp_front_bridge.py`, not the older free-form `frontend/response_composer.py` path.
-- Downstream consumer analysis: the support/frontend lane needs a user-facing evidence block, not just `run_dir`, `repo_report_tail`, or raw `artifacts` dictionaries.
+- Entrypoint analysis: the only active runnable binary path used by verify is `ctcp_headless`; the Qt GUI path is an optional leftover branch in `CMakeLists.txt` plus old docs and source files.
+- Downstream consumer analysis: operators and agents should see one real startup/build path; stale GUI instructions create false manual-test and build expectations.
 - Source of truth:
-  - user request in this turn
+  - user clarification in this turn
   - `AGENTS.md`
+  - `docs/00_CORE.md`
   - `docs/03_quality_gates.md`
-  - current frontend/backend bridge code
+  - `CMakeLists.txt`
+  - `scripts/verify_repo.ps1`
+  - `scripts/verify_repo.sh`
 - Current break point / missing wiring:
-  - backend result event contains only developer-oriented artifacts
-  - frontend `PresentableEvent` has no dedicated delivery evidence field
-  - `ResponseRenderer` compresses completion into “任务已完成，结果已准备好。”
+  - `build\ctcp.exe` and `CTCP_ENABLE_GUI` still exist as a misleading startup lane
+  - GUI-only Qt source/resources remain in repo even though the product surface is headless
+  - active docs/build notes still advertise optional GUI behavior
 - Repo-local search sufficient: `yes`
 
 ## Integration Check
 
-- upstream: project generation/delivery already produces reports, screenshots, demo media, and structured outputs.
-- current_module: backend service and bridge must consolidate those artifacts into one explicit evidence manifest before the frontend renders completion.
-- downstream: the frontend completion path should be able to show result summary, report path, screenshot paths, demo media paths, verification status, limitations, and next actions without scanning directories or inventing summaries.
-- source_of_truth: bridge-delivered manifest, result events, and frontend rendering output.
-- fallback: if a run lacks some evidence categories, emit them as empty lists/strings in the manifest and keep user-facing copy honest about what is available now.
+- upstream: the user expects the repo startup/build story to be headless-only, and canonical verify already uses the headless path as the real runnable surface.
+- current_module: CMake, verify scripts, active docs, and stale GUI-only code/resources must agree on one executable surface.
+- downstream: manual startup, verify, and future maintenance should no longer surface or accidentally launch `ctcp.exe`.
+- source_of_truth: `CMakeLists.txt`, `scripts/verify_repo.ps1`, `scripts/verify_repo.sh`, and the active routed docs.
+- fallback: keep legacy GUI-era docs only as explicitly deprecated historical notes if hard deletion would leave duplicate authority or broken references.
 - acceptance_test:
-  - `python -m unittest tests/backend/test_backend_service.py -v`
-  - `python -m unittest tests/frontend/test_frontend_handler.py -v`
-  - `python -m unittest tests/test_frontend_rendering_boundary.py -v`
+  - `python -m unittest discover -s tests -p "test_workflow_checks.py" -v`
   - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code`
 - forbidden_bypass:
-  - do not hardcode evidence summaries in frontend copy without backend evidence input
-  - do not expose only raw repo-internal paths and claim that frontend evidence display is done
-  - do not rely on docs-only guidance instead of executable evidence propagation
-- user_visible_effect: completion replies directly show user-facing delivery evidence and next actions instead of sending the user to inspect zip/output folders manually.
+  - do not leave a dead `CTCP_ENABLE_GUI` option or `ctcp` GUI target behind
+  - do not keep active docs suggesting a GUI build/start path still exists
+  - do not fix this only by changing wording while leaving the executable GUI branch in place
+- user_visible_effect: operators see one headless build/start path and no repo-provided GUI target.
 
 ## DoD Mapping
 
-- [x] DoD-1: Backend completion paths emit a stable delivery evidence manifest with user-facing fields including summary, view-now items, screenshots, demo media, structured outputs, verification summary, limitations, and next actions
-- [x] DoD-2: Frontend result objects explicitly carry delivery evidence and completion replies render it as a user-facing evidence block instead of generic “done” text
-- [x] DoD-3: Focused tests and canonical verify pass from the updated task/report state
+- [x] DoD-1: `CMakeLists.txt` and verify scripts expose only the headless build target; the stale GUI target/option is removed
+- [x] DoD-2: GUI-only source/resources are removed, and active docs/meta no longer advertise a repo GUI path
+- [x] DoD-3: focused checks and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` pass from the updated task/report state
 
 ## Acceptance
 
@@ -97,65 +147,60 @@
 
 ## Plan
 
-1. Add a first-class delivery evidence schema plus a bridge-side manifest builder/writer.
-2. Thread that manifest through backend result assembly and frontend presentable events.
-3. Render user-facing evidence summary in completion replies while keeping engineering/debug details secondary.
-4. Add focused tests for backend evidence emission and frontend evidence rendering.
-5. Run focused tests and canonical verify, then close the task with evidence.
+1. Archive the previous active topic and bind a new ADHOC queue item for GUI removal.
+2. Remove the GUI CMake branch, GUI-only source/resources, and GUI-specific verify arguments.
+3. Align active docs/meta/tests to a headless-only repo surface, with deprecation notes on legacy GUI-era docs where needed.
+4. Run focused workflow coverage and canonical verify.
+5. Close the task with explicit first-failure evidence or final pass evidence.
 
 ## Check / Contrast / Fix Loop Evidence
 
-- check-1: completion evidence currently lives in project directories, zips, and raw artifact paths, but the frontend mainline only returns a generic completion sentence.
-- contrast-1: this task requires the frontend to directly surface delivery evidence without forcing the user to inspect zip/output trees manually.
-- fix-1: add a backend-generated delivery evidence manifest and thread it into the completion event/result object.
-- check-2: even if the backend exposes raw artifacts, the frontend can still fail this task by rendering only generic text.
-- contrast-2: the reply must organize evidence around user-facing summary, what can be viewed now, verification state, and next actions.
-- fix-2: add an evidence-aware renderer and dedicated result field in the frontend presentable event.
-- check-3: user-facing evidence should not be polluted by developer-only detail.
-- contrast-3: users should see outcome, previewable assets, and next steps first; engineering internals stay secondary/debug.
-- fix-3: keep the evidence manifest user-oriented and relegate raw run/debug values to secondary artifacts rather than the primary reply.
+- check-1: the repo still contains `CTCP_ENABLE_GUI`, a `ctcp` GUI binary target, and Qt source/resources even though verify and the actual runtime surface are headless.
+- contrast-1: the user clarified there is no project GUI, so keeping a repo GUI lane creates a false startup/build path.
+- fix-1: remove the GUI branch from build/verify and delete GUI-only code/resources.
+- check-2: even after code deletion, stale docs/meta can still claim a GUI lane exists.
+- contrast-2: active docs/meta must align to one headless-only surface.
+- fix-2: rewrite the active routed docs/build notes and downgrade old GUI-era docs to explicit historical/deprecated status where retained.
+- check-3: workflow/code-health checks may still point at deleted GUI entry files.
+- contrast-3: task/report evidence and focused tests must describe the new headless-only path without dangling GUI entry references.
+- fix-3: update task/report state, code-health entrypoint patterns, and the focused workflow regression fixture.
 
 ## Completion Criteria Evidence
 
 - connected + accumulated + consumed:
-- connected: backend completion state, bridge manifest, result event, and frontend reply are wired through one evidence path.
-- accumulated: screenshots, reports, demo media, structured outputs, verification summary, limitations, and next actions are normalized into one stable manifest.
-- consumed: the frontend result object and completion copy consume that manifest directly instead of reconstructing delivery evidence from raw paths.
+- connected: CMake, verify scripts, and active docs all point to the same headless executable/build surface.
+- accumulated: GUI-only code/resources and misleading GUI notes are removed or explicitly deprecated in one scoped patch.
+- consumed: focused tests and canonical verify consume the new headless-only repo surface without referencing deleted GUI entrypoints.
 
 ## Notes / Decisions
 
-- Default choices made: treat bridge-side evidence assembly as backend truth for the current mainline, then serialize that into result events and frontend display blocks.
-- Alternatives considered: adding evidence logic only in the frontend; rejected because it would keep the frontend guessing which outputs matter.
+- Default choices made: remove the executable GUI lane entirely and keep any retained GUI-era docs explicitly deprecated instead of silently authoritative.
+- Alternatives considered: leaving the GUI target in place but hiding it in docs; rejected because that would preserve the wrong startup path the user already hit.
 - Any contract exception reference:
   - None
-- Issue memory decision: none; this is a scoped delivery-surface implementation task, not a recurring runtime defect class.
+- Issue memory decision: none; this is a direct repo-surface cleanup, not a recurring runtime defect class.
 - Skill decision (`skillized: yes` or `skillized: no, because ...`): `skillized: yes` using `ctcp-workflow` for repo-standard execution and `ctcp-verify` for canonical closure.
 
 ## Results
 
 - Files changed:
-  - `contracts/schemas/delivery_evidence.py`
-  - `contracts/schemas/event_result.py`
-  - `scripts/project_delivery_evidence_bridge.py`
-  - `scripts/ctcp_front_bridge.py`
-  - `apps/project_backend/application/delivery_evidence.py`
-  - `apps/project_backend/application/service.py`
-  - `apps/project_backend/domain/job.py`
-  - `apps/project_backend/orchestrator/job_runner.py`
-  - `apps/cs_frontend/domain/presentable_event.py`
-  - `apps/cs_frontend/dialogue/delivery_evidence_renderer.py`
-  - `apps/cs_frontend/dialogue/response_renderer.py`
-  - `apps/cs_frontend/application/handle_user_message.py`
-  - `scripts/ctcp_dispatch.py`
-  - `tools/providers/ollama_agent.py`
-  - `tests/backend/test_backend_service.py`
-  - `tests/frontend/test_frontend_handler.py`
-  - `tests/test_delivery_evidence_bridge.py`
-  - `tests/test_ollama_agent.py`
-  - `tests/test_provider_selection.py`
-  - `tests/test_mock_agent_pipeline.py`
+  - `CMakeLists.txt`
+  - `README.md`
+  - `BUILD.md`
+  - `artifacts/PLAN.md`
+  - `scripts/verify_repo.ps1`
+  - `scripts/verify_repo.sh`
+  - active headless/runtime docs under `docs/`
+  - deprecated legacy GUI docs under `docs/`
+  - `meta/code_health/rules.json`
+  - `meta/sddai_project.json`
+  - GUI-only files removed under `src/`, `include/`, and `resources/`
+  - `tests/test_workflow_checks.py`
+  - `tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch`
+  - task/report/queue/archive files under `meta/`
 - Verification summary:
-  - focused evidence tests passed for backend/frontend/bridge propagation
-  - `python -m unittest discover -s tests -p "test_mock_agent_pipeline.py" -v` -> `0`
+  - `python -m unittest discover -s tests -p "test_workflow_checks.py" -v` -> `0`
+  - `python scripts/sync_doc_links.py --check` -> `0`
+  - `python simlab/run.py --suite lite --json-out artifacts/gui_removal_simlab.json` -> `0`
   - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` -> `0`
 - Queue status update suggestion (`todo/doing/done/blocked`): `done`

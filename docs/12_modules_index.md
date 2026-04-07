@@ -16,17 +16,9 @@ Contract precedence remains `docs/00_CORE.md`.
 | Workflow Registry / Resolver | Resolver-first workflow selection authority. | In: goal + `workflow_registry`; Out: `artifacts/find_result.json`. | Local registry/history and contract boundary. | [specs/modules/workflow_registry_resolver.md](../specs/modules/workflow_registry_resolver.md) |
 | Externals Pack / Research | Candidate-only external evidence intake. | In: guardrails + web constraints; Out: `artifacts/find_web.json` or externals pack. | Resolver-first boundary; web constraints. | [specs/modules/externals_pack_research.md](../specs/modules/externals_pack_research.md) |
 
-## Legacy/Supporting Engine Modules
+## Historical GUI-Era Module Docs
 
-| Module | Purpose | Inputs / Outputs | Dependencies | Spec |
-|---|---|---|---|---|
-| ProjectScanner | Scan project files into a model input set. | In: repo tree; Out: scanned project metadata. | Core scanner conventions. | [specs/modules/project_scanner/spec.md](../specs/modules/project_scanner/spec.md) |
-| GraphBuilder | Build graph structure for visualization/pipeline metadata. | In: scanner/meta outputs; Out: graph contract outputs. | ProjectScanner + MetaStore. | [specs/modules/graph_builder/spec.md](../specs/modules/graph_builder/spec.md) |
-| MetaStore | Persist and expose pipeline metadata. | In: runtime/module metadata; Out: meta graph artifacts. | GraphBuilder consumers. | [specs/modules/meta_store/spec.md](../specs/modules/meta_store/spec.md) |
-| RunLoader | Load and normalize run/event artifacts. | In: run directories + JSONL events; Out: run view model. | External run-dir contract. | [specs/modules/run_loader/spec.md](../specs/modules/run_loader/spec.md) |
-| QWebChannel Bridge | Bridge native/runtime data to web view layer. | In: native model events; Out: bridged web channel payloads. | Web renderer. | [specs/modules/qwebchannel_bridge/spec.md](../specs/modules/qwebchannel_bridge/spec.md) |
-| Web Renderer | Render graph and run views. | In: graph/meta/run data; Out: UI/web representation. | Bridge + frontend assets. | [specs/modules/web_renderer/spec.md](../specs/modules/web_renderer/spec.md) |
-| Frontend Gateway (Session/Adapter/Progress/Decision) | Conversation UX shell around CTCP artifacts. | In: inbound chat + bridge status; Out: user-friendly progress and decision prompts. | Front Bridge API; non-authoritative session cache. | [frontend_session_contract.md](architecture/contracts/frontend_session_contract.md) |
+Legacy GUI/scanner/graph-render specs are retained only as deprecated historical material and are not part of the active CTCP runtime/build surface.
 
 ## Authoring Template
 

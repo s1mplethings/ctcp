@@ -1,5 +1,8 @@
 # SDDAI GUI Lane Overview (Non-Repo-Purpose Doc)
 
+> Deprecated: legacy GUI-lane documentation retained for historical context only.
+> CTCP no longer ships a repo GUI target; use `README.md`, `BUILD.md`, and `docs/00_CORE.md` for active build/runtime guidance.
+
 Scope boundary:
 
 - This document describes the optional GUI lane only.
