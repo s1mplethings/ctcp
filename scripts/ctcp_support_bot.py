@@ -6,7 +6,6 @@ import copy
 import datetime as dt
 import hashlib
 import json
-import mimetypes
 import os
 import re
 import socket
@@ -14,10 +13,6 @@ import shutil
 import subprocess
 import sys
 import time
-import urllib.error
-import urllib.parse
-import urllib.request
-import uuid
 import zipfile
 from pathlib import Path
 from typing import Any, Mapping
@@ -27,6 +22,7 @@ SCRIPTS_DIR = Path(__file__).resolve().parent
 
 if str(ROOT) not in sys.path: sys.path.insert(0, str(ROOT))
 from frontend.delivery_reply_actions import align_reply_with_delivery_actions, delivery_plan_failed, inject_ready_delivery_actions, prioritize_screenshot_files
+from frontend.telegram_http_client import telegram_post_form, telegram_post_multipart
 PROMPT_TEMPLATE_PATH = ROOT / "agents" / "prompts" / "support_lead_reply.md"
 SUPPORT_INBOX_REL_PATH = Path("artifacts") / "support_inbox.jsonl"
 SUPPORT_PROMPT_REL_PATH = Path("artifacts") / "support_prompt_input.md"
@@ -5834,60 +5830,10 @@ class TelegramClient:
         self.timeout_sec = max(1, int(timeout_sec))
 
     def _post(self, method: str, params: dict[str, Any]) -> Any:
-        url = f"{self.base}/{method}"
-        data = urllib.parse.urlencode({k: str(v) for k, v in params.items()}).encode("utf-8")
-        req = urllib.request.Request(url, data=data, method="POST")
-        try:
-            with urllib.request.urlopen(req, timeout=self.timeout_sec + 15) as resp:
-                payload = resp.read().decode("utf-8", errors="replace")
-        except urllib.error.HTTPError as exc:
-            body = ""
-            try:
-                body = exc.read().decode("utf-8", errors="replace")
-            except Exception:
-                body = ""
-            detail = body or str(exc)
-            raise RuntimeError(f"telegram api http {exc.code}: {detail}") from exc
-        doc = json.loads(payload)
-        if not isinstance(doc, dict) or not bool(doc.get("ok")):
-            raise RuntimeError(f"telegram api error: {payload}")
-        return doc.get("result")
+        return telegram_post_form(self.base, method, params, timeout_sec=self.timeout_sec + 15)
 
     def _post_multipart(self, method: str, params: dict[str, Any], file_field: str, file_path: Path) -> Any:
-        url = f"{self.base}/{method}"
-        boundary = f"ctcp-{uuid.uuid4().hex}"
-        body = bytearray()
-        for key, value in params.items():
-            body.extend(f"--{boundary}\r\n".encode("utf-8"))
-            body.extend(f'Content-Disposition: form-data; name="{key}"\r\n\r\n'.encode("utf-8"))
-            body.extend(str(value).encode("utf-8"))
-            body.extend(b"\r\n")
-        mime_type = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
-        body.extend(f"--{boundary}\r\n".encode("utf-8"))
-        body.extend(
-            f'Content-Disposition: form-data; name="{file_field}"; filename="{file_path.name}"\r\n'.encode("utf-8")
-        )
-        body.extend(f"Content-Type: {mime_type}\r\n\r\n".encode("utf-8"))
-        body.extend(file_path.read_bytes())
-        body.extend(b"\r\n")
-        body.extend(f"--{boundary}--\r\n".encode("utf-8"))
-        req = urllib.request.Request(url, data=bytes(body), method="POST")
-        req.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
-        try:
-            with urllib.request.urlopen(req, timeout=self.timeout_sec + 30) as resp:
-                payload = resp.read().decode("utf-8", errors="replace")
-        except urllib.error.HTTPError as exc:
-            body = ""
-            try:
-                body = exc.read().decode("utf-8", errors="replace")
-            except Exception:
-                body = ""
-            detail = body or str(exc)
-            raise RuntimeError(f"telegram api http {exc.code}: {detail}") from exc
-        doc = json.loads(payload)
-        if not isinstance(doc, dict) or not bool(doc.get("ok")):
-            raise RuntimeError(f"telegram api error: {payload}")
-        return doc.get("result")
+        return telegram_post_multipart(self.base, method, params, file_field, file_path, timeout_sec=self.timeout_sec + 30)
 
     def get_updates(self, offset: int) -> list[dict[str, Any]]:
         result = self._post(

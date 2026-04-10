@@ -29,6 +29,7 @@
   - `scripts/ctcp_support_bot.py`
   - `frontend/delivery_reply_actions.py`
   - `frontend/support_reply_policy.py`
+  - `frontend/telegram_http_client.py`
   - `tests/test_project_generation_artifacts.py`
   - `tests/test_support_public_delivery_state.py`
   - `tests/test_support_bot_humanization.py`
@@ -36,6 +37,7 @@
   - `tests/test_support_delivery_user_visible_contract.py`
   - `tests/test_screenshot_priority_selection.py`
   - `tests/test_delivery_evidence_bridge.py`
+  - `tests/test_telegram_http_client.py`
   - `ai_context/problem_registry.md`
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/CURRENT.md`

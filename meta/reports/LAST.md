@@ -3,7 +3,7 @@
 ## Latest Report
 
 - File: `meta/reports/LAST.md`
-- Date: `2026-04-10`
+- Date: `2026-04-11`
 - Topic: `real visual evidence and public delivery for Telegram-bound project outputs`
 
 ### Readlist
@@ -22,12 +22,14 @@
 - `scripts/ctcp_support_bot.py`
 - `frontend/delivery_reply_actions.py`
 - `frontend/support_reply_policy.py`
+- `frontend/telegram_http_client.py`
 - `tests/test_project_generation_artifacts.py`
 - `tests/test_screenshot_priority_selection.py`
 - `tests/test_support_public_delivery_state.py`
 - `tests/test_support_bot_humanization.py`
 - `tests/test_support_delivery_user_visible_contract.py`
 - `tests/test_support_reply_policy_regression.py`
+- `tests/test_telegram_http_client.py`
 - `tests/test_support_to_production_path.py`
 - `tests/test_runtime_wiring_contract.py`
 - `tests/test_issue_memory_accumulation_contract.py`
@@ -61,6 +63,10 @@
   - fixed proactive/result outbound jobs so they call `emit_public_delivery()` after sending result text when delivery actions are present
   - treats a delivery action with no `sent` files or any delivery errors as a failed send that must be retried instead of a successful result push
   - prioritizes final/result/app-home/preview screenshot candidates before overview/debug/proof images
+- Added [frontend/telegram_http_client.py](/d:/.c_projects/adc/ctcp/frontend/telegram_http_client.py):
+  - keeps the existing urllib Telegram transport first
+  - falls back to curl for transient urllib timeout/SSL transport failures observed during live send smoke
+  - keeps Telegram HTTP errors as hard failures
 - Updated [frontend/delivery_reply_actions.py](/d:/.c_projects/adc/ctcp/frontend/delivery_reply_actions.py):
   - added `delivery_plan_failed(...)` so Telegram paths can enforce the shared invariant: delivery actions require real `sent` files
   - added explicit high/mid/low screenshot prioritization and a humanized delivery rewrite for public replies that still contain internal stage/artifact/json/hash markers
@@ -84,6 +90,8 @@
   - proves `overview.png + final-ui.png` sends `final-ui.png` first
   - proves `debug.png + result.png` sends `result.png` first
   - proves the delivery evidence bridge picks product screenshots first
+- Added [tests/test_telegram_http_client.py](/d:/.c_projects/adc/ctcp/tests/test_telegram_http_client.py):
+  - proves Telegram form and multipart sends fall back to curl when urllib transport fails
 - Updated [ai_context/problem_registry.md](/d:/.c_projects/adc/ctcp/ai_context/problem_registry.md):
   - recorded the user-visible Telegram delivery gap as Example 30 issue memory
 
@@ -110,6 +118,7 @@
   - `python -m unittest discover -s tests -p "test_support_delivery_user_visible_contract.py" -v` -> `OK`
   - `python -m unittest discover -s tests -p "test_screenshot_priority_selection.py" -v` -> `OK`
   - `python -m unittest discover -s tests -p "test_support_reply_policy_regression.py" -v` -> `OK`
+  - `python -m unittest discover -s tests -p "test_telegram_http_client.py" -v` -> `OK`
   - `python -m unittest discover -s tests -p "test_support_to_production_path.py" -v` -> `OK`
 - triplet runtime wiring command evidence:
   - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` -> `OK`
@@ -122,7 +131,7 @@
   - first `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` after stricter tests failed at `tests/test_support_bot_humanization.py` growth guard; fixed by compressing assertions without weakening coverage
   - second run failed at `test_support_reply_policy_regression.py::test_transcript_near_duplicate_regression_test`; fixed by preserving artifact hints when no manifest delivery fields exist
   - third run failed at `frontend/support_reply_policy.py` longest-function growth guard; fixed by extracting `_policy_delivery_result_text(...)`
-  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` -> `OK`
+  - latest `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` -> `OK` with 362 Python tests, 3 skipped, and lite replay `20260411-031820` passed 14/14
 
 ### Questions
 
@@ -165,4 +174,13 @@
     - document: `user-visible-delivery-demo.zip`
     - `support_public_delivery.json.sent` contains both `photo` and `document`
     - `errors = []`
-  - live Telegram API send attempt at `2026-04-10` failed before message send with TLS handshake error; `curl getMe` failed with the same TLS error, so this run is local transport evidence, not proof that Telegram delivered to the user
+  - latest live Telegram delivery smoke:
+    - first attempt used an invalid smoke PNG and failed hard at `sendPhoto` with `IMAGE_PROCESS_FAILED`; no success was recorded
+    - rerun id: `delivery-smoke-telegram-20260411-031653`
+    - run dir: `C:\Users\sunom\AppData\Local\ctcp\runs\ctcp\delivery_smoke\delivery-smoke-telegram-20260411-031653`
+    - [support_public_delivery.json](C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/delivery_smoke/delivery-smoke-telegram-20260411-031653/artifacts/support_public_delivery.json) records:
+      - first photo: `final-ui.png`
+      - document: `user-visible-delivery-demo.zip`
+      - `sent` contains both `photo` and `document`
+      - `errors = []`
+    - Telegram-visible message summary: `项目交付链路 smoke 已整理好。你先看这张成品截图，再看随后发出的 zip 包。zip 里包含 README、启动入口 src/app.py 和主要代码。`
