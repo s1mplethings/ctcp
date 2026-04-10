@@ -278,6 +278,7 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
             visual_files = [str(x) for x in list(report.get("visual_evidence_files", [])) if str(x).strip()]
             self.assertTrue(visual_files)
             screenshot_path = run_dir / visual_files[0]
+            self.assertEqual(screenshot_path.name, "final-ui.png")
             self.assertTrue(screenshot_path.exists(), msg=str(screenshot_path))
             self.assertEqual(screenshot_path.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
             syntax = dict(dict(report.get("generic_validation", {})).get("python_syntax", {}))
@@ -468,6 +469,7 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
             visual_files = [str(x) for x in list(report.get("visual_evidence_files", [])) if str(x).strip()]
             self.assertTrue(visual_files)
             screenshot_path = run_dir / visual_files[0]
+            self.assertEqual(screenshot_path.name, "final-ui.png")
             self.assertTrue(screenshot_path.exists(), msg=str(screenshot_path))
             self.assertEqual(screenshot_path.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
             package_name = str(contract.get("package_name", "project_copilot"))

@@ -340,7 +340,7 @@ def _capture_visual_evidence(
         _write_visual_failure_note(project_artifacts_dir, reason)
         return {"status": "capture_failed", "reason": reason, "files": [], "source_files": []}
 
-    screenshot_path = screenshots_dir / "overview.png"
+    screenshot_path = screenshots_dir / "final-ui.png"
     title = "CTCP VISUAL EVIDENCE"
     subtitle = f"{shape.upper()} {Path(entry_script).name}"
     detail_lines = [

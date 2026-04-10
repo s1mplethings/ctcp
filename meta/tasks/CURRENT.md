@@ -15,9 +15,9 @@
 ## Task Truth Source (single source for current task)
 
 - task_purpose:
-  - add a real screenshot capture step for `gui_first` / `web_first` generated projects after the runtime probes actually launch/export the generated output
+  - add a real final-product screenshot capture step for `gui_first` / `web_first` generated projects after the runtime probes actually launch/export the generated output
   - persist screenshot artifacts under the generated project or run artifacts and propagate them into `source_generation_report.json`, `project_manifest.json`, and delivery evidence
-  - ensure Telegram/public delivery emits real zip and screenshot files and records them in `support_public_delivery.json`
+  - ensure Telegram/public delivery emits real zip and final-product screenshot files, records them in `support_public_delivery.json`, and does not treat text-only delivery as success
   - prove the back-half flow with focused tests and one real Telegram-lane delivery send
 - allowed_behavior_change:
   - `tools/providers/project_generation_source_helpers.py`
@@ -25,11 +25,18 @@
   - `tools/providers/project_generation_business_templates.py`
   - `tools/providers/project_generation_generic_archetypes.py`
   - `scripts/project_generation_gate.py`
+  - `scripts/project_delivery_evidence_bridge.py`
   - `scripts/ctcp_support_bot.py`
+  - `frontend/delivery_reply_actions.py`
+  - `frontend/support_reply_policy.py`
   - `tests/test_project_generation_artifacts.py`
   - `tests/test_support_public_delivery_state.py`
   - `tests/test_support_bot_humanization.py`
   - `tests/test_support_proactive_delivery.py`
+  - `tests/test_support_delivery_user_visible_contract.py`
+  - `tests/test_screenshot_priority_selection.py`
+  - `tests/test_delivery_evidence_bridge.py`
+  - `ai_context/problem_registry.md`
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/CURRENT.md`
   - `meta/reports/LAST.md`

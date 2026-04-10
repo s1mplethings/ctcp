@@ -786,3 +786,32 @@ When to add:
   任何 support/backend artifact gate 改动，只要 provider 会写 run artifact，就必须补一条 “provider 声称执行成功但 target 缺失” 回归；任何 runtime snapshot refresh 也必须补一条“旧 blocker 不得跨状态恢复残留”的回归。
 - Tags:
   support, bridge, orchestrator, librarian, planner, blocker, stale-state, artifact-materialization
+
+## Example 30
+
+- Symptom:
+  Telegram 最终回复说“我现在把 zip 包和结果截图发到当前对话”，但用户只看到文本、抽象 overview 图、hash 或内部 artifact 提示，没有真正收到可用 zip 与成品截图。
+- Repro:
+  1. 让后台 run 达到 verify PASS 并触发 support controller result push。
+  2. 检查 Telegram 对话与 `artifacts/support_public_delivery.json`。
+  3. 观察 proactive/result push 可能只发送文本，或首图选择 `overview.png` 而不是最终成品图。
+- Root cause:
+  普通消息路径会执行 delivery action，但 proactive/result push 路径之前只调用文本发送；截图候选按文件遍历顺序发送，未优先选择 final/result/app-home 类成品图；公开回复仍可能保留 stage/artifact/json/hash 等内部语气。
+- Affected entrypoint:
+  `scripts/ctcp_support_bot.py::run_telegram_mode` and `_emit_controller_outbound_jobs`
+- Affected modules:
+  `scripts/ctcp_support_bot.py`, `frontend/delivery_reply_actions.py`, `tools/providers/project_generation_source_helpers.py`
+- Observed fallback behavior:
+  用户看到“会发附件”的承诺，但需要人工介入才真正发送；首图可能只是流程证明图；最终文案还可能暴露内部文件或状态机字段。
+- Expected correct behavior:
+  任何 public delivery action 都必须产生对应的 `sent` 文件记录；截图首发必须优先 final/result/app-home/preview 类成品图；最终回复只用自然语言说明结果、附件和 README/启动入口。
+- Fix:
+  把 delivery action 无 sent 视为失败并重试；把 proactive/result push 接到 `emit_public_delivery()`；增加截图候选优先级；生成阶段输出 `final-ui.png`；公开回复遇到内部 marker 时改写为用户可读交付说明。
+- Fix attempt status:
+  2026-04-10 scoped repair bound under `ADHOC-20260410-real-visual-evidence-and-public-delivery`.
+- Regression test status:
+  Covered by `tests/test_support_proactive_delivery.py`, `tests/test_support_delivery_user_visible_contract.py`, and `tests/test_project_generation_artifacts.py`.
+- Prevention:
+  任何声称“已交付”的 support/Telegram 改动都必须同时验证 text、photo、document、`support_public_delivery.json.sent`、首图优先级和用户可读启动说明；只有 json 或文本存在不算交付完成。
+- Tags:
+  telegram, support, public-delivery, screenshot, zip, humanization, proactive

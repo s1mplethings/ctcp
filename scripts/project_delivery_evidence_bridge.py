@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from contracts.schemas.delivery_evidence import DeliveryEvidenceManifest
+from frontend.delivery_reply_actions import prioritize_screenshot_files
 
 MANIFEST_REL_PATH = Path("artifacts") / "delivery_evidence_manifest.json"
 
@@ -66,6 +67,7 @@ def _select_primary_report(run_dir: Path, artifacts: list[dict[str, Any]]) -> st
 
 def _select_screenshots(run_dir: Path, artifacts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
+    markers = ("final-ui", "final", "result", "app-home", "home", "main-screen", "ui", "page", "render", "output", "preview", "screen", "screenshot", "overview", "debug", "trace", "proof", "evidence", "timeline")
     for row in artifacts:
         if not isinstance(row, dict):
             continue
@@ -74,9 +76,11 @@ def _select_screenshots(run_dir: Path, artifacts: list[dict[str, Any]]) -> list[
         low = rel.lower()
         if suffix not in {".png", ".jpg", ".jpeg", ".webp", ".bmp"}:
             continue
-        if any(token in low for token in ("screenshot", "timeline", "frame", "preview", "overview")):
+        if any(token in low for token in markers):
             rows.append(_artifact_item(run_dir, row, description="可直接查看的交付截图"))
-    return rows[:8]
+    ordered_paths = prioritize_screenshot_files([row.get("path", "") for row in rows])
+    rank = {str(path): idx for idx, path in enumerate(ordered_paths)}
+    return sorted(rows, key=lambda row: rank.get(str(row.get("path", "")), 999))[:8]
 
 
 def _select_demo_media(run_dir: Path, artifacts: list[dict[str, Any]]) -> list[dict[str, Any]]:

@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = Path(__file__).resolve().parent
 
 if str(ROOT) not in sys.path: sys.path.insert(0, str(ROOT))
-from frontend.delivery_reply_actions import align_reply_with_delivery_actions, delivery_plan_failed, inject_ready_delivery_actions
+from frontend.delivery_reply_actions import align_reply_with_delivery_actions, delivery_plan_failed, inject_ready_delivery_actions, prioritize_screenshot_files
 PROMPT_TEMPLATE_PATH = ROOT / "agents" / "prompts" / "support_lead_reply.md"
 SUPPORT_INBOX_REL_PATH = Path("artifacts") / "support_inbox.jsonl"
 SUPPORT_PROMPT_REL_PATH = Path("artifacts") / "support_prompt_input.md"
@@ -3837,7 +3837,7 @@ def collect_public_delivery_state(
     state["ctcp_package_source_dirs"] = [str(path) for path in ctcp_package_source_dirs]
     state["placeholder_package_source_dirs"] = [str(path) for path in placeholder_package_source_dirs]
     state["existing_package_files"] = [str(path) for path in existing_package_files]
-    state["screenshot_files"] = [str(path) for path in screenshot_files]
+    state["screenshot_files"] = [str(path) for path in prioritize_screenshot_files(screenshot_files)]
     state["project_name_hint"] = _delivery_project_name_hint(
         session_state=session_state,
         project_context=project_context,
@@ -5767,7 +5767,7 @@ def resolve_public_delivery_plan(
         Path(str(x)).resolve() for x in delivery_state.get("placeholder_package_source_dirs", []) if str(x).strip()
     ]
     existing_packages = [Path(str(x)).resolve() for x in delivery_state.get("existing_package_files", []) if str(x).strip()]
-    screenshot_files = [Path(str(x)).resolve() for x in delivery_state.get("screenshot_files", []) if str(x).strip()]
+    screenshot_files = [Path(str(x)).resolve() for x in prioritize_screenshot_files(delivery_state.get("screenshot_files", []))]
     export_dir = run_dir / SUPPORT_EXPORTS_REL_DIR
 
     for action in actions or []:

@@ -108,6 +108,25 @@ _FILLER_RE = re.compile(
 )
 
 
+def _public_delivery_result_text(*, delivery: Mapping[str, str], lang_hint: str) -> str:
+    use_en = _norm(lang_hint).lower().startswith("en")
+    entry = _norm(delivery.get("startup_entrypoint", ""))
+    readme = _norm(delivery.get("startup_readme", "")) or "README.md"
+    entry_name = entry.replace("\\", "/").rsplit("/", 1)[-1] if entry else "README 里的启动入口"
+    if use_en:
+        return (
+            "The project is packaged and ready to review.\n\n"
+            "Start with the final screenshot, then open the zip package.\n\n"
+            f"The zip includes {readme}, the startup entry `{entry_name}`, and the main source code. "
+            f"Use the README run instructions first; this is delivered as a runnable project package."
+        )
+    return (
+        "项目已经整理好，可以直接查看和运行。\n\n"
+        "你先看成品截图确认界面效果，再打开 zip 包看完整代码。\n\n"
+        f"zip 里包含 {readme}、启动入口 `{entry_name}` 和主要代码；运行方式先按 README 说明执行。当前按可运行项目包交付。"
+    )
+
+
 def _norm(value: Any) -> str:
     return re.sub(r"\s+", " ", str(value or "").strip())
 
@@ -197,16 +216,10 @@ def render_fallback_reply(
                 question = f"{question}?"
             return {"reply_text": f"I am missing one key detail to continue: {question}", "next_question": question}
         if intent == "deliver_result":
-            if artifacts:
-                return {
-                    "reply_text": f"The result is ready. Startup entry: {delivery.get('startup_entrypoint', '') or 'available in project artifacts'}. Produced artifacts: {', '.join(artifacts[:3])}.",
-                    "next_question": "",
-                }
             if any(delivery.values()):
-                return {
-                    "reply_text": f"The result is ready. Project root: {delivery.get('project_root', '')}. Startup entry: {delivery.get('startup_entrypoint', '')}. Readme: {delivery.get('startup_readme', '')}.",
-                    "next_question": "",
-                }
+                return {"reply_text": _public_delivery_result_text(delivery=delivery, lang_hint=lang_hint), "next_question": ""}
+            if artifacts:
+                return {"reply_text": _public_delivery_result_text(delivery=delivery, lang_hint=lang_hint), "next_question": ""}
             return {"reply_text": "The result is ready. I can walk you through what was produced and continue with your next preference.", "next_question": ""}
         if intent in {"explain_error", "guide_recovery"}:
             if truth_text:
@@ -251,19 +264,13 @@ def render_fallback_reply(
             question = f"{question}？"
         return {"reply_text": f"我还缺一个关键信息才能继续：{question}", "next_question": question}
     if intent == "deliver_result":
-        if artifacts:
-            return {
-                "reply_text": f"这轮结果已经产出。启动入口：{delivery.get('startup_entrypoint', '') or '项目产物中可见'}。主要文件有：{', '.join(artifacts[:3])}。",
-                "next_question": "",
-            }
         if any(delivery.values()):
-            return {
-                "reply_text": f"这轮已经完成。项目目录：{delivery.get('project_root', '')}。启动入口：{delivery.get('startup_entrypoint', '')}。说明入口：{delivery.get('startup_readme', '')}。",
-                "next_question": "",
-            }
+            return {"reply_text": _public_delivery_result_text(delivery=delivery, lang_hint=lang_hint), "next_question": ""}
+        if artifacts:
+            return {"reply_text": _public_delivery_result_text(delivery=delivery, lang_hint=lang_hint), "next_question": ""}
         if visible_state == "DONE":
-            return {"reply_text": "这轮已经完成。我可以按你关注的点逐项带你看结果，并继续下一轮。", "next_question": ""}
-        return {"reply_text": "结果已经准备好，我可以先把产出重点发你确认，再继续推进下一步。", "next_question": ""}
+            return {"reply_text": _public_delivery_result_text(delivery=delivery, lang_hint=lang_hint), "next_question": ""}
+        return {"reply_text": "项目结果已经整理好；我会先给你看成品截图，再给 zip 包和 README 运行说明。", "next_question": ""}
     if intent in {"explain_error", "guide_recovery"}:
         if truth_text:
             return {"reply_text": truth_text, "next_question": ""}
@@ -525,11 +532,11 @@ def _downgrade_text(
         artifacts = artifact_labels(project_context)
         if artifacts:
             if use_en:
-                return f"Result stays the same. Key artifacts: {', '.join(artifacts[:2])}.", ""
-            return f"结果状态不变，关键产出仍是：{', '.join(artifacts[:2])}。", ""
+                return _public_delivery_result_text(delivery=delivery_summary(project_context), lang_hint=lang_hint), ""
+            return _public_delivery_result_text(delivery=delivery_summary(project_context), lang_hint=lang_hint), ""
         if use_en:
-            return "Result status remains complete. Let me know what you want to refine next.", ""
-        return "结果状态保持完成，你告诉我下一步优先改哪里即可。", ""
+            return _public_delivery_result_text(delivery=delivery_summary(project_context), lang_hint=lang_hint), ""
+        return _public_delivery_result_text(delivery=delivery_summary(project_context), lang_hint=lang_hint), ""
     if intent in {"explain_error", "guide_recovery"}:
         if use_en:
             return "Issue state is unchanged. There is still no clearer backend result than before.", "Retry now or wait for a clearer backend result?"
@@ -624,6 +631,18 @@ def _append_artifact_hint(text: str, artifacts: list[str], *, lang_hint: str) ->
     return note if not raw else f"{raw}\n\n{note}"
 
 
+def _policy_delivery_result_text(text: str, project_context: Mapping[str, Any] | None, *, lang_hint: str) -> tuple[str, str]:
+    delivery = delivery_summary(project_context)
+    if any(delivery.values()):
+        return _public_delivery_result_text(delivery=delivery, lang_hint=lang_hint), "delivery_result_humanized"
+    artifacts = artifact_labels(project_context)
+    if artifacts:
+        updated = _append_artifact_hint(text, artifacts, lang_hint=lang_hint)
+        if updated != text:
+            return updated, "artifact_hint_added"
+    return text, ""
+
+
 def enforce_reply_policy(
     *,
     reply_text: str,
@@ -705,12 +724,9 @@ def enforce_reply_policy(
             reasons.append("decision_not_explicit")
 
     if intent == "deliver_result":
-        artifacts = artifact_labels(project_context)
-        if artifacts:
-            updated = _append_artifact_hint(text, artifacts, lang_hint=lang_hint)
-            if updated != text:
-                text = updated
-                reasons.append("artifact_hint_added")
+        text, reason = _policy_delivery_result_text(text, project_context, lang_hint=lang_hint)
+        if reason:
+            reasons.append(reason)
 
     if intent in {"explain_error", "guide_recovery"}:
         low = text.lower()

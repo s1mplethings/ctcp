@@ -4,6 +4,47 @@ import re
 from typing import Any
 
 _FINAL_READY_RUN_STATUSES = {"pass", "done", "completed", "success"}
+_DELIVERY_ACTION_TYPES = {"send_project_package", "send_project_screenshot"}
+_HIGH_VALUE_SCREENSHOT_MARKERS = ("final-ui", "final", "result", "app-home", "home", "main-screen", "ui", "page", "render", "output")
+_MID_VALUE_SCREENSHOT_MARKERS = ("preview", "screen", "screenshot")
+_LOW_VALUE_SCREENSHOT_MARKERS = ("overview", "debug", "trace", "proof", "evidence", "timeline")
+_INTERNAL_REPLY_MARKERS = (
+    "stage",
+    "gate",
+    "artifact",
+    "artifacts/",
+    ".json",
+    "hash",
+    "path",
+    "report",
+    "project_output/",
+    "plan_draft",
+    "file_request",
+    "source_generation_report",
+    "support_public_delivery",
+)
+
+
+def prioritize_screenshot_files(paths: list[Any]) -> list[Any]:
+    def score(raw: Any) -> tuple[int, str]:
+        text = str(raw or "").replace("\\", "/").lower()
+        name = text.rsplit("/", 1)[-1]
+        if any(marker in name for marker in _HIGH_VALUE_SCREENSHOT_MARKERS):
+            return (0, name)
+        if any(marker in name for marker in _MID_VALUE_SCREENSHOT_MARKERS):
+            return (1, name)
+        if any(marker in name for marker in _LOW_VALUE_SCREENSHOT_MARKERS):
+            return (3, name)
+        return (2, name)
+
+    return sorted([item for item in paths if str(item or "").strip()], key=score)
+
+
+def _looks_internal(text: str) -> bool:
+    low = text.lower()
+    if re.search(r"\b[a-f0-9]{40}\b", low):
+        return True
+    return any(marker in low for marker in _INTERNAL_REPLY_MARKERS)
 
 
 def align_reply_with_delivery_actions(reply_text: str, *, actions: list[dict[str, Any]], source_hint: str) -> str:
@@ -11,7 +52,7 @@ def align_reply_with_delivery_actions(reply_text: str, *, actions: list[dict[str
     if str(source_hint or "").strip().lower() != "telegram":
         return text
     action_types = {str(item.get("type", "")).strip().lower() for item in actions if isinstance(item, dict)}
-    if not ({"send_project_package", "send_project_screenshot"} & action_types):
+    if not (_DELIVERY_ACTION_TYPES & action_types):
         return text
     text = re.sub(
         r"\n*\s*((本轮已产出文件|关键产出仍是)[:：].*|Artifacts generated:.*|Key outputs remain:.*)\s*$",
@@ -26,11 +67,13 @@ def align_reply_with_delivery_actions(reply_text: str, *, actions: list[dict[str
             text = f"{text}\n\n{note}" if text else note
     delivery_note = ""
     if {"send_project_package", "send_project_screenshot"} <= action_types:
-        delivery_note = "我现在直接把 zip 包和结果截图发到当前对话。"
+        delivery_note = "我会先发成品截图，再发 zip 包；zip 里包含 README、启动入口和主要代码，运行方式先看 README。"
     elif "send_project_package" in action_types:
-        delivery_note = "我现在直接把 zip 包发到当前对话。"
+        delivery_note = "我现在把 zip 包发到当前对话；zip 里包含 README、启动入口和主要代码，运行方式先看 README。"
     elif "send_project_screenshot" in action_types:
-        delivery_note = "我先把结果截图发到当前对话。"
+        delivery_note = "我先把成品截图发到当前对话，你可以先看界面效果。"
+    if _looks_internal(text):
+        text = "项目已经整理好。我会先发成品截图，再发 zip 包；zip 里包含 README、启动入口和主要代码，先看 README 里的运行方式。"
     if delivery_note and delivery_note not in text:
         text = f"{text}\n\n{delivery_note}" if text else delivery_note
     return text
@@ -76,10 +119,15 @@ def inject_ready_delivery_actions(
 
 def delivery_plan_failed(actions: list[dict[str, Any]] | None, plan: dict[str, Any] | None) -> bool:
     action_types = {str(item.get("type", "")).strip().lower() for item in actions or [] if isinstance(item, dict)}
-    if not ({"send_project_package", "send_project_screenshot"} & action_types):
+    if not (_DELIVERY_ACTION_TYPES & action_types):
         return False
     if not isinstance(plan, dict):
         return True
     sent = [item for item in plan.get("sent", []) if isinstance(item, dict)]
     errors = [item for item in plan.get("errors", []) if str(item).strip()]
+    sent_types = {str(item.get("type", "")).strip().lower() for item in sent}
+    if "send_project_package" in action_types and "document" not in sent_types:
+        return True
+    if "send_project_screenshot" in action_types and "photo" not in sent_types:
+        return True
     return bool(errors) or not sent

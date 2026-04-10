@@ -2314,9 +2314,9 @@ class SupportBotHumanizationTests(unittest.TestCase):
             action_types = {str(item.get("type", "")).strip().lower() for item in list(doc.get("actions", []))}
             self.assertIn("send_project_package", action_types)
             self.assertIn("send_project_screenshot", action_types)
-            self.assertIn("zip", str(doc.get("reply_text", "")).lower())
-            self.assertIn("截图", str(doc.get("reply_text", "")))
-            self.assertNotIn("本轮已产出文件", str(doc.get("reply_text", "")))
+            reply = str(doc.get("reply_text", "")); low = reply.lower()
+            self.assertTrue("zip" in low and all(token in reply for token in ("成品截图", "README", "启动入口", "运行方式")))
+            self.assertFalse(any(token in low for token in ("stage", "gate", "artifact", ".json", "hash", "source_generation_report", "本轮已产出文件")))
 
     def test_public_delivery_prompt_context_exposes_ctcp_scaffold_shape(self) -> None:
         ctx = support_bot.public_delivery_prompt_context(
