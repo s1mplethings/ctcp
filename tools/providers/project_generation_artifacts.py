@@ -689,7 +689,7 @@ def normalize_source_generation(doc: dict[str, Any] | None, *, goal: str, run_di
     business_expected = list(lists.get("business_files", []))
     business_generated = sorted(set(business_expected) & set(generated_files))
     business_missing = sorted(set(business_expected) - set(generated_files))
-    behavior_probe, export_probe, gate_layers = build_runtime_checks(
+    behavior_probe, export_probe, gate_layers, visual_evidence = build_runtime_checks(
         run_dir=run_dir,
         project_root=project_root,
         package_name=package_name,
@@ -725,6 +725,7 @@ def normalize_source_generation(doc: dict[str, Any] | None, *, goal: str, run_di
         run_dir=run_dir,
     )
 
+    generated_files = _collect_project_files(run_dir, project_root)
     report = _stage_report(
         stage="source_generation",
         goal=goal_text,
@@ -747,6 +748,7 @@ def normalize_source_generation(doc: dict[str, Any] | None, *, goal: str, run_di
             behavior_probe=behavior_probe,
             export_probe=export_probe,
             scaffold=scaffold,
+            visual_evidence=visual_evidence,
         ),
     )
     report["project_intent"] = project_intent
@@ -912,11 +914,13 @@ def normalize_project_manifest(doc: dict[str, Any] | None, *, goal: str, run_dir
         "visual_evidence_required": bool(source_stage_doc.get("visual_evidence_required", lists.get("visual_evidence_required", False))),
         "screenshot_required": bool(source_stage_doc.get("screenshot_required", lists.get("screenshot_required", False))),
         "visual_evidence_status": str(source_stage_doc.get("visual_evidence_status", "")).strip() or str(lists.get("visual_evidence_status", "not_requested")),
+        "visual_evidence_files": _normalize_rel_list([str(x) for x in source_stage_doc.get("visual_evidence_files", [])]) if isinstance(source_stage_doc.get("visual_evidence_files"), list) else [],
         "benchmark_sample_applied": bool(source_stage_doc.get("benchmark_sample_applied", lists.get("benchmark_sample_applied", False))),
         "decision_nodes": _normalize_rel_list([str(x) for x in source_stage_doc.get("decision_nodes", lists.get("decision_nodes", []))]),
         "flow_nodes": _normalize_rel_list([str(x) for x in source_stage_doc.get("flow_nodes", lists.get("flow_nodes", []))]),
         "gate_layers": source_stage_doc.get("gate_layers") if isinstance(source_stage_doc.get("gate_layers"), dict) else {},
         "behavioral_checks": source_stage_doc.get("behavioral_checks") if isinstance(source_stage_doc.get("behavioral_checks"), dict) else {},
+        "visual_evidence_capture": source_stage_doc.get("visual_evidence_capture") if isinstance(source_stage_doc.get("visual_evidence_capture"), dict) else {},
         "generic_validation": generic_validation,
         "domain_validation": domain_validation,
         "artifacts": output_refs,
@@ -935,7 +939,7 @@ def normalize_deliverable_index(doc: dict[str, Any] | None, *, goal: str, run_di
         except Exception:
             manifest_doc = {}
     deliverables: list[str] = []
-    for field in ("business_files_generated", "acceptance_files", "source_files", "doc_files", "workflow_files"):
+    for field in ("business_files_generated", "acceptance_files", "source_files", "doc_files", "workflow_files", "visual_evidence_files"):
         value = manifest_doc.get(field)
         if isinstance(value, list):
             deliverables.extend(str(row).strip() for row in value if str(row).strip())
@@ -973,6 +977,7 @@ def normalize_deliverable_index(doc: dict[str, Any] | None, *, goal: str, run_di
         "visual_evidence_required": bool(manifest_doc.get("visual_evidence_required", False)),
         "screenshot_required": bool(manifest_doc.get("screenshot_required", False)),
         "visual_evidence_status": str(manifest_doc.get("visual_evidence_status", "not_requested")).strip(),
+        "visual_evidence_files": _normalize_rel_list([str(x) for x in manifest_doc.get("visual_evidence_files", [])]) if isinstance(manifest_doc.get("visual_evidence_files"), list) else [],
         "generic_validation": manifest_doc.get("generic_validation", {}) if isinstance(manifest_doc.get("generic_validation"), dict) else {},
         "domain_validation": manifest_doc.get("domain_validation", {}) if isinstance(manifest_doc.get("domain_validation"), dict) else {},
         "business_deliverables": _normalize_rel_list([str(x) for x in manifest_doc.get("business_files_generated", [])]) if isinstance(manifest_doc.get("business_files_generated"), list) else [],

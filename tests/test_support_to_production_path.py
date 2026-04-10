@@ -224,6 +224,270 @@ class SupportToProductionPathTests(unittest.TestCase):
             self.assertFalse(bool(dict(runtime.get("error", {})).get("has_error", False)))
             self.assertEqual(str(runtime.get("recovery", {}).get("status", "")), "none")
 
+    def test_runtime_state_marks_missing_plan_draft_as_retryable_recovery(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_runtime_plan_retry_") as td:
+            run_dir = Path(td)
+
+            def _fake_run_cmd(cmd: list[str], cwd: Path) -> dict[str, Any]:
+                del cwd
+                self.assertEqual(str(cmd[2]), "status")
+                return {
+                    "cmd": " ".join(cmd),
+                    "exit_code": 0,
+                    "stdout": "\n".join(
+                        [
+                            f"[ctcp_orchestrate] run_dir={run_dir}",
+                            "[ctcp_orchestrate] run_status=running",
+                            "[ctcp_orchestrate] next=blocked",
+                            "[ctcp_orchestrate] owner=Chair/Planner",
+                            "[ctcp_orchestrate] path=artifacts/PLAN_draft.md",
+                            "[ctcp_orchestrate] reason=waiting for PLAN_draft.md",
+                        ]
+                    )
+                    + "\n",
+                    "stderr": "",
+                }
+
+            with mock.patch.object(ctcp_front_bridge, "_resolve_run_dir", return_value=run_dir), mock.patch.object(
+                ctcp_front_bridge,
+                "_run_cmd",
+                side_effect=_fake_run_cmd,
+            ):
+                context = ctcp_front_bridge.ctcp_get_support_context("r-plan")
+
+            runtime = dict(context.get("runtime_state", {}))
+            recovery = dict(runtime.get("recovery", {}))
+            self.assertEqual(str(runtime.get("phase", "")), "RECOVER")
+            self.assertTrue(bool(recovery.get("needed", False)))
+            self.assertEqual(str(recovery.get("status", "")), "retry_ready")
+            self.assertIn("PLAN_draft.md", str(recovery.get("hint", "")))
+
+    def test_runtime_state_marks_invalid_existing_source_generation_report_as_blocked_hard(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_runtime_source_invalid_") as td:
+            run_dir = Path(td)
+            _write_json(
+                run_dir / "artifacts" / "source_generation_report.json",
+                {
+                    "schema_version": "ctcp-project-stage-report-v1",
+                    "stage": "source_generation",
+                    "status": "blocked",
+                },
+            )
+
+            def _fake_run_cmd(cmd: list[str], cwd: Path) -> dict[str, Any]:
+                del cwd
+                self.assertEqual(str(cmd[2]), "status")
+                return {
+                    "cmd": " ".join(cmd),
+                    "exit_code": 0,
+                    "stdout": "\n".join(
+                        [
+                            f"[ctcp_orchestrate] run_dir={run_dir}",
+                            "[ctcp_orchestrate] run_status=running",
+                            "[ctcp_orchestrate] next=blocked",
+                            "[ctcp_orchestrate] owner=Chair/Planner",
+                            "[ctcp_orchestrate] path=artifacts/source_generation_report.json",
+                            "[ctcp_orchestrate] reason=generic_validation.passed must be true",
+                        ]
+                    )
+                    + "\n",
+                    "stderr": "",
+                }
+
+            with mock.patch.object(ctcp_front_bridge, "_resolve_run_dir", return_value=run_dir), mock.patch.object(
+                ctcp_front_bridge,
+                "_run_cmd",
+                side_effect=_fake_run_cmd,
+            ):
+                context = ctcp_front_bridge.ctcp_get_support_context("r-source-invalid")
+
+            runtime = dict(context.get("runtime_state", {}))
+            gate = dict(runtime.get("gate", {}))
+            recovery = dict(runtime.get("recovery", {}))
+            self.assertEqual(str(runtime.get("phase", "")), "BLOCKED_HARD")
+            self.assertEqual(str(gate.get("watchdog_status", "")), "blocked_hard")
+            self.assertEqual(str(runtime.get("blocking_reason", "")), "generic_validation.passed must be true")
+            self.assertTrue(bool(recovery.get("needed", False)))
+            self.assertEqual(str(recovery.get("status", "")), "blocked_hard")
+            self.assertIn("source_generation_report.json", str(recovery.get("hint", "")))
+            self.assertIn("generic_validation", str(dict(runtime.get("error", {})).get("message", "")))
+
+    def test_ctcp_advance_marks_stalled_plan_draft_gate_as_retrying_and_counts_retry(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_runtime_retry_mark_") as td:
+            run_dir = Path(td)
+            stale_ts = "2026-04-09T00:00:00Z"
+            _write_json(
+                run_dir / "artifacts" / "support_runtime_state.json",
+                {
+                    "schema_version": "ctcp-support-runtime-state-v1",
+                    "run_id": "r-retry",
+                    "run_dir": str(run_dir),
+                    "phase": "RECOVER",
+                    "run_status": "running",
+                    "blocking_reason": "waiting for PLAN_draft.md",
+                    "recovery": {"needed": True, "hint": "retry planner to generate PLAN_draft.md", "status": "retry_ready"},
+                    "gate": {
+                        "state": "blocked",
+                        "owner": "Chair/Planner",
+                        "path": "artifacts/PLAN_draft.md",
+                        "reason": "waiting for PLAN_draft.md",
+                        "entered_at": stale_ts,
+                        "updated_at": stale_ts,
+                        "retry_count": 0,
+                        "max_retries": 2,
+                        "expected_artifact": "artifacts/PLAN_draft.md",
+                        "recovery_action": "retry planner and verify PLAN_draft.md lands with a valid draft contract",
+                        "last_retry_at": "",
+                        "watchdog_status": "retry_ready",
+                    },
+                    "verify_result": "",
+                    "verify_gate": "",
+                    "updated_at": stale_ts,
+                },
+            )
+
+            def _fake_run_cmd(cmd: list[str], cwd: Path) -> dict[str, Any]:
+                del cwd
+                action = str(cmd[2])
+                if action == "status":
+                    return {
+                        "cmd": " ".join(cmd),
+                        "exit_code": 0,
+                        "stdout": "\n".join(
+                            [
+                                f"[ctcp_orchestrate] run_dir={run_dir}",
+                                "[ctcp_orchestrate] run_status=running",
+                                "[ctcp_orchestrate] next=blocked",
+                                "[ctcp_orchestrate] owner=Chair/Planner",
+                                "[ctcp_orchestrate] path=artifacts/PLAN_draft.md",
+                                "[ctcp_orchestrate] reason=waiting for PLAN_draft.md",
+                            ]
+                        )
+                        + "\n",
+                        "stderr": "",
+                    }
+                if action == "advance":
+                    return {"cmd": " ".join(cmd), "exit_code": 0, "stdout": "[ctcp_orchestrate] reached max-steps=1\n", "stderr": ""}
+                raise AssertionError(action)
+
+            with mock.patch.object(ctcp_front_bridge, "_resolve_run_dir", return_value=run_dir), mock.patch.object(
+                ctcp_front_bridge,
+                "_run_cmd",
+                side_effect=_fake_run_cmd,
+            ):
+                result = ctcp_front_bridge.ctcp_advance("r-retry", max_steps=1)
+
+            runtime_before = dict(result.get("runtime_before", {}))
+            gate_before = dict(runtime_before.get("gate", {}))
+            self.assertEqual(str(runtime_before.get("phase", "")), "RETRYING")
+            self.assertEqual(int(gate_before.get("retry_count", 0) or 0), 1)
+            self.assertEqual(str(gate_before.get("watchdog_status", "")), "retrying")
+
+    def test_runtime_state_escalates_retry_exhaustion_to_recovery_needed(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_runtime_retry_exhausted_") as td:
+            run_dir = Path(td)
+            stale_ts = "2026-04-09T00:00:00Z"
+            _write_json(
+                run_dir / "artifacts" / "support_runtime_state.json",
+                {
+                    "schema_version": "ctcp-support-runtime-state-v1",
+                    "run_id": "r-recovery-needed",
+                    "run_dir": str(run_dir),
+                    "phase": "RETRYING",
+                    "run_status": "running",
+                    "blocking_reason": "waiting for PLAN_draft.md",
+                    "recovery": {"needed": True, "hint": "retry planner to generate PLAN_draft.md", "status": "retrying"},
+                    "gate": {
+                        "state": "blocked",
+                        "owner": "Chair/Planner",
+                        "path": "artifacts/PLAN_draft.md",
+                        "reason": "waiting for PLAN_draft.md",
+                        "entered_at": stale_ts,
+                        "updated_at": stale_ts,
+                        "retry_count": 2,
+                        "max_retries": 2,
+                        "expected_artifact": "artifacts/PLAN_draft.md",
+                        "recovery_action": "retry planner and verify PLAN_draft.md lands with a valid draft contract",
+                        "last_retry_at": stale_ts,
+                        "watchdog_status": "retrying",
+                    },
+                    "verify_result": "",
+                    "verify_gate": "",
+                    "updated_at": stale_ts,
+                },
+            )
+
+            def _fake_run_cmd(cmd: list[str], cwd: Path) -> dict[str, Any]:
+                del cwd
+                self.assertEqual(str(cmd[2]), "status")
+                return {
+                    "cmd": " ".join(cmd),
+                    "exit_code": 0,
+                    "stdout": "\n".join(
+                        [
+                            f"[ctcp_orchestrate] run_dir={run_dir}",
+                            "[ctcp_orchestrate] run_status=running",
+                            "[ctcp_orchestrate] next=blocked",
+                            "[ctcp_orchestrate] owner=Chair/Planner",
+                            "[ctcp_orchestrate] path=artifacts/PLAN_draft.md",
+                            "[ctcp_orchestrate] reason=waiting for PLAN_draft.md",
+                        ]
+                    )
+                    + "\n",
+                    "stderr": "",
+                }
+
+            with mock.patch.object(ctcp_front_bridge, "_resolve_run_dir", return_value=run_dir), mock.patch.object(
+                ctcp_front_bridge,
+                "_run_cmd",
+                side_effect=_fake_run_cmd,
+            ):
+                context = ctcp_front_bridge.ctcp_get_support_context("r-recovery-needed")
+
+            runtime = dict(context.get("runtime_state", {}))
+            recovery = dict(runtime.get("recovery", {}))
+            self.assertEqual(str(runtime.get("phase", "")), "RECOVERY_NEEDED")
+            self.assertEqual(str(recovery.get("status", "")), "recovery_needed")
+            self.assertEqual(int(recovery.get("retry_count", 0) or 0), 2)
+
+    def test_runtime_state_marks_executed_target_missing_as_exec_failed(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_runtime_exec_failed_") as td:
+            run_dir = Path(td)
+
+            def _fake_run_cmd(cmd: list[str], cwd: Path) -> dict[str, Any]:
+                del cwd
+                self.assertEqual(str(cmd[2]), "status")
+                return {
+                    "cmd": " ".join(cmd),
+                    "exit_code": 0,
+                    "stdout": "\n".join(
+                        [
+                            f"[ctcp_orchestrate] run_dir={run_dir}",
+                            "[ctcp_orchestrate] run_status=running",
+                            "[ctcp_orchestrate] next=blocked",
+                            "[ctcp_orchestrate] owner=Chair/Planner",
+                            "[ctcp_orchestrate] path=artifacts/PLAN.md",
+                            "[ctcp_orchestrate] reason=provider reported executed but target missing: artifacts/PLAN.md",
+                        ]
+                    )
+                    + "\n",
+                    "stderr": "",
+                }
+
+            with mock.patch.object(ctcp_front_bridge, "_resolve_run_dir", return_value=run_dir), mock.patch.object(
+                ctcp_front_bridge,
+                "_run_cmd",
+                side_effect=_fake_run_cmd,
+            ):
+                context = ctcp_front_bridge.ctcp_get_support_context("r-exec-failed")
+
+            runtime = dict(context.get("runtime_state", {}))
+            error_doc = dict(runtime.get("error", {}))
+            recovery = dict(runtime.get("recovery", {}))
+            self.assertEqual(str(runtime.get("phase", "")), "EXEC_FAILED")
+            self.assertTrue(bool(error_doc.get("has_error", False)))
+            self.assertEqual(str(recovery.get("status", "")), "exec_failed")
+
     def test_reply_policy_prefers_deliver_result_when_pass_truth_exists_even_if_provider_failed(self) -> None:
         project_context = {
             "status": {"run_status": "pass", "verify_result": "PASS", "gate": {"state": "pass", "reason": ""}},
@@ -389,7 +653,7 @@ class SupportToProductionPathTests(unittest.TestCase):
 
             self.assertEqual(int(state.get("new_run_calls", 0) or 0), 1)
             self.assertEqual(int(state.get("advance_calls", 0) or 0), 1)
-            self.assertEqual(int(state.get("last_max_steps", 0) or 0), 4)
+            self.assertEqual(int(state.get("last_max_steps", 0) or 0), 2)
             self.assertTrue((production_run / "artifacts" / "frontend_request.json").exists())
             self.assertTrue((production_run / SUPPORT_FRONTEND_TURNS_REL).exists())
             self.assertTrue((production_run / SUPPORT_WHITEBOARD_REL).exists())

@@ -7,6 +7,12 @@
 
 | Date | Topic | File |
 |------|-------|------|
+| 2026-04-09 | 可复用 LLM 调用层 Phase 1 skeleton（归档，后续切到 runtime rehook + Telegram smoke） | [→](archive/20260409-reusable-llm-core-phase1-skeleton.md) |
+| 2026-04-09 | 可复用 LLM 调用层抽离分析（归档，后续切换到 Phase 1 skeleton 实施） | [→](archive/20260409-reusable-llm-core-extraction-analysis.md) |
+| 2026-04-09 | support execution-chain breakpoint isolation（归档，后续切换到可复用 LLM 调用层抽离分析） | [→](archive/20260408-support-chain-breakpoint-isolation.md) |
+| 2026-04-08 | support 领域中性与真实状态回复边界（归档，后续切换到链路断点隔离与合同测试） | [→](archive/20260408-support-domain-neutrality-and-truthful-reply-boundary.md) |
+| 2026-04-07 | support 会话恢复、确认词误绑与计划自愈（归档，后续切换到领域污染与真实状态输出修复） | [→](archive/20260407-support-session-recovery-and-plan-self-heal.md) |
+| 2026-04-07 | remove legacy GUI lane（归档，后续切换到 support 会话恢复与计划自愈） | [→](archive/20260407-remove-legacy-gui-lane.md) |
 | 2026-04-07 | support/frontend 交付证据直出（归档，后续切换到移除残留 GUI lane） | [→](archive/20260406-support-delivery-evidence-surface.md) |
 | 2026-04-06 | VTuber 高能片段本地 MVP 项目（归档，后续切换到客服直接展示交付证据） | [→](archive/20260406-vtuber-highlight-local-mvp.md) |
 | 2026-04-06 | generic archetype 去模板化与非 narrative 验收（归档，后续切换到 VTuber 高能片段本地 MVP 项目） | [→](archive/20260406-generic-archetype-mainline-and-nonnarrative-e2e.md) |

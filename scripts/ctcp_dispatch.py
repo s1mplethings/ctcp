@@ -18,11 +18,19 @@ SUPPORT_WHITEBOARD_LOG_REL = Path("artifacts") / "support_whiteboard.md"
 SUPPORT_WHITEBOARD_SCHEMA_VERSION = "ctcp-support-whiteboard-v1"
 
 try:
+    from ctcp_adapters import dispatch_request_mapper, dispatch_whiteboard
+    from llm_core.dispatch import router as core_router
+    from llm_core.providers import runtime as provider_runtime
     from tools import local_librarian
+    from tools.dispatch_result_contract import apply_dispatch_evidence, normalize_executed_target_result, provider_mode
     from tools.providers import api_agent, codex_agent, local_exec, manual_outbox, mock_agent, ollama_agent
 except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
+    from ctcp_adapters import dispatch_request_mapper, dispatch_whiteboard
+    from llm_core.dispatch import router as core_router
+    from llm_core.providers import runtime as provider_runtime
     from tools import local_librarian
+    from tools.dispatch_result_contract import apply_dispatch_evidence, normalize_executed_target_result, provider_mode
     from tools.providers import api_agent, codex_agent, local_exec, manual_outbox, mock_agent, ollama_agent
 
 KNOWN_PROVIDERS = {"manual_outbox", "ollama_agent", "api_agent", "codex_agent", "mock_agent", "local_exec"}
@@ -54,24 +62,9 @@ BEHAVIOR_ID_STEP_PLAN_DRAFT_FAMILY = "B026"
 # BEHAVIOR_ID: B027
 BEHAVIOR_ID_PROVIDER_RESOLUTION = "B027"
 def default_dispatch_config_doc(role_defaults: dict[str, str] | None = None) -> dict[str, Any]:
-    role_providers: dict[str, str] = dict(HARD_ROLE_PROVIDERS)
-    if isinstance(role_defaults, dict):
-        for role, provider in role_defaults.items():
-            key = str(role).strip().lower()
-            if key in HARD_ROLE_PROVIDERS:
-                continue
-            role_providers[key] = _normalize_provider(str(provider))
-    return {
-        "schema_version": "ctcp-dispatch-config-v1",
-        "mode": "api_agent",
-        "role_providers": role_providers,
-        "budgets": {"max_outbox_prompts": 20},
-    }
+    return dispatch_request_mapper.default_dispatch_config_doc(role_defaults)
 def _normalize_provider(value: str) -> str:
-    text = (value or "").strip().lower()
-    if text in KNOWN_PROVIDERS:
-        return text
-    return "manual_outbox"
+    return core_router.normalize_provider(value)
 
 def _apply_hard_role_providers(role_providers: dict[str, str], *, mode: str) -> dict[str, str]:
     out: dict[str, str] = {}
@@ -118,21 +111,7 @@ def _brief_text(value: str, *, max_chars: int = 260) -> str:
     if len(text) <= limit:
         return text
     return text[: limit - 3].rstrip() + "..."
-def _provider_mode(provider: str) -> str:
-    value = str(provider or "").strip().lower()
-    return "local" if value in {"ollama_agent", "local_exec"} else "remote" if value in {"api_agent", "codex_agent"} else "manual" if value == "manual_outbox" else "mock" if value == "mock_agent" else "unknown"
-def _apply_dispatch_evidence(payload: dict[str, Any], *, request: dict[str, Any], provider: str, note: str) -> dict[str, Any]:
-    role = str(request.get("role", "")).strip().lower()
-    action = str(request.get("action", "")).strip().lower()
-    payload["provider"] = payload["chosen_provider"] = provider
-    payload["provider_mode"] = str(payload.get("provider_mode", "")).strip() or _provider_mode(provider)
-    model_name = str(payload.get("model_name", "")).strip() or str(payload.get("ollama_model", "")).strip()
-    if model_name:
-        payload["model_name"] = model_name
-    if role == "librarian" and action == "context_pack":
-        payload["provider_mode"] = "local"
-        payload["fallback_blocked"] = bool(payload.get("fallback_blocked", False)) or bool(str(note).strip())
-    return payload
+
 def _safe_whiteboard_hits(rows: Any, *, max_items: int = 5) -> list[dict[str, Any]]:
     """Sanitize and limit librarian search hits for whiteboard storage.
 
@@ -314,17 +293,7 @@ def _latest_librarian_context(entries: list[dict[str, Any]]) -> dict[str, Any]:
         "lookup_error": lookup_error,
     }
 def get_support_whiteboard_context(run_dir: Path) -> dict[str, Any]:
-    """Return whiteboard snapshot plus latest lookup context for support consumption."""
-    board = _load_support_whiteboard(run_dir)
-    entries = _safe_whiteboard_entries(board.get("entries", []), max_items=120)
-    latest = _latest_librarian_context(entries)
-    return {
-        "path": SUPPORT_WHITEBOARD_REL.as_posix(),
-        "query": str(latest.get("query", "")),
-        "hits": list(latest.get("hits", [])),
-        "lookup_error": str(latest.get("lookup_error", "")),
-        "snapshot": _compact_whiteboard_snapshot(board, max_entries=5),
-    }
+    return dispatch_whiteboard.get_support_whiteboard_context(run_dir)
 
 
 def record_support_turn_whiteboard(
@@ -336,65 +305,14 @@ def record_support_turn_whiteboard(
     conversation_mode: str,
     chat_id: str = "",
 ) -> dict[str, Any]:
-    """Append support turn and helper lookup entries to the shared whiteboard."""
-    board = _load_support_whiteboard(run_dir)
-    entries = _safe_whiteboard_entries(board.get("entries", []), max_items=120)
-    query = _brief_text(str(text or ""), max_chars=220)
-    last_query = _last_librarian_query(entries)
-    should_lookup = bool(query) and query.lower() != last_query.lower()
-    hits: list[dict[str, Any]] = []
-    lookup_error = ""
-    if should_lookup:
-        try:
-            rows = local_librarian.search(repo_root=repo_root, query=query, k=4)
-            hits = _safe_whiteboard_hits(rows, max_items=4)
-        except Exception as exc:
-            lookup_error = _brief_text(str(exc), max_chars=180) or "lookup failed"
-
-    note = _brief_text(
-        f"{source or 'support'} {conversation_mode or 'project_turn'}: {text}",
-        max_chars=260,
+    return dispatch_whiteboard.record_support_turn_whiteboard(
+        run_dir=run_dir,
+        repo_root=repo_root,
+        text=text,
+        source=source,
+        conversation_mode=conversation_mode,
+        chat_id=chat_id,
     )
-    entry: dict[str, Any] = {
-        "ts": _now_iso(),
-        "role": "support",
-        "kind": "support_turn",
-        "text": note,
-        "query": query,
-    }
-    if chat_id:
-        entry["question"] = _brief_text(f"chat_id={chat_id}", max_chars=220)
-    entries.append(entry)
-
-    if should_lookup:
-        librarian_entry: dict[str, Any] = {
-            "ts": _now_iso(),
-            "role": "local_search",
-            "kind": "support_lookup",
-            "text": (
-                f"lookup error: {lookup_error}"
-                if lookup_error
-                else f"lookup completed with {len(hits)} hits"
-            ),
-            "query": query,
-        }
-        if hits:
-            librarian_entry["hits"] = hits
-            librarian_entry["hit_count"] = len(hits)
-        entries.append(librarian_entry)
-        _append_support_whiteboard_log(
-            run_dir,
-            f"support lookup source={source or 'support'} mode={conversation_mode or 'project_turn'} "
-            f"query={query} hits={len(hits)} err={lookup_error or 'none'}",
-        )
-
-    board["entries"] = entries
-    _save_support_whiteboard(run_dir, board)
-    context = get_support_whiteboard_context(run_dir)
-    context["query"] = query
-    context["hits"] = hits if should_lookup else list(context.get("hits", []))
-    context["lookup_error"] = lookup_error or str(context.get("lookup_error", ""))
-    return context
 
 
 def _dispatch_whiteboard_query(request: dict[str, Any]) -> str:
@@ -433,70 +351,11 @@ def _prepare_dispatch_whiteboard_context(
     repo_root: Path,
     request: dict[str, Any],
 ) -> dict[str, Any]:
-    """Append dispatch request plus helper lookup context before provider execution."""
-    board = _load_support_whiteboard(run_dir)
-    entries = _safe_whiteboard_entries(board.get("entries", []), max_items=120)
-    role = _brief_text(str(request.get("role", "")).lower(), max_chars=32) or "agent"
-    action = _brief_text(str(request.get("action", "")), max_chars=48)
-    target_path = _brief_text(str(request.get("target_path", "")), max_chars=140)
-    reason = _brief_text(str(request.get("reason", "")), max_chars=220)
-    query = _dispatch_whiteboard_query(request)
-    last_query = _last_librarian_query(entries)
-    should_lookup = bool(query) and query.lower() != last_query.lower()
-    hits: list[dict[str, Any]] = []
-    lookup_error = ""
-    if should_lookup:
-        try:
-            rows = local_librarian.search(repo_root=repo_root, query=query, k=4)
-            hits = _safe_whiteboard_hits(rows, max_items=4)
-        except Exception as exc:
-            lookup_error = _brief_text(str(exc), max_chars=180) or "lookup failed"
-
-    dispatch_text = _brief_text(
-        f"{role}/{action} -> {target_path}; {reason or 'dispatch requested'}",
-        max_chars=260,
+    return dispatch_whiteboard.prepare_dispatch_whiteboard_context(
+        run_dir=run_dir,
+        repo_root=repo_root,
+        request=request,
     )
-    entries.append(
-        {
-            "ts": _now_iso(),
-            "role": role,
-            "kind": "dispatch_request",
-            "text": dispatch_text,
-            "query": query,
-        }
-    )
-
-    if should_lookup:
-        librarian_entry: dict[str, Any] = {
-            "ts": _now_iso(),
-            "role": "local_search",
-            "kind": "dispatch_lookup",
-            "text": (
-                f"lookup error: {lookup_error}"
-                if lookup_error
-                else f"lookup completed with {len(hits)} hits"
-            ),
-            "query": query,
-        }
-        if hits:
-            librarian_entry["hits"] = hits
-            librarian_entry["hit_count"] = len(hits)
-        entries.append(librarian_entry)
-        _append_support_whiteboard_log(
-            run_dir,
-            f"dispatch lookup role={role} action={action} query={query} hits={len(hits)} err={lookup_error or 'none'}",
-        )
-
-    board["entries"] = entries
-    _save_support_whiteboard(run_dir, board)
-    snapshot = _compact_whiteboard_snapshot(board, max_entries=5)
-    return {
-        "path": SUPPORT_WHITEBOARD_REL.as_posix(),
-        "query": query,
-        "hits": hits,
-        "lookup_error": lookup_error,
-        "snapshot": snapshot,
-    }
 
 
 def _append_dispatch_result_whiteboard(
@@ -505,38 +364,11 @@ def _append_dispatch_result_whiteboard(
     request: dict[str, Any],
     result: dict[str, Any],
 ) -> dict[str, Any]:
-    """Append dispatch execution result to whiteboard.
-
-    WHITEBOARD WRITE: Appends dispatch_result entry after agent execution
-    CALLED BY: dispatch_once() after every agent (analyst/architect/coder/reviewer/etc) execution
-    CONSUMED BY: ctcp_support_bot.build_progress_binding() extracts done_items from status=executed entries
-
-    Entry format: "{role}/{action} via {provider} => {status} ({target_path}); {reason}"
-    Example: "analyst/file_request via api_agent => executed (docs/spec.md); context gathering"
-    """
-    board = _load_support_whiteboard(run_dir)
-    entries = _safe_whiteboard_entries(board.get("entries", []), max_items=120)
-    role = _brief_text(str(request.get("role", "")).lower(), max_chars=32) or "agent"
-    action = _brief_text(str(request.get("action", "")), max_chars=48)
-    provider = _brief_text(str(result.get("provider", "")), max_chars=40) or "unknown"
-    status = _brief_text(str(result.get("status", "")), max_chars=40) or "unknown"
-    reason = _brief_text(str(result.get("reason", "")), max_chars=180)
-    target_path = _brief_text(str(request.get("target_path", "")), max_chars=140)
-    text = f"{role}/{action} via {provider} => {status} ({target_path})"
-    if reason:
-        text += f"; {reason}"
-    entries.append(
-        {
-            "ts": _now_iso(),
-            "role": role,
-            "kind": "dispatch_result",
-            "text": _brief_text(text, max_chars=260),
-        }
+    return dispatch_whiteboard.append_dispatch_result_whiteboard(
+        run_dir=run_dir,
+        request=request,
+        result=result,
     )
-    board["entries"] = entries
-    _save_support_whiteboard(run_dir, board)
-    _append_support_whiteboard_log(run_dir, text)
-    return _compact_whiteboard_snapshot(board, max_entries=5)
 
 
 def _live_provider_violation(
@@ -650,7 +482,7 @@ def _append_step_meta(
         "role": str(request.get("role", "")).strip(),
         "action": str(request.get("action", "")).strip(),
         "provider": provider, "chosen_provider": str(result.get("chosen_provider", provider)).strip() or provider,
-        "provider_mode": str(result.get("provider_mode", "")).strip() or _provider_mode(provider), "model_name": str(result.get("model_name", "")).strip() or str(result.get("ollama_model", "")).strip(),
+        "provider_mode": str(result.get("provider_mode", "")).strip() or provider_mode(provider), "model_name": str(result.get("model_name", "")).strip() or str(result.get("ollama_model", "")).strip(),
         "fallback_blocked": bool(result.get("fallback_blocked", False)),
         "inputs": inputs,
         "inputs_ready": all(bool(x.get("exists")) for x in inputs) if inputs else True,
@@ -728,77 +560,15 @@ def _load_recipe_role_providers(run_dir: Path) -> dict[str, str]:
 
 
 def ensure_dispatch_config(run_dir: Path) -> Path:
-    path = run_dir / DISPATCH_CONFIG_PATH
-    if not path.exists():
-        _write_json(path, default_dispatch_config_doc(_load_recipe_role_providers(run_dir)))
-    return path
+    return dispatch_request_mapper.ensure_dispatch_config(run_dir)
 
 
 def load_dispatch_config(run_dir: Path) -> tuple[dict[str, Any] | None, str]:
-    path = run_dir / DISPATCH_CONFIG_PATH
-    if not path.exists():
-        cfg = default_dispatch_config_doc(_load_recipe_role_providers(run_dir))
-        return cfg, "missing dispatch_config; using defaults"
-
-    try:
-        raw = _read_json(path)
-    except Exception as exc:
-        return None, f"invalid dispatch_config json: {exc}"
-
-    if not isinstance(raw, dict):
-        return None, "dispatch_config must be object"
-
-    if raw.get("schema_version") != "ctcp-dispatch-config-v1":
-        return None, "dispatch_config schema_version must be ctcp-dispatch-config-v1"
-
-    mode = _normalize_provider(str(raw.get("mode", "api_agent")))
-
-    role_providers_raw = raw.get("role_providers", {})
-    role_providers: dict[str, str] = {}
-    if isinstance(role_providers_raw, dict):
-        for k, v in role_providers_raw.items():
-            role_providers[str(k).strip().lower()] = _normalize_provider(str(v))
-    for role, provider in _load_recipe_role_providers(run_dir).items():
-        if role not in role_providers:
-            role_providers[role] = _normalize_provider(provider)
-    role_providers = _apply_hard_role_providers(role_providers, mode=mode)
-
-    budgets = raw.get("budgets", {})
-    if not isinstance(budgets, dict):
-        budgets = {}
-    try:
-        max_prompts = int(budgets.get("max_outbox_prompts", 20))
-    except Exception:
-        max_prompts = 20
-    budgets["max_outbox_prompts"] = max(1, max_prompts)
-
-    providers = raw.get("providers", {})
-    if not isinstance(providers, dict):
-        providers = {}
-
-    cfg = {
-        "schema_version": "ctcp-dispatch-config-v1",
-        "mode": mode,
-        "role_providers": role_providers,
-        "budgets": budgets,
-        "providers": providers,
-    }
-    return cfg, "ok"
+    return dispatch_request_mapper.load_dispatch_config(run_dir)
 
 
 def _parse_guardrails_budgets(run_dir: Path) -> dict[str, str]:
-    path = run_dir / "artifacts" / "guardrails.md"
-    if not path.exists():
-        return {"max_files": "", "max_total_bytes": "", "max_iterations": ""}
-    out = {"max_files": "", "max_total_bytes": "", "max_iterations": ""}
-    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-        m = re.match(r"^\s*([A-Za-z0-9_\-]+)\s*:\s*(.+?)\s*$", line)
-        if not m:
-            continue
-        key = m.group(1).strip().lower()
-        if key in out:
-            out[key] = m.group(2).strip()
-    return out
+    return dispatch_request_mapper.parse_guardrails_budgets(run_dir)
 
 
 def _split_missing_paths(path_value: str) -> list[str]:
@@ -830,131 +600,17 @@ def _gate_owner(owner: str) -> str:
 
 
 def derive_request(gate: dict[str, str], run_doc: dict[str, Any]) -> dict[str, Any] | None:
-    state = str(gate.get("state", "")).strip().lower()
-    owner = _gate_owner(str(gate.get("owner", "")))
-    path_value = str(gate.get("path", "")).strip()
-    reason = str(gate.get("reason", "")).strip()
-    path_l = path_value.lower()
-    reason_l = reason.lower()
-    goal = str(run_doc.get("goal", "")).strip()
-
-    if state == "fail":
-        # BEHAVIOR_ID: B017
-        return {
-            "role": "fixer",
-            "action": "fix_patch",
-            "target_path": "artifacts/diff.patch",
-            "missing_paths": ["failure_bundle.zip", "artifacts/diff.patch"],
-            "reason": reason or "verify failed; fix required",
-            "goal": goal,
-        }
-
-    if state != "blocked":
-        return None
-
-    if "context_pack.json" in path_l:
-        # BEHAVIOR_ID: B018
-        role, action, target = "librarian", "context_pack", "artifacts/context_pack.json"
-    elif "review_contract.md" in path_l and "review_cost.md" in path_l and "approve reviews" in reason_l:
-        # BEHAVIOR_ID: B026
-        role, action, target = "chair", "plan_draft", "artifacts/PLAN_draft.md"
-    elif "review_contract.md" in path_l:
-        # BEHAVIOR_ID: B019
-        role, action, target = "contract_guardian", "review_contract", "reviews/review_contract.md"
-    elif "review_cost.md" in path_l:
-        # BEHAVIOR_ID: B020
-        role, action, target = "cost_controller", "review_cost", "reviews/review_cost.md"
-    elif "plan_draft.md" in path_l:
-        # BEHAVIOR_ID: B026
-        role, action, target = "chair", "plan_draft", "artifacts/PLAN_draft.md"
-    elif "plan.md" in path_l:
-        # BEHAVIOR_ID: B021
-        role, action, target = "chair", "plan_signed", "artifacts/PLAN.md"
-    elif "output_contract_freeze.json" in path_l:
-        role, action, target = "chair", "output_contract_freeze", "artifacts/output_contract_freeze.json"
-    elif "source_generation_report.json" in path_l:
-        role, action, target = "chair", "source_generation", "artifacts/source_generation_report.json"
-    elif "docs_generation_report.json" in path_l:
-        role, action, target = "chair", "docs_generation", "artifacts/docs_generation_report.json"
-    elif "workflow_generation_report.json" in path_l:
-        role, action, target = "chair", "workflow_generation", "artifacts/workflow_generation_report.json"
-    elif "project_manifest.json" in path_l:
-        role, action, target = "chair", "artifact_manifest_build", "artifacts/project_manifest.json"
-    elif "deliverable_index.json" in path_l:
-        role, action, target = "chair", "deliver", "artifacts/deliverable_index.json"
-    elif "file_request.json" in path_l:
-        # BEHAVIOR_ID: B022
-        role, action, target = "chair", "file_request", "artifacts/file_request.json"
-    elif "find_web.json" in path_l or "externals_pack.json" in path_l:
-        # BEHAVIOR_ID: B023
-        role, action, target = "researcher", "find_web", "artifacts/find_web.json"
-    elif "analysis.md" in path_l:
-        # BEHAVIOR_ID: B026
-        role, action, target = "chair", "plan_draft", "artifacts/analysis.md"
-    elif "guardrails.md" in path_l:
-        # BEHAVIOR_ID: B026
-        role, action, target = "chair", "plan_draft", "artifacts/guardrails.md"
-    elif "diff.patch" in path_l:
-        if owner == "fixer":
-            # BEHAVIOR_ID: B025
-            role, action, target = "fixer", "fix_patch", "artifacts/diff.patch"
-        else:
-            # BEHAVIOR_ID: B024
-            role, action, target = "patchmaker", "make_patch", "artifacts/diff.patch"
-    else:
-        return None
-
-    return {
-        "role": role,
-        "action": action,
-        "target_path": target,
-        "missing_paths": (
-            _merge_missing_paths(["failure_bundle.zip"], _split_missing_paths(path_value))
-            if role == "fixer"
-            else _split_missing_paths(path_value)
-        ),
-        "reason": reason,
-        "goal": goal,
-    }
+    return dispatch_request_mapper.derive_request(gate, run_doc)
 
 
 def _resolve_provider(config: dict[str, Any], role: str, action: str) -> tuple[str, str]:
-    # BEHAVIOR_ID: B027
-    forced = _forced_provider()
-    hard_provider = HARD_ROLE_PROVIDERS.get(role, "")
-    mode_norm = str(config.get("mode", "")).strip().lower()
-    if forced:
-        if hard_provider:
-            if forced != hard_provider:
-                return (
-                    hard_provider,
-                    f"ignored CTCP_FORCE_PROVIDER={forced} for hard-local role={role}; using {hard_provider}",
-                )
-            return hard_provider, f"forced provider matches hard-local role={role}"
-        return forced, f"forced by CTCP_FORCE_PROVIDER={forced}"
-
-    role_providers = config.get("role_providers", {})
-    if not isinstance(role_providers, dict):
-        role_providers = {}
-    provider = _normalize_provider(str(role_providers.get(role, config.get("mode", "manual_outbox"))))
-    if (role, action) == ("librarian", "context_pack"):
-        if mode_norm == "mock_agent":
-            return provider, ""
-        locked = hard_provider or "ollama_agent"
-        if provider != locked:
-            return (locked, f"blocked configured provider={provider or 'unknown'} for hard-local-model role={role}; using {locked}")
-        return locked, ""
-    if provider == "local_exec" and (role, action) != ("librarian", "context_pack"):
-        return (
-            "api_agent",
-            "local_exec restricted to librarian/context_pack; fallback to api_agent",
-        )
-    if provider == "ollama_agent" and role != "librarian":
-        return (
-            "api_agent",
-            "ollama_agent restricted to librarian/context_pack; fallback to api_agent",
-        )
-    return provider, ""
+    return core_router.resolve_provider(
+        config,
+        role,
+        action,
+        force_provider=_forced_provider(),
+        hard_role_providers=HARD_ROLE_PROVIDERS,
+    )
 
 
 def dispatch_preview(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str]) -> dict[str, Any]:
@@ -965,42 +621,15 @@ def dispatch_preview(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str
     request = derive_request(gate, run_doc)
     if request is None:
         return {"status": "no_request"}
-
-    provider, note = _resolve_provider(config, str(request["role"]), str(request["action"]))
-    violation = _live_provider_violation(
-        run_dir=run_dir,
-        gate=gate,
+    return core_router.dispatch_preview(
         request=request,
-        provider=provider,
-        note=note,
+        config=config,
+        run_dir=run_dir,
+        preview_provider=provider_runtime.preview_provider,
+        force_provider=_forced_provider(),
+        hard_role_providers=HARD_ROLE_PROVIDERS,
+        live_policy=lambda **kwargs: _live_provider_violation(gate=gate, **kwargs),
     )
-    if violation is not None:
-        if note:
-            violation["note"] = note
-        return _apply_dispatch_evidence(violation, request=request, provider=provider, note=note)
-
-    preview: dict[str, Any]
-    if provider == "manual_outbox":
-        preview = manual_outbox.preview(run_dir=run_dir, request=request, config=config)
-    elif provider == "local_exec":
-        preview = {"status": "can_execute_local"}
-    elif provider == "ollama_agent":
-        preview = ollama_agent.preview(run_dir=run_dir, request=request, config=config)
-    elif provider == "api_agent":
-        preview = api_agent.preview(run_dir=run_dir, request=request, config=config)
-    elif provider == "codex_agent":
-        preview = codex_agent.preview(run_dir=run_dir, request=request, config=config)
-    elif provider == "mock_agent":
-        preview = mock_agent.preview(run_dir=run_dir, request=request, config=config)
-    else:
-        preview = {"status": "unsupported_provider", "reason": provider}
-
-    preview["role"] = request["role"]
-    preview["action"] = request["action"]
-    preview["target_path"] = request["target_path"]
-    if note:
-        preview["note"] = note
-    return _apply_dispatch_evidence(preview, request=request, provider=provider, note=note)
 def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], repo_root: Path) -> dict[str, Any]:
     # BEHAVIOR_ID: B027
     config, cfg_msg = load_dispatch_config(run_dir)
@@ -1024,92 +653,18 @@ def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], 
         "snapshot": dict(whiteboard_context.get("snapshot", {})),
     }
 
-    provider, note = _resolve_provider(config, str(request["role"]), str(request["action"]))
-    violation = _live_provider_violation(
-        run_dir=run_dir,
-        gate=gate,
+    provider, _note = _resolve_provider(config, str(request["role"]), str(request["action"]))
+    result = core_router.dispatch_execute(
         request=request,
-        provider=provider,
-        note=note,
+        config=config,
+        run_dir=run_dir,
+        repo_root=repo_root,
+        execute_provider=provider_runtime.execute_provider,
+        guardrails_budgets=_parse_guardrails_budgets(run_dir),
+        force_provider=_forced_provider(),
+        hard_role_providers=HARD_ROLE_PROVIDERS,
+        live_policy=lambda **kwargs: _live_provider_violation(gate=gate, **kwargs),
     )
-    if violation is not None:
-        if note:
-            violation["note"] = note
-        _apply_dispatch_evidence(violation, request=request, provider=provider, note=note)
-        violation_snapshot = _append_dispatch_result_whiteboard(
-            run_dir=run_dir,
-            request=request,
-            result=violation,
-        )
-        violation["whiteboard"] = {
-            "path": str(whiteboard_context.get("path", "")),
-            "query": str(whiteboard_context.get("query", "")),
-            "hit_count": len(list(whiteboard_context.get("hits", []))),
-            "lookup_error": str(whiteboard_context.get("lookup_error", "")),
-            "snapshot": violation_snapshot,
-        }
-        _append_step_meta(
-            run_dir=run_dir,
-            gate=gate,
-            request=request,
-            provider=provider,
-            result=violation,
-        )
-        return violation
-
-    if provider == "manual_outbox":
-        result = manual_outbox.execute(
-            repo_root=repo_root,
-            run_dir=run_dir,
-            request=request,
-            config=config,
-            guardrails_budgets=_parse_guardrails_budgets(run_dir),
-        )
-    elif provider == "local_exec":
-        result = local_exec.execute(
-            repo_root=repo_root,
-            run_dir=run_dir,
-            request=request,
-        )
-    elif provider == "ollama_agent":
-        result = ollama_agent.execute(
-            repo_root=repo_root,
-            run_dir=run_dir,
-            request=request,
-            config=config,
-            guardrails_budgets=_parse_guardrails_budgets(run_dir),
-        )
-    elif provider == "api_agent":
-        result = api_agent.execute(
-            repo_root=repo_root,
-            run_dir=run_dir,
-            request=request,
-            config=config,
-            guardrails_budgets=_parse_guardrails_budgets(run_dir),
-        )
-    elif provider == "codex_agent":
-        result = codex_agent.execute(
-            repo_root=repo_root,
-            run_dir=run_dir,
-            request=request,
-            config=config,
-            guardrails_budgets=_parse_guardrails_budgets(run_dir),
-        )
-    elif provider == "mock_agent":
-        result = mock_agent.execute(
-            repo_root=repo_root,
-            run_dir=run_dir,
-            request=request,
-            config=config,
-            guardrails_budgets=_parse_guardrails_budgets(run_dir),
-        )
-    else:
-        result = {"status": "unsupported_provider", "reason": provider}
-
-    result["role"] = request["role"]
-    result["action"] = request["action"]
-    result["target_path"] = request["target_path"]
-    _apply_dispatch_evidence(result, request=request, provider=provider, note=note)
     result_snapshot = _append_dispatch_result_whiteboard(
         run_dir=run_dir,
         request=request,
@@ -1122,8 +677,6 @@ def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], 
         "lookup_error": str(whiteboard_context.get("lookup_error", "")),
         "snapshot": result_snapshot,
     }
-    if note:
-        result["note"] = note
     _append_step_meta(
         run_dir=run_dir,
         gate=gate,

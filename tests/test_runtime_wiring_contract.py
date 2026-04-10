@@ -487,12 +487,12 @@ class RuntimeWiringContractTests(unittest.TestCase):
             self.assertEqual([provider for provider, _ in observed], ["api_agent", "ollama_agent"])
             self.assertEqual(str(dict(observed[1][1].get("provider_failover", {})).get("failed_provider", "")), "api_agent")
             self.assertEqual(str(doc.get("provider", "")), "ollama_agent")
-            self.assertIn("API", str(doc.get("reply_text", "")))
-            self.assertIn("本地", str(doc.get("reply_text", "")))
+            self.assertIn("本地这边先继续接住", str(doc.get("reply_text", "")))
+            self.assertNotIn("API 路径", str(doc.get("reply_text", "")))
             reply_path = run_dir / support_bot.SUPPORT_REPLY_REL_PATH
             self.assertTrue(reply_path.exists())
             saved = json.loads(reply_path.read_text(encoding="utf-8"))
-            self.assertIn("API", str(saved.get("reply_text", "")))
+            self.assertIn("本地这边先继续接住", str(saved.get("reply_text", "")))
 
     def test_support_bot_greeting_stale_context_retries_api_before_local_fallback(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_runtime_support_greeting_repair_") as td:
@@ -622,7 +622,7 @@ class RuntimeWiringContractTests(unittest.TestCase):
             self.assertEqual(str(doc.get("provider_status", "")), "executed")
             new_run_spy.assert_called_once_with(goal="我想做一个帮我整理剧情节奏的项目。")
             record_spy.assert_called_once()
-            advance_spy.assert_called_once_with("r-demo", max_steps=4)
+            advance_spy.assert_called_once_with("r-demo", max_steps=2)
             self.assertEqual(context_spy.call_count, 2)
             session_state = json.loads((run_dir / support_bot.SUPPORT_SESSION_STATE_REL_PATH).read_text(encoding="utf-8"))
             self.assertEqual(str(session_state.get("bound_run_id", "")), "r-demo")

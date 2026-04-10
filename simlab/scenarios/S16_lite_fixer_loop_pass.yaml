@@ -29,7 +29,7 @@
     },
     {
       "run": {
-        "cmd": "python -c \"from pathlib import Path; import shutil; r=Path(Path('artifacts/_s16_run_dir.txt').read_text(encoding='utf-8').strip()); art=r/'artifacts'; shutil.copy2('tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch', art/'diff.patch')\"",
+        "cmd": "python simlab/generate_s16_fix_patch.py --run-dir-file artifacts/_s16_run_dir.txt",
         "expect_exit": 0
       }
     },

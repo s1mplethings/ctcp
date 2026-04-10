@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 import subprocess
 import sys
@@ -7,11 +8,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tools.providers.project_generation_business_templates import _launcher_script
 from tools.providers.project_generation_artifacts import (
     build_default_context_request,
     normalize_output_contract_freeze,
     normalize_source_generation,
 )
+from tools.providers.project_generation_validation import generic_validation
 
 
 FIXED_NARRATIVE_GOAL = (
@@ -21,6 +24,12 @@ FIXED_NARRATIVE_GOAL = (
 GENERIC_GOAL = "请生成一个工具库型项目，用于整理任务规划和 JSON 导出。"
 WEB_SERVICE_GOAL = "请生成一个本地 HTTP 服务 MVP，用于把模糊项目目标整理成结构化 spec、workflow plan 和 acceptance 摘要 JSON。"
 DATA_PIPELINE_GOAL = "请生成一个数据处理 pipeline MVP，用于把原始项目目标转换成结构化 spec、sample output 和 acceptance 报告。"
+PRODUCTION_GUI_NARRATIVE_GOAL = (
+    "做一个本地可运行的 VN 项目助手 MVP："
+    "输入角色资料、章节大纲、场景列表，生成一个可视化整理工具。"
+    "这个工具至少要能管理角色卡、管理章节和场景卡、绑定背景和立绘占位、"
+    "展示剧情流程顺序、导出基础的 Ren'Py 风格脚本骨架或结构化 JSON，并提供一个最小可用界面。"
+)
 
 
 def _write_json(path: Path, doc: dict[str, object]) -> None:
@@ -29,6 +38,44 @@ def _write_json(path: Path, doc: dict[str, object]) -> None:
 
 
 class ProjectGenerationArtifactTests(unittest.TestCase):
+    def test_narrative_launcher_script_is_python_parseable_for_gui_shape(self) -> None:
+        script = _launcher_script(
+            package_name="vn_mvp_ren_py_json",
+            mode_label="Narrative project launcher.",
+            startup_rel="scripts/run_project_gui.py",
+        )
+        ast.parse(script, filename="run_project_gui.py")
+        self.assertIn("def main() -> int:", script)
+        self.assertIn("if not args.headless and len(sys.argv) == 1:", script)
+
+    def test_generic_validation_rejects_syntax_invalid_python_business_file(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_pg_syntax_invalid_") as td:
+            run_dir = Path(td)
+            entry = run_dir / "project_output" / "broken-project" / "scripts" / "run_project_gui.py"
+            readme = run_dir / "project_output" / "broken-project" / "README.md"
+            entry.parent.mkdir(parents=True, exist_ok=True)
+            readme.parent.mkdir(parents=True, exist_ok=True)
+            entry.write_text("from __future__ import annotations\n    import sys\n", encoding="utf-8")
+            readme.write_text("# Broken Project\n\npython scripts/run_project_gui.py --help\n", encoding="utf-8")
+
+            doc = generic_validation(
+                run_dir=run_dir,
+                startup_entrypoint="project_output/broken-project/scripts/run_project_gui.py",
+                startup_readme="project_output/broken-project/README.md",
+                generated_business_files=["project_output/broken-project/scripts/run_project_gui.py"],
+                behavior_probe={"rc": 0},
+                export_probe={"rc": 0},
+                acceptance_files=["project_output/broken-project/README.md"],
+            )
+
+            self.assertFalse(bool(doc.get("passed", False)))
+            syntax = dict(doc.get("python_syntax", {}))
+            self.assertFalse(bool(syntax.get("passed", False)))
+            self.assertEqual(
+                [row["path"] for row in syntax.get("syntax_errors", []) if isinstance(row, dict)],
+                ["project_output/broken-project/scripts/run_project_gui.py"],
+            )
+
     def test_output_contract_freeze_production_narrative_request_is_not_benchmark_default(self) -> None:
         doc = normalize_output_contract_freeze(None, goal=FIXED_NARRATIVE_GOAL)
         self.assertEqual(doc.get("project_type"), "narrative_copilot")
@@ -184,6 +231,96 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
                     self.assertIn(key, export_doc)
                     self.assertTrue(Path(str(export_doc[key])).exists(), msg=key)
 
+    def test_source_generation_production_narrative_gui_goal_generates_parseable_launcher(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_pg_prod_gui_") as td:
+            run_dir = Path(td)
+            _write_json(
+                run_dir / "artifacts" / "frontend_request.json",
+                {
+                    "schema_version": "ctcp-frontend-request-v1",
+                    "goal": PRODUCTION_GUI_NARRATIVE_GOAL,
+                    "constraints": {
+                        "project_domain": "story_reasoning_game",
+                        "story_knowledge_ops": "required",
+                    },
+                    "attachments": [],
+                },
+            )
+            contract = normalize_output_contract_freeze(None, goal=PRODUCTION_GUI_NARRATIVE_GOAL, run_dir=run_dir)
+            self.assertEqual(str(contract.get("project_type", "")), "narrative_copilot")
+            self.assertEqual(str(contract.get("delivery_shape", "")), "gui_first")
+            _write_json(run_dir / "artifacts" / "output_contract_freeze.json", contract)
+            _write_json(
+                run_dir / "artifacts" / "context_pack.json",
+                {
+                    "schema_version": "ctcp-context-pack-v1",
+                    "goal": PRODUCTION_GUI_NARRATIVE_GOAL,
+                    "repo_slug": "ctcp",
+                    "summary": "production narrative gui context",
+                    "files": [
+                        {"path": "docs/41_low_capability_project_generation.md", "why": "contract", "content": "production and benchmark split"},
+                        {"path": "docs/backend_interface_contract.md", "why": "contract", "content": "manifest fields and delivery bridge"},
+                        {"path": "scripts/project_generation_gate.py", "why": "gate", "content": "generic_validation and runtime probes"},
+                        {"path": "scripts/project_manifest_bridge.py", "why": "bridge", "content": "project_manifest fields"},
+                        {"path": "workflow_registry/wf_project_generation_manifest/recipe.yaml", "why": "workflow", "content": "fixed stage order"},
+                    ],
+                    "omitted": [],
+                },
+            )
+            project_root = run_dir / "project_output" / str(contract.get("project_id", "vn-project"))
+            _write_json(project_root / "meta" / "manifest.json", {"schema_version": "ctcp-pointcloud-manifest-v1"})
+
+            report = normalize_source_generation(None, goal=PRODUCTION_GUI_NARRATIVE_GOAL, run_dir=run_dir)
+
+            self.assertEqual(report.get("status"), "pass", msg=json.dumps(report, ensure_ascii=False))
+            self.assertTrue(bool(dict(report.get("generic_validation", {})).get("passed", False)))
+            self.assertEqual(str(report.get("visual_evidence_status", "")), "provided")
+            visual_files = [str(x) for x in list(report.get("visual_evidence_files", [])) if str(x).strip()]
+            self.assertTrue(visual_files)
+            screenshot_path = run_dir / visual_files[0]
+            self.assertTrue(screenshot_path.exists(), msg=str(screenshot_path))
+            self.assertEqual(screenshot_path.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
+            syntax = dict(dict(report.get("generic_validation", {})).get("python_syntax", {}))
+            self.assertTrue(bool(syntax.get("passed", False)))
+            launcher = project_root / "scripts" / "run_project_gui.py"
+            self.assertTrue(launcher.exists())
+            ast.parse(launcher.read_text(encoding="utf-8"), filename=str(launcher))
+
+            help_proc = subprocess.run(
+                [sys.executable, str(launcher), "--help"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                check=False,
+            )
+            self.assertEqual(help_proc.returncode, 0, msg=help_proc.stderr or help_proc.stdout)
+
+            with tempfile.TemporaryDirectory(prefix="ctcp_pg_prod_gui_export_") as export_td:
+                export_proc = subprocess.run(
+                    [
+                        sys.executable,
+                        str(launcher),
+                        "--goal",
+                        "vn smoke export",
+                        "--project-name",
+                        "VN Copilot",
+                        "--out",
+                        export_td,
+                        "--headless",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    check=False,
+                )
+                self.assertEqual(export_proc.returncode, 0, msg=export_proc.stderr or export_proc.stdout)
+                export_doc = json.loads(export_proc.stdout)
+                for key in ("project_bundle_json", "asset_prompts_json", "project_outline_md"):
+                    self.assertIn(key, export_doc)
+                    self.assertTrue(Path(str(export_doc[key])).exists(), msg=key)
+
     def test_build_default_context_request_expands_project_generation_inputs(self) -> None:
         request = build_default_context_request(FIXED_NARRATIVE_GOAL)
         paths = {str(dict(item).get("path", "")) for item in list(request.get("needs", [])) if isinstance(item, dict)}
@@ -327,6 +464,12 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
             self.assertEqual(report.get("status"), "pass", msg=json.dumps(report, ensure_ascii=False))
             self.assertEqual(str(report.get("project_archetype", "")), "web_service")
             self.assertEqual(str(dict(report.get("domain_validation", {})).get("kind", "")), "web_service")
+            self.assertEqual(str(report.get("visual_evidence_status", "")), "provided")
+            visual_files = [str(x) for x in list(report.get("visual_evidence_files", [])) if str(x).strip()]
+            self.assertTrue(visual_files)
+            screenshot_path = run_dir / visual_files[0]
+            self.assertTrue(screenshot_path.exists(), msg=str(screenshot_path))
+            self.assertEqual(screenshot_path.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
             package_name = str(contract.get("package_name", "project_copilot"))
             self.assertTrue((project_root / "src" / package_name / "service_contract.py").exists())
             self.assertTrue((project_root / "src" / package_name / "app.py").exists())

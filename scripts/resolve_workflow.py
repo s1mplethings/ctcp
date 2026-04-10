@@ -48,6 +48,19 @@ def _is_project_generation_goal(goal: str) -> bool:
             "project generation",
         )
     )
+    has_build_signal = any(
+        key in lower
+        for key in (
+            "build",
+            "create",
+            "make",
+            "做一个",
+            "做个",
+            "搭一个",
+            "实现一个",
+            "写一个",
+        )
+    )
     has_project_signal = any(
         key in lower
         for key in (
@@ -61,7 +74,24 @@ def _is_project_generation_goal(goal: str) -> bool:
             "workflow",
         )
     )
-    return bool(has_generate_signal and has_project_signal)
+    has_runnable_delivery_signal = any(
+        key in lower
+        for key in (
+            "可运行",
+            "本地可运行",
+            "双击",
+            "zip",
+            "交付",
+            "单文件",
+            "html",
+            "页面",
+            "网站",
+            "web app",
+            "landing page",
+            "index.html",
+        )
+    )
+    return bool((has_generate_signal or has_build_signal) and (has_project_signal or has_runnable_delivery_signal))
 
 
 def _collect_history(repo: Path, fallback_workflow_id: str) -> dict[str, int]:

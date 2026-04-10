@@ -17,6 +17,14 @@ except ModuleNotFoundError:
     from tools import contract_guard
 
 
+def _read_json(path: Path) -> dict[str, Any]:
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    except Exception:
+        return {}
+    return raw if isinstance(raw, dict) else {}
+
+
 def _run_librarian(repo_root: Path, run_dir: Path, target_path: str) -> dict[str, Any]:
     # BEHAVIOR_ID: B029
     logs_dir = run_dir / "logs"
@@ -37,6 +45,7 @@ def _run_librarian(repo_root: Path, run_dir: Path, target_path: str) -> dict[str
     stderr_log.write_text(proc.stderr, encoding="utf-8")
 
     target = run_dir / target_path
+    failure_doc = _read_json(run_dir / "artifacts" / "context_pack.failure.json")
     if proc.returncode == 0 and target.exists():
         return {
             "status": "executed",
@@ -49,12 +58,15 @@ def _run_librarian(repo_root: Path, run_dir: Path, target_path: str) -> dict[str
 
     return {
         "status": "exec_failed",
-        "reason": f"local_exec command failed rc={proc.returncode}",
+        "reason": str(failure_doc.get("message", "")).strip() or f"local_exec command failed rc={proc.returncode}",
         "target_path": target_path,
         "cmd": " ".join(cmd),
         "rc": proc.returncode,
         "stdout_log": stdout_log.relative_to(run_dir).as_posix(),
         "stderr_log": stderr_log.relative_to(run_dir).as_posix(),
+        "error_code": str(failure_doc.get("error_code", "")).strip() or ("target_missing" if proc.returncode == 0 else ""),
+        "failure_stage": str(failure_doc.get("stage", "")).strip(),
+        "failure_path": str(failure_doc.get("failed_path", "")).strip() or str(failure_doc.get("target_path", "")).strip(),
     }
 
 

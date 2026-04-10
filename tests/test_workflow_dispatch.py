@@ -32,6 +32,15 @@ class WorkflowDispatchTests(unittest.TestCase):
         self.assertEqual(result.get("selected_workflow_id"), "wf_orchestrator_only")
         self.assertEqual(result.get("selected_path"), "workflow_registry/wf_minimal_patch_verify/recipe.yaml")
 
+    def test_resolve_selects_project_generation_workflow_for_runnable_delivery_goal(self) -> None:
+        result = resolve_workflow.resolve(
+            goal="请直接开始，做一个本地可运行的单文件 HTML 页面并最终 zip 交付。",
+            repo=ROOT,
+        )
+        self.assertEqual(result.get("selected_workflow_id"), "wf_project_generation_manifest")
+        self.assertEqual(result.get("selected_path"), "workflow_registry/wf_project_generation_manifest/recipe.yaml")
+        self.assertTrue(bool(dict(result.get("decision", {})).get("project_generation_goal", False)))
+
 
 if __name__ == "__main__":
     unittest.main()

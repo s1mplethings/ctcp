@@ -1,206 +1,166 @@
-# Task - remove-legacy-gui-lane
+# Task - real-visual-evidence-and-public-delivery
 
 ## Queue Binding
 
-- Queue Item: `ADHOC-20260407-remove-legacy-gui-lane`
-- Layer/Priority: `L1 / P1`
+- Queue Item: `ADHOC-20260410-real-visual-evidence-and-public-delivery`
+- Layer/Priority: `L1 / P0`
 - Source Queue File: `meta/backlog/execution_queue.json`
 
 ## Context
 
-- Why this item now: the user clarified that this project does not have its own GUI, but the repo still exposes a stale Qt GUI target and GUI-era docs that can be mistaken for a real startup path.
-- Dependency check: `ADHOC-20260406-support-delivery-evidence-surface` = `done`.
-- Scope boundary: remove the repo-shipped GUI build target and GUI-only source/resources, then align active docs/meta/verify to a headless-only surface without widening into unrelated frontend/support/product work.
+- Why this item now: the real Telegram-bound run `20260409-215339-177800-orchestrate` is no longer blocked on generation truth. It now proves a narrower delivery gap: the generation chain can reach `verify PASS`, but GUI/web outputs still leave `visual_evidence_status=placeholder_only`, no real screenshot artifacts are surfaced, and the Telegram-facing final result can end with artifact hints instead of a real zip plus screenshot delivery record.
+- Dependency check: `ADHOC-20260410-project-generation-launcher-syntax-fix` = `done`.
+- Scope boundary: repair the post-generation delivery chain only. Add real screenshot evidence for GUI/web project outputs, make verify-pass delivery send actual package/photo files, and keep invalid or placeholder-only artifacts from counting as successful delivery. Do not reopen watchdog/state-machine architecture in this patch.
 
-## Task Truth Source
+## Task Truth Source (single source for current task)
 
-- task_purpose: remove the stale GUI lane so the repository only presents a headless executable/build path and no longer ships or advertises a dedicated GUI target.
+- task_purpose:
+  - add a real screenshot capture step for `gui_first` / `web_first` generated projects after the runtime probes actually launch/export the generated output
+  - persist screenshot artifacts under the generated project or run artifacts and propagate them into `source_generation_report.json`, `project_manifest.json`, and delivery evidence
+  - ensure Telegram/public delivery emits real zip and screenshot files and records them in `support_public_delivery.json`
+  - prove the back-half flow with focused tests and one real Telegram-lane delivery send
 - allowed_behavior_change:
-  - `CMakeLists.txt`
-  - `README.md`
-  - `BUILD.md`
-  - `artifacts/PLAN.md`
-  - `scripts/verify_repo.ps1`
-  - `scripts/verify_repo.sh`
-  - `docs/00_CORE.md`
-  - `docs/01_north_star.md`
-  - `docs/03_quality_gates.md`
-  - `docs/12_modules_index.md`
-  - `docs/verify_contract.md`
-  - `docs/adlc_pipeline.md`
-  - `docs/00_overview.md`
-  - `docs/01_architecture.md`
-  - `docs/04_project_detection.md`
-  - `docs/05_navigation.md`
-  - `docs/06_graph_map.md`
-  - `docs/07_layout_and_views.md`
-  - `docs/10_workflow.md`
-  - `docs/11_webengine_resources.md`
-  - `docs/18_back_and_preview.md`
-  - `docs/19_lod_rendering.md`
-  - `docs/20_backend_bridge.md`
-  - `meta/code_health/rules.json`
-  - `meta/sddai_project.json`
-  - `include/Bridge.h`
-  - `include/DocPreviewer.h`
-  - `include/FileIndexer.h`
-  - `include/GraphBuilder.h`
-  - `include/GraphTypes.h`
-  - `include/GraphViewProjector.h`
-  - `include/LayoutEngine.h`
-  - `include/MainWindow.h`
-  - `include/MetaStore.h`
-  - `include/ProjectScanner.h`
-  - `include/RunLoader.h`
-  - `include/SchemaLoader.h`
-  - `include/SpecExtractor.h`
-  - `resources/app.qrc`
-  - `resources/qt_style.qss`
-  - `src/Bridge.cpp`
-  - `src/DocPreviewer.cpp`
-  - `src/FileIndexer.cpp`
-  - `src/GraphBuilder.cpp`
-  - `src/GraphViewProjector.cpp`
-  - `src/LayoutEngine.cpp`
-  - `src/MainWindow.cpp`
-  - `src/MetaStore.cpp`
-  - `src/ProjectScanner.cpp`
-  - `src/RunLoader.cpp`
-  - `src/SchemaLoader.cpp`
-  - `src/SpecExtractor.cpp`
-  - `src/main.cpp`
-  - `src/preview_window.cpp`
-  - `src/preview_window.h`
-  - `src/sddai_bridge.cpp`
-  - `src/sddai_bridge.h`
-  - `tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch`
-  - `tests/test_workflow_checks.py`
+  - `tools/providers/project_generation_source_helpers.py`
+  - `tools/providers/project_generation_artifacts.py`
+  - `tools/providers/project_generation_business_templates.py`
+  - `tools/providers/project_generation_generic_archetypes.py`
+  - `scripts/project_generation_gate.py`
+  - `scripts/ctcp_support_bot.py`
+  - `tests/test_project_generation_artifacts.py`
+  - `tests/test_support_public_delivery_state.py`
+  - `tests/test_support_bot_humanization.py`
+  - `tests/test_support_proactive_delivery.py`
   - `meta/backlog/execution_queue.json`
-  - `meta/tasks/ARCHIVE_INDEX.md`
   - `meta/tasks/CURRENT.md`
   - `meta/reports/LAST.md`
-  - `meta/tasks/archive/20260406-support-delivery-evidence-surface.md`
-  - `meta/reports/archive/20260406-support-delivery-evidence-surface.md`
-- forbidden_goal_shift:
-  - do not introduce a replacement GUI or web UI path in this patch
-  - do not refactor unrelated headless/runtime/support modules
-  - do not turn this into a broad docs rewrite beyond GUI-lane removal and deprecation notes
 - in_scope_modules:
-  - build entrypoints and verify commands
-  - GUI-only C++ source/resources
-  - active docs/meta that currently advertise or depend on the GUI lane
-  - focused workflow regression coverage for the new headless-only path
+  - GUI/web source-generation visual evidence capture
+  - manifest/report propagation for screenshot evidence
+  - verify-pass delivery action synthesis and file send plan
+  - focused delivery regressions and one live Telegram delivery evidence run
 - out_of_scope_modules:
-  - project generation mainline logic
-  - frontend/support conversation behavior
-  - generated projects and benchmark fixtures unless verify proves a direct dependency
-- completion_evidence: the repo no longer defines a GUI build target, GUI-only code/resources are removed, active docs point only to headless startup/build paths, focused checks pass, and canonical verify closes.
+  - watchdog/front-bridge/recovery truth redesign
+  - provider/router refactors unrelated to delivery evidence
+  - weakening any result/verify gate to tolerate placeholder-only evidence
+- forbidden_goal_shift:
+  - do not mark `visual_evidence_status=provided` unless a real image file is produced from the launched/exported output path
+  - do not treat `placeholder_only` as delivery complete
+  - do not replace file delivery with hash-only or path-only text
+  - do not claim a Telegram delivery success without an updated `support_public_delivery.json`
+- completion_evidence:
+  - GUI/web generation tests show screenshot files exist and `visual_evidence_status` is no longer `placeholder_only`
+  - support delivery tests show zip + screenshot records populate `support_public_delivery.json`
+  - a real Telegram-lane outbound delivery writes `deliveries` and `sent` entries for actual files
+  - canonical verify passes
 
-## Analysis / Find
+## Analysis / Find (before plan)
 
-- Entrypoint analysis: the only active runnable binary path used by verify is `ctcp_headless`; the Qt GUI path is an optional leftover branch in `CMakeLists.txt` plus old docs and source files.
-- Downstream consumer analysis: operators and agents should see one real startup/build path; stale GUI instructions create false manual-test and build expectations.
+- Entrypoint analysis:
+  - `tools/providers/project_generation_source_helpers.py::build_runtime_checks()` currently launches the generated project for startup/export probes, but it does not capture any visual evidence and still allows `placeholder_only` in result gating.
+  - `tools/providers/project_generation_artifacts.py::normalize_source_generation()` and `normalize_project_manifest()` propagate `visual_evidence_status` from static contract defaults instead of computed screenshot truth.
+  - `scripts/project_generation_gate.py` currently accepts `placeholder_only` for GUI/web source-generation + manifest gates.
+  - `scripts/ctcp_support_bot.py::collect_public_delivery_state()` and `emit_public_delivery()` can consume screenshots and zip packages, but the final reply path can still end with hash hints when no delivery actions are synthesized.
 - Source of truth:
-  - user clarification in this turn
   - `AGENTS.md`
+  - `ai_context/00_AI_CONTRACT.md`
   - `docs/00_CORE.md`
-  - `docs/03_quality_gates.md`
-  - `CMakeLists.txt`
-  - `scripts/verify_repo.ps1`
-  - `scripts/verify_repo.sh`
-- Current break point / missing wiring:
-  - `build\ctcp.exe` and `CTCP_ENABLE_GUI` still exist as a misleading startup lane
-  - GUI-only Qt source/resources remain in repo even though the product surface is headless
-  - active docs/build notes still advertise optional GUI behavior
-- Repo-local search sufficient: `yes`
+  - `meta/backlog/execution_queue.json`
+  - `meta/tasks/CURRENT.md`
+  - `tools/providers/project_generation_source_helpers.py`
+  - `tools/providers/project_generation_artifacts.py`
+  - `tools/providers/project_generation_business_templates.py`
+  - `tools/providers/project_generation_generic_archetypes.py`
+  - `scripts/project_generation_gate.py`
+  - `scripts/ctcp_support_bot.py`
+  - `tests/test_project_generation_artifacts.py`
+  - `tests/test_support_public_delivery_state.py`
+  - `tests/test_support_bot_humanization.py`
+- Live evidence captured before edits:
+  - run: `%LOCALAPPDATA%\\ctcp\\runs\\ctcp\\20260409-215339-177800-orchestrate`
+  - [project_manifest.json](C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/20260409-215339-177800-orchestrate/artifacts/project_manifest.json) still declares:
+    - `visual_evidence_required = true`
+    - `screenshot_required = true`
+    - `visual_evidence_status = placeholder_only`
+  - [support_public_delivery.json](C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/support_sessions/6092527664/artifacts/support_public_delivery.json) is empty:
+    - `deliveries = []`
+    - `sent = []`
+  - [support_reply.json](C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/support_sessions/6092527664/artifacts/support_reply.json) final delivery text used `artifact_hint_added` rather than real file actions.
+- Repo-local + runtime evidence sufficient: `yes`
 
-## Integration Check
+## Integration Check (before implementation)
 
-- upstream: the user expects the repo startup/build story to be headless-only, and canonical verify already uses the headless path as the real runnable surface.
-- current_module: CMake, verify scripts, active docs, and stale GUI-only code/resources must agree on one executable surface.
-- downstream: manual startup, verify, and future maintenance should no longer surface or accidentally launch `ctcp.exe`.
-- source_of_truth: `CMakeLists.txt`, `scripts/verify_repo.ps1`, `scripts/verify_repo.sh`, and the active routed docs.
-- fallback: keep legacy GUI-era docs only as explicitly deprecated historical notes if hard deletion would leave duplicate authority or broken references.
+- upstream:
+  - `tools/providers/project_generation_decisions.py`
+  - generated launcher scripts under `tools/providers/project_generation_business_templates.py` and `tools/providers/project_generation_generic_archetypes.py`
+- current_module:
+  - `tools/providers/project_generation_source_helpers.py`
+  - `tools/providers/project_generation_artifacts.py`
+  - `scripts/project_generation_gate.py`
+  - `scripts/ctcp_support_bot.py`
+- source_of_truth:
+  - `tools/providers/project_generation_artifacts.py::normalize_source_generation()`
+  - `scripts/project_generation_gate.py`
+  - `scripts/ctcp_support_bot.py::collect_public_delivery_state()`
+  - `scripts/ctcp_support_bot.py::build_final_reply_doc()`
+  - `scripts/ctcp_support_bot.py::emit_public_delivery()`
+- downstream:
+  - `artifacts/source_generation_report.json`
+  - `artifacts/project_manifest.json`
+  - `artifacts/deliverable_index.json`
+  - `artifacts/support_public_delivery.json`
+  - Telegram-visible final delivery reply
+- fallback:
+  - if real screenshot capture fails for a generated GUI/web project, the gate should block with explicit visual evidence failure instead of silently leaving `placeholder_only`
 - acceptance_test:
-  - `python -m unittest discover -s tests -p "test_workflow_checks.py" -v`
+  - `python -m unittest discover -s tests -p "test_project_generation_artifacts.py" -v`
+  - `python -m unittest discover -s tests -p "test_support_public_delivery_state.py" -v`
+  - `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v`
+  - `python -m unittest discover -s tests -p "test_support_to_production_path.py" -v`
   - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code`
 - forbidden_bypass:
-  - do not leave a dead `CTCP_ENABLE_GUI` option or `ctcp` GUI target behind
-  - do not keep active docs suggesting a GUI build/start path still exists
-  - do not fix this only by changing wording while leaving the executable GUI branch in place
-- user_visible_effect: operators see one headless build/start path and no repo-provided GUI target.
+  - do not mark delivery ready when screenshot or zip file does not physically exist
+  - do not leave final Telegram delivery at hash-only artifact hints
+  - do not bypass canonical verify
+- user_visible_effect:
+  - GUI/web projects should surface real screenshot evidence and the final Telegram result should send a usable zip plus screenshot instead of only text hints
 
-## DoD Mapping
-
-- [x] DoD-1: `CMakeLists.txt` and verify scripts expose only the headless build target; the stale GUI target/option is removed
-- [x] DoD-2: GUI-only source/resources are removed, and active docs/meta no longer advertise a repo GUI path
-- [x] DoD-3: focused checks and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` pass from the updated task/report state
-
-## Acceptance
+## Acceptance (must be checkable)
 
 - [x] DoD written (this file complete)
-- [x] Research logged (repo-local search only)
-- [x] Code changes allowed
-- [x] Patch applies cleanly (`git apply ...`) OR overlay zip applies cleanly
-- [x] `scripts/verify_repo.*` passes (or first failure + minimal fix recorded)
-- [x] Demo report updated: `meta/reports/LAST.md`
+- [x] Research logged (delivery gap + live evidence captured)
+- [x] Code changes allowed (scoped generator/delivery/tests/meta only)
+- [x] Patch scope aligned with user request
+- [ ] `scripts/verify_repo.*` passes
+- [ ] Demo report updated: `meta/reports/LAST.md`
 
 ## Plan
 
-1. Archive the previous active topic and bind a new ADHOC queue item for GUI removal.
-2. Remove the GUI CMake branch, GUI-only source/resources, and GUI-specific verify arguments.
-3. Align active docs/meta/tests to a headless-only repo surface, with deprecation notes on legacy GUI-era docs where needed.
-4. Run focused workflow coverage and canonical verify.
-5. Close the task with explicit first-failure evidence or final pass evidence.
+1. Add a real visual evidence capture step after GUI/web runtime probes and propagate the resulting screenshot truth into source-generation reports and manifests.
+2. Tighten GUI/web gates so `placeholder_only` no longer counts as a successful source-generation/manifest result.
+3. Make the Telegram final delivery path auto-synthesize and send zip/screenshot files when verify-pass delivery truth exists.
+4. Add focused regressions for screenshot generation, delivery manifest population, and final delivery reply actions.
+5. Exercise one real Telegram-lane outbound delivery and run canonical verify.
 
 ## Check / Contrast / Fix Loop Evidence
 
-- check-1: the repo still contains `CTCP_ENABLE_GUI`, a `ctcp` GUI binary target, and Qt source/resources even though verify and the actual runtime surface are headless.
-- contrast-1: the user clarified there is no project GUI, so keeping a repo GUI lane creates a false startup/build path.
-- fix-1: remove the GUI branch from build/verify and delete GUI-only code/resources.
-- check-2: even after code deletion, stale docs/meta can still claim a GUI lane exists.
-- contrast-2: active docs/meta must align to one headless-only surface.
-- fix-2: rewrite the active routed docs/build notes and downgrade old GUI-era docs to explicit historical/deprecated status where retained.
-- check-3: workflow/code-health checks may still point at deleted GUI entry files.
-- contrast-3: task/report evidence and focused tests must describe the new headless-only path without dangling GUI entry references.
-- fix-3: update task/report state, code-health entrypoint patterns, and the focused workflow regression fixture.
+- check-1: generation runtime probes launch/export the generated project, but no screenshot artifact is produced, so visual evidence stays `placeholder_only`.
+- contrast-1: the user asked for true screenshots and real package delivery, not placeholder evidence or hash-only delivery hints.
+- fix-1: capture a real image artifact from launched/exported GUI/web output and propagate it as delivery truth.
+- check-2: support delivery can already send package/photo files when actions exist, but the final delivery reply can still omit those actions and only mention artifact hints.
+- contrast-2: the user asked for Telegram final delivery to prioritize actual zip/screenshots.
+- fix-2: synthesize concrete delivery actions from verify-pass truth and persist them in `support_public_delivery.json`.
 
 ## Completion Criteria Evidence
 
 - connected + accumulated + consumed:
-- connected: CMake, verify scripts, and active docs all point to the same headless executable/build surface.
-- accumulated: GUI-only code/resources and misleading GUI notes are removed or explicitly deprecated in one scoped patch.
-- consumed: focused tests and canonical verify consume the new headless-only repo surface without referencing deleted GUI entrypoints.
+- connected: source-generation screenshot capture, manifest truth, and support delivery all point to the same actual files.
+- accumulated: focused tests and runtime artifacts show screenshot existence, zip existence, and support delivery manifest contents.
+- consumed: a real Telegram-lane outbound delivery uses the produced screenshot/package files and records them in `support_public_delivery.json`.
 
 ## Notes / Decisions
 
-- Default choices made: remove the executable GUI lane entirely and keep any retained GUI-era docs explicitly deprecated instead of silently authoritative.
-- Alternatives considered: leaving the GUI target in place but hiding it in docs; rejected because that would preserve the wrong startup path the user already hit.
-- Any contract exception reference:
-  - None
-- Issue memory decision: none; this is a direct repo-surface cleanup, not a recurring runtime defect class.
-- Skill decision (`skillized: yes` or `skillized: no, because ...`): `skillized: yes` using `ctcp-workflow` for repo-standard execution and `ctcp-verify` for canonical closure.
-
-## Results
-
-- Files changed:
-  - `CMakeLists.txt`
-  - `README.md`
-  - `BUILD.md`
-  - `artifacts/PLAN.md`
-  - `scripts/verify_repo.ps1`
-  - `scripts/verify_repo.sh`
-  - active headless/runtime docs under `docs/`
-  - deprecated legacy GUI docs under `docs/`
-  - `meta/code_health/rules.json`
-  - `meta/sddai_project.json`
-  - GUI-only files removed under `src/`, `include/`, and `resources/`
-  - `tests/test_workflow_checks.py`
-  - `tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch`
-  - task/report/queue/archive files under `meta/`
-- Verification summary:
-  - `python -m unittest discover -s tests -p "test_workflow_checks.py" -v` -> `0`
-  - `python scripts/sync_doc_links.py --check` -> `0`
-  - `python simlab/run.py --suite lite --json-out artifacts/gui_removal_simlab.json` -> `0`
-  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` -> `0`
-- Queue status update suggestion (`todo/doing/done/blocked`): `done`
+- Default choices made: keep the existing live Telegram session `6092527664` and the bound run `20260409-215339-177800-orchestrate` as the delivery evidence target rather than inventing a fake transport.
+- Alternatives considered: fix only support reply wording or relax `placeholder_only` gate acceptance; rejected because neither would produce real visual evidence or usable delivery files.
+- Any contract exception reference: none.
+- Issue memory decision: yes; record “verify-pass generated project lacks screenshot/package delivery evidence even though support can consume such files” as a user-visible delivery regression if this lands cleanly.
+- Skill decision (`skillized: yes` or `skillized: no, because ...`): `skillized: no, because this patch is a CTCP-local generator/delivery repair tightly coupled to the repo’s project-generation and Telegram support contracts rather than a reusable workflow asset.`

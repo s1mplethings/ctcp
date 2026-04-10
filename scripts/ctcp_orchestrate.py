@@ -69,6 +69,35 @@ except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
     from tools import v2p_fixtures
 try:
+    from tools.orchestrate_gate_truth import artifact_missing_reason
+except ModuleNotFoundError:
+    sys.path.insert(0, str(ROOT))
+    from tools.orchestrate_gate_truth import artifact_missing_reason
+try:
+    from tools.checks.plan_contract import load_plan_contract
+except ModuleNotFoundError:
+    sys.path.insert(0, str(ROOT))
+    from tools.checks.plan_contract import load_plan_contract
+try:
+    from tools.orchestrate_verify_runtime import (
+        missing_verify_target_report,
+        resolve_repo_verify_cmd,
+        resolve_run_verify_invocation,
+        scaffold_verify_cmd,
+        verify_cmd,
+        write_verify_report,
+    )
+except ModuleNotFoundError:
+    sys.path.insert(0, str(ROOT))
+    from tools.orchestrate_verify_runtime import (
+        missing_verify_target_report,
+        resolve_repo_verify_cmd,
+        resolve_run_verify_invocation,
+        scaffold_verify_cmd,
+        verify_cmd,
+        write_verify_report,
+    )
+try:
     from project_generation_gate import (
         evaluate_project_generation_gate,
         is_project_generation_workflow,
@@ -122,11 +151,7 @@ def active_patch_candidate(run_dir: Path) -> Path | None:
     artifacts = run_dir / "artifacts"
     patch = artifacts / "diff.patch"
     patch_v2 = artifacts / "diff.patch.v2"
-    if patch_v2.exists():
-        return patch_v2
-    if patch.exists():
-        return patch
-    return None
+    return patch_v2 if patch_v2.exists() else patch if patch.exists() else None
 def ensure_active_patch(run_dir: Path) -> tuple[Path | None, bool]:
     artifacts = run_dir / "artifacts"
     patch = artifacts / "diff.patch"
@@ -143,20 +168,16 @@ def ensure_active_patch(run_dir: Path) -> tuple[Path | None, bool]:
 
 def normalize_find_mode(value: str) -> str:
     v = (value or "").strip().lower()
-    if v in {"resolver_only", "resolver_plus_web"}:
-        return v
-    return "resolver_only"
+    return v if v in {"resolver_only", "resolver_plus_web"} else "resolver_only"
 
 
 def write_pointer(path: Path, target: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(str(target.resolve()) + "\n", encoding="utf-8")
+    path.parent.mkdir(parents=True, exist_ok=True); path.write_text(str(target.resolve()) + "\n", encoding="utf-8")
 
 
 def is_within(child: Path, parent: Path) -> bool:
     try:
-        child.resolve().relative_to(parent.resolve())
-        return True
+        child.resolve().relative_to(parent.resolve()); return True
     except ValueError:
         return False
 
@@ -184,10 +205,9 @@ def resolve_run_dir(raw: str) -> Path:
 
 
 def resolve_scaffold_runs_root(raw: str) -> Path:
-    if str(raw or "").strip():
-        return Path(raw).expanduser().resolve()
-    env_raw = str(os.environ.get("CTCP_RUNS_ROOT", "")).strip()
-    if env_raw:
+    if value := str(raw or "").strip():
+        return Path(value).expanduser().resolve()
+    if env_raw := str(os.environ.get("CTCP_RUNS_ROOT", "")).strip():
         return Path(env_raw).expanduser().resolve()
     return (ROOT / "simlab" / "_runs").resolve()
 
@@ -205,9 +225,7 @@ def resolve_scaffold_out_dir(raw: str) -> Path:
 
 def resolve_reference_manifest_rel(raw: str) -> str:
     text = str(raw or "").strip()
-    if not text:
-        return DEFAULT_REFERENCE_EXPORT_MANIFEST
-    return reference_export.norm_relpath(text)
+    return DEFAULT_REFERENCE_EXPORT_MANIFEST if not text else reference_export.norm_relpath(text)
 
 
 def _scaffold_tokens(
@@ -268,20 +286,15 @@ def _write_reference_source_metadata(
 
 
 def default_scaffold_run_id(project_name: str) -> str:
-    slug = goal_slug(project_name or "project")
-    ts = dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
-    return f"{ts}-scaffold-{slug}"
+    return f"{dt.datetime.now().strftime('%Y%m%d-%H%M%S-%f')}-scaffold-{goal_slug(project_name or 'project')}"
 
 
 def default_scaffold_pointcloud_run_id(project_name: str) -> str:
-    slug = goal_slug(project_name or "project")
-    ts = dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
-    return f"{ts}-scaffold-pointcloud-{slug}"
+    return f"{dt.datetime.now().strftime('%Y%m%d-%H%M%S-%f')}-scaffold-pointcloud-{goal_slug(project_name or 'project')}"
 
 
 def append_trace(run_dir: Path, text: str) -> None:
-    with (run_dir / "TRACE.md").open("a", encoding="utf-8") as fh:
-        fh.write(f"- {now_iso()} | {text}\n")
+    with (run_dir / "TRACE.md").open("a", encoding="utf-8") as fh: fh.write(f"- {now_iso()} | {text}\n")
 
 
 def append_event(run_dir: Path, role: str, event: str, path: str = "", **extra: Any) -> None:
@@ -428,15 +441,31 @@ def resolve_max_iterations(run_dir: Path) -> tuple[int, str]:
 
 def resolve_patch_policy(run_dir: Path) -> tuple[dict[str, Any] | None, str, str]:
     policy_path = run_dir / "artifacts" / "patch_policy.json"
-    if not policy_path.exists():
-        return None, "default", ""
-    try:
-        raw = read_json(policy_path)
-    except Exception as exc:
-        return {}, "artifacts/patch_policy.json", f"invalid patch policy json: {exc}"
-    if not isinstance(raw, dict):
-        return {}, "artifacts/patch_policy.json", "patch policy json must be an object"
-    return raw, "artifacts/patch_policy.json", ""
+    if policy_path.exists():
+        try:
+            raw = read_json(policy_path)
+        except Exception as exc:
+            return {}, "artifacts/patch_policy.json", f"invalid patch policy json: {exc}"
+        if not isinstance(raw, dict):
+            return {}, "artifacts/patch_policy.json", "patch policy json must be an object"
+        return raw, "artifacts/patch_policy.json", ""
+
+    plan_path = run_dir / "artifacts" / "PLAN.md"
+    if plan_path.exists():
+        plan, errors = load_plan_contract(plan_path)
+        if plan is None:
+            note = "; ".join(str(item) for item in errors[:4] if str(item).strip())
+            return {}, "artifacts/PLAN.md", note or "invalid PLAN contract"
+        return (
+            {
+                "allow_roots": list(plan.scope_allow),
+                "deny_prefixes": list(plan.scope_deny),
+                "max_files": int(plan.budgets.get("max_files", 5) or 5),
+            },
+            "artifacts/PLAN.md",
+            "",
+        )
+    return None, "default", ""
 
 
 def write_patch_rejection_review(
@@ -513,6 +542,23 @@ def append_command_trace(
     ]
     with (run_dir / "TRACE.md").open("a", encoding="utf-8") as fh:
         fh.write("\n".join(lines) + "\n")
+
+
+def finish_verify_pass(run_dir: Path, run_doc: dict[str, Any], *, rc: int, iteration: int) -> int:
+    run_doc["status"] = "pass"
+    run_doc.pop("blocked_reason", None)
+    save_run_doc(run_dir, run_doc)
+    append_event(
+        run_dir,
+        "Local Verifier",
+        "VERIFY_PASSED",
+        "artifacts/verify_report.json",
+        rc=rc,
+        iteration=iteration,
+    )
+    append_event(run_dir, "Local Verifier", "run_pass", "artifacts/verify_report.json")
+    print("[ctcp_orchestrate] PASS: verify succeeded")
+    return 0
 
 
 def _porcelain_path(row: str) -> str:
@@ -657,12 +703,13 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
     find_result = artifacts / "find_result.json"
     selected_workflow_id = selected_workflow_id_from_find_result(find_result)
     project_generation_mode = is_project_generation_workflow(selected_workflow_id)
-
     if str(run_doc.get("status", "")).lower() == "pass":
         return {"state": "pass", "owner": "", "path": "", "reason": "run already pass"}
 
-    blocked_reason = str(run_doc.get("blocked_reason", "")).strip().lower()
-    if blocked_reason.startswith("patch_first_rejected"):
+    blocked_reason = str(run_doc.get("blocked_reason", "")).strip()
+    blocked_reason_or = lambda fallback: blocked_reason if str(run_doc.get("status", "")).lower() == "blocked" and blocked_reason and blocked_reason.lower() != str(fallback or "").strip().lower() else fallback
+
+    if blocked_reason.lower().startswith("patch_first_rejected"):
         candidate = active_patch_candidate(run_dir)
         if candidate is not None and patch_marker.exists():
             try:
@@ -749,14 +796,14 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
     goal = str(run_doc.get("goal", ""))
 
     if not guardrails.exists():
-        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/guardrails.md", "reason": "waiting for guardrails.md"}
+        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/guardrails.md", "reason": blocked_reason_or("waiting for guardrails.md")}
 
     ok, msg, policy = parse_guardrails(guardrails)
     if not ok:
         return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/guardrails.md", "reason": msg}
 
     if not analysis.exists():
-        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/analysis.md", "reason": "waiting for analysis.md"}
+        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/analysis.md", "reason": blocked_reason_or("waiting for analysis.md")}
 
     if not find_result.exists():
         return {"state": "resolve_find_local", "owner": "Local Orchestrator", "path": "artifacts/find_result.json", "reason": "run local resolver"}
@@ -775,13 +822,23 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
             pass
 
     if not file_request.exists():
-        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/file_request.json", "reason": "waiting for file_request.json"}
+        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/file_request.json", "reason": blocked_reason_or("waiting for file_request.json")}
 
     if not context_pack.exists():
-        return {"state": "blocked", "owner": "Local Librarian", "path": "artifacts/context_pack.json", "reason": "waiting for context_pack.json"}
+        return {
+            "state": "blocked",
+            "owner": "Local Librarian",
+            "path": "artifacts/context_pack.json",
+            "reason": blocked_reason_or(artifact_missing_reason(run_dir, target_path="artifacts/context_pack.json", fallback="waiting for context_pack.json")),
+        }
 
     if not plan_draft.exists():
-        return {"state": "blocked", "owner": "Chair/Planner", "path": "artifacts/PLAN_draft.md", "reason": "waiting for PLAN_draft.md"}
+        return {
+            "state": "blocked",
+            "owner": "Chair/Planner",
+            "path": "artifacts/PLAN_draft.md",
+            "reason": blocked_reason_or(artifact_missing_reason(run_dir, target_path="artifacts/PLAN_draft.md", fallback="waiting for PLAN_draft.md")),
+        }
 
     if not review_contract.exists():
         return {"state": "blocked", "owner": "Contract Guardian", "path": "reviews/review_contract.md", "reason": "waiting for review_contract.md"}
@@ -1006,12 +1063,6 @@ def _extract_verify_failures(stdout: str, stderr: str) -> list[dict[str, str]]:
     ]
 
 
-def verify_cmd() -> list[str]:
-    if os.name == "nt":
-        return ["powershell", "-ExecutionPolicy", "Bypass", "-File", str(ROOT / "scripts" / "verify_repo.ps1")]
-    return ["bash", str(ROOT / "scripts" / "verify_repo.sh")]
-
-
 def verify_run_env() -> dict[str, str]:
     env = {
         "CTCP_SKIP_LITE_REPLAY": "1",
@@ -1057,19 +1108,6 @@ def render_scaffold_plan_markdown(
         lines.append(f"- {rel}")
     lines.append("")
     return "\n".join(lines)
-
-
-def scaffold_verify_cmd(out_dir: Path) -> tuple[list[str], str]:
-    ps1 = out_dir / "scripts" / "verify_repo.ps1"
-    sh = out_dir / "scripts" / "verify_repo.sh"
-    if os.name == "nt" and ps1.exists():
-        return (
-            ["powershell", "-ExecutionPolicy", "Bypass", "-File", str(ps1.resolve())],
-            "scripts/verify_repo.ps1",
-        )
-    if os.name != "nt" and sh.exists():
-        return (["bash", str(sh.resolve())], "scripts/verify_repo.sh")
-    return ([], "")
 
 
 def _is_path_root(path: Path) -> bool:
@@ -1401,40 +1439,6 @@ def parse_threshold_answer(answer: str) -> dict[str, float]:
         defaults["points_min"] = float(nums[1])
         defaults["fscore_min"] = float(nums[2])
     return defaults
-
-
-def resolve_repo_verify_cmd(repo_path: Path) -> tuple[str, str]:
-    candidates = [
-        (repo_path / "scripts" / "verify_repo.ps1", "scripts/verify_repo.ps1"),
-        (repo_path / "scripts" / "verify_repo.sh", "scripts/verify_repo.sh"),
-        (repo_path / "verify_repo.ps1", "verify_repo.ps1"),
-        (repo_path / "verify_repo.sh", "verify_repo.sh"),
-    ]
-    ps1_candidates = [(p, rel) for p, rel in candidates if p.suffix.lower() == ".ps1" and p.exists()]
-    sh_candidates = [(p, rel) for p, rel in candidates if p.suffix.lower() == ".sh" and p.exists()]
-    if os.name == "nt":
-        if ps1_candidates:
-            p, rel = ps1_candidates[0]
-            if rel == "scripts/verify_repo.ps1":
-                return ("powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1", rel)
-            return (f'powershell -ExecutionPolicy Bypass -File "{p.resolve()}"', rel)
-        if sh_candidates:
-            p, rel = sh_candidates[0]
-            if rel == "scripts/verify_repo.sh":
-                return ("bash scripts/verify_repo.sh", rel)
-            return (f'bash "{p.resolve()}"', rel)
-    else:
-        if sh_candidates:
-            p, rel = sh_candidates[0]
-            if rel == "scripts/verify_repo.sh":
-                return ("bash scripts/verify_repo.sh", rel)
-            return (f'bash "{p.resolve()}"', rel)
-        if ps1_candidates:
-            p, rel = ps1_candidates[0]
-            if rel == "scripts/verify_repo.ps1":
-                return ("powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1", rel)
-            return (f'powershell -ExecutionPolicy Bypass -File "{p.resolve()}"', rel)
-    return "", ""
 
 
 def render_user_sim_plan_md(
@@ -2995,17 +2999,41 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
             run_doc["max_iterations_source"] = max_source
             save_run_doc(run_dir, run_doc)
 
-            cmd = verify_cmd()
+            cmd, verify_cwd, verify_entry, verify_note = resolve_run_verify_invocation(run_dir, run_doc)
+            if not cmd:
+                append_event(
+                    run_dir,
+                    "Local Verifier",
+                    "VERIFY_TARGET_MISSING",
+                    "artifacts/verify_report.json",
+                    note=verify_note,
+                    iteration=iteration,
+                    max_iterations=max_iterations,
+                )
+                report = missing_verify_target_report(
+                    iteration=iteration,
+                    max_iterations=max_iterations,
+                    note=verify_note,
+                )
+                write_json(run_dir / "artifacts" / "verify_report.json", report)
+                run_doc["status"] = "fail"
+                run_doc["blocked_reason"] = "verify_failed"
+                save_run_doc(run_dir, run_doc)
+                print(f"[ctcp_orchestrate] FAIL: verify target missing ({verify_note})")
+                return 1
             append_event(
                 run_dir,
                 "Local Verifier",
                 "VERIFY_STARTED",
                 "artifacts/verify_report.json",
                 cmd=" ".join(cmd),
+                verify_entry=verify_entry,
+                cwd=str(verify_cwd),
+                note=verify_note,
                 iteration=iteration,
                 max_iterations=max_iterations,
             )
-            rc, out, err = run_cmd(cmd, ROOT, env=verify_run_env())
+            rc, out, err = run_cmd(cmd, verify_cwd, env=verify_run_env())
             out_log = run_dir / "logs" / "verify.stdout.log"
             err_log = run_dir / "logs" / "verify.stderr.log"
             write_text(out_log, out)
@@ -3023,37 +3051,19 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
 
             patch, _ = ensure_active_patch(run_dir)
             patch_sha = file_sha256(patch) if patch is not None else ""
-            paths = {
-                "trace": "TRACE.md",
-                "verify_report": "artifacts/verify_report.json",
-                "bundle": "failure_bundle.zip" if rc != 0 else "",
-                "stdout_log": out_log.relative_to(run_dir).as_posix(),
-                "stderr_log": err_log.relative_to(run_dir).as_posix(),
-            }
-            if (run_dir / "artifacts" / "PLAN.md").exists():
-                paths["plan"] = "artifacts/PLAN.md"
-            if (run_dir / "artifacts" / "diff.patch").exists():
-                paths["patch"] = "artifacts/diff.patch"
-
-            report = {
-                "result": "PASS" if rc == 0 else "FAIL",
-                "gate": "lite",
-                "iteration": iteration,
-                "max_iterations": max_iterations,
-                "patch_sha256": patch_sha,
-                "commands": [
-                    {
-                        "cmd": " ".join(cmd),
-                        "exit_code": rc,
-                        "stdout_log": out_log.relative_to(run_dir).as_posix(),
-                        "stderr_log": err_log.relative_to(run_dir).as_posix(),
-                    }
-                ],
-                "failures": [] if rc == 0 else _extract_verify_failures(out, err),
-                "paths": paths,
-                "artifacts": paths,
-            }
-            write_json(run_dir / "artifacts" / "verify_report.json", report)
+            report = write_verify_report(
+                run_dir,
+                rc=rc,
+                iteration=iteration,
+                max_iterations=max_iterations,
+                cmd=cmd,
+                verify_cwd=verify_cwd,
+                verify_entry=verify_entry,
+                out_log=out_log,
+                err_log=err_log,
+                patch_sha=patch_sha,
+                failures=[] if rc == 0 else _extract_verify_failures(out, err),
+            )
             append_event(
                 run_dir,
                 "Local Verifier",
@@ -3136,20 +3146,7 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
                 print(f"[ctcp_orchestrate] FAIL: verify failed, bundle={bundle}")
                 return 1
 
-            run_doc["status"] = "pass"
-            run_doc.pop("blocked_reason", None)
-            save_run_doc(run_dir, run_doc)
-            append_event(
-                run_dir,
-                "Local Verifier",
-                "VERIFY_PASSED",
-                "artifacts/verify_report.json",
-                rc=rc,
-                iteration=iteration,
-            )
-            append_event(run_dir, "Local Verifier", "run_pass", "artifacts/verify_report.json")
-            print("[ctcp_orchestrate] PASS: verify succeeded")
-            return 0
+            return finish_verify_pass(run_dir, run_doc, rc=rc, iteration=iteration)
 
         if state == "pass":
             return cmd_status(run_dir)

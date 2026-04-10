@@ -73,6 +73,65 @@ def _prepare_until_reviews(run_dir: Path) -> None:
 
 
 class OrchestrateReviewGateTests(unittest.TestCase):
+    def test_resolve_run_verify_invocation_uses_generated_project_for_project_generation_runs(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            run_dir = Path(td)
+            artifacts = run_dir / "artifacts"
+            project_dir = run_dir / "project_output" / "demo-project"
+            (project_dir / "scripts").mkdir(parents=True, exist_ok=True)
+            artifacts.mkdir(parents=True, exist_ok=True)
+            (project_dir / "scripts" / "verify_repo.ps1").write_text("Write-Host ok\n", encoding="utf-8")
+            _write_json(
+                artifacts / "find_result.json",
+                {
+                    "schema_version": "ctcp-find-result-v1",
+                    "selected_workflow_id": "wf_project_generation_manifest",
+                },
+            )
+            _write_json(
+                artifacts / "project_manifest.json",
+                {
+                    "schema_version": "ctcp-project-manifest-v1",
+                    "project_root": "project_output/demo-project",
+                },
+            )
+
+            cmd, cwd, entry, note = ctcp_orchestrate.resolve_run_verify_invocation(run_dir, {"goal": "test"})
+            self.assertEqual(cwd, project_dir.resolve())
+            self.assertEqual(entry, "scripts/verify_repo.ps1")
+            self.assertEqual(note, "")
+            self.assertEqual(cmd[:4], ["powershell", "-ExecutionPolicy", "Bypass", "-File"])
+            self.assertTrue(str(cmd[-1]).endswith("verify_repo.ps1"))
+
+    def test_resolve_patch_policy_uses_signed_plan_scope_when_patch_policy_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            run_dir = Path(td)
+            artifacts = run_dir / "artifacts"
+            artifacts.mkdir(parents=True, exist_ok=True)
+            (artifacts / "PLAN.md").write_text(
+                "\n".join(
+                    [
+                        "Status: SIGNED",
+                        "Scope-Allow: scripts/,index.html",
+                        "Scope-Deny: .git/,build/,dist/",
+                        "Gates: lite,plan_check,patch_check,behavior_catalog_check",
+                        "Budgets: max_iterations=3,max_files=7,max_total_bytes=200000",
+                        "Stop: scope_violation=true",
+                        "Behaviors: B001",
+                        "Results: R001",
+                        "",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            policy, source, note = ctcp_orchestrate.resolve_patch_policy(run_dir)
+            self.assertEqual(source, "artifacts/PLAN.md")
+            self.assertEqual(note, "")
+            self.assertIsInstance(policy, dict)
+            self.assertIn("index.html", list(policy.get("allow_roots", [])))
+            self.assertEqual(int(policy.get("max_files", 0) or 0), 7)
+
     def test_invalid_contract_review_routes_to_contract_guardian(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             run_dir = Path(td)
@@ -98,4 +157,3 @@ class OrchestrateReviewGateTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

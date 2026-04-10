@@ -5,6 +5,22 @@ import hashlib
 import re
 from typing import Any, Literal, Mapping
 
+from .recovery_visibility import (
+    context_internal_recovery_details,
+    context_reply_truth_details,
+    context_truth_reply,
+    render_internal_recovery_text,
+)
+from .support_context_view import (
+    artifact_labels,
+    current_snapshot,
+    decision_prompt,
+    delivery_summary,
+    has_error_truth,
+    has_result_truth,
+    render_snapshot,
+)
+
 ReplyIntent = Literal[
     "progress_update",
     "ask_decision",
@@ -100,142 +116,6 @@ def _as_mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
-def _render_snapshot(project_context: Mapping[str, Any] | None) -> Mapping[str, Any]:
-    source = _as_mapping(project_context)
-    for key in ("render_snapshot", "render_state_snapshot", "render_state"):
-        row = _as_mapping(source.get(key, {}))
-        if row:
-            return row
-    return {}
-
-
-def _current_snapshot(project_context: Mapping[str, Any] | None) -> Mapping[str, Any]:
-    source = _as_mapping(project_context)
-    for key in ("current_snapshot", "current_state_snapshot", "current_state"):
-        row = _as_mapping(source.get(key, {}))
-        if row:
-            return row
-    return {}
-
-
-def _decision_prompt(project_context: Mapping[str, Any] | None) -> str:
-    source = _as_mapping(project_context)
-    render = _render_snapshot(source)
-    cards = render.get("decision_cards", [])
-    if isinstance(cards, list):
-        for item in cards:
-            row = _as_mapping(item)
-            question = _norm(row.get("question", "") or row.get("question_hint", ""))
-            if question:
-                return question
-    runtime = _as_mapping(source.get("runtime_state", {}))
-    rows = runtime.get("pending_decisions", [])
-    if isinstance(rows, list):
-        for item in rows:
-            row = _as_mapping(item)
-            question = _norm(row.get("question", "") or row.get("question_hint", ""))
-            if question:
-                return question
-    decisions = _as_mapping(source.get("decisions", {}))
-    rows = decisions.get("decisions", [])
-    if isinstance(rows, list):
-        for item in rows:
-            row = _as_mapping(item)
-            question = _norm(row.get("question", "") or row.get("question_hint", ""))
-            if question:
-                return question
-    return ""
-
-
-def _artifact_labels(project_context: Mapping[str, Any] | None) -> list[str]:
-    source = _as_mapping(project_context)
-    out: list[str] = []
-    seen: set[str] = set()
-
-    def _add(raw: Any) -> None:
-        text = _norm(raw)
-        if not text:
-            return
-        key = text.lower()
-        if key in seen:
-            return
-        seen.add(key)
-        out.append(text)
-
-    manifest = _as_mapping(source.get("artifact_manifest", {}))
-    for key in ("artifacts", "entries", "files"):
-        rows = manifest.get(key, [])
-        if isinstance(rows, list):
-            for item in rows:
-                row = _as_mapping(item)
-                _add(row.get("path", "") or row.get("name", "") or row.get("artifact_id", ""))
-
-    outputs = _as_mapping(source.get("output_artifacts", {}))
-    rows = outputs.get("artifacts", [])
-    if isinstance(rows, list):
-        for item in rows:
-            row = _as_mapping(item)
-            _add(row.get("path", "") or row.get("name", "") or row.get("artifact_id", ""))
-
-    result_event = _as_mapping(source.get("result_event", {}))
-    rows = result_event.get("artifacts", [])
-    if isinstance(rows, list):
-        for item in rows:
-            row = _as_mapping(item)
-            _add(row.get("path", "") or row.get("name", "") or row.get("artifact_id", ""))
-
-    return out[:6]
-
-
-def _delivery_summary(project_context: Mapping[str, Any] | None) -> dict[str, str]:
-    source = _as_mapping(project_context)
-    manifest = _as_mapping(source.get("project_manifest", {}))
-    return {
-        "project_root": _norm(manifest.get("project_root", "")),
-        "startup_entrypoint": _norm(manifest.get("startup_entrypoint", "")),
-        "startup_readme": _norm(manifest.get("startup_readme", "")),
-    }
-
-
-def _has_error_truth(project_context: Mapping[str, Any] | None) -> bool:
-    source = _as_mapping(project_context)
-    render = _render_snapshot(source)
-    if _norm(render.get("visible_state", "")).upper() == "ERROR":
-        return True
-    runtime = _as_mapping(source.get("runtime_state", {}))
-    run_status = _norm(runtime.get("run_status", "")).lower()
-    if run_status in {"error", "failed", "fail", "aborted"}:
-        return True
-    error = _as_mapping(runtime.get("error", {}))
-    if bool(error.get("has_error", False)):
-        return True
-    status = _as_mapping(source.get("status", {}))
-    run_status = _norm(status.get("run_status", "")).lower()
-    return run_status in {"error", "failed", "fail", "aborted"}
-
-
-def _has_result_truth(project_context: Mapping[str, Any] | None) -> bool:
-    source = _as_mapping(project_context)
-    render = _render_snapshot(source)
-    visible_state = _norm(render.get("visible_state", "")).upper()
-    if visible_state == "DONE":
-        return True
-    status = _as_mapping(source.get("status", {}))
-    runtime = _as_mapping(source.get("runtime_state", {}))
-    run_status = _norm(runtime.get("run_status", "") or status.get("run_status", "")).lower()
-    done_like = run_status in {"done", "pass", "completed", "success"}
-    result_event = _as_mapping(source.get("result_event", {}))
-    if result_event:
-        result_status = _norm(result_event.get("status", "") or result_event.get("verify_result", "")).lower()
-        if (not result_status) or result_status in {"done", "pass", "completed", "success"}:
-            return True
-    if not done_like:
-        return False
-    if _as_mapping(source.get("artifact_manifest", {})):
-        return True
-    outputs = _as_mapping(source.get("output_artifacts", {}))
-    rows = outputs.get("artifacts", [])
-    return isinstance(rows, list) and bool(rows)
 
 
 def infer_reply_intent(
@@ -246,21 +126,32 @@ def infer_reply_intent(
     provider_status: str = "",
 ) -> ReplyIntent:
     mode = _norm(conversation_mode).upper()
-    render = _render_snapshot(project_context)
-    current = _current_snapshot(project_context)
+    render = render_snapshot(project_context)
+    current = current_snapshot(project_context)
     visible_state = _norm(render.get("visible_state", "")).upper()
     authoritative_stage = _norm(current.get("authoritative_stage", "")).upper()
-    pending_prompt = _decision_prompt(project_context)
+    pending_prompt = decision_prompt(project_context)
     provider_low = _norm(provider_status).lower()
-    error_truth = _has_error_truth(project_context)
-    result_truth = _has_result_truth(project_context)
+    error_truth = has_error_truth(project_context)
+    result_truth = has_result_truth(project_context)
+    recovery_details = context_internal_recovery_details(project_context)
+    reply_truth = context_reply_truth_details(project_context)
+    internal_recovery_truth = bool(recovery_details.get("has_internal_recovery", False))
 
     if visible_state == "WAITING_FOR_DECISION" or authoritative_stage == "WAIT_USER_DECISION" or pending_prompt:
         return "ask_decision"
     if result_truth and not error_truth:
         return "deliver_result"
+    if bool(reply_truth.get("has_truth", False)):
+        truth_status = str(reply_truth.get("status", ""))
+        if truth_status in {"backend_unavailable", "backend_failed"}:
+            return "explain_error"
+        if truth_status in {"backend_deferred", "backend_blocked", "low_confidence_fallback"}:
+            return "guide_recovery"
     if provider_low in {"exec_failed", "failed", "error"} or error_truth:
         return "explain_error"
+    if internal_recovery_truth:
+        return "guide_recovery"
     if mode in {"PROJECT_INTAKE", "PROJECT_DETAIL"} and _norm(next_question):
         return "ask_missing_input"
     if mode in {"STATUS_QUERY", "PROJECT_DETAIL"} or visible_state in {"EXECUTING", "SHOWING_PROGRESS"}:
@@ -277,24 +168,25 @@ def render_fallback_reply(
     previous_reply_text: str = "",
 ) -> dict[str, str]:
     use_en = _norm(lang_hint).lower().startswith("en")
-    render = _render_snapshot(project_context)
+    render = render_snapshot(project_context)
     progress = _norm(render.get("progress_summary", ""))
-    decision_prompt = _decision_prompt(project_context) or _norm(next_question)
-    artifacts = _artifact_labels(project_context)
+    pending_question = decision_prompt(project_context) or _norm(next_question)
+    artifacts = artifact_labels(project_context)
     visible_state = _norm(render.get("visible_state", "")).upper()
-    delivery = _delivery_summary(project_context)
+    delivery = delivery_summary(project_context)
 
     if use_en:
+        truth_text = context_truth_reply(project_context, lang_hint=lang_hint)
         if intent == "progress_update":
             if progress:
                 text = f"Quick progress sync: I am currently handling this step: {progress}. I will update you as soon as something visible changes."
             else:
-                text = "Quick progress sync: I am still advancing the current step. I will update you as soon as there is a visible change."
+                text = "Quick progress sync: there is no new visible backend milestone yet. I will update you as soon as there is a confirmed change."
             if _norm(previous_reply_text) == _norm(text):
-                text = "No visible milestone changed yet. I am continuing this step and will ping you on the next concrete update."
+                text = "No visible milestone changed yet. I will wait for the next concrete backend update before claiming progress."
             return {"reply_text": text, "next_question": ""}
         if intent == "ask_decision":
-            question = decision_prompt or "Which option should I take for this step?"
+            question = pending_question or "Which option should I take for this step?"
             if not question.endswith("?"):
                 question = f"{question}?"
             text = f"I need one decision from you before I continue: {question}"
@@ -317,22 +209,38 @@ def render_fallback_reply(
                 }
             return {"reply_text": "The result is ready. I can walk you through what was produced and continue with your next preference.", "next_question": ""}
         if intent in {"explain_error", "guide_recovery"}:
+            if truth_text:
+                return {"reply_text": truth_text, "next_question": ""}
+            recovery_details = context_internal_recovery_details(project_context)
+            if recovery_details.get("has_internal_recovery", False):
+                return {
+                    "reply_text": render_internal_recovery_text(
+                        lang_hint=lang_hint,
+                        blocker=str(recovery_details.get("blocker", "")),
+                        next_action=str(recovery_details.get("next_action", "")),
+                        retry_count=int(recovery_details.get("retry_count", 0) or 0),
+                        max_retries=int(recovery_details.get("max_retries", 0) or 0),
+                        recovery_action=str(recovery_details.get("recovery_action", "")),
+                    ),
+                    "next_question": "",
+                }
             return {
-                "reply_text": "This round did not complete as expected, but we can continue safely. If you want, I can retry from the current step or switch to a narrower fallback path.",
+                "reply_text": "This round did not produce a customer-ready reply. I can retry from the current step or wait for a clearer backend state.",
                 "next_question": "Do you prefer a direct retry or a narrower fallback?",
             }
-        return {"reply_text": "Understood. I will continue with your latest instruction and keep the updates concise.", "next_question": ""}
+        return {"reply_text": "Understood. There is no new confirmed backend state to report yet.", "next_question": ""}
 
+    truth_text = context_truth_reply(project_context, lang_hint=lang_hint)
     if intent == "progress_update":
         if progress:
             text = f"同步一下进展：我现在在处理这一步：{progress}。有可见变化我会第一时间告诉你。"
         else:
-            text = "同步一下进展：当前步骤还在推进中；有新的可见结果我会马上同步你。"
+            text = "同步一下进展：当前还没有新的可见后端里程碑；一旦有确认过的变化我会马上同步你。"
         if _norm(previous_reply_text) == _norm(text):
-            text = "当前还没有新的可见里程碑，我在继续推进这一步，下一次有实质变化就马上同步你。"
+            text = "当前还没有新的可见里程碑；等后端给出新的实质变化后我再同步你。"
         return {"reply_text": text, "next_question": ""}
     if intent == "ask_decision":
-        question = decision_prompt or "这一步你更希望我优先走哪种方案？"
+        question = pending_question or "这一步你更希望我优先走哪种方案？"
         if not re.search(r"[?？]$", question):
             question = f"{question}？"
         text = f"现在这一步需要你先拍一个板：{question} 你可以直接回复选项或偏好。"
@@ -357,11 +265,26 @@ def render_fallback_reply(
             return {"reply_text": "这轮已经完成。我可以按你关注的点逐项带你看结果，并继续下一轮。", "next_question": ""}
         return {"reply_text": "结果已经准备好，我可以先把产出重点发你确认，再继续推进下一步。", "next_question": ""}
     if intent in {"explain_error", "guide_recovery"}:
+        if truth_text:
+            return {"reply_text": truth_text, "next_question": ""}
+        recovery_details = context_internal_recovery_details(project_context)
+        if recovery_details.get("has_internal_recovery", False):
+            return {
+                "reply_text": render_internal_recovery_text(
+                    lang_hint=lang_hint,
+                    blocker=str(recovery_details.get("blocker", "")),
+                    next_action=str(recovery_details.get("next_action", "")),
+                    retry_count=int(recovery_details.get("retry_count", 0) or 0),
+                    max_retries=int(recovery_details.get("max_retries", 0) or 0),
+                    recovery_action=str(recovery_details.get("recovery_action", "")),
+                ),
+                "next_question": "",
+            }
         return {
-            "reply_text": "这轮没有按预期完成，但不影响继续推进。你可以让我直接重试，或者先切到更稳妥的简化路径。",
+            "reply_text": "这轮还没有形成可直接发送的正式回复。你可以让我直接重试，或者等后端给出更明确的状态。",
             "next_question": "你希望我现在直接重试，还是先走简化路径？",
         }
-    return {"reply_text": "收到，我会按你这轮信息继续推进，并在关键节点主动同步你。", "next_question": ""}
+    return {"reply_text": "收到。这轮我先按真实状态同步，不虚构新的进展。", "next_question": ""}
 
 
 def _contains_internal_leak(text: str) -> bool:
@@ -494,18 +417,18 @@ def _semantic_similarity(a: str, b: str) -> float:
 
 def _progress_context_signature(project_context: Mapping[str, Any] | None) -> str:
     source = _as_mapping(project_context)
-    render = _render_snapshot(source)
-    current = _current_snapshot(source)
+    render = render_snapshot(source)
+    current = current_snapshot(source)
     runtime = _as_mapping(source.get("runtime_state", {}))
     status = _as_mapping(source.get("status", {}))
-    artifacts = _artifact_labels(source)
+    artifacts = artifact_labels(source)
     payload = {
         "visible_state": _norm(render.get("visible_state", "")).upper(),
         "progress": _norm(render.get("progress_summary", "")),
         "phase": _norm(current.get("authoritative_stage", "") or runtime.get("phase", "")).upper(),
         "blocker": _norm(current.get("current_blocker", "") or runtime.get("blocking_reason", "") or status.get("blocking_reason", "")),
         "next_action": _norm(current.get("next_action", "") or runtime.get("next_action", "")),
-        "decision_prompt": _norm(_decision_prompt(source)),
+        "decision_prompt": _norm(decision_prompt(source)),
         "artifact_count": len(artifacts),
         "run_status": _norm(runtime.get("run_status", "") or status.get("run_status", "")).lower(),
     }
@@ -515,7 +438,7 @@ def _progress_context_signature(project_context: Mapping[str, Any] | None) -> st
 
 def _decision_context_signature(project_context: Mapping[str, Any] | None, question: str) -> str:
     source = _as_mapping(project_context)
-    prompt = _norm(question) or _decision_prompt(source)
+    prompt = _norm(question) or decision_prompt(source)
     return _semantic_fingerprint(prompt)
 
 
@@ -539,7 +462,7 @@ def _error_context_signature(project_context: Mapping[str, Any] | None) -> str:
 
 def _result_context_signature(project_context: Mapping[str, Any] | None) -> str:
     source = _as_mapping(project_context)
-    artifacts = _artifact_labels(source)
+    artifacts = artifact_labels(source)
     if not artifacts:
         return ""
     return _semantic_fingerprint("|".join(sorted(artifacts)))
@@ -580,14 +503,17 @@ def _downgrade_text(
 ) -> tuple[str, str]:
     use_en = _norm(lang_hint).lower().startswith("en")
     question = _norm(next_question)
+    truth_text = context_truth_reply(project_context, lang_hint=lang_hint)
+    if truth_text:
+        return truth_text, ""
     if intent == "progress_update":
         if use_en:
-            text = "No visible update yet. I am still advancing the current step."
+            text = "No visible update yet. I will wait for the next confirmed backend change."
         else:
-            text = "暂无新的可见变化，我会继续推进当前步骤。"
+            text = "暂无新的可见变化；等后端给出下一条确认状态后我再同步。"
         return text, ""
     if intent == "ask_decision":
-        prompt = _decision_prompt(project_context) or question
+        prompt = decision_prompt(project_context) or question
         if use_en:
             short = f"I still need your decision to continue: {prompt or 'Which option should I take?'}"
             return short, prompt if prompt.endswith("?") else (f"{prompt}?" if prompt else "Which option should I take?")
@@ -596,7 +522,7 @@ def _downgrade_text(
             prompt = f"{prompt}？"
         return short, prompt
     if intent == "deliver_result":
-        artifacts = _artifact_labels(project_context)
+        artifacts = artifact_labels(project_context)
         if artifacts:
             if use_en:
                 return f"Result stays the same. Key artifacts: {', '.join(artifacts[:2])}.", ""
@@ -606,11 +532,11 @@ def _downgrade_text(
         return "结果状态保持完成，你告诉我下一步优先改哪里即可。", ""
     if intent in {"explain_error", "guide_recovery"}:
         if use_en:
-            return "Issue state is unchanged. I can retry now or switch to a safer fallback path.", "Retry now or use fallback path?"
-        return "问题状态暂时未变；我可以现在重试，或先走更稳妥的兜底路径。", "你要我直接重试，还是先走兜底路径？"
+            return "Issue state is unchanged. There is still no clearer backend result than before.", "Retry now or wait for a clearer backend result?"
+        return "问题状态暂时未变；目前还没有比刚才更清楚的后端结果。", "你要我现在直接重试，还是等更明确的后端结果？"
     if use_en:
-        return "Acknowledged. I will continue.", ""
-    return "收到，我继续推进。", ""
+        return "Acknowledged. There is no new confirmed state yet.", ""
+    return "收到。目前还没有新的确认状态。", ""
 
 
 def _select_context_signature(intent: ReplyIntent, project_context: Mapping[str, Any] | None, question: str) -> str:
@@ -760,9 +686,9 @@ def enforce_reply_policy(
         fallback_used = True
 
     if intent == "ask_decision":
-        decision_prompt = _decision_prompt(project_context) or question
-        if (not question) and decision_prompt:
-            question = decision_prompt
+        pending_prompt = decision_prompt(project_context) or question
+        if (not question) and pending_prompt:
+            question = pending_prompt
             reasons.append("decision_prompt_promoted")
         merged = f"{text} {question}".strip()
         if not _question_is_explicit(merged):
@@ -770,7 +696,7 @@ def enforce_reply_policy(
                 intent="ask_decision",
                 lang_hint=lang_hint,
                 project_context=project_context,
-                next_question=question or decision_prompt,
+                next_question=question or pending_prompt,
                 previous_reply_text=previous_reply_text,
             )
             text = _norm(fallback.get("reply_text", ""))
@@ -779,7 +705,7 @@ def enforce_reply_policy(
             reasons.append("decision_not_explicit")
 
     if intent == "deliver_result":
-        artifacts = _artifact_labels(project_context)
+        artifacts = artifact_labels(project_context)
         if artifacts:
             updated = _append_artifact_hint(text, artifacts, lang_hint=lang_hint)
             if updated != text:

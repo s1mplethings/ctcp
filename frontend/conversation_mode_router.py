@@ -93,6 +93,28 @@ _PROJECT_EXECUTION_FOLLOWUP_EN = (
     "i will adjust later",
     "keep building",
 )
+_PROJECT_CONFIRMATION_TURNS_ZH = {
+    "确定",
+    "好",
+    "好的",
+    "继续",
+    "继续吧",
+    "开始",
+    "开始吧",
+    "可以",
+    "行",
+    "嗯",
+}
+_PROJECT_CONFIRMATION_TURNS_EN = {
+    "yes",
+    "ok",
+    "okay",
+    "continue",
+    "go on",
+    "start",
+    "start it",
+    "go ahead",
+}
 _STATUS_PATTERNS = (
     re.compile(r"(进度|状态(?!机)|还在做吗|进行到哪|卡住|阻塞|当前项目|有没有在进行)"),
     re.compile(r"(什么情况|做好了吗|完成了吗|好了没|生成了.{0,4}吗|弄好了吗|搞定了吗|做完了吗|出来了吗|结果.{0,4}(怎|如何|出))"),
@@ -108,16 +130,10 @@ _PROJECT_INTENT_PATTERNS = (
     re.compile(r"\b(build|create|start|implement|develop|generate)\b.{0,24}\b(project|workflow|pipeline|system|tool|bot|game|app|assistant)\b", re.IGNORECASE),
 )
 _PROJECT_DOMAIN_TOKENS = (
-    "项目",
-    "流程",
-    "工作流",
-    "系统",
-    "工具",
     "点云",
     "无人机",
     "语义",
     "建图",
-    "视频",
     "游戏",
     "剧情",
     "角色",
@@ -395,6 +411,22 @@ def is_project_execution_followup(text: str) -> bool:
     return False
 
 
+def is_project_confirmation_turn(text: str) -> bool:
+    raw = _norm(text)
+    if not raw:
+        return False
+    low = raw.lower()
+    return raw in _PROJECT_CONFIRMATION_TURNS_ZH or low in _PROJECT_CONFIRMATION_TURNS_EN
+
+
+def _is_waiting_project_decision(state: Mapping[str, Any] | None) -> bool:
+    if not isinstance(state, Mapping):
+        return False
+    active_stage = _norm(state.get("active_stage", "")).upper()
+    waiting_for = _norm(state.get("waiting_for", ""))
+    return active_stage == "WAIT_USER_DECISION" or bool(waiting_for)
+
+
 def can_emit_project_followup(state: Mapping[str, Any] | None) -> bool:
     if not isinstance(state, Mapping):
         return False
@@ -447,6 +479,8 @@ def route_conversation_mode(
         return "STATUS_QUERY"
     if _is_decision_reply(latest) and has_project_context:
         return "PROJECT_DECISION_REPLY"
+    if has_project_context and is_project_confirmation_turn(latest):
+        return "PROJECT_DECISION_REPLY" if _is_waiting_project_decision(active_task_state) else "PROJECT_DETAIL"
     if has_project_context and is_project_execution_followup(latest):
         return "PROJECT_DETAIL"
 

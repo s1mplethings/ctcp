@@ -699,3 +699,90 @@ When to add:
   任何用户可见“已生成/可交付”语义都必须绑定主 run gate/status；禁止在 support 层再引入并行快通道状态源。
 - Tags:
   support, telegram, dual-path, state-machine, gate, delivery, runtime-wiring
+
+## Example 27
+
+- Symptom:
+  support 会话长期绑定到一个已经不存在的 run；之后用户只回 `确定/继续/开始` 这类短确认词时，系统会新建一个 `goal=确定` 的错误 run，或者在空闲轮询里持续刷 `run_id not found`。
+- Repro:
+  1. 让 support session 保存一个已经被删除的 `bound_run_id`。
+  2. 触发 proactive cycle，或在 Telegram 里继续回复 `确定`、`继续`、`开始`。
+  3. 观察 stderr/日志里的 `run_id not found` 持续出现，或新 run 的 `analysis.md` 把 goal 写成确认词。
+- Root cause:
+  交互式桥接和 proactive 轮询对 `run_id not found` 的恢复逻辑不一致；同时短确认词没有和已有项目上下文绑定，导致 stale run 被清空后直接把确认词当成了新 goal。
+- Affected entrypoint:
+  `scripts/ctcp_support_bot.py::sync_project_context` 和 `scripts/ctcp_support_bot.py::run_proactive_support_cycle`
+- Affected modules:
+  `scripts/ctcp_support_bot.py`, `scripts/ctcp_front_bridge.py`, `frontend/conversation_mode_router.py`
+- Observed fallback behavior:
+  用户可见 reply 还在说“我会继续推进”，但 backend 实际没有推进；旧 run 残留还会持续污染 session state 和 proactive 日志。
+- Expected correct behavior:
+  stale `bound_run_id` 必须在 direct/proactive 两条路径上统一清理；短确认词在已有项目上下文下只能继续/答复当前 run，而不能新建 `goal=确定` 的 run；`PLAN_draft.md` 缺失要进入明确可重试恢复态。
+- Fix:
+  统一 stale run recovery helper，清空失效绑定并写回 recoverable session/runtime context；给确认类短消息加已有上下文下的 follow-up 路由；对缺失 `PLAN_draft.md` 的 blocked gate 输出 retry-ready recovery doc 并允许自动重试 planner。
+- Fix attempt status:
+  2026-04-07 scoped repair bound under `ADHOC-20260407-support-session-recovery-and-plan-self-heal`.
+- Regression test status:
+  Covered by `tests/test_support_bot_humanization.py`, `tests/test_runtime_wiring_contract.py`, `tests/test_support_to_production_path.py`, and `tests/test_frontend_rendering_boundary.py`.
+- Prevention:
+  任何 support 改动只要碰 run binding 或低信息 follow-up 路由，就必须同时补一个 direct stale-run test 和一个 proactive stale-run test；planner gate 缺件必须输出 recovery hint，不能只留 optimistic progress 话术。
+- Tags:
+  support, session, stale-run, recovery, routing, plan, proactive
+
+## Example 28
+
+- Symptom:
+  用户提交正常的软件项目需求，例如本地可运行的 VN 项目助手，但客服回复却混入点云/无人机/PLY/LAS 等旧领域内容，或者在没有正式 backend reply 时只回“收到，我继续推进”。
+- Repro:
+  1. 通过 support/frontend 主链提交泛化项目需求或 VN 需求。
+  2. 让 provider/backend 缺少 customer-ready reply，或让 frontend PM mode 走默认提问路径。
+  3. 观察 `support_reply.json.reply_text` 与 frontend follow-up，出现旧点云默认问题或假进度兜底。
+- Root cause:
+  `frontend/project_manager_mode.py` 和 `frontend/missing_info_rewriter.py` 仍保留 pointcloud-first 的默认假设；`scripts/ctcp_support_bot.py`、`frontend/response_composer.py`、`frontend/support_reply_policy.py` 在 backend/provider 无正式回复时仍允许乐观 continuation shell。
+- Affected entrypoint:
+  `scripts/ctcp_support_bot.py::process_message` -> `frontend/response_composer.py::run_internal_reply_pipeline`
+- Affected modules:
+  `frontend/project_manager_mode.py`, `frontend/missing_info_rewriter.py`, `frontend/response_composer.py`, `frontend/support_reply_policy.py`, `scripts/ctcp_support_bot.py`
+- Observed fallback behavior:
+  通用项目被点云默认追问污染；API/backend 无正式回复时仍出现“继续推进”或“本地兜底继续”式误导性文案。
+- Expected correct behavior:
+  只有显式点云需求才进入点云分支；backend unavailable / blocked / no-formal-reply / low-confidence-fallback 都要用真实状态文案，不能假装已有进展。
+- Fix:
+  引入显式 domain profiling，把 pointcloud 逻辑只挂到明确关键词；把 provider/backend truth 注入 frontend render 和 reply policy；移除 customer-facing failover optimistic notice。
+- Fix attempt status:
+  2026-04-08 scoped repair bound under `ADHOC-20260408-support-domain-neutrality-and-truthful-reply-boundary`.
+- Regression test status:
+  Covered by `tests/test_frontend_rendering_boundary.py`, `tests/test_support_bot_humanization.py`, `tests/test_runtime_wiring_contract.py`, and `tests/test_support_reply_policy_regression.py`.
+- Prevention:
+  任何 support/frontend 改动只要涉及默认问题、domain inference、fallback reply 或 backend truth，都必须同时补“通用/VN 不被点云污染”和“无正式 reply 不得假装继续推进”两类回归。
+- Tags:
+  support, frontend, domain-pollution, pointcloud, fallback, truthful-status
+
+## Example 29
+
+- Symptom:
+  support run 看起来仍是 `run_status=running`，但真实链路已经卡在 `context_pack.json` 或 `PLAN_draft.md`；同时用户可见状态还可能继续显示旧 blocker 摘要。
+- Repro:
+  1. 让 planner 或 librarian provider 报告 `executed`，但实际不落地目标产物，例如不生成 `artifacts/PLAN_draft.md`。
+  2. 或者先让 `support_runtime_state.json` 记录 `waiting for context_pack.json`，再让 backend status 恢复为 `run_status=running`、`gate_state=open`。
+  3. 观察 orchestrator status 与 support-visible reply，前者可能回落成泛化 `waiting for ...`，后者可能继续沿用旧 blocker。
+- Root cause:
+  `scripts/ctcp_dispatch.py` 之前没有把 “provider 报 executed 但 target 文件不存在” 视为失败；`scripts/ctcp_orchestrate.py::current_gate` 会优先回到泛化缺件判断；`scripts/ctcp_front_bridge.py::_runtime_blocking_reason` 还会在 backend 已恢复后继续复用旧 `blocking_reason`。
+- Affected entrypoint:
+  `scripts/ctcp_support_bot.py::process_message` -> `scripts/ctcp_front_bridge.py::ctcp_get_status` -> `scripts/ctcp_orchestrate.py::current_gate`
+- Affected modules:
+  `scripts/ctcp_dispatch.py`, `scripts/ctcp_orchestrate.py`, `scripts/ctcp_front_bridge.py`, `scripts/ctcp_librarian.py`, `tools/providers/local_exec.py`
+- Observed fallback behavior:
+  run 假装仍在 running；planner/librarian 真失败被重新折叠成 `waiting for context_pack.json` / `waiting for PLAN_draft.md`；support 可见状态继续沿用旧摘要。
+- Expected correct behavior:
+  target artifact 未落地必须沉淀成明确 blocker；bridge refresh 后应清掉过期 blocker；librarian 失败要有结构化 failure artifact。
+- Fix:
+  把 `executed + missing target` 变成 `exec_failed/target_missing`，让 orchestrator 对缺件时优先保留更具体的 `blocked_reason`，并给 librarian 写 `context_pack.failure.json` 供测试和下游断言。
+- Fix attempt status:
+  2026-04-08 scoped isolation bound under `ADHOC-20260408-support-chain-breakpoint-isolation`.
+- Regression test status:
+  Covered by `tests/test_local_librarian.py`, `tests/test_support_runtime_acceptance.py`, and `tests/test_support_to_production_path.py`.
+- Prevention:
+  任何 support/backend artifact gate 改动，只要 provider 会写 run artifact，就必须补一条 “provider 声称执行成功但 target 缺失” 回归；任何 runtime snapshot refresh 也必须补一条“旧 blocker 不得跨状态恢复残留”的回归。
+- Tags:
+  support, bridge, orchestrator, librarian, planner, blocker, stale-state, artifact-materialization

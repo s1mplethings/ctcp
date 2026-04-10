@@ -3397,6 +3397,507 @@
       },
       "status": "done",
       "notes": "Completed on 2026-04-07 after the user clarified the project has no dedicated GUI: removed the stale Qt GUI lane from build/code/resources, aligned active docs and verify to a headless-only surface, rebased the S16 fixer-loop fixture to the new task header, passed `python -m unittest discover -s tests -p \"test_workflow_checks.py\" -v`, passed `python simlab/run.py --suite lite --json-out artifacts/gui_removal_simlab.json`, and final canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` returned 0."
+    },
+    {
+      "id": "ADHOC-20260407-support-session-recovery-and-plan-self-heal",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Repair stale support session recovery, confirmation-turn routing, and blocked plan self-heal",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260406-support-delivery-evidence-surface",
+        "ADHOC-20260407-remove-legacy-gui-lane"
+      ],
+      "dod": [
+        "Support session binding self-heals consistently across direct turns and proactive cycle when a stored bound_run_id no longer resolves, and stale run residue no longer keeps polluting the chat state",
+        "Short confirmation or continue turns with existing project context do not create a fresh run or write a low-signal goal like `确定`; they reuse or advance the existing run instead",
+        "Runs blocked on missing `PLAN_draft.md` surface a real recoverable status with recovery evidence/next action, and focused support/frontend regressions plus canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` pass"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_front_bridge.py",
+          "scripts/ctcp_support_recovery.py",
+          "frontend/conversation_mode_router.py",
+          "frontend/response_composer.py",
+          "frontend/support_reply_policy.py",
+          "simlab/generate_s16_fix_patch.py",
+          "simlab/scenarios/S16_lite_fixer_loop_pass.yaml",
+          "tests/fixtures/patches/lite_fix_remove_bad_readme_link.patch",
+          "tests/test_support_bot_humanization.py",
+          "tests/test_runtime_wiring_contract.py",
+          "tests/test_support_session_recovery_regression.py",
+          "tests/test_support_proactive_recovery_regression.py",
+          "tests/test_support_to_production_path.py",
+          "tests/test_frontend_rendering_boundary.py",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_session_recovery_regression.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_proactive_recovery_regression.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_to_production_path.py\" -v",
+          "python -m unittest discover -s tests -p \"test_frontend_rendering_boundary.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-07: unified stale bound-run recovery across interactive/proactive support paths, prevented confirmation-word new-run misbinding, surfaced retryable `PLAN_draft.md` recovery truth through the support/frontend lane, added focused regressions plus SimLab S16 repair generation, passed `python simlab/run.py --suite lite` (`run_dir=C:/Users/sunom/AppData/Local/ctcp/runs/ctcp/simlab_runs/20260407-143546`, `14/14`), and final canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` returned 0."
+    },
+    {
+      "id": "ADHOC-20260408-support-domain-neutrality-and-truthful-reply-boundary",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Remove stale pointcloud-domain pollution and make support replies reflect real backend truth",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260407-support-session-recovery-and-plan-self-heal"
+      ],
+      "dod": [
+        "Generic or VN-style project requests no longer inherit pointcloud/drone/PLY/LAS defaults unless the user explicitly asks for that domain",
+        "When provider/backend has no customer-ready reply, support/frontend expose a truthful unavailable/blocked/no-formal-reply state instead of fake progress wording",
+        "Focused support/frontend/runtime regressions plus canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` pass from the updated task/report state"
+      ],
+      "artifacts": {
+        "produces": [
+          "frontend/project_domain_profile.py",
+          "frontend/progress_reply.py",
+          "frontend/project_manager_mode.py",
+          "frontend/missing_info_rewriter.py",
+          "frontend/response_composer.py",
+          "frontend/support_context_view.py",
+          "frontend/support_reply_policy.py",
+          "frontend/recovery_visibility.py",
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_support_recovery.py",
+          "tests/test_frontend_rendering_boundary.py",
+          "tests/test_support_bot_humanization.py",
+          "tests/test_runtime_wiring_contract.py",
+          "tests/test_support_reply_policy_regression.py",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260407-support-session-recovery-and-plan-self-heal.md",
+          "meta/reports/archive/20260407-support-session-recovery-and-plan-self-heal.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_frontend_rendering_boundary.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_reply_policy_regression.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-08: generic/VN intake now requires explicit pointcloud markers before any pointcloud branch activates, empty/deferred/blocked provider states render as truthful backend status instead of fake progress, helper extraction kept the repair within growth-guard limits, focused regressions passed, and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` returned 0."
+    },
+    {
+      "id": "ADHOC-20260408-support-chain-breakpoint-isolation",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Isolate support execution-chain breakpoints and add reproducible contract tests",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260408-support-domain-neutrality-and-truthful-reply-boundary"
+      ],
+      "dod": [
+        "The real support -> run binding -> file_request -> context_pack -> PLAN_draft -> runtime truth -> user-visible mapping chain is documented with concrete owners, artifacts, and failure surfaces",
+        "Non-Telegram tests reproduce librarian contract, plan gate, and support truth-mapping behavior, including at least one confirmed real breakpoint",
+        "Minimal observability changes make librarian/planner failures explicit and canonical verify plus focused regressions pass from the updated task/report state"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_librarian.py",
+          "tools/providers/local_exec.py",
+          "scripts/ctcp_dispatch.py",
+          "scripts/ctcp_orchestrate.py",
+          "scripts/ctcp_front_bridge.py",
+          "scripts/ctcp_support_bot.py",
+          "tests/test_local_librarian.py",
+          "tests/test_support_runtime_acceptance.py",
+          "tests/test_support_to_production_path.py",
+          "tests/test_support_bot_humanization.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260408-support-domain-neutrality-and-truthful-reply-boundary.md",
+          "meta/reports/archive/20260408-support-domain-neutrality-and-truthful-reply-boundary.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_local_librarian.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_runtime_acceptance.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_to_production_path.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "doing",
+      "notes": "Active on 2026-04-08: user requested test-first breakpoint isolation for a real support execution-chain fault, explicitly excluding Telegram-first validation and wording-only repairs."
+    },
+    {
+      "id": "ADHOC-20260409-reusable-llm-core-extraction-analysis",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Map and extract the reusable LLM/provider/router core from CTCP",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260408-support-chain-breakpoint-isolation"
+      ],
+      "dod": [
+        "All real LLM/provider/router/API/local-retrieval implementation files are mapped with concrete responsibilities and call-chain placement",
+        "Reusable generic modules are separated from CTCP-specific runtime/business modules with explicit reasons and coupling notes",
+        "A minimal reusable package design is produced with target directory tree, migration table, and proposed public interfaces for provider routing, OpenAI-compatible calls, Ollama-local calls, and repo retrieval"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260408-support-chain-breakpoint-isolation.md",
+          "meta/reports/archive/20260408-support-chain-breakpoint-isolation.md"
+        ],
+        "tests": [
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-09: produced a file-level extraction blueprint for reusable LLM/provider/router/retrieval code, identified coupling hotspots, and handed off a phased implementation plan."
+    },
+    {
+      "id": "ADHOC-20260409-reusable-llm-core-phase1-skeleton",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Extract llm_core phase 1 skeleton with compatibility shims and focused tests",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260409-reusable-llm-core-extraction-analysis"
+      ],
+      "dod": [
+        "A new llm_core package exists for the lowest-risk reusable seams: OpenAI-compatible client, repo search helper, and dispatch result contract",
+        "Legacy import paths remain valid through compatibility shims without changing the main behavior of ctcp_dispatch, ctcp_orchestrate, or ctcp_support_bot",
+        "Focused unit tests prove the new llm_core skeleton works independently before any provider or router split starts"
+      ],
+      "artifacts": {
+        "produces": [
+          "llm_core/clients/openai_compatible.py",
+          "llm_core/retrieval/repo_search.py",
+          "llm_core/dispatch/result.py",
+          "scripts/externals/openai_responses_client.py",
+          "tools/local_librarian.py",
+          "tools/dispatch_result_contract.py",
+          "tests/test_llm_core_openai_compatible.py",
+          "tests/test_llm_core_repo_search.py",
+          "tests/test_llm_core_dispatch_result.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260409-reusable-llm-core-extraction-analysis.md",
+          "meta/reports/archive/20260409-reusable-llm-core-extraction-analysis.md"
+        ],
+        "tests": [
+          "python -m unittest tests/test_llm_core_openai_compatible.py -v",
+          "python -m unittest tests/test_llm_core_repo_search.py -v",
+          "python -m unittest tests/test_llm_core_dispatch_result.py -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-09: extracted the Phase 1 llm_core skeleton for the OpenAI-compatible client, repo search helper, and dispatch result contract; kept legacy imports working via shims; added focused tests; and passed canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` without changing ctcp_dispatch/ctcp_orchestrate/ctcp_support_bot main behavior."
+    },
+    {
+      "id": "ADHOC-20260409-reusable-llm-core-runtime-rehook-telegram-smoke",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Rehook CTCP runtime imports to llm_core and prove Telegram blocker-aligned smoke path",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260409-reusable-llm-core-phase1-skeleton"
+      ],
+      "dod": [
+        "ctcp_dispatch, ctcp_orchestrate, ctcp_support_bot, and the relevant ctcp_front_bridge seams call the extracted core/adapters instead of only local switch logic",
+        "Focused integration tests cover orchestrate -> dispatch_execute, support_bot -> execute_provider, and front-bridge blocker synchronization",
+        "A minimal Telegram smoke path proves analysis.md -> file_request.json -> context_pack.json -> PLAN_draft.md progression and keeps user-visible status aligned with backend gate/blocker"
+      ],
+      "artifacts": {
+        "produces": [
+          "llm_core/dispatch/router.py",
+          "llm_core/providers/runtime.py",
+          "ctcp_adapters/dispatch_request_mapper.py",
+          "ctcp_adapters/dispatch_whiteboard.py",
+          "scripts/ctcp_dispatch.py",
+          "scripts/ctcp_orchestrate.py",
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_front_bridge.py",
+          "tests/test_provider_selection.py",
+          "tests/test_support_to_production_path.py",
+          "tests/test_support_runtime_acceptance.py",
+          "tests/test_runtime_wiring_contract.py",
+          "tests/test_telegram_runtime_smoke.py",
+          "artifacts/PLAN.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260409-reusable-llm-core-phase1-skeleton.md",
+          "meta/reports/archive/20260409-reusable-llm-core-phase1-skeleton.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_provider_selection.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_to_production_path.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_runtime_acceptance.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_telegram_runtime_smoke.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-09: added llm_core runtime/router facades plus ctcp_adapters request/whiteboard glue, rehooked ctcp_dispatch and support_bot through them, added focused integration coverage and a Telegram smoke path for analysis->file_request->context_pack->PLAN_draft blocker alignment, and passed canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` after fixing PLAN scope allow and a smoke-test growth-guard issue."
+    },
+    {
+      "id": "ADHOC-20260409-api-agent-core-split",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Split api_agent into llm_core provider shell plus CTCP artifact adapters without changing runtime entrypoints",
+      "owner_role": "Local Orchestrator",
+      "deps": [
+        "ADHOC-20260409-reusable-llm-core-runtime-rehook-telegram-smoke"
+      ],
+      "dod": [
+        "tools/providers/api_agent.py becomes a compatibility shim over llm_core/providers/api_provider.py and ctcp_adapters/ctcp_artifact_normalizers.py",
+        "runtime rehook and Telegram smoke remain green without touching ollama_agent.py",
+        "executed-but-target-missing still downgrades through the existing dispatch result contract"
+      ],
+      "artifacts": {
+        "produces": [
+          "llm_core/providers/api_provider.py",
+          "ctcp_adapters/ctcp_artifact_normalizers.py",
+          "tools/providers/api_agent.py",
+          "tests/test_api_provider_core.py",
+          "tests/test_ctcp_artifact_normalizers.py",
+          "tests/test_runtime_rehook_integration.py",
+          "tests/test_telegram_runtime_smoke.py",
+          "tests/test_provider_selection.py",
+          "tests/test_runtime_wiring_contract.py",
+          "tests/test_support_to_production_path.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_runtime_rehook_integration.py\" -v",
+          "python -m unittest discover -s tests -p \"test_telegram_runtime_smoke.py\" -v",
+          "python -m unittest discover -s tests -p \"test_provider_selection.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_to_production_path.py\" -v",
+          "python -m unittest discover -s tests -p \"test_api_provider_core.py\" -v",
+          "python -m unittest discover -s tests -p \"test_ctcp_artifact_normalizers.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-09: split tools/providers/api_agent.py into llm_core/providers/api_provider.py plus ctcp_adapters/ctcp_artifact_normalizers.py, kept the old path as a compatibility shim, preserved runtime rehook and Telegram smoke behavior without touching ollama_agent.py, added focused core/adapter tests, and passed canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` after repairing CURRENT.md workflow metadata, restoring B031 on the shim, and splitting the new core execute helper for growth-guard."
+    },
+    {
+      "id": "ADHOC-20260409-telegram-full-e2e-back-half-validation",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Run a Telegram-lane full E2E through PLAN, artifacts, review, verify, and deliver; repair back-half blockers if needed",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260409-api-agent-core-split"
+      ],
+      "dod": [
+        "A controlled Telegram-lane project request is advanced through PLAN.md, project artifacts, review/verify/final-deliver or ends with a concrete blocker and evidence",
+        "User-visible status replies stay aligned with backend gate/blocker truth throughout the exercised path",
+        "If a back-half gate bug is found, the minimal repair plus focused regression coverage lands in the same task"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "tests/test_telegram_runtime_smoke.py",
+          "tests/test_runtime_wiring_contract.py",
+          "tests/test_support_to_production_path.py",
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_front_bridge.py",
+          "scripts/ctcp_orchestrate.py",
+          "tools/**",
+          "llm_core/**",
+          "ctcp_adapters/**"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_telegram_runtime_smoke.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_rehook_integration.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_to_production_path.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-09: validated the controlled Telegram-lane back-half path through PLAN/artifacts/project_manifest/deliverable_index, repaired project-generation verify target selection in scripts/ctcp_orchestrate.py, repaired package-source discovery from project_manifest.project_root in scripts/ctcp_support_bot.py, proved the bound run 20260409-194339-832519-orchestrate to verify PASS, and produced a real zip plus support_public_delivery.json on the same support session. Live Telegram ingress remains blocked locally because the bot token is unavailable, so the final send step was exercised through the same emit_public_delivery path with a fake transport."
+    },
+    {
+      "id": "ADHOC-20260409-recovery-supervisor-watchdog",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Add a bounded recovery supervisor watchdog so waiting gates auto-retry, escalate explicitly, and stay frontend-truthful",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260409-telegram-full-e2e-back-half-validation"
+      ],
+      "dod": [
+        "Waiting gates that stall on missing artifacts are recognized as stalled and move through bounded retry states instead of remaining in weak waiting forever",
+        "Executed-but-target-missing cases surface as explicit EXEC_FAILED truth and exhausted retries surface as RECOVERY_NEEDED or BLOCKED_HARD truth",
+        "Telegram/frontend-visible task status shows the current stage, current blocker, automatic retry count, and next recovery action in sync with the backend runtime snapshot"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_front_bridge.py",
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_support_recovery.py",
+          "frontend/recovery_visibility.py",
+          "tests/test_support_to_production_path.py",
+          "tests/test_support_proactive_recovery_regression.py",
+          "tests/test_support_session_recovery_regression.py",
+          "tests/test_frontend_rendering_boundary.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_support_to_production_path.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_proactive_recovery_regression.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_session_recovery_regression.py\" -v",
+          "python -m unittest discover -s tests -p \"test_frontend_rendering_boundary.py\" -v",
+          "python -m unittest discover -s tests -p \"test_telegram_runtime_smoke.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-09: added a bridge-side recovery supervisor/watchdog that stamps gate retry metadata, auto-retries stalled waiting artifacts with bounded counts, escalates exhausted or non-landed cases to explicit RETRYING/RECOVERY_NEEDED/EXEC_FAILED/BLOCKED_HARD runtime truth, keeps Telegram/frontend-visible recovery text aligned with blocker+retry+recovery-action state, added focused regressions, and passed canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code`."
+    },
+    {
+      "id": "ADHOC-20260409-live-telegram-back-half-recovery-truth",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Run a real Telegram-lane full E2E and repair back-half recovery truth plus visible status drift",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260409-recovery-supervisor-watchdog"
+      ],
+      "dod": [
+        "A real Telegram-bound run is driven through the post-PLAN gates until project artifacts, review, verify, and deliver complete or a concrete blocker is captured with evidence",
+        "If a back-half gate fails or stalls, runtime truth surfaces the latest blocker and explicit recovery/failure state instead of stale waiting or misleading continue text",
+        "Telegram/support-visible status remains aligned with the latest backend gate truth for the exercised back-half path"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_front_bridge.py",
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_support_recovery.py",
+          "frontend/recovery_visibility.py",
+          "tests/test_support_to_production_path.py",
+          "tests/test_support_session_recovery_regression.py",
+          "tests/test_telegram_runtime_smoke.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_support_to_production_path.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_session_recovery_regression.py\" -v",
+          "python -m unittest discover -s tests -p \"test_telegram_runtime_smoke.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-09: drove a real Telegram-bound run into the post-PLAN gates, repaired stale back-half blocker/recovery truth so support-visible state aligned to the backend invalid source_generation_report blocker, and captured the next concrete root cause as a generated run_project_gui.py IndentationError."
+    },
+    {
+      "id": "ADHOC-20260410-project-generation-launcher-syntax-fix",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Repair project-generation launcher synthesis so generated Python entrypoints parse and source_generation can pass honestly",
+      "owner_role": "Local Orchestrator",
+      "deps": [
+        "ADHOC-20260409-live-telegram-back-half-recovery-truth"
+      ],
+      "dod": [
+        "The generator path that materializes run_project_gui.py is traced to the concrete template/helper that emitted invalid indentation and the template is fixed at the source",
+        "Generic source validation only reports passed when generated Python business files are syntactically parseable in addition to existing runtime probes",
+        "Focused project-generation tests plus a real back-half rerun prove source_generation_report.json either passes or advances to a newer explicit blocker without relaxing invalid-artifact truth"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/providers/project_generation_business_templates.py",
+          "tools/providers/project_generation_validation.py",
+          "tools/providers/project_generation_artifacts.py",
+          "tests/test_project_generation_artifacts.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_project_generation_artifacts.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_to_production_path.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_session_recovery_regression.py\" -v",
+          "python -m unittest discover -s tests -p \"test_telegram_runtime_smoke.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-10: fixed the launcher synthesis root cause in tools/providers/project_generation_business_templates.py, tightened syntax-aware generic_validation in tools/providers/project_generation_validation.py, proved the real Telegram-bound run 20260409-215339-177800-orchestrate advanced from blocked source_generation_report.json to verify PASS, and kept invalid-artifact truth strict."
+    },
+    {
+      "id": "ADHOC-20260410-real-visual-evidence-and-public-delivery",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Add real screenshot evidence and public delivery package sending for Telegram-lane project outputs",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260410-project-generation-launcher-syntax-fix"
+      ],
+      "dod": [
+        "GUI-first and web-first project-generation runs produce real screenshot artifacts under the generated project or run artifacts instead of leaving visual_evidence_status at placeholder_only",
+        "Verify-pass delivery paths generate a real zip package plus screenshot delivery records in support_public_delivery.json and Telegram final-result replies prioritize sending those files",
+        "Focused regressions and one real Telegram-lane delivery exercise prove screenshot existence, zip existence, delivery manifest population, and user-visible final delivery evidence"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/providers/project_generation_source_helpers.py",
+          "tools/providers/project_generation_artifacts.py",
+          "tools/providers/project_generation_business_templates.py",
+          "tools/providers/project_generation_generic_archetypes.py",
+          "scripts/project_generation_gate.py",
+          "scripts/ctcp_support_bot.py",
+          "tests/test_project_generation_artifacts.py",
+          "tests/test_support_public_delivery_state.py",
+          "tests/test_support_bot_humanization.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_project_generation_artifacts.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_public_delivery_state.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_to_production_path.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "doing",
+      "notes": "Active on 2026-04-10: generation truth is now passing, but the real delivery chain still lacks true screenshot evidence and Telegram-visible package delivery; this task adds real visual evidence capture plus public zip/photo delivery without weakening verify truth."
     }
   ]
 }

@@ -19,12 +19,26 @@ from .conversation_mode_router import (
 from .frontdesk_state_machine import normalize_frontdesk_state
 from .message_sanitizer import sanitize_internal_text
 from .missing_info_rewriter import infer_missing_fields_from_text, rewrite_missing_requirements
+from .progress_reply import (
+    compose_progress_update_reply,
+    is_progress_update_request,
+    looks_like_progress_grounded_reply,
+    normalize_progress_binding,
+)
+from .project_domain_profile import DOMAIN_POINTCLOUD, DOMAIN_VISUAL_NOVEL
 from .project_manager_mode import (
     build_default_assumptions,
     extract_known_project_facts,
     is_generic_intake_question,
     requirement_information_score,
     select_best_requirement_source,
+)
+from .recovery_visibility import (
+    apply_frontdesk_truth_state,
+    backend_truth_details,
+    render_backend_truth_text,
+    render_internal_recovery_text,
+    reply_truth_note_fields,
 )
 from .state_resolver import VISIBLE_STATES, VisibleState, resolve_visible_state
 
@@ -78,7 +92,6 @@ _FORBIDDEN_PUBLIC_TOKENS = (
     "tool logs",
     "artifact dump",
     "analysis.md",
-    "plan_draft.md",
     "blocked_needs_input",
     "waiting for",
     "outbox",
@@ -95,17 +108,6 @@ _FORBIDDEN_PUBLIC_TOKENS = (
 _FORBIDDEN_PUBLIC_LABEL_RE = re.compile(r"\b(CONTEXT|CONSTRAINTS|EXTERNALS|PLAN|PATCH)\b")
 _RC_FIELD_RE = re.compile(r"\b(?:rc|exit[_ ]?code|return[_ ]?code)\s*[:=]?\s*\d+\b", re.IGNORECASE)
 _WAITING_INTERNAL_REQUEST_RE = re.compile(r"\bwaiting\s+for\s+[^\s]+\.(?:md|json|patch)\b", re.IGNORECASE)
-_PROGRESS_UPDATE_PATTERNS_ZH = (
-    re.compile(r"(进度|状态|做到什么程度|做到哪|做到哪一步|到哪了|到哪一步|做了什么|现在什么情况|到什么阶段|卡在哪)"),
-)
-_PROGRESS_UPDATE_PATTERNS_EN = (
-    re.compile(
-        r"\b(progress|status|how far|where are we|what(?:'| i)?s done|what has been done|what did you do|what.?s the update|what.?s the status)\b",
-        re.IGNORECASE,
-    ),
-)
-
-
 def _question_block(questions: list[str], *, lang: str) -> str:
     picked = [q.strip() for q in questions if str(q).strip()][:2]
     if not picked:
@@ -130,150 +132,30 @@ def _join_questions(questions: list[str], *, lang: str) -> str:
     return f"{picked[0]}另外，{picked[1]}"
 
 
-def _is_progress_update_request(text: str) -> bool:
-    raw = re.sub(r"\s+", " ", str(text or "").strip())
-    if not raw:
-        return False
-    low = raw.lower()
-    return any(p.search(raw) for p in _PROGRESS_UPDATE_PATTERNS_ZH) or any(p.search(low) for p in _PROGRESS_UPDATE_PATTERNS_EN)
-
-
-def _looks_like_progress_grounded_reply(text: str, *, lang: str) -> bool:
-    raw = re.sub(r"\s+", " ", str(text or "").strip())
-    if not raw:
-        return False
-    low = raw.lower()
-    if str(lang or "").strip().lower().startswith("en"):
-        markers = (
-            "current",
-            "status",
-            "phase",
-            "progress",
-            "blocked",
-            "completed",
-            "next step",
-            "next action",
-        )
-        return any(marker in low for marker in markers)
-    markers = (
-        "当前",
-        "目前",
-        "状态",
-        "阶段",
-        "进展",
-        "卡点",
-        "阻塞",
-        "已完成",
-        "下一步",
-    )
-    return any(marker in raw for marker in markers)
-
-
-def _normalize_progress_binding(raw: Any) -> dict[str, Any]:
-    if not isinstance(raw, Mapping):
-        return {}
-    done_items = [
-        re.sub(r"\s+", " ", str(item or "").strip())
-        for item in raw.get("last_confirmed_items", [])
-        if re.sub(r"\s+", " ", str(item or "").strip())
-    ] if isinstance(raw.get("last_confirmed_items", []), list) else []
-    proof_refs = [
-        re.sub(r"\s+", " ", str(item or "").strip())
-        for item in raw.get("proof_refs", [])
-        if re.sub(r"\s+", " ", str(item or "").strip())
-    ] if isinstance(raw.get("proof_refs", []), list) else []
-    normalized = {
-        "current_task_goal": re.sub(r"\s+", " ", str(raw.get("current_task_goal", "")).strip()),
-        "current_phase": re.sub(r"\s+", " ", str(raw.get("current_phase", "")).strip()),
-        "last_confirmed_items": done_items,
-        "current_blocker": re.sub(r"\s+", " ", str(raw.get("current_blocker", "")).strip()),
-        "message_purpose": re.sub(r"\s+", " ", str(raw.get("message_purpose", "")).strip()),
-        "question_needed": re.sub(r"\s+", " ", str(raw.get("question_needed", "")).strip().lower()),
-        "next_action": re.sub(r"\s+", " ", str(raw.get("next_action", "")).strip()),
-        "blocking_question": re.sub(r"\s+", " ", str(raw.get("blocking_question", "")).strip()),
-        "proof_refs": proof_refs,
-    }
-    if not any(
-        (
-            normalized["current_task_goal"],
-            normalized["current_phase"],
-            normalized["last_confirmed_items"],
-            normalized["current_blocker"],
-            normalized["next_action"],
-            normalized["blocking_question"],
-            normalized["proof_refs"],
-        )
-    ):
-        return {}
-    return normalized
-
-
-def _compose_progress_update_reply(
-    *,
-    binding: Mapping[str, Any],
-    visible_state: VisibleState,
-    lang: str,
-    fallback_question: str = "",
-) -> tuple[str, list[str]]:
-    done_items = _dedupe_items(list(binding.get("last_confirmed_items", []) or []), limit=3)
-    phase = re.sub(r"\s+", " ", str(binding.get("current_phase", "")).strip())
-    blocker = re.sub(r"\s+", " ", str(binding.get("current_blocker", "")).strip())
-    next_action = re.sub(r"\s+", " ", str(binding.get("next_action", "")).strip())
-    question_needed = str(binding.get("question_needed", "")).strip().lower() in {"yes", "true", "1"}
-    blocking_question = re.sub(r"\s+", " ", str(binding.get("blocking_question", "")).strip()) or re.sub(
-        r"\s+", " ", str(fallback_question or "").strip()
-    )
-    rows: list[str] = []
-    questions: list[str] = []
-
-    if lang == "en":
-        if done_items:
-            rows.append(f"Confirmed progress so far: {'; '.join(done_items)}.")
-        if blocker and blocker.lower() != "none":
-            if phase:
-                rows.append(f"Current phase: {phase}. The blocker is {blocker}.")
-            else:
-                rows.append(f"The current blocker is {blocker}.")
-        else:
-            phase_text = phase or ("delivery" if visible_state == "DONE" else "execution")
-            rows.append(f"Current phase: {phase_text}. There is no extra blocker right now.")
-        if next_action:
-            rows.append(f"Next I will {next_action}.")
-        if question_needed and blocking_question:
-            rows.append(f"Before I continue, I need your call on this: {blocking_question}")
-            questions = [blocking_question]
-        return "\n\n".join([row for row in rows if row]).strip(), questions
-
-    if done_items:
-        rows.append("我这边已经完成：" + "、".join(done_items) + "。")
-    if blocker and blocker.lower() != "none":
-        if phase:
-            rows.append(f"目前在{phase}这个阶段，当前卡点是：{blocker}。")
-        else:
-            rows.append(f"当前卡点是：{blocker}。")
-    else:
-        phase_text = phase or ("结果整理/交付" if visible_state == "DONE" else "执行推进")
-        rows.append(f"目前在{phase_text}这个阶段，主流程还在推进，暂时没有新增阻塞。")
-    if next_action:
-        rows.append(f"下一步我会继续处理：{next_action}。")
-    if question_needed and blocking_question:
-        rows.append(f"继续前我这边还差你拍板这个点：{blocking_question}")
-        questions = [blocking_question]
-    return "\n\n".join([row for row in rows if row]).strip(), questions
-
-
 def _execution_direction_text(note: Mapping[str, Any], lang: str) -> str:
     explicit = str(note.get("execution_direction", "")).strip()
     if explicit:
         return explicit
+    known_facts = note.get("known_facts", {})
+    if not isinstance(known_facts, Mapping):
+        known_facts = {}
+    project_type = str(known_facts.get("project_type", "")).strip().lower()
     assumptions = note.get("assumptions", {})
     if not isinstance(assumptions, Mapping):
         assumptions = {}
     semantic_plan = str(assumptions.get("semantic_plan", "")).strip()
     if lang == "en":
+        if project_type == DOMAIN_VISUAL_NOVEL:
+            return "Next I will lock the smallest runnable VN workbench path first: structured asset entry, scene ordering, and a first export target."
+        if project_type != DOMAIN_POINTCLOUD:
+            return "Next I will lock the smallest runnable user flow first, then keep non-critical extensions behind that main path."
         if semantic_plan == "integrate_semantic_in_v1":
             return "I will prioritize speed, land a runnable main pipeline first, and integrate semantic capability directly in V1."
         return "I will prioritize speed, land a runnable main pipeline first, and keep semantic capability as an extension path."
+    if project_type == DOMAIN_VISUAL_NOVEL:
+        return "接下来我会先按“本地可运行、资料录入与场景整理优先、先锁定一条导出路径”的方向整理第一版方案。"
+    if project_type != DOMAIN_POINTCLOUD:
+        return "接下来我会先按“先跑通最小可用主流程，再补非关键扩展”的方向整理第一版方案。"
     if semantic_plan == "integrate_semantic_in_v1":
         return "接下来我会先按“优先速度、先跑通主流程、语义能力第一版直接接入”的方向整理第一版方案。"
     return "接下来我会先按“优先速度、先跑通主流程、语义能力后接入或并联”的方向整理第一版方案，不先让你补一堆非关键细节。"
@@ -346,24 +228,39 @@ def _question_already_answered(question: str, known_facts: Mapping[str, Any]) ->
     q = str(question or "").lower()
     if not q:
         return True
+    project_type = str(known_facts.get("project_type", "")).strip().lower()
     input_mode = str(known_facts.get("input_mode", "unknown"))
     runtime_target = str(known_facts.get("runtime_target", "unknown"))
     deployment = str(known_facts.get("deployment_boundary", "unknown"))
     output_format = str(known_facts.get("output_format", "unknown"))
     semantic = str(known_facts.get("semantic_integration_level", "unknown"))
-    if any(k in q for k in ("单目", "多视角", "single", "multi-view")) and input_mode not in {"", "unknown"}:
+    if project_type == DOMAIN_POINTCLOUD:
+        if any(k in q for k in ("单目", "多视角", "single", "multi-view")) and input_mode not in {"", "unknown"}:
+            return True
+        if any(k in q for k in ("实时", "离线", "real-time", "offline")) and runtime_target not in {
+            "",
+            "unknown",
+            "speed_first_unresolved",
+        }:
+            return True
+        if any(k in q for k in ("机载", "工作站", "edge", "server")) and deployment not in {"", "unknown"}:
+            return True
+        if any(k in q for k in ("ply", "las", "pcd", "输出")) and output_format not in {"", "unknown"}:
+            return True
+        if any(k in q for k in ("语义", "semantic")) and semantic not in {"", "unknown"}:
+            return True
+        return False
+    if project_type == DOMAIN_VISUAL_NOVEL:
+        if any(k in q for k in ("角色卡", "章节", "场景", "资料")) and input_mode not in {"", "unknown"}:
+            return True
+        if any(k in q for k in ("ren'py", "renpy", "json", "导出", "脚本")) and output_format not in {"", "unknown"}:
+            return True
+        if any(k in q for k in ("桌面", "浏览器", "本地", "desktop", "browser")) and runtime_target not in {"", "unknown"}:
+            return True
+        return False
+    if any(k in q for k in ("桌面", "浏览器", "命令行", "desktop", "browser", "cli")) and runtime_target not in {"", "unknown"}:
         return True
-    if any(k in q for k in ("实时", "离线", "real-time", "offline")) and runtime_target not in {
-        "",
-        "unknown",
-        "speed_first_unresolved",
-    }:
-        return True
-    if any(k in q for k in ("机载", "工作站", "edge", "server")) and deployment not in {"", "unknown"}:
-        return True
-    if any(k in q for k in ("ply", "las", "pcd", "输出")) and output_format not in {"", "unknown"}:
-        return True
-    if any(k in q for k in ("语义", "semantic")) and semantic not in {"", "unknown"}:
+    if any(k in q for k in ("json", "脚本", "脚手架", "导出", "输出")) and output_format not in {"", "unknown"}:
         return True
     return False
 
@@ -400,6 +297,7 @@ def _is_low_signal_project_reply(text: str) -> bool:
         "收到，继续推进",
         "继续推进。",
         "我会继续推进",
+        "我继续推进",
         "我先继续处理",
         "收到，目标很清晰",
     )
@@ -724,7 +622,6 @@ def _stage_requirement_extraction(
     state.assumptions = _serialize_key_values(assumptions_map)
     return state
 
-
 def _stage_project_manager_draft(
     state: InternalReplyPipelineState,
     *,
@@ -746,9 +643,7 @@ def _stage_project_manager_draft(
         active_task_context["known_facts"] = dict(known_facts)
     allow_followup = bool(notes.get("allow_project_followup", True)) and can_emit_project_followup(active_task_context)
 
-    merged_raw = "\n".join(
-        x for x in [raw_reply_text, raw_next_question, str(raw_backend_state.get("reason", ""))] if str(x).strip()
-    )
+    merged_raw = "\n".join(x for x in [raw_reply_text, raw_next_question, str(raw_backend_state.get("reason", ""))] if str(x).strip())
     explicit_missing = raw_backend_state.get("missing_fields", [])
     if isinstance(explicit_missing, str):
         explicit_missing = [explicit_missing]
@@ -804,15 +699,17 @@ def _stage_project_manager_draft(
         raw_state["blocked_needs_input"] = False
         raw_state["needs_input"] = False
         raw_state["missing_count"] = 0
+    progress_binding = normalize_progress_binding(raw_backend_state.get("progress_binding", {}))
+    internal_blocker = str(progress_binding.get("current_blocker", "")).strip() or str(raw_state.get("reason", "")).strip() or str(raw_state.get("blocking_reason", "")).strip()
+    recovery_next_action = str(progress_binding.get("next_action", "")).strip() or str(raw_state.get("next_action", "")).strip()
+    reply_truth = backend_truth_details(raw_state)
+    reply_truth_next_action = str(reply_truth.get("next_action", "")).strip() or recovery_next_action
     state.visible_state = resolve_visible_state(raw_state)
     if mode in {"GREETING", "SMALLTALK", "CAPABILITY_QUERY", "STATUS_QUERY", "PROJECT_INTAKE"} and state.visible_state in {
         "BLOCKED_NEEDS_INPUT",
         "WAITING_FOR_DECISION",
     }:
         state.visible_state = "UNDERSTOOD"
-    # When run_status is "blocked" but visible_state is EXECUTING (internal
-    # gate block), model text about specific tech/platforms is unreliable
-    # because no real work has started yet.  Use the template reply instead.
     internal_gate_block = (
         str(raw_state.get("run_status", "")).lower() == "blocked"
         and not raw_state.get("blocked_needs_input")
@@ -822,9 +719,20 @@ def _stage_project_manager_draft(
         and bool(
             raw_state.get("run_status") or raw_state.get("waiting_for_decision") or raw_state.get("blocked_needs_input")
         )
-    ) or internal_gate_block
+    ) or internal_gate_block or bool(reply_truth.get("has_truth", False))
     raw_sanitized = sanitize_internal_text(raw_reply_text)
     raw_text = raw_sanitized.text.strip()
+    truth_notes = reply_truth_note_fields(
+        raw_state,
+        internal_blocker=internal_blocker,
+        next_action=reply_truth_next_action,
+        temporary_failure=bool(
+            raw_sanitized.redactions > 0
+            and state.visible_state == "BLOCKED_NEEDS_INPUT"
+            and has_valid_task_summary(active_task_context)
+        ),
+        allow_internal_error_rewrite=bool(has_valid_task_summary(active_task_context)),
+    )
     if raw_text and not force_state_grounded_reply:
         if not _should_fallback_from_raw_project_reply(
             raw_reply_text=raw_reply_text,
@@ -844,12 +752,8 @@ def _stage_project_manager_draft(
                 notes={
                     **dict(notes),
                     "lang": lang,
-                    "backend_temporary_failure": bool(
-                        raw_sanitized.redactions > 0
-                        and state.visible_state == "BLOCKED_NEEDS_INPUT"
-                        and has_valid_task_summary(active_task_context)
-                    ),
-                    "allow_internal_error_rewrite": bool(has_valid_task_summary(active_task_context)),
+                    "known_facts": dict(known_facts),
+                    **truth_notes,
                 },
             )
     else:
@@ -860,12 +764,8 @@ def _stage_project_manager_draft(
             notes={
                 **dict(notes),
                 "lang": lang,
-                "backend_temporary_failure": bool(
-                    raw_sanitized.redactions > 0
-                    and state.visible_state == "BLOCKED_NEEDS_INPUT"
-                    and has_valid_task_summary(active_task_context)
-                ),
-                "allow_internal_error_rewrite": bool(has_valid_task_summary(active_task_context)),
+                "known_facts": dict(known_facts),
+                **truth_notes,
             },
         )
     return state
@@ -1004,7 +904,6 @@ def run_internal_reply_pipeline(
     frontdesk_name = str(frontdesk_state.get("state", "")).strip().lower()
     frontdesk_interrupt = str(frontdesk_state.get("interrupt_kind", "")).strip().lower()
     is_decision_state = frontdesk_name in {"showing_decision", "awaitdecision"}
-    is_error_state = frontdesk_name in {"showing_error", "error"}
     is_result_state = frontdesk_name in {"showing_result", "returnresult"}
     is_recoverish_state = frontdesk_name in {"showing_error", "interruptrecover"}
     if is_decision_state:
@@ -1012,11 +911,13 @@ def run_internal_reply_pipeline(
         raw_backend["decisions_count"] = max(int(raw_backend.get("decisions_count", 0) or 0), max(1, len(decision_points)))
         if frontdesk_question and not str(raw_next_question or "").strip():
             raw_next_question = frontdesk_question
-    elif is_error_state:
-        raw_backend["blocked_needs_input"] = True
-        raw_backend["needs_input"] = bool(frontdesk_question or str(raw_next_question or "").strip())
     elif is_result_state:
         raw_backend["stage"] = str(raw_backend.get("stage", "")).strip() or "done"
+    raw_backend, raw_next_question = apply_frontdesk_truth_state(
+        raw_backend,
+        frontdesk_state=frontdesk_state,
+        raw_next_question=frontdesk_question or raw_next_question,
+    )
 
     shared_binding: dict[str, Any] = {}
     if shared_state_to_frontend_binding is not None:
@@ -1073,10 +974,10 @@ def run_internal_reply_pipeline(
     if shared_binding:
         state.conversation_context["shared_state_consumed"] = True
         state.review_flags.append("shared_state_binding_consumed")
-    progress_binding = _normalize_progress_binding(raw_backend.get("progress_binding", {}))
+    progress_binding = normalize_progress_binding(raw_backend.get("progress_binding", {}))
     progress_requested = bool(progress_binding) and (
         mode == "STATUS_QUERY"
-        or _is_progress_update_request(latest_user_message)
+        or is_progress_update_request(latest_user_message)
         or ((is_recoverish_state or is_result_state) and frontdesk_interrupt in {"status_query", "result_query"})
     )
 
@@ -1092,7 +993,7 @@ def run_internal_reply_pipeline(
             state.visible_state = resolve_visible_state(raw_state)
         if state.visible_state == "NEEDS_ONE_OR_TWO_DETAILS":
             state.visible_state = "EXECUTING"
-        progress_reply, progress_questions = _compose_progress_update_reply(
+        progress_reply, progress_questions = compose_progress_update_reply(
             binding=progress_binding,
             visible_state=state.visible_state,
             lang=lang,
@@ -1103,7 +1004,7 @@ def run_internal_reply_pipeline(
             bool(raw_progress)
             and (not _raw_project_reply_has_internal_marker(raw_progress))
             and (not _is_low_signal_project_reply(raw_progress))
-            and _looks_like_progress_grounded_reply(raw_progress, lang=lang)
+            and looks_like_progress_grounded_reply(raw_progress, lang=lang)
         )
         if prefer_raw_progress:
             state.review_flags.append("progress_binding_agent_reply_preferred")
@@ -1117,7 +1018,6 @@ def run_internal_reply_pipeline(
         state = _stage_safety_sanitization(state, lang=lang)
         state = _stage_final_emission(state)
         return state
-
     if is_decision_state:
         state.visible_state = "WAITING_FOR_DECISION"
         if frontdesk_question:
@@ -1137,17 +1037,11 @@ def run_internal_reply_pipeline(
     non_project_modes = {"GREETING", "SMALLTALK", "CAPABILITY_QUERY", "STATUS_QUERY", "PROJECT_INTAKE"}
     if mode in non_project_modes:
         if mode == "STATUS_QUERY" and has_active_task:
-            if preferred_visible_state in VISIBLE_STATES:
-                resolved_visible_state = preferred_visible_state
-            else:
-                resolved_visible_state = resolve_visible_state(raw_backend)
+            resolved_visible_state = preferred_visible_state if preferred_visible_state in VISIBLE_STATES else resolve_visible_state(raw_backend)
             if resolved_visible_state in {"WAITING_FOR_DECISION", "BLOCKED_NEEDS_INPUT", "DONE", "EXECUTING"}:
                 state.visible_state = resolved_visible_state
             else:
                 state.visible_state = "EXECUTING"
-            # Agent-first: prefer model text for status replies when it is
-            # substantive and free of internal markers.  Fall back to
-            # template only when the model produced nothing usable.
             raw_sanitized = sanitize_internal_text(raw_reply_text)
             raw_text = raw_sanitized.text.strip()
             if raw_text and not _reply_leaks_project_context(raw_text, latest_user_message):
@@ -1157,7 +1051,7 @@ def run_internal_reply_pipeline(
                     visible_state=state.visible_state,
                     task_summary=state.task_summary,
                     followup_questions=[],
-                    notes={"lang": lang},
+                    notes={"lang": lang, **reply_truth_note_fields(raw_backend)},
                 )
                 summary_text = re.sub(r"\s+", " ", str(state.task_summary or "")).strip()
                 if summary_text:
@@ -1175,30 +1069,31 @@ def run_internal_reply_pipeline(
             state.visible_state = "UNDERSTOOD"
         raw_sanitized = sanitize_internal_text(raw_reply_text)
         raw_text = raw_sanitized.text.strip()
+        reply_truth = backend_truth_details(raw_backend)
         if raw_text and mode in {"GREETING", "SMALLTALK", "CAPABILITY_QUERY"} and _reply_leaks_project_context(raw_text, latest_user_message):
-            # Safety guard: model hallucinated project-specific content on a
-            # greeting/smalltalk turn (e.g. stale session context leaking).
-            # Fall back to template entry reply.
             raw_text = ""
-        if raw_text:
-            # Agent-first: always prefer the model's own text when it
-            # produces usable (post-sanitisation) content.  Templates
-            # serve only as fallback for empty / fully-redacted output.
+        if raw_text and not (mode == "PROJECT_INTAKE" and bool(reply_truth.get("has_truth", False))):
             state.draft_reply = raw_text
         else:
-            state.draft_reply = _compose_entry_reply(
-                mode=mode,
-                lang=lang,
-                has_active_task=has_active_task,
-                latest_user_message=latest_user_message,
-                rag_hints=note.get("entry_hint_bank") if isinstance(note.get("entry_hint_bank"), Mapping) else None,
-            )
+            if mode == "PROJECT_INTAKE" and bool(reply_truth.get("has_truth", False)):
+                state.draft_reply = compose_user_reply(
+                    visible_state="UNDERSTOOD",
+                    task_summary=state.task_summary,
+                    followup_questions=[],
+                    notes={"lang": lang, **reply_truth_note_fields(reply_truth)},
+                )
+            else:
+                state.draft_reply = _compose_entry_reply(
+                    mode=mode,
+                    lang=lang,
+                    has_active_task=has_active_task,
+                    latest_user_message=latest_user_message,
+                    rag_hints=note.get("entry_hint_bank") if isinstance(note.get("entry_hint_bank"), Mapping) else None,
+                )
         explicit_question = sanitize_internal_text(raw_next_question).text.strip()
         if mode == "PROJECT_INTAKE" and explicit_question and not is_generic_intake_question(explicit_question, lang):
             allow_tradeoff = has_valid_task_summary({"task_summary": state.task_summary, "conversation_mode": mode})
-            if (not _is_generic_opening_question(explicit_question, lang)) and (
-                (not is_generic_tradeoff_question(explicit_question)) or allow_tradeoff
-            ):
+            if (not _is_generic_opening_question(explicit_question, lang)) and ((not is_generic_tradeoff_question(explicit_question)) or allow_tradeoff):
                 if not _is_internal_question_leak(explicit_question):
                     state.candidate_questions = _dedupe_items([explicit_question], limit=1)
         if state.candidate_questions:
@@ -1272,9 +1167,9 @@ def _user_reply_hint_defaults(lang: str) -> dict[str, str]:
             "done": "Done. I can move to the next step whenever you are ready.",
             "waiting_decision": "I need one decision from you before I continue.",
             "blocked_input": "I need one key detail to continue this task.",
-            "blocked_internal": "I hit an internal blocker. I can continue as soon as this input is confirmed.",
-            "blocked_temp_fail": "The processing path had a temporary issue. I can continue from your latest direction.",
-            "executing": "I am continuing this task and keeping it aligned with your latest requirement.",
+            "blocked_internal": "The backend is blocked right now, but this step does not need extra input from you.",
+            "blocked_temp_fail": "There is still no customer-ready reply for this turn, so I am only syncing the confirmed state.",
+            "executing": "The task is still moving, and I will sync the next visible change instead of guessing progress.",
             "understood": "Understood.",
             "needs_details": "I need one or two key details before I proceed.",
         }
@@ -1282,9 +1177,9 @@ def _user_reply_hint_defaults(lang: str) -> dict[str, str]:
         "done": "已完成当前步骤，你确认后我继续下一步。",
         "waiting_decision": "我这边需要你确认一个决策点再继续。",
         "blocked_input": "我还缺一个关键信息，补上后我就继续推进。",
-        "blocked_internal": "当前遇到内部阻塞，确认这条输入后我可以继续。",
-        "blocked_temp_fail": "处理链路刚才出现临时波动，我会按你最新方向继续推进。",
-        "executing": "我正在继续推进这项任务，会保持和你当前要求一致。",
+        "blocked_internal": "当前后台有阻塞，但这一步不需要你额外补信息。",
+        "blocked_temp_fail": "当前还没有可直接发送的正式回复，我先只同步已经确认的状态。",
+        "executing": "当前还在推进中；一有新的可见变化我就马上同步你。",
         "understood": "收到。",
         "needs_details": "我还需要一到两个关键细节再往下走。",
     }
@@ -1306,6 +1201,30 @@ def compose_user_reply(
     temporary_failure = bool(note.get("backend_temporary_failure", False))
     execution_direction = _execution_direction_text(note, lang)
     allow_internal_error_rewrite = bool(note.get("allow_internal_error_rewrite", True))
+    internal_blocked_reply = render_internal_recovery_text(
+        lang_hint=lang,
+        blocker=str(note.get("internal_blocker", "") or note.get("current_blocker", "") or note.get("blocked_reason", "")),
+        next_action=str(note.get("recovery_next_action", "") or note.get("next_action", "") or note.get("recovery_hint", "")),
+    )
+    reply_truth = backend_truth_details(note)
+    if bool(reply_truth.get("has_truth", False)):
+        truth_status = str(reply_truth.get("status", ""))
+        if truth_status in {
+            "backend_unavailable",
+            "backend_deferred",
+            "backend_failed",
+            "backend_blocked",
+            "low_confidence_fallback",
+        }:
+            return render_backend_truth_text(
+                lang_hint=lang,
+                status=truth_status,
+                reason=str(reply_truth.get("reason", "")),
+                next_action=str(reply_truth.get("next_action", "")),
+                source_confidence=str(reply_truth.get("source_confidence", "")),
+                current_phase=str(reply_truth.get("current_phase", "")),
+                last_confirmed_items=reply_truth.get("last_confirmed_items", []),
+            )
 
     bank = _user_reply_hint_bank(lang)
     defaults = _user_reply_hint_defaults(lang)
@@ -1326,6 +1245,15 @@ def compose_user_reply(
             return head
         if temporary_failure:
             head = _pick_hint(bank["blocked_temp_fail"], seed, defaults["blocked_temp_fail"])
+        elif (not joined_q) and (
+            str(note.get("internal_blocker", "")).strip()
+            or str(note.get("current_blocker", "")).strip()
+            or str(note.get("blocked_reason", "")).strip()
+            or str(note.get("recovery_next_action", "")).strip()
+            or str(note.get("next_action", "")).strip()
+            or str(note.get("recovery_hint", "")).strip()
+        ):
+            return internal_blocked_reply
         else:
             head = _pick_hint(bank["blocked_internal"], seed, defaults["blocked_internal"])
         if joined_q:

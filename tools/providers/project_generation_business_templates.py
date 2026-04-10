@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import re
-import textwrap
 from pathlib import Path
 from typing import Any
 
@@ -35,56 +34,61 @@ def _context_lines(context_used: list[str]) -> str:
 
 def _launcher_script(*, package_name: str, mode_label: str, startup_rel: str) -> str:
     run_mode = "gui" if "gui" in startup_rel else ("web" if "web" in startup_rel else "cli")
-    serve_branch = ""
+    mode_lines = ["pass"]
     if run_mode == "gui":
-        serve_branch = textwrap.dedent(
-            """
-            if not args.headless and len(sys.argv) == 1:
-                import tkinter as tk
-                root = tk.Tk()
-                root.title(args.project_name)
-                tk.Label(root, text="GUI-first launcher is ready; rerun with --headless for scripted export.").pack(padx=12, pady=12)
-                root.mainloop()
-                return 0
-            """
-        )
+        mode_lines = [
+            "if not args.headless and len(sys.argv) == 1:",
+            "    import tkinter as tk",
+            "    root = tk.Tk()",
+            "    root.title(args.project_name)",
+            '    tk.Label(root, text="GUI-first launcher is ready; rerun with --headless for scripted export.").pack(padx=12, pady=12)',
+            "    root.mainloop()",
+            "    return 0",
+        ]
     elif run_mode == "web":
-        serve_branch = textwrap.dedent(
-            """
-            if args.serve:
-                preview = Path(args.out) / "preview.html"
-                preview.parent.mkdir(parents=True, exist_ok=True)
-                preview.write_text("<html><body><h1>Web-first preview placeholder</h1></body></html>\\n", encoding="utf-8")
-                print(json.dumps({"preview_html": str(preview)}, ensure_ascii=False, indent=2))
-                return 0
-            """
-        )
-    return textwrap.dedent(
-        f"""
-        from __future__ import annotations
-        import argparse, json, sys
-        from pathlib import Path
-        ROOT = Path(__file__).resolve().parents[1]
-        SRC = ROOT / "src"
-        if str(SRC) not in sys.path:
-            sys.path.insert(0, str(SRC))
-        from {package_name}.service import generate_project
-        def main() -> int:
-            parser = argparse.ArgumentParser(description="{mode_label}")
-            parser.add_argument("--goal", default="project generation request")
-            parser.add_argument("--project-name", default="Project Copilot")
-            parser.add_argument("--out", default=str(ROOT / "generated_output"))
-            parser.add_argument("--headless", action="store_true")
-            parser.add_argument("--serve", action="store_true")
-            args = parser.parse_args()
-        {textwrap.indent(serve_branch.rstrip() or "pass", '    ')}
-            result = generate_project(goal=args.goal, project_name=args.project_name, out_dir=Path(args.out))
-            print(json.dumps(result, ensure_ascii=False, indent=2))
-            return 0
-        if __name__ == "__main__":
-            raise SystemExit(main())
-        """
-    ).lstrip()
+        mode_lines = [
+            "if args.serve:",
+            '    preview = Path(args.out) / "preview.html"',
+            "    preview.parent.mkdir(parents=True, exist_ok=True)",
+            '    preview.write_text("<html><body><h1>Web-first preview placeholder</h1></body></html>\\\\n", encoding="utf-8")',
+            '    print(json.dumps({"preview_html": str(preview)}, ensure_ascii=False, indent=2))',
+            "    return 0",
+        ]
+    lines = [
+        "from __future__ import annotations",
+        "import argparse",
+        "import json",
+        "import sys",
+        "from pathlib import Path",
+        "",
+        "ROOT = Path(__file__).resolve().parents[1]",
+        'SRC = ROOT / "src"',
+        "if str(SRC) not in sys.path:",
+        "    sys.path.insert(0, str(SRC))",
+        "",
+        f"from {package_name}.service import generate_project",
+        "",
+        "def main() -> int:",
+        f'    parser = argparse.ArgumentParser(description="{mode_label}")',
+        '    parser.add_argument("--goal", default="project generation request")',
+        '    parser.add_argument("--project-name", default="Project Copilot")',
+        '    parser.add_argument("--out", default=str(ROOT / "generated_output"))',
+        '    parser.add_argument("--headless", action="store_true")',
+        '    parser.add_argument("--serve", action="store_true")',
+        "    args = parser.parse_args()",
+    ]
+    lines.extend(f"    {row}" for row in mode_lines)
+    lines.extend(
+        [
+            "    result = generate_project(goal=args.goal, project_name=args.project_name, out_dir=Path(args.out))",
+            "    print(json.dumps(result, ensure_ascii=False, indent=2))",
+            "    return 0",
+            "",
+            'if __name__ == "__main__":',
+            "    raise SystemExit(main())",
+        ]
+    )
+    return "\n".join(lines) + "\n"
 
 
 def _benchmark_narrative_files(goal_text: str, project_id: str, project_root: str, context_used: list[str]) -> dict[str, str]:

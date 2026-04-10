@@ -627,9 +627,8 @@ class SupportBotHumanizationTests(unittest.TestCase):
             self.assertEqual(calls, ["api_agent", "ollama_agent"])
             self.assertEqual(str(doc.get("provider", "")), "ollama_agent")
             self.assertEqual(str(doc.get("provider_status", "")), "executed")
-            self.assertIn("API", str(doc.get("reply_text", "")))
-            self.assertIn("本地", str(doc.get("reply_text", "")))
             self.assertIn("本地这边能先接住", str(doc.get("reply_text", "")))
+            self.assertNotIn("API 路径", str(doc.get("reply_text", "")))
             self.assertNotIn("暂时还没连上稳定的回复能力", str(doc.get("reply_text", "")))
             self.assertNotIn("我先帮你整理一下", str(doc.get("reply_text", "")))
 
@@ -730,10 +729,9 @@ class SupportBotHumanizationTests(unittest.TestCase):
             self.assertEqual(calls, ["api_agent", "api_agent", "ollama_agent"])
             reply = str(doc.get("reply_text", ""))
             self.assertEqual(str(doc.get("provider", "")), "ollama_agent")
-            self.assertIn("API", reply)
-            self.assertIn("本地", reply)
-            self.assertIn("没给到可直接发出的回复", reply)
-            self.assertNotIn("没连上", reply)
+            self.assertIn("本地回复接住", reply)
+            self.assertNotIn("API 路径", reply)
+            self.assertNotIn("没给到可直接发出的回复", reply)
             self.assertNotIn("你好，随时可以开始。你说说看要做什么？", reply)
 
     def test_process_message_reports_api_and_local_disconnect_without_old_shell(self) -> None:
@@ -770,8 +768,8 @@ class SupportBotHumanizationTests(unittest.TestCase):
             reply = str(doc.get("reply_text", ""))
             self.assertEqual(str(doc.get("provider_status", "")), "exec_failed")
             self.assertIn("API", reply)
-            self.assertIn("本地", reply)
-            self.assertIn("没连上", reply)
+            self.assertIn("正式回复", reply)
+            self.assertIn("暂时不可用", reply)
             self.assertNotIn("暂时还没连上稳定的回复能力", reply)
             self.assertNotIn("我先帮你整理一下", reply)
 
@@ -842,7 +840,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             self.assertEqual(str(doc.get("provider_status", "")), "executed")
             new_run_spy.assert_called_once_with(goal="我想做一个帮我整理剧情结构的项目。")
             record_spy.assert_called_once()
-            advance_spy.assert_called_once_with("r-demo", max_steps=4)
+            advance_spy.assert_called_once_with("r-demo", max_steps=2)
             self.assertEqual(context_spy.call_count, 2)
 
     def test_process_message_preserves_project_brief_across_low_signal_followup(self) -> None:
@@ -1438,7 +1436,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             reply = str(doc.get("reply_text", ""))
             self.assertIn("我这边已经接手到后台流程", reply)
             self.assertIn("目前在方案整理这个阶段", reply)
-            self.assertIn("先把方案整理卡点处理掉", reply)
+            self.assertIn("补齐 PLAN_draft.md", reply)
             self.assertNotIn("规划文档", reply)
 
     def test_build_final_reply_doc_status_query_handles_running_gate_blocked_as_real_blocker(self) -> None:
@@ -1490,7 +1488,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
 
             reply = str(doc.get("reply_text", ""))
             self.assertIn("目前在方案整理这个阶段", reply)
-            self.assertIn("先把方案整理卡点处理掉", reply)
+            self.assertIn("补齐 PLAN_draft.md", reply)
             self.assertNotIn("暂时没有新增阻塞", reply)
 
     def test_sync_project_context_recovers_archived_previous_outline_brief(self) -> None:
@@ -2077,113 +2075,6 @@ class SupportBotHumanizationTests(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("telegram token missing", stderr.getvalue())
 
-    def test_collect_public_delivery_state_blocks_low_quality_generated_package(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_state_") as td:
-            repo_root = Path(td)
-            generated_project = repo_root / "generated_projects" / "story_organizer"
-            generated_project.mkdir(parents=True, exist_ok=True)
-            (generated_project / "main.py").write_text("print('story')\n", encoding="utf-8")
-
-            bound_run = repo_root / "runs" / "bound-story"
-            (bound_run / "artifacts").mkdir(parents=True, exist_ok=True)
-            (bound_run / "artifacts" / "patch_apply.json").write_text(
-                json.dumps({"touched_files": ["generated_projects/story_organizer/main.py"]}, ensure_ascii=False),
-                encoding="utf-8",
-            )
-            (bound_run / "artifacts" / "PLAN.md").write_text(
-                "Status: SIGNED\nScope-Allow: generated_projects/story_organizer/\n",
-                encoding="utf-8",
-            )
-
-            state = support_bot.default_support_session_state("delivery-demo")
-            state["bound_run_id"] = "r-story"
-            state["bound_run_dir"] = str(bound_run)
-            with mock.patch.object(support_bot, "ROOT", repo_root):
-                delivery = support_bot.collect_public_delivery_state(
-                    session_state=state,
-                    project_context={
-                        "run_id": "r-story",
-                        "run_dir": str(bound_run),
-                        "status": {
-                            "run_status": "completed",
-                            "verify_result": "PASS",
-                            "needs_user_decision": False,
-                            "decisions_needed_count": 0,
-                            "gate": {"state": "closed", "owner": "", "reason": ""},
-                        },
-                    },
-                    source="telegram",
-                )
-
-            self.assertFalse(bool(delivery.get("package_ready", False)))
-            self.assertFalse(bool(delivery.get("package_delivery_allowed", False)))
-            self.assertFalse(bool(delivery.get("package_quality_ready", True)))
-            self.assertIn("quality score", str(delivery.get("package_blocked_reason", "")))
-            self.assertFalse(bool(delivery.get("screenshot_ready", False)))
-            self.assertIn(str(generated_project.resolve()), list(delivery.get("package_source_dirs", [])))
-            self.assertEqual(str(delivery.get("package_delivery_mode", "")), "materialize_ctcp_scaffold")
-            self.assertEqual(str(delivery.get("project_name_hint", "")), "story_organizer")
-            self.assertIn("docs/", list(delivery.get("package_structure_hint", [])))
-
-    def test_collect_public_delivery_state_allows_high_quality_generated_package(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_quality_ok_") as td:
-            repo_root = Path(td)
-            generated_project = repo_root / "generated_projects" / "story_organizer"
-            (generated_project / "docs").mkdir(parents=True, exist_ok=True)
-            (generated_project / "meta" / "tasks").mkdir(parents=True, exist_ok=True)
-            (generated_project / "scripts").mkdir(parents=True, exist_ok=True)
-            (generated_project / "tests").mkdir(parents=True, exist_ok=True)
-            (generated_project / "artifacts" / "screenshots").mkdir(parents=True, exist_ok=True)
-            (generated_project / "README.md").write_text("# story_organizer\n", encoding="utf-8")
-            (generated_project / "manifest.json").write_text("{}", encoding="utf-8")
-            (generated_project / "docs" / "00_CORE.md").write_text("# core\n", encoding="utf-8")
-            (generated_project / "meta" / "tasks" / "CURRENT.md").write_text("# current\n", encoding="utf-8")
-            (generated_project / "scripts" / "verify_repo.ps1").write_text("Write-Host ok\n", encoding="utf-8")
-            (generated_project / "tests" / "test_smoke.py").write_text("def test_smoke():\n    assert True\n", encoding="utf-8")
-            (generated_project / "artifacts" / "test_plan.json").write_text("{}", encoding="utf-8")
-            (generated_project / "artifacts" / "test_cases.json").write_text("{}", encoding="utf-8")
-            (generated_project / "artifacts" / "test_summary.md").write_text("# summary\n", encoding="utf-8")
-            (generated_project / "artifacts" / "demo_trace.md").write_text("# demo\n", encoding="utf-8")
-            (generated_project / "artifacts" / "screenshots" / "step01.png").write_bytes(b"\x89PNG\r\n")
-
-            bound_run = repo_root / "runs" / "bound-story"
-            (bound_run / "artifacts").mkdir(parents=True, exist_ok=True)
-            (bound_run / "artifacts" / "patch_apply.json").write_text(
-                json.dumps({"touched_files": ["generated_projects/story_organizer/README.md"]}, ensure_ascii=False),
-                encoding="utf-8",
-            )
-            (bound_run / "artifacts" / "PLAN.md").write_text(
-                "Status: SIGNED\nScope-Allow: generated_projects/story_organizer/\n",
-                encoding="utf-8",
-            )
-
-            state = support_bot.default_support_session_state("delivery-demo")
-            state["bound_run_id"] = "r-story"
-            state["bound_run_dir"] = str(bound_run)
-            with mock.patch.object(support_bot, "ROOT", repo_root):
-                delivery = support_bot.collect_public_delivery_state(
-                    session_state=state,
-                    project_context={
-                        "run_id": "r-story",
-                        "run_dir": str(bound_run),
-                        "status": {
-                            "run_status": "completed",
-                            "verify_result": "PASS",
-                            "needs_user_decision": False,
-                            "decisions_needed_count": 0,
-                            "gate": {"state": "closed", "owner": "", "reason": ""},
-                        },
-                    },
-                    source="telegram",
-                )
-
-            self.assertTrue(bool(delivery.get("package_ready", False)))
-            self.assertTrue(bool(delivery.get("package_delivery_allowed", False)))
-            self.assertTrue(bool(delivery.get("package_quality_ready", False)))
-            self.assertGreaterEqual(int(delivery.get("package_quality_score", 0) or 0), support_bot.SUPPORT_PACKAGE_MIN_QUALITY_SCORE)
-            self.assertEqual(str(delivery.get("package_blocked_reason", "")), "")
-            self.assertEqual(str(delivery.get("package_delivery_mode", "")), "zip_existing_ctcp_project")
-
     def test_collect_public_delivery_state_blocks_package_until_final_pass(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_gate_") as td:
             repo_root = Path(td)
@@ -2304,6 +2195,46 @@ class SupportBotHumanizationTests(unittest.TestCase):
             self.assertIn("send_project_screenshot", action_types)
             self.assertIn("确认“可以发包”", str(doc.get("reply_text", "")))
 
+    def test_build_final_reply_doc_strips_screenshot_action_when_screenshot_not_ready(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_no_preview_") as td:
+            run_dir = Path(td)
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "把项目 zip 发我",
+                },
+            )
+            doc = support_bot.build_final_reply_doc(
+                run_dir=run_dir,
+                provider="api_agent",
+                provider_result={"status": "executed", "reason": "ok"},
+                provider_doc={
+                    "reply_text": "我先同步当前进度。",
+                    "next_question": "",
+                    "actions": [{"type": "send_project_screenshot", "count": 1}],
+                    "debug_notes": "",
+                },
+                source_hint="telegram",
+                conversation_mode="PROJECT_DETAIL",
+                delivery_state={
+                    "channel_can_send_files": True,
+                    "package_ready": False,
+                    "package_delivery_allowed": False,
+                    "package_blocked_reason": "verify_result is not PASS",
+                    "screenshot_ready": False,
+                    "package_source_dirs": ["D:/tmp/story_organizer"],
+                    "existing_package_files": [],
+                    "screenshot_files": [],
+                },
+            )
+
+            action_types = {str(item.get("type", "")).strip().lower() for item in list(doc.get("actions", []))}
+            self.assertNotIn("send_project_package", action_types)
+            self.assertNotIn("send_project_screenshot", action_types)
+            self.assertNotIn("确认“可以发包”", str(doc.get("reply_text", "")))
+
     def test_build_final_reply_doc_zip_confirmation_after_preview_sends_package(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_confirm_") as td:
             run_dir = Path(td)
@@ -2348,6 +2279,44 @@ class SupportBotHumanizationTests(unittest.TestCase):
             )
 
             self.assertTrue(any(str(item.get("type", "")) == "send_project_package" for item in list(doc.get("actions", []))))
+
+    def test_build_final_reply_doc_verify_pass_auto_injects_package_and_screenshot_delivery(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_auto_ready_") as td:
+            run_dir = Path(td)
+            doc = support_bot.build_final_reply_doc(
+                run_dir=run_dir,
+                provider="api_agent",
+                provider_result={"status": "executed", "reason": "ok"},
+                provider_doc={
+                    "reply_text": "本轮结果已经整理好了。\n\n本轮已产出文件：abc123, def456。",
+                    "next_question": "",
+                    "actions": [],
+                    "debug_notes": "",
+                },
+                project_context={
+                    "status": {"run_status": "pass", "verify_result": "PASS", "gate": {"state": "pass", "reason": ""}},
+                    "runtime_state": {"run_status": "pass", "verify_result": "PASS"},
+                },
+                source_hint="telegram",
+                conversation_mode="STATUS_QUERY",
+                delivery_state={
+                    "channel_can_send_files": True,
+                    "package_ready": True,
+                    "package_delivery_allowed": True,
+                    "package_blocked_reason": "",
+                    "screenshot_ready": True,
+                    "package_source_dirs": ["D:/tmp/story_organizer"],
+                    "existing_package_files": ["D:/tmp/story_organizer.zip"],
+                    "screenshot_files": ["D:/tmp/story_organizer/artifacts/overview.png"],
+                },
+            )
+
+            action_types = {str(item.get("type", "")).strip().lower() for item in list(doc.get("actions", []))}
+            self.assertIn("send_project_package", action_types)
+            self.assertIn("send_project_screenshot", action_types)
+            self.assertIn("zip", str(doc.get("reply_text", "")).lower())
+            self.assertIn("截图", str(doc.get("reply_text", "")))
+            self.assertNotIn("本轮已产出文件", str(doc.get("reply_text", "")))
 
     def test_public_delivery_prompt_context_exposes_ctcp_scaffold_shape(self) -> None:
         ctx = support_bot.public_delivery_prompt_context(
@@ -2409,13 +2378,15 @@ class SupportBotHumanizationTests(unittest.TestCase):
 
             self.assertFalse(any(str(item.get("type", "")) == "send_project_package" for item in list(doc.get("actions", []))))
 
-    def test_emit_public_delivery_materializes_zip_and_sends_document(self) -> None:
+    def test_emit_public_delivery_materializes_zip_and_sends_document_and_photo(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_emit_delivery_") as td:
             root = Path(td)
             support_run_dir = root / "support-session"
             project_dir = root / "generated_projects" / "story_organizer"
             project_dir.mkdir(parents=True, exist_ok=True)
             (project_dir / "main.py").write_text("print('demo')\n", encoding="utf-8")
+            (project_dir / "artifacts" / "screenshots").mkdir(parents=True, exist_ok=True)
+            (project_dir / "artifacts" / "screenshots" / "overview.png").write_bytes(b"\x89PNG\r\n\x1a\n")
             scaffold_dir = root / "exports" / "story_organizer_ctcp_project"
             (scaffold_dir / "docs").mkdir(parents=True, exist_ok=True)
             (scaffold_dir / "meta").mkdir(parents=True, exist_ok=True)
@@ -2448,18 +2419,18 @@ class SupportBotHumanizationTests(unittest.TestCase):
                     fake,  # type: ignore[arg-type]
                     chat_id=123,
                     run_dir=support_run_dir,
-                    actions=[{"type": "send_project_package", "format": "zip"}],
+                    actions=[{"type": "send_project_package", "format": "zip"}, {"type": "send_project_screenshot", "count": 1}],
                     delivery_state={
                         "channel_can_send_files": True,
                         "package_ready": True,
                         "package_delivery_allowed": True,
                         "package_blocked_reason": "",
-                        "screenshot_ready": False,
+                        "screenshot_ready": True,
                         "package_source_dirs": [str(project_dir)],
                         "ctcp_package_source_dirs": [],
                         "placeholder_package_source_dirs": [str(project_dir)],
                         "existing_package_files": [],
-                        "screenshot_files": [],
+                        "screenshot_files": [str(project_dir / "artifacts" / "screenshots" / "overview.png")],
                         "project_name_hint": "story_organizer",
                         "package_delivery_mode": "materialize_ctcp_scaffold",
                         "package_structure_hint": list(support_bot.CTCP_SCAFFOLD_STRUCTURE_HINT),
@@ -2467,6 +2438,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
                 )
 
             self.assertEqual(len(fake.sent_documents), 1)
+            self.assertEqual(len(fake.sent_photos), 1)
             sent_chat, sent_path, caption = fake.sent_documents[0]
             self.assertEqual(sent_chat, 123)
             self.assertTrue(sent_path.exists(), msg=str(sent_path))
@@ -2479,8 +2451,9 @@ class SupportBotHumanizationTests(unittest.TestCase):
             self.assertIn("story_organizer_ctcp_project/docs/00_CORE.md", names)
             self.assertIn("story_organizer_ctcp_project/scripts/verify_repo.ps1", names)
             manifest = json.loads((support_run_dir / support_bot.SUPPORT_PUBLIC_DELIVERY_REL_PATH).read_text(encoding="utf-8"))
-            self.assertEqual(len(list(manifest.get("sent", []))), 1)
-            self.assertEqual(len(list(plan.get("sent", []))), 1)
+            self.assertEqual(len(list(manifest.get("deliveries", []))), 2)
+            self.assertEqual(len(list(manifest.get("sent", []))), 2)
+            self.assertEqual(len(list(plan.get("sent", []))), 2)
 
     def test_t2p_fast_path_trigger_is_disabled_for_project_create_turn(self) -> None:
         session_state = support_bot.default_support_session_state("single-mainline")

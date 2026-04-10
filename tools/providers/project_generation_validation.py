@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 from pathlib import Path
 from typing import Any
@@ -89,6 +90,41 @@ def _looks_placeholder_content(path: Path) -> bool:
     return len(lines) <= 4 and any(line == "pass" for line in lines)
 
 
+def _python_syntax_validation(*, run_dir: Path, generated_business_files: list[str], startup_entrypoint: str) -> dict[str, Any]:
+    candidates: list[str] = []
+    seen: set[str] = set()
+    for raw in [startup_entrypoint] + list(generated_business_files):
+        rel = str(raw or "").strip().replace("\\", "/")
+        if not rel or rel in seen or not rel.endswith(".py"):
+            continue
+        seen.add(rel)
+        candidates.append(rel)
+    checked: list[str] = []
+    syntax_errors: list[dict[str, Any]] = []
+    for rel in candidates:
+        path = (run_dir / rel).resolve()
+        if not path.exists():
+            continue
+        checked.append(rel)
+        try:
+            source = path.read_text(encoding="utf-8", errors="replace")
+            ast.parse(source, filename=rel)
+        except SyntaxError as exc:
+            syntax_errors.append(
+                {
+                    "path": rel,
+                    "message": str(exc.msg or "syntax error"),
+                    "line": int(exc.lineno or 0),
+                    "offset": int(exc.offset or 0),
+                }
+            )
+    return {
+        "checked_files": checked,
+        "syntax_errors": syntax_errors,
+        "passed": not syntax_errors,
+    }
+
+
 def generic_validation(
     *,
     run_dir: Path,
@@ -119,8 +155,19 @@ def generic_validation(
     )
     readme_has_start = bool(readme.exists()) and (readme_has_start_signal or bool(readme_text.strip()))
     smoke_passed = int(dict(behavior_probe).get("rc", 1)) == 0 and int(dict(export_probe).get("rc", 1)) == 0
+    python_syntax = _python_syntax_validation(
+        run_dir=run_dir,
+        generated_business_files=generated_business_files,
+        startup_entrypoint=startup_entrypoint,
+    )
     return {
-        "passed": bool(entry.exists()) and bool(readme.exists()) and readme_has_start and bool(generated_business_files) and smoke_passed and not placeholder_hits,
+        "passed": bool(entry.exists())
+        and bool(readme.exists())
+        and readme_has_start
+        and bool(generated_business_files)
+        and smoke_passed
+        and not placeholder_hits
+        and bool(python_syntax.get("passed", False)),
         "has_runnable_entrypoint": bool(entry.exists()),
         "readme_startup_ready": readme_has_start,
         "core_user_flow": [
@@ -129,6 +176,7 @@ def generic_validation(
         ],
         "core_feature_files": list(generated_business_files),
         "placeholder_hits": placeholder_hits,
+        "python_syntax": python_syntax,
         "delivery_package": list(acceptance_files),
         "smoke_run": {
             "startup_probe": dict(behavior_probe),

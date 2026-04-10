@@ -1,11 +1,38 @@
 import unittest
 
+from frontend.conversation_mode_router import route_conversation_mode
 from frontend.missing_info_rewriter import rewrite_missing_requirements
 from frontend.project_manager_mode import build_project_manager_context
 from frontend.response_composer import render_frontend_output
+from frontend.support_reply_policy import render_fallback_reply
 
 
 class FrontendRenderingBoundaryTests(unittest.TestCase):
+    def test_confirmation_turn_with_active_project_routes_to_project_detail(self) -> None:
+        mode = route_conversation_mode(
+            ["确定"],
+            "确定",
+            {
+                "task_summary": "我想要你继续优化我的剧情项目",
+                "run_id": "r-demo",
+                "active_stage": "EXECUTE",
+            },
+        )
+        self.assertEqual(mode, "PROJECT_DETAIL")
+
+    def test_confirmation_turn_while_waiting_decision_routes_to_decision_reply(self) -> None:
+        mode = route_conversation_mode(
+            ["可以"],
+            "可以",
+            {
+                "task_summary": "我想要你继续优化我的剧情项目",
+                "run_id": "r-demo",
+                "active_stage": "WAIT_USER_DECISION",
+                "waiting_for": "请选择交付格式",
+            },
+        )
+        self.assertEqual(mode, "PROJECT_DECISION_REPLY")
+
     def test_project_intake_generic_opening_question_no_name_error(self) -> None:
         result = render_frontend_output(
             raw_backend_state={
@@ -43,8 +70,8 @@ class FrontendRenderingBoundaryTests(unittest.TestCase):
         )
         text = result.reply_text
         self.assertTrue(
-            any(tok in text for tok in ("目标", "结果", "规划", "方案")),
-            msg=f"intake reply should mention goal/result keywords: {text}",
+            any(tok in text for tok in ("目标、输入和想要什么结果", "我来帮你理")),
+            msg=f"intake reply should stay truthful and neutral: {text}",
         )
         self.assertNotIn("待处理的事项", text)
         self.assertNotIn("waiting for", text.lower())
@@ -252,6 +279,83 @@ class FrontendRenderingBoundaryTests(unittest.TestCase):
         self.assertIn("目前在合同评审这个阶段", result.reply_text)
         self.assertIn("我会继续处理：先处理合同评审卡住的点", result.reply_text)
         self.assertNotEqual(result.reply_text.strip(), "这边已经进入处理阶段。")
+
+    def test_internal_recovery_block_on_project_detail_exposes_real_status(self) -> None:
+        result = render_frontend_output(
+            raw_backend_state={
+                "stage": "executing",
+                "run_status": "blocked",
+                "reason": "waiting for PLAN_draft.md",
+                "progress_binding": {
+                    "current_task_goal": "做一个本地可运行的 VN 项目助手 MVP",
+                    "current_phase": "方案整理",
+                    "last_confirmed_items": [],
+                    "current_blocker": "waiting for PLAN_draft.md",
+                    "message_purpose": "progress",
+                    "question_needed": "no",
+                    "next_action": "补齐 PLAN_draft.md 并继续推进方案整理",
+                    "proof_refs": ["run_id=demo"],
+                },
+            },
+            task_summary="做一个本地可运行的 VN 项目助手 MVP",
+            raw_reply_text="当前遇到内部阻塞，确认这条输入后我可以继续。",
+            raw_next_question="",
+            notes={
+                "lang": "zh",
+                "recent_user_messages": [
+                    "做一个本地可运行的 VN 项目助手 MVP：输入角色资料、章节大纲、场景列表，生成一个可视化整理工具。"
+                ],
+                "frontdesk_state": {
+                    "state": "showing_error",
+                    "blocked_reason": "waiting for PLAN_draft.md",
+                },
+            },
+        )
+        self.assertIn("PLAN_draft.md", result.reply_text)
+        self.assertIn("补齐 PLAN_draft.md", result.reply_text)
+        self.assertNotIn("确认这条输入后我可以继续", result.reply_text)
+
+    def test_frontend_recovery_reply_surfaces_retry_count_and_recovery_action(self) -> None:
+        reply = render_fallback_reply(
+            intent="guide_recovery",
+            lang_hint="zh",
+            project_context={
+                "runtime_state": {
+                    "phase": "RETRYING",
+                    "blocking_reason": "waiting for PLAN_draft.md",
+                    "recovery": {
+                        "needed": True,
+                        "status": "retrying",
+                        "retry_count": 1,
+                        "max_retries": 2,
+                        "recovery_action": "retry planner and verify PLAN_draft.md lands with a valid draft contract",
+                    },
+                    "gate": {
+                        "state": "blocked",
+                        "path": "artifacts/PLAN_draft.md",
+                        "reason": "waiting for PLAN_draft.md",
+                        "retry_count": 1,
+                        "max_retries": 2,
+                        "expected_artifact": "artifacts/PLAN_draft.md",
+                        "recovery_action": "retry planner and verify PLAN_draft.md lands with a valid draft contract",
+                        "watchdog_status": "retrying",
+                    },
+                },
+                "status": {
+                    "run_status": "running",
+                    "verify_result": "",
+                    "gate": {
+                        "state": "blocked",
+                        "path": "artifacts/PLAN_draft.md",
+                        "reason": "waiting for PLAN_draft.md",
+                    },
+                },
+            },
+        )
+        text = str(reply.get("reply_text", ""))
+        self.assertIn("已自动重试 1/2 次", text)
+        self.assertIn("PLAN_draft.md", text)
+        self.assertIn("retry planner", text)
 
     def test_summary_selection_prefers_detailed_recent_message(self) -> None:
         ctx = build_project_manager_context(
@@ -466,11 +570,11 @@ class FrontendRenderingBoundaryTests(unittest.TestCase):
 
     def test_missing_field_questions_are_concrete(self) -> None:
         expected = {
-            "input_mode": ("单段视频", "多段多视角"),
-            "runtime_target": ("接近实时输出", "离线处理"),
+            "input_mode": ("输入", "资料"),
+            "runtime_target": ("桌面本地", "浏览器页面"),
             "hardware_budget": ("高性能工作站", "普通电脑"),
-            "output_format": ("稀疏点云", "PLY / LAS"),
-            "semantic_integration_level": ("语义信息", "语义分割"),
+            "output_format": ("结构化 JSON", "脚手架/脚本"),
+            "semantic_integration_level": ("预留接口", "主流程"),
             "external_dependency_policy": ("开源组件", "自研可控"),
         }
         for field, keywords in expected.items():
@@ -481,6 +585,78 @@ class FrontendRenderingBoundaryTests(unittest.TestCase):
                 self.assertTrue(question.endswith("？"))
                 self.assertNotIn(field, question.lower())
                 self.assertTrue(any(token in question for token in keywords), msg=question)
+
+    def test_vn_request_does_not_emit_pointcloud_followups(self) -> None:
+        ctx = build_project_manager_context(
+            [
+                "做一个本地可运行的 VN 项目助手 MVP：输入角色资料、章节大纲、场景列表，生成一个可视化整理工具。",
+            ],
+            lang="zh",
+            max_questions=2,
+        )
+        questions = list(ctx.high_leverage_questions)
+        merged = "\n".join(questions)
+        self.assertNotIn("单目", merged)
+        self.assertNotIn("多视角", merged)
+        self.assertNotIn("PLY", merged.upper())
+        self.assertNotIn("LAS", merged.upper())
+        self.assertTrue(any(token in merged for token in ("Ren'Py", "JSON", "桌面本地工具", "浏览器本地页面")), msg=merged)
+
+    def test_backend_unavailable_reply_is_truthful_not_fake_progress(self) -> None:
+        result = render_frontend_output(
+            raw_backend_state={
+                "stage": "support_provider_failed",
+                "reply_truth_status": "backend_unavailable",
+                "reply_truth_reason": "connect timeout",
+                "has_actionable_goal": True,
+                "first_pass_understood": True,
+            },
+            task_summary="做一个本地可运行的 VN 项目助手 MVP",
+            raw_reply_text="收到，我继续推进。",
+            raw_next_question="",
+            notes={
+                "lang": "zh",
+                "recent_user_messages": ["做一个本地可运行的 VN 项目助手 MVP"],
+            },
+        )
+        self.assertTrue(
+            ("正式回复" in result.reply_text) or ("backend" in result.reply_text.lower()) or ("customer-ready" in result.reply_text.lower()),
+            msg=result.reply_text,
+        )
+        self.assertNotIn("我继续推进", result.reply_text)
+
+    def test_backend_blocked_reply_includes_phase_and_confirmed_progress(self) -> None:
+        result = render_frontend_output(
+            raw_backend_state={
+                "stage": "executing",
+                "run_status": "blocked",
+                "reply_truth_status": "backend_blocked",
+                "reply_truth_reason": "waiting for file_request.json",
+                "reply_truth_next_action": "补齐 file_request.json 并继续推进执行阶段",
+                "progress_binding": {
+                    "current_task_goal": "做一个本地可运行的 VN 项目助手 MVP",
+                    "current_phase": "执行推进",
+                    "last_confirmed_items": ["项目已接到后台流程", "需求摘要已写入当前 run"],
+                    "current_blocker": "waiting for file_request.json",
+                    "message_purpose": "progress",
+                    "question_needed": "no",
+                    "next_action": "补齐 file_request.json 并继续推进执行阶段",
+                    "proof_refs": ["run_id=demo"],
+                },
+            },
+            task_summary="做一个本地可运行的 VN 项目助手 MVP",
+            raw_reply_text="收到，我继续推进。",
+            raw_next_question="",
+            notes={
+                "lang": "zh",
+                "recent_user_messages": ["做一个本地可运行的 VN 项目助手 MVP"],
+            },
+        )
+        self.assertIn("当前后端卡在：当前缺的是 file_request.json。", result.reply_text)
+        self.assertIn("当前阶段：执行推进。", result.reply_text)
+        self.assertIn("已确认进展：项目已接到后台流程、需求摘要已写入当前 run。", result.reply_text)
+        self.assertIn("下一步我会先处理：补齐 file_request.json 并继续推进执行阶段。", result.reply_text)
+        self.assertNotIn("我继续推进", result.reply_text)
 
     def test_internal_pipeline_state_shape_exists(self) -> None:
         result = render_frontend_output(

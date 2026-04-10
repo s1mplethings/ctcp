@@ -24,7 +24,6 @@ _FINAL_RUN_STATUSES = {"pass", "done", "completed", "success"}
 _RUNNING_STATUSES = {"running", "in_progress", "working"}
 _ERROR_RUN_STATUSES = {"fail", "failed", "error", "aborted"}
 _ERROR_GATE_STATES = {"error", "failed"}
-
 STATUS_LINE_RE = re.compile(r"^\[ctcp_orchestrate\]\s*([^=]+)=(.*)$")
 
 try:
@@ -85,14 +84,42 @@ except ModuleNotFoundError:
         _collect_output_artifacts,
     )
 
+try:
+    from ctcp_front_bridge_watchdog import (
+        build_error_doc,
+        build_runtime_snapshot,
+        build_recovery_doc,
+        gate_recovery_action,
+        gate_watchdog_doc,
+        load_verify_progress,
+        mark_retry_attempt,
+        normalize_decision_registry_after_error,
+        retry_attempt_text,
+        runtime_blocking_reason,
+        watchdog_phase,
+    )
+except ModuleNotFoundError:
+    if str(SCRIPTS_DIR) not in sys.path:
+        sys.path.insert(0, str(SCRIPTS_DIR))
+    from ctcp_front_bridge_watchdog import (
+        build_error_doc,
+        build_runtime_snapshot,
+        build_recovery_doc,
+        gate_recovery_action,
+        gate_watchdog_doc,
+        load_verify_progress,
+        mark_retry_attempt,
+        normalize_decision_registry_after_error,
+        retry_attempt_text,
+        runtime_blocking_reason,
+        watchdog_phase,
+    )
 
 class BridgeError(RuntimeError):
     pass
 
-
 def _now_utc_iso() -> str:
     return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
 
 def _run_cmd(cmd: list[str], cwd: Path) -> dict[str, Any]:
     proc = subprocess.run(
@@ -110,12 +137,10 @@ def _run_cmd(cmd: list[str], cwd: Path) -> dict[str, Any]:
         "stderr": proc.stderr,
     }
 
-
 def _read_text(path: Path) -> str:
     if not path.exists():
         return ""
     return path.read_text(encoding="utf-8", errors="replace")
-
 
 def _read_json(path: Path) -> dict[str, Any]:
     if not path.exists():
@@ -126,28 +151,23 @@ def _read_json(path: Path) -> dict[str, Any]:
         return {}
     return doc if isinstance(doc, dict) else {}
 
-
 def _write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
 
-
 def _write_json(path: Path, doc: dict[str, Any]) -> None:
     _write_text(path, json.dumps(doc, ensure_ascii=False, indent=2) + "\n")
-
 
 def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(row, ensure_ascii=False) + "\n")
 
-
 def _tail_lines(text: str, max_lines: int = 80) -> str:
     rows = text.splitlines()
     if len(rows) <= max_lines:
         return text
     return "\n".join(rows[-max_lines:])
-
 
 def _is_within(child: Path, parent: Path) -> bool:
     try:
@@ -156,11 +176,9 @@ def _is_within(child: Path, parent: Path) -> bool:
     except ValueError:
         return False
 
-
 def _ensure_within_run_dir(run_dir: Path, candidate: Path) -> None:
     if not _is_within(candidate, run_dir):
         raise BridgeError(f"path escapes run_dir: {candidate}")
-
 
 def _guess_mime_type(path: Path) -> str:
     suffix = path.suffix.lower()
@@ -180,7 +198,6 @@ def _guess_mime_type(path: Path) -> str:
     mime, _enc = mimetypes.guess_type(str(path))
     return str(mime or "application/octet-stream")
 
-
 def _sha256_hex(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as fh:
@@ -191,7 +208,6 @@ def _sha256_hex(path: Path) -> str:
             h.update(chunk)
     return h.hexdigest()
 
-
 def _resolve_latest_run_dir() -> Path:
     raw = _read_text(LAST_RUN_POINTER).strip()
     if not raw:
@@ -200,7 +216,6 @@ def _resolve_latest_run_dir() -> Path:
     if not run_dir.exists():
         raise BridgeError(f"LAST_RUN pointer does not exist: {run_dir}")
     return run_dir
-
 
 def _resolve_run_dir(run_id: str = "") -> Path:
     rid = str(run_id or "").strip()
@@ -219,10 +234,8 @@ def _resolve_run_dir(run_id: str = "") -> Path:
         return run_dir
     raise BridgeError(f"run_id not found: {rid}")
 
-
 def _run_id_from_dir(run_dir: Path) -> str:
     return run_dir.resolve().name
-
 
 def _parse_status_output(stdout: str) -> dict[str, str]:
     out: dict[str, str] = {}
@@ -238,7 +251,6 @@ def _parse_status_output(stdout: str) -> dict[str, str]:
         if line.startswith("[ctcp_orchestrate] blocked:"):
             out["blocked"] = line.split(":", 1)[1].strip()
     return out
-
 
 def _parse_outbox_prompt(path: Path) -> dict[str, str]:
     text = _read_text(path)
@@ -263,14 +275,11 @@ def _parse_outbox_prompt(path: Path) -> dict[str, str]:
             out["question_hint"] = line.split(":", 1)[1].strip()
     return out
 
-
 def _runtime_state_path(run_dir: Path) -> Path:
     return run_dir / SUPPORT_RUNTIME_STATE_REL
 
-
 def _iso_from_epoch(epoch: float) -> str:
     return dt.datetime.fromtimestamp(float(epoch), tz=dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
 
 def _file_ts_iso(path: Path) -> str:
     try:
@@ -278,11 +287,9 @@ def _file_ts_iso(path: Path) -> str:
     except Exception:
         return _now_utc_iso()
 
-
 def _runtime_core_hash(payload: dict[str, Any]) -> str:
     raw = json.dumps(payload, ensure_ascii=False, sort_keys=True)
     return hashlib.sha1(raw.encode("utf-8", errors="replace")).hexdigest()
-
 
 def _derive_runtime_phase(
     *,
@@ -307,20 +314,6 @@ def _derive_runtime_phase(
     if gate_state == "blocked":
         return "RECOVER"
     return "PLAN"
-
-
-def _load_verify_progress(run_dir: Path, previous_state: dict[str, Any], iterations: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
-    verify_result = str(previous_state.get("verify_result", "")).strip().upper()
-    verify_gate = str(previous_state.get("verify_gate", "")).strip().lower()
-    if verify_doc := _read_json(run_dir / "artifacts" / "verify_report.json"):
-        verify_result = str(verify_doc.get("result", "")).strip().upper() or verify_result
-        verify_gate = str(verify_doc.get("gate", "")).strip().lower() or verify_gate
-        iterations["current"] = int(verify_doc.get("iteration", iterations.get("current", 0)) or 0)
-        iterations["max"] = int(verify_doc.get("max_iterations", iterations.get("max", 0)) or 0)
-        if verify_doc.get("max_iterations") is not None:
-            iterations["source"] = str(iterations.get("source", "")).strip() or "verify_report.json"
-    return verify_result, verify_gate, iterations
-
 
 def _resolve_decision_runtime(
     *,
@@ -360,30 +353,12 @@ def _resolve_decision_runtime(
     submitted_open = [row for row in decision_registry if str(row.get("status", "")).strip().lower() == "submitted"]
     return decision_registry, decision_source, legacy_fallback_used, pending_user_decisions, open_decisions, submitted_open
 
-
-def _runtime_blocking_reason(
-    *,
-    pending_user_decisions: list[dict[str, Any]],
-    submitted_open: list[dict[str, Any]],
-    has_error: bool,
-    gate_state: str,
-    gate: dict[str, Any],
-    previous_state: dict[str, Any],
-    run_status: str,
-    final_ready: bool,
-) -> str:
-    if pending_user_decisions:
-        first = pending_user_decisions[0]
-        return str(first.get("question", "") or first.get("reason", "")).strip() or str(gate.get("reason", "")).strip() or "decision_required"
-    if submitted_open:
-        return "decision_submitted_waiting_backend_consume"
-    if has_error:
-        return str(gate.get("reason", "")).strip() or f"run_status={run_status or 'error'}"
-    if gate_state == "blocked":
-        return str(gate.get("reason", "")).strip() or "blocked"
-    if str(previous_state.get("blocking_reason", "")).strip():
-        return str(previous_state.get("blocking_reason", "")).strip()
-    return "none" if final_ready else "none"
+def _is_missing_plan_draft_gate(gate: dict[str, Any]) -> bool:
+    if not isinstance(gate, dict):
+        return False
+    path = str(gate.get("path", "")).strip().lower()
+    reason = str(gate.get("reason", "")).strip().lower()
+    return "plan_draft.md" in path or "plan_draft.md" in reason
 
 
 def _read_runtime_state(run_dir: Path) -> dict[str, Any]:
@@ -419,16 +394,27 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
     }
     now_ts = _now_utc_iso()
     previous_state = _read_runtime_state(run_dir)
+    gate.update(
+        gate_watchdog_doc(
+            run_dir,
+            previous_state,
+            gate,
+            now_ts=now_ts,
+            is_within=_is_within,
+            file_ts_iso=_file_ts_iso,
+        )
+    )
     previous_iterations = previous_state.get("iterations", {}) if isinstance(previous_state.get("iterations", {}), dict) else {}
-    iterations = {
-        "current": int(previous_iterations.get("current", 0) or 0),
-        "max": int(previous_iterations.get("max", 0) or 0),
-        "source": str(previous_iterations.get("source", "")).strip(),
-    }
+    iterations = {"current": int(previous_iterations.get("current", 0) or 0), "max": int(previous_iterations.get("max", 0) or 0), "source": str(previous_iterations.get("source", "")).strip()}
     run_status = str(parsed.get("run_status", "")).strip().lower()
     if not run_status:
         run_status = str(previous_state.get("run_status", "")).strip().lower()
-    verify_result, verify_gate, iterations = _load_verify_progress(run_dir, previous_state, iterations)
+    verify_result, verify_gate, iterations = load_verify_progress(
+        run_dir,
+        previous_state,
+        iterations,
+        read_json=_read_json,
+    )
     decision_registry, decision_source, legacy_fallback_used, pending_user_decisions, open_decisions, submitted_open = _resolve_decision_runtime(
         run_dir=run_dir,
         previous_state=previous_state,
@@ -450,18 +436,10 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
         or (isinstance(previous_error, dict) and bool(previous_error.get("has_error", False)))
     )
     if has_error and not pending_user_decisions:
-        normalized_registry: list[dict[str, Any]] = []
-        for row in decision_registry:
-            if not isinstance(row, dict):
-                continue
-            current = dict(row)
-            if str(current.get("status", "")).strip().lower() == "submitted":
-                current["status"] = "consumed"
-                current["consumed_at"] = str(current.get("consumed_at", "")).strip() or now_ts
-            normalized_registry.append(current)
-        decision_registry = normalized_registry
-        open_decisions = []
-        submitted_open = []
+        decision_registry, open_decisions, submitted_open = normalize_decision_registry_after_error(
+            decision_registry,
+            now_ts=now_ts,
+        )
     phase = _derive_runtime_phase(
         run_status=run_status,
         verify_result=verify_result,
@@ -469,9 +447,14 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
         needs_user_decision=needs_user_decision,
         has_error=has_error,
     )
+    watchdog_phase_name = watchdog_phase(gate)
+    if watchdog_phase_name:
+        phase = watchdog_phase_name
+    elif gate_state == "blocked" and _is_missing_plan_draft_gate(gate):
+        phase = "RECOVER"
     if submitted_open and phase in {"PLAN", "RECOVER"} and not has_error:
         phase = "EXECUTE"
-    blocking_reason = _runtime_blocking_reason(
+    blocking_reason = runtime_blocking_reason(
         pending_user_decisions=pending_user_decisions,
         submitted_open=submitted_open,
         has_error=has_error,
@@ -480,13 +463,16 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
         previous_state=previous_state,
         run_status=run_status,
         final_ready=final_ready,
+        running_statuses=_RUNNING_STATUSES,
     )
-    error_doc = {
-        "has_error": bool(has_error),
-        "code": run_status if run_status in _ERROR_RUN_STATUSES else (gate_state if gate_state in _ERROR_GATE_STATES else ""),
-        "message": str(gate.get("reason", "")).strip() if has_error else "",
-    }
-    recovery_doc = {"needed": False, "hint": "", "status": "none"} if final_ready else {"needed": bool(has_error or submitted_open), "hint": "run ctcp_advance after decision consumption" if submitted_open else ("inspect verify report and failure bundle" if has_error else ""), "status": "required" if (has_error or submitted_open) else "none"}
+    error_doc = build_error_doc(has_error=has_error, run_status=run_status, gate_state=gate_state, gate=gate)
+    recovery_doc = build_recovery_doc(
+        final_ready=final_ready,
+        submitted_open=submitted_open,
+        has_error=has_error,
+        gate_state=gate_state,
+        gate=gate,
+    )
     latest_result = {
         "verify_result": verify_result,
         "verify_gate": verify_gate,
@@ -494,43 +480,28 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
         "gate": gate,
         "status_raw": latest_status_raw,
     }
-    core_hash = _runtime_core_hash(
-        {
-            "run_status": run_status,
-            "verify_result": verify_result,
-            "verify_gate": verify_gate,
-            "gate": gate,
-            "iterations": iterations,
-            "latest_status_raw": latest_status_raw,
-            "decisions": decision_registry,
-        }
+    snapshot = build_runtime_snapshot(
+        run_dir=run_dir,
+        phase=phase,
+        run_status=run_status,
+        blocking_reason=blocking_reason,
+        needs_user_decision=needs_user_decision,
+        open_decisions=open_decisions,
+        decision_registry=decision_registry,
+        decision_source=decision_source,
+        legacy_fallback_used=legacy_fallback_used,
+        latest_result=latest_result,
+        error_doc=error_doc,
+        recovery_doc=recovery_doc,
+        gate=gate,
+        iterations=iterations,
+        verify_result=verify_result,
+        verify_gate=verify_gate,
+        submitted_open=submitted_open,
+        now_ts=now_ts,
+        runtime_core_hash=_runtime_core_hash,
+        run_id_from_dir=_run_id_from_dir,
     )
-    snapshot = {
-        "schema_version": "ctcp-support-runtime-state-v1",
-        "run_id": _run_id_from_dir(run_dir),
-        "run_dir": str(run_dir),
-        "phase": phase,
-        "run_status": run_status,
-        "blocking_reason": blocking_reason or "none",
-        "needs_user_decision": bool(needs_user_decision),
-        "pending_decisions": open_decisions[:32],
-        "decisions": decision_registry[:64],
-        "decision_source": decision_source,
-        "legacy_decision_fallback_used": legacy_fallback_used,
-        "latest_result": latest_result,
-        "error": error_doc,
-        "recovery": recovery_doc,
-        "gate": gate,
-        "iterations": iterations,
-        "verify_result": verify_result,
-        "verify_gate": verify_gate,
-        "decisions_needed_count": len(pending_user_decisions),
-        "open_decisions_count": len(open_decisions),
-        "submitted_decisions_count": len(submitted_open),
-        "core_hash": core_hash,
-        "updated_at": now_ts,
-        "snapshot_source": "backend_interface_snapshot",
-    }
     _write_runtime_state(run_dir, snapshot)
     return snapshot
 
@@ -542,7 +513,6 @@ def _load_runtime_state(run_dir: Path, *, refresh: bool = True) -> dict[str, Any
         return _refresh_runtime_state(run_dir)
     return state
 
-
 def ctcp_get_project_manifest(run_id: str = "") -> dict[str, Any]:
     run_dir = _resolve_run_dir(run_id)
     rid = _run_id_from_dir(run_dir)
@@ -552,7 +522,6 @@ def ctcp_get_project_manifest(run_id: str = "") -> dict[str, Any]:
     if not isinstance(declared, dict) or not declared:
         declared = None
     return resolve_project_manifest(run_id=rid, run_dir=run_dir, artifacts=artifacts, declared=declared)
-
 
 def ctcp_get_delivery_evidence_manifest(run_id: str = "") -> dict[str, Any]:
     run_dir = _resolve_run_dir(run_id)
@@ -572,7 +541,6 @@ def ctcp_get_delivery_evidence_manifest(run_id: str = "") -> dict[str, Any]:
     out["manifest_path"] = rel_path
     out["manifest_abs_path"] = str((run_dir / DELIVERY_EVIDENCE_REL_PATH).resolve())
     return out
-
 
 def _resolve_artifact_path(run_dir: Path, artifact_ref: str) -> tuple[Path, dict[str, Any]]:
     ref = str(artifact_ref or "").strip()
@@ -596,7 +564,6 @@ def _resolve_artifact_path(run_dir: Path, artifact_ref: str) -> tuple[Path, dict
         raise BridgeError(f"output artifact path missing: {target}")
     return target, row
 
-
 def _append_event(run_dir: Path, event: str, path: str = "", **extra: Any) -> None:
     row: dict[str, Any] = {
         "ts": _now_utc_iso(),
@@ -611,13 +578,11 @@ def _append_event(run_dir: Path, event: str, path: str = "", **extra: Any) -> No
     with events_path.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(row, ensure_ascii=False) + "\n")
 
-
 def _orchestrate_status(run_dir: Path) -> dict[str, Any]:
     cmd = [sys.executable, str(ORCHESTRATE_PATH), "status", "--run-dir", str(run_dir)]
     result = _run_cmd(cmd, ROOT)
     result["parsed"] = _parse_status_output(str(result.get("stdout", "")))
     return result
-
 
 def ctcp_new_run(
     goal: str,
@@ -675,7 +640,6 @@ def ctcp_new_run(
         "status": status,
     }
 
-
 def ctcp_get_status(run_id: str = "") -> dict[str, Any]:
     run_dir = _resolve_run_dir(run_id)
     runtime_state = _load_runtime_state(run_dir, refresh=True)
@@ -711,6 +675,17 @@ def ctcp_get_status(run_id: str = "") -> dict[str, Any]:
             "owner": str(gate.get("owner", "")).strip(),
             "path": str(gate.get("path", "")).strip(),
             "reason": str(gate.get("reason", "")).strip(),
+            "entered_at": str(gate.get("entered_at", "")).strip(),
+            "updated_at": str(gate.get("updated_at", "")).strip(),
+            "retry_count": int(gate.get("retry_count", 0) or 0),
+            "max_retries": int(gate.get("max_retries", 0) or 0),
+            "expected_artifact": str(gate.get("expected_artifact", "")).strip(),
+            "expected_exists": bool(gate.get("expected_exists", False)),
+            "recovery_action": str(gate.get("recovery_action", "")).strip(),
+            "last_retry_at": str(gate.get("last_retry_at", "")).strip(),
+            "stalled": bool(gate.get("stalled", False)),
+            "stalled_seconds": int(gate.get("stalled_seconds", 0) or 0),
+            "watchdog_status": str(gate.get("watchdog_status", "")).strip(),
         },
         "phase": str(runtime_state.get("phase", "")).strip(),
         "blocking_reason": str(runtime_state.get("blocking_reason", "")).strip(),
@@ -729,7 +704,6 @@ def ctcp_get_status(run_id: str = "") -> dict[str, Any]:
         "runtime_state_path": SUPPORT_RUNTIME_STATE_REL.as_posix(),
         "runtime_state": runtime_state,
     }
-
 
 def ctcp_get_support_context(run_id: str = "") -> dict[str, Any]:
     run_dir = _resolve_run_dir(run_id)
@@ -759,10 +733,19 @@ def ctcp_get_support_context(run_id: str = "") -> dict[str, Any]:
         "goal": str(frontend_request.get("goal", "")).strip(),
     }
 
-
 def ctcp_advance(run_id: str, max_steps: int = 1) -> dict[str, Any]:
     run_dir = _resolve_run_dir(run_id)
     steps = max(1, min(int(max_steps or 1), 32))
+    runtime_before = _load_runtime_state(run_dir, refresh=True)
+    gate_before = runtime_before.get("gate", {}) if isinstance(runtime_before.get("gate", {}), dict) else {}
+    if str(gate_before.get("watchdog_status", "")).strip().lower() == "retry_ready":
+        runtime_before = mark_retry_attempt(
+            run_dir,
+            runtime_before,
+            now_utc_iso=_now_utc_iso,
+            write_runtime_state=_write_runtime_state,
+            append_event=_append_event,
+        )
     cmd = [
         sys.executable,
         str(ORCHESTRATE_PATH),
@@ -778,10 +761,10 @@ def ctcp_advance(run_id: str, max_steps: int = 1) -> dict[str, Any]:
         "run_id": _run_id_from_dir(run_dir),
         "run_dir": str(run_dir),
         "max_steps": steps,
+        "runtime_before": runtime_before,
         "advance": result,
         "status": status,
     }
-
 
 def ctcp_record_support_turn(
     run_id: str,
@@ -827,7 +810,6 @@ def ctcp_record_support_turn(
         "whiteboard": whiteboard,
     }
 
-
 def ctcp_get_last_report(run_id: str = "") -> dict[str, Any]:
     run_dir = _resolve_run_dir(run_id)
     verify_report_path = run_dir / "artifacts" / "verify_report.json"
@@ -846,7 +828,6 @@ def ctcp_get_last_report(run_id: str = "") -> dict[str, Any]:
         "verify_report": verify_doc,
     }
 
-
 def ctcp_list_output_artifacts(run_id: str = "") -> dict[str, Any]:
     run_dir = _resolve_run_dir(run_id)
     rows = _collect_output_artifacts(run_dir, guess_mime_type=_guess_mime_type, file_ts_iso=_file_ts_iso)
@@ -856,7 +837,6 @@ def ctcp_list_output_artifacts(run_id: str = "") -> dict[str, Any]:
         "artifacts": rows,
         "count": len(rows),
     }
-
 
 def ctcp_get_output_artifact_meta(run_id: str, artifact_ref: str) -> dict[str, Any]:
     run_dir = _resolve_run_dir(run_id)
@@ -872,7 +852,6 @@ def ctcp_get_output_artifact_meta(run_id: str, artifact_ref: str) -> dict[str, A
         "sha256": _sha256_hex(target),
         "created_at": str(row.get("created_at", "")).strip(),
     }
-
 
 def ctcp_read_output_artifact(run_id: str, artifact_ref: str, *, max_text_bytes: int = 65536) -> dict[str, Any]:
     run_dir = _resolve_run_dir(run_id)
@@ -902,7 +881,6 @@ def ctcp_read_output_artifact(run_id: str, artifact_ref: str, *, max_text_bytes:
         out["text"] = text
     return out
 
-
 def ctcp_get_current_state_snapshot(run_id: str = "") -> dict[str, Any]:
     run_dir = _resolve_run_dir(run_id)
     status = ctcp_get_status(_run_id_from_dir(run_dir))
@@ -913,7 +891,6 @@ def ctcp_get_current_state_snapshot(run_id: str = "") -> dict[str, Any]:
     goal = str(frontend_request.get("goal", "")).strip() or str(runtime_state.get("goal", "")).strip()
     return _build_current_state_snapshot(run_id=_run_id_from_dir(run_dir), goal=goal, runtime_state=runtime_state)
 
-
 def ctcp_get_render_state_snapshot(run_id: str = "") -> dict[str, Any]:
     run_dir = _resolve_run_dir(run_id)
     current = ctcp_get_current_state_snapshot(_run_id_from_dir(run_dir))
@@ -922,7 +899,6 @@ def ctcp_get_render_state_snapshot(run_id: str = "") -> dict[str, Any]:
     if not isinstance(runtime_state, dict):
         runtime_state = {}
     return _build_render_state_snapshot(current_snapshot=current, runtime_state=runtime_state)
-
 
 def ctcp_list_decisions_needed(run_id: str = "") -> dict[str, Any]:
     run_dir = _resolve_run_dir(run_id)
@@ -955,7 +931,6 @@ def ctcp_list_decisions_needed(run_id: str = "") -> dict[str, Any]:
         "open_count": len(decisions),
         "decisions": decisions,
     }
-
 
 def ctcp_submit_decision(run_id: str, decision: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(decision, dict):
@@ -1084,7 +1059,6 @@ def ctcp_submit_decision(run_id: str, decision: dict[str, Any]) -> dict[str, Any
         "updated_at": str(refreshed_state.get("updated_at", "")),
     }
 
-
 def ctcp_upload_artifact(run_id: str, file: str | dict[str, Any]) -> dict[str, Any]:
     run_dir = _resolve_run_dir(run_id)
     if isinstance(file, dict):
@@ -1121,7 +1095,6 @@ def ctcp_upload_artifact(run_id: str, file: str | dict[str, Any]) -> dict[str, A
         "uploaded_at": _now_utc_iso(),
     }
 
-
 # Backend interface aliases (contract-facing names)
 def create_run(
     goal: str,
@@ -1138,34 +1111,26 @@ def create_run(
         project_spec=project_spec,
     )
 
-
 def get_run_status(run_id: str = "") -> dict[str, Any]:
     return ctcp_get_status(run_id=run_id)
-
 
 def advance_run(run_id: str, max_steps: int = 1) -> dict[str, Any]:
     return ctcp_advance(run_id=run_id, max_steps=max_steps)
 
-
 def list_pending_decisions(run_id: str = "") -> dict[str, Any]:
     return ctcp_list_decisions_needed(run_id=run_id)
-
 
 def submit_decision(run_id: str, decision: dict[str, Any]) -> dict[str, Any]:
     return ctcp_submit_decision(run_id=run_id, decision=decision)
 
-
 def upload_input_artifact(run_id: str, file: str | dict[str, Any]) -> dict[str, Any]:
     return ctcp_upload_artifact(run_id=run_id, file=file)
-
 
 def get_last_report(run_id: str = "") -> dict[str, Any]:
     return ctcp_get_last_report(run_id=run_id)
 
-
 def get_support_context(run_id: str = "") -> dict[str, Any]:
     return ctcp_get_support_context(run_id=run_id)
-
 
 def record_support_turn(
     run_id: str,
@@ -1183,34 +1148,26 @@ def record_support_turn(
         conversation_mode=conversation_mode,
     )
 
-
 def list_output_artifacts(run_id: str = "") -> dict[str, Any]:
     return ctcp_list_output_artifacts(run_id=run_id)
-
 
 def get_output_artifact_meta(run_id: str, artifact_ref: str) -> dict[str, Any]:
     return ctcp_get_output_artifact_meta(run_id=run_id, artifact_ref=artifact_ref)
 
-
 def read_output_artifact(run_id: str, artifact_ref: str, *, max_text_bytes: int = 65536) -> dict[str, Any]:
     return ctcp_read_output_artifact(run_id=run_id, artifact_ref=artifact_ref, max_text_bytes=max_text_bytes)
-
 
 def get_project_manifest(run_id: str = "") -> dict[str, Any]:
     return ctcp_get_project_manifest(run_id=run_id)
 
-
 def get_delivery_evidence_manifest(run_id: str = "") -> dict[str, Any]:
     return ctcp_get_delivery_evidence_manifest(run_id=run_id)
-
 
 def get_current_state_snapshot(run_id: str = "") -> dict[str, Any]:
     return ctcp_get_current_state_snapshot(run_id=run_id)
 
-
 def get_render_state_snapshot(run_id: str = "") -> dict[str, Any]:
     return ctcp_get_render_state_snapshot(run_id=run_id)
-
 
 __all__ = [
     "BridgeError",

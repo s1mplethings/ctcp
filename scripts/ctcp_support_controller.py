@@ -507,9 +507,38 @@ def mark_job_sent(
     notification_state["cooldown_until_ts"] = until.replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def requeue_outbound_job(session_state: dict[str, Any], job: dict[str, Any] | None, *, sanitize_inline_text: Any) -> None:
+    if not isinstance(job, dict):
+        return
+    queue = _outbound_queue(session_state)
+    jobs = _list_zone(queue, "jobs")
+    pending_ids = _list_zone(queue, "pending_ids")
+    job_id = sanitize_inline_text(str(job.get("id", "")), max_chars=120)
+    if job_id and all(sanitize_inline_text(str(item), max_chars=120) != job_id for item in pending_ids):
+        pending_ids.append(job_id)
+    if not any(isinstance(item, dict) and sanitize_inline_text(str(item.get("id", "")), max_chars=120) == job_id for item in jobs):
+        jobs.insert(0, dict(job))
+    queue["jobs"] = jobs[:32]
+    queue["pending_ids"] = pending_ids[:64]
+
+
+def normalize_proactive_progress_reply_text(reply_text: str, *, lang_hint: str, leak_tokens: tuple[str, ...]) -> str:
+    text = str(reply_text or "").strip()
+    if not text:
+        return text
+    low = text.lower()
+    if any(token in low for token in leak_tokens):
+        if str(lang_hint or "").strip().lower().startswith("en"):
+            return "Progress is moving forward as planned. I will keep pushing and sync you on the next visible update."
+        return "项目在按计划推进中，我会继续往下处理，有可见进展会第一时间同步你。"
+    return text
+
+
 __all__ = [
     "CONTROLLER_STATES",
     "decide_and_queue",
     "mark_job_sent",
+    "normalize_proactive_progress_reply_text",
     "pop_outbound_jobs",
+    "requeue_outbound_job",
 ]

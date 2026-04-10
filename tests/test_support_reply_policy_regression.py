@@ -21,11 +21,13 @@ def _project_context(
     progress_summary: str = "",
     decision_question: str = "",
     run_status: str = "running",
+    phase: str = "EXECUTE",
     error: bool = False,
     error_message: str = "",
     artifacts: list[str] | None = None,
     blocker: str = "",
     next_action: str = "",
+    recovery: dict[str, object] | None = None,
 ) -> dict[str, object]:
     decision_cards = []
     if decision_question:
@@ -39,13 +41,16 @@ def _project_context(
             "decision_cards": decision_cards,
         },
         "runtime_state": {
+            "phase": phase,
             "run_status": run_status,
             "blocking_reason": blocker,
             "next_action": next_action,
             "error": {"has_error": error, "message": error_message or ("traceback details" if error else "")},
+            "needs_user_decision": bool(decision_question),
+            "recovery": recovery or {"needed": False, "hint": "", "status": "none"},
         },
         "current_snapshot": {
-            "authoritative_stage": "WAIT_USER_DECISION" if visible_state == "WAITING_FOR_DECISION" else "EXECUTE",
+            "authoritative_stage": "WAIT_USER_DECISION" if visible_state == "WAITING_FOR_DECISION" else phase,
             "current_blocker": blocker,
             "next_action": next_action,
         },
@@ -333,6 +338,48 @@ class SupportReplyPolicyRegressionTests(unittest.TestCase):
         self.assertEqual(str(docs[0].get("dedupe_action", "")), "send")
         self.assertIn(str(docs[1].get("dedupe_action", "")), {"downgrade", "suppress"})
         self.assertIn(str(docs[2].get("dedupe_action", "")), {"downgrade", "suppress"})
+
+    def test_internal_recovery_block_does_not_become_missing_input_test(self) -> None:
+        ctx = _project_context(
+            visible_state="BLOCKED_NEEDS_INPUT",
+            run_status="running",
+            phase="RECOVER",
+            blocker="waiting for PLAN_draft.md",
+            next_action="retry planner to generate PLAN_draft.md",
+            recovery={"needed": True, "hint": "retry planner to generate PLAN_draft.md", "status": "retry_ready"},
+        )
+        self.assertEqual(
+            infer_reply_intent(
+                conversation_mode="PROJECT_DETAIL",
+                project_context=ctx,
+                next_question="当前遇到内部阻塞，确认这条输入后我可以继续。",
+            ),
+            "guide_recovery",
+        )
+
+    def test_internal_recovery_fallback_exposes_real_blocker_test(self) -> None:
+        ctx = _project_context(
+            visible_state="BLOCKED_NEEDS_INPUT",
+            run_status="running",
+            phase="RECOVER",
+            blocker="waiting for PLAN_draft.md",
+            next_action="retry planner to generate PLAN_draft.md",
+            recovery={"needed": True, "hint": "retry planner to generate PLAN_draft.md", "status": "retry_ready"},
+        )
+        out = enforce_reply_policy(
+            reply_text="",
+            next_question="",
+            conversation_mode="PROJECT_DETAIL",
+            lang_hint="zh",
+            project_context=ctx,
+            provider_status="executed",
+            reply_memory=default_reply_dedupe_memory(),
+            allow_suppress=False,
+        )
+        self.assertEqual(str(out.get("intent", "")), "guide_recovery")
+        self.assertIn("PLAN_draft.md", str(out.get("reply_text", "")))
+        self.assertIn("retry planner", str(out.get("reply_text", "")))
+        self.assertEqual(str(out.get("next_question", "")), "")
 
 
 if __name__ == "__main__":

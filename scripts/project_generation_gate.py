@@ -298,6 +298,20 @@ def _validate_output_contract_freeze(path: Path) -> tuple[bool, str]:
     return True, "ok"
 
 
+def _validate_visual_evidence_files(doc: dict[str, Any], *, run_dir: Path, context: str) -> tuple[bool, str]:
+    rows = doc.get("visual_evidence_files")
+    if not isinstance(rows, list):
+        return False, f"result gate: {context} visual_evidence_files must be array"
+    files = [str(item).strip() for item in rows if str(item).strip()]
+    if not files:
+        return False, f"result gate: {context} visual_evidence_files must not be empty"
+    for rel in files:
+        target = (run_dir / rel).resolve()
+        if not target.exists():
+            return False, f"result gate: {context} visual evidence missing: {rel}"
+    return True, "ok"
+
+
 def _validate_project_manifest(path: Path) -> tuple[bool, str]:
     doc, msg = _load_json(
         path,
@@ -383,8 +397,12 @@ def _validate_project_manifest(path: Path) -> tuple[bool, str]:
     behavior = doc.get("behavioral_checks")
     if not isinstance(behavior, dict):
         return False, "behavioral gate: behavioral_checks must be object"
-    if str(doc.get("delivery_shape", "")).strip() in {"gui_first", "web_first"} and str(doc.get("visual_evidence_status", "")).strip() not in {"placeholder_only", "provided"}:
-        return False, "result gate: GUI/web manifest must declare visual_evidence_status"
+    if str(doc.get("delivery_shape", "")).strip() in {"gui_first", "web_first"}:
+        if str(doc.get("visual_evidence_status", "")).strip() != "provided":
+            return False, "result gate: GUI/web manifest must provide real visual evidence"
+        ok, msg = _validate_visual_evidence_files(doc, run_dir=run_dir, context="manifest")
+        if not ok:
+            return False, msg
     if str(doc.get("execution_mode", "")).strip() == "production" and bool(doc.get("benchmark_sample_applied", False)):
         return False, "result gate: production manifest must not apply benchmark sample content"
     if _is_narrative_project(doc):
@@ -512,8 +530,12 @@ def _validate_stage_report(path: Path, *, stage: str) -> tuple[bool, str]:
                 probe_rc_int = 1
             if probe_rc_int != 0:
                 return False, f"behavioral gate: {field} must pass"
-        if str(doc.get("delivery_shape", "")).strip() in {"gui_first", "web_first"} and str(doc.get("visual_evidence_status", "")).strip() not in {"placeholder_only", "provided"}:
-            return False, "result gate: GUI/web source_generation must declare visual_evidence_status"
+        if str(doc.get("delivery_shape", "")).strip() in {"gui_first", "web_first"}:
+            if str(doc.get("visual_evidence_status", "")).strip() != "provided":
+                return False, "result gate: GUI/web source_generation must provide real visual evidence"
+            ok, msg = _validate_visual_evidence_files(doc, run_dir=run_dir, context="source_generation")
+            if not ok:
+                return False, msg
         if str(doc.get("execution_mode", "")).strip() == "production" and bool(doc.get("benchmark_sample_applied", False)):
             return False, "result gate: production source_generation must not apply benchmark sample content"
         if _is_narrative_project(doc):

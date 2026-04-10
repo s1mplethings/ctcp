@@ -405,6 +405,8 @@ class ProviderSelectionTests(unittest.TestCase):
             captured: dict[str, object] = {}
 
             def _fake_execute(*, repo_root: Path, run_dir: Path, request: dict[str, object], config: dict[str, object], guardrails_budgets: dict[str, str]) -> dict[str, object]:
+                target_path = run_dir / "artifacts" / "diff.patch"
+                target_path.write_text("diff --git a/a b/a\n", encoding="utf-8")
                 captured["request"] = request
                 return {"status": "executed", "target_path": "artifacts/diff.patch"}
 

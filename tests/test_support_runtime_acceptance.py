@@ -375,6 +375,75 @@ class RuntimeStateContractAcceptanceTests(unittest.TestCase):
             self.assertEqual(str(status.get("phase", "")), "EXECUTE")
             self.assertFalse(bool(status.get("needs_user_decision", False)))
 
+    def test_layer1_contract_clears_stale_blocker_once_backend_gate_recovers(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_accept_layer1_stale_blocker_") as td:
+            run_dir = Path(td)
+            _write_json(
+                run_dir / "artifacts" / "support_runtime_state.json",
+                {
+                    "schema_version": "ctcp-support-runtime-state-v1",
+                    "run_id": "r-layer1-stale",
+                    "run_dir": str(run_dir),
+                    "phase": "RECOVER",
+                    "run_status": "blocked",
+                    "blocking_reason": "waiting for context_pack.json",
+                    "needs_user_decision": False,
+                    "pending_decisions": [],
+                    "decisions": [],
+                    "latest_result": {
+                        "verify_result": "",
+                        "verify_gate": "",
+                        "iterations": {"current": 0, "max": 8, "source": "test"},
+                        "gate": {"state": "blocked", "owner": "Local Librarian", "path": "artifacts/context_pack.json", "reason": "waiting for context_pack.json"},
+                        "status_raw": {},
+                    },
+                    "error": {"has_error": False, "code": "", "message": ""},
+                    "recovery": {"needed": False, "hint": "", "status": "none"},
+                    "gate": {"state": "blocked", "owner": "Local Librarian", "path": "artifacts/context_pack.json", "reason": "waiting for context_pack.json"},
+                    "iterations": {"current": 0, "max": 8, "source": "test"},
+                    "verify_result": "",
+                    "verify_gate": "",
+                    "decisions_needed_count": 0,
+                    "open_decisions_count": 0,
+                    "submitted_decisions_count": 0,
+                    "core_hash": "old-hash",
+                    "updated_at": "2026-03-30T00:00:00Z",
+                    "snapshot_source": "canonical_snapshot",
+                },
+            )
+
+            def _fake_run_cmd(cmd: list[str], cwd: Path) -> dict[str, Any]:
+                del cwd
+                self.assertEqual(str(cmd[2]), "status")
+                return {
+                    "cmd": " ".join(cmd),
+                    "exit_code": 0,
+                    "stdout": "\n".join(
+                        [
+                            f"[ctcp_orchestrate] run_dir={run_dir}",
+                            "[ctcp_orchestrate] run_status=running",
+                            "[ctcp_orchestrate] next=open",
+                            "[ctcp_orchestrate] owner=PatchMaker",
+                            "[ctcp_orchestrate] path=artifacts/PLAN.md",
+                            "[ctcp_orchestrate] reason=working",
+                        ]
+                    )
+                    + "\n",
+                    "stderr": "",
+                }
+
+            with mock.patch.object(ctcp_front_bridge, "_resolve_run_dir", return_value=run_dir), mock.patch.object(
+                ctcp_front_bridge,
+                "_run_cmd",
+                side_effect=_fake_run_cmd,
+            ):
+                status = ctcp_front_bridge.ctcp_get_status("r-layer1-stale")
+
+            self.assertEqual(str(status.get("run_status", "")), "running")
+            self.assertEqual(str(status.get("gate", {}).get("state", "")), "open")
+            self.assertEqual(str(status.get("blocking_reason", "")), "none")
+            self.assertEqual(str(dict(status.get("runtime_state", {})).get("blocking_reason", "")), "none")
+
     def test_layer1_decision_lifecycle_pending_submitted_consumed(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_accept_layer1_lifecycle_") as td:
             run_dir = Path(td)
