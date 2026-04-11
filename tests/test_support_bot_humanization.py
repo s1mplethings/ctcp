@@ -7,7 +7,6 @@ import unittest
 import zipfile
 from pathlib import Path
 from unittest import mock
-
 import scripts.ctcp_support_bot as support_bot
 
 
@@ -1679,7 +1678,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
 
             reply = str(doc.get("reply_text", ""))
             self.assertIn("目前在", reply)
-            self.assertIn("我会继续处理：", reply)
+            self.assertIn("下一步我会继续处理：", reply)
             self.assertNotIn("你好，随时可以开始", reply)
             self.assertNotEqual(reply.strip(), "你好，随时可以开始。你说说看要做什么？")
         self.assertEqual(str(session_state.get("frontdesk_state", {}).get("state", "")), "idle")

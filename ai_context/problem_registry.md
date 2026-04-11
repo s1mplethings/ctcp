@@ -808,7 +808,7 @@ When to add:
 - Fix:
   把 delivery action 无 sent 视为失败并重试；把 proactive/result push 接到 `emit_public_delivery()`；增加截图候选优先级；生成阶段输出 `final-ui.png`；公开回复遇到内部 marker 时改写为用户可读交付说明。
 - Fix attempt status:
-  2026-04-10 scoped repair bound under `ADHOC-20260410-real-visual-evidence-and-public-delivery`.
+  2026-04-10 scoped repair bound under `ADHOC-20260410-real-visual-evidence-and-public-delivery`; 2026-04-11 stopgap follow-up aligned the Telegram-visible delivery wording, hard delivery-plan sent-file checks, screenshot-evidence ordering, and generator default `final-ui.png` naming under the same queue item.
 - Regression test status:
   Covered by `tests/test_support_proactive_delivery.py`, `tests/test_support_delivery_user_visible_contract.py`, and `tests/test_project_generation_artifacts.py`.
 - Prevention:

@@ -16,9 +16,11 @@ class SupportProactiveDeliveryTests(unittest.TestCase):
             project_dir = root / "generated_projects" / "story_organizer"
             project_dir.mkdir(parents=True, exist_ok=True)
             (project_dir / "README.md").write_text("# story_organizer\n", encoding="utf-8")
-            screenshot = project_dir / "artifacts" / "screenshots" / "overview.png"
-            screenshot.parent.mkdir(parents=True, exist_ok=True)
-            screenshot.write_bytes(b"\x89PNG\r\n\x1a\n")
+            final_ui = project_dir / "artifacts" / "screenshots" / "final-ui.png"
+            overview = project_dir / "artifacts" / "screenshots" / "overview.png"
+            final_ui.parent.mkdir(parents=True, exist_ok=True)
+            final_ui.write_bytes(b"\x89PNG\r\n\x1a\n")
+            overview.write_bytes(b"\x89PNG\r\n\x1a\n")
             session_state = support_bot.default_support_session_state("123")
             session_state["outbound_queue"] = {
                 "pending_ids": ["result:run-demo:1"],
@@ -68,7 +70,7 @@ class SupportProactiveDeliveryTests(unittest.TestCase):
                     "ctcp_package_source_dirs": [],
                     "placeholder_package_source_dirs": [],
                     "existing_package_files": [],
-                    "screenshot_files": [str(screenshot)],
+                    "screenshot_files": [str(overview), str(final_ui)],
                     "project_name_hint": "story_organizer",
                 },
             ):
@@ -87,8 +89,10 @@ class SupportProactiveDeliveryTests(unittest.TestCase):
             self.assertEqual(len(fake.sent_messages), 1)
             self.assertEqual(len(fake.sent_documents), 1)
             self.assertEqual(len(fake.sent_photos), 1)
+            self.assertEqual(fake.sent_photos[0][1].name, "final-ui.png")
             manifest = json.loads((support_run_dir / support_bot.SUPPORT_PUBLIC_DELIVERY_REL_PATH).read_text(encoding="utf-8"))
             self.assertEqual(len(list(manifest.get("sent", []))), 2)
+            self.assertEqual({item.get("type") for item in manifest.get("sent", [])}, {"document", "photo"})
 
     def test_controller_result_push_requeues_when_delivery_manifest_has_no_sent_files(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_controller_delivery_fail_") as td:

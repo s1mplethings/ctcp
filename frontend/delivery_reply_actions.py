@@ -1,11 +1,23 @@
 from __future__ import annotations
 
 import re
-from typing import Any
+from pathlib import Path
+from typing import Any, Iterable
 
 _FINAL_READY_RUN_STATUSES = {"pass", "done", "completed", "success"}
 _DELIVERY_ACTION_TYPES = {"send_project_package", "send_project_screenshot"}
-_HIGH_VALUE_SCREENSHOT_MARKERS = ("final-ui", "final", "result", "app-home", "home", "main-screen", "ui", "page", "render", "output")
+_HIGH_VALUE_SCREENSHOT_MARKERS = (
+    "final-ui",
+    "final",
+    "result",
+    "app-home",
+    "home",
+    "main-screen",
+    "ui",
+    "page",
+    "render",
+    "output",
+)
 _MID_VALUE_SCREENSHOT_MARKERS = ("preview", "screen", "screenshot")
 _LOW_VALUE_SCREENSHOT_MARKERS = ("overview", "debug", "trace", "proof", "evidence", "timeline")
 _INTERNAL_REPLY_MARKERS = (
@@ -25,19 +37,20 @@ _INTERNAL_REPLY_MARKERS = (
 )
 
 
-def prioritize_screenshot_files(paths: list[Any]) -> list[Any]:
-    def score(raw: Any) -> tuple[int, str]:
-        text = str(raw or "").replace("\\", "/").lower()
-        name = text.rsplit("/", 1)[-1]
-        if any(marker in name for marker in _HIGH_VALUE_SCREENSHOT_MARKERS):
-            return (0, name)
-        if any(marker in name for marker in _MID_VALUE_SCREENSHOT_MARKERS):
-            return (1, name)
-        if any(marker in name for marker in _LOW_VALUE_SCREENSHOT_MARKERS):
-            return (3, name)
-        return (2, name)
+def _screenshot_priority_key(value: Any) -> tuple[int, str]:
+    name = Path(str(value or "")).name.lower()
+    if any(marker in name for marker in _HIGH_VALUE_SCREENSHOT_MARKERS):
+        return (0, name)
+    if any(marker in name for marker in _MID_VALUE_SCREENSHOT_MARKERS):
+        return (1, name)
+    if any(marker in name for marker in _LOW_VALUE_SCREENSHOT_MARKERS):
+        return (3, name)
+    return (2, name)
 
-    return sorted([item for item in paths if str(item or "").strip()], key=score)
+
+def prioritize_screenshot_files(paths: Iterable[Any]) -> list[str]:
+    normalized = [str(item).strip() for item in paths if str(item).strip()]
+    return sorted(normalized, key=_screenshot_priority_key)
 
 
 def _looks_internal(text: str) -> bool:
@@ -65,15 +78,26 @@ def align_reply_with_delivery_actions(reply_text: str, *, actions: list[dict[str
         note = "文件我会直接发到当前对话，不用再留邮箱。"
         if note not in text:
             text = f"{text}\n\n{note}" if text else note
+
+    base_delivery_text = (
+        "项目已经整理好了，你可以直接开始查看。\n\n"
+        "你先看我发的成品截图确认界面和结果，再打开 zip 包看完整代码。\n\n"
+        "zip 里包含 README、启动入口和主要代码；运行方式先按 README 里的说明执行。"
+    )
+    if _looks_internal(text):
+        text = base_delivery_text
+    elif {"send_project_package", "send_project_screenshot"} <= action_types and not all(
+        token in text for token in ("README", "启动入口", "运行方式")
+    ):
+        text = base_delivery_text
+
     delivery_note = ""
     if {"send_project_package", "send_project_screenshot"} <= action_types:
-        delivery_note = "我会先发成品截图，再发 zip 包；zip 里包含 README、启动入口和主要代码，运行方式先看 README。"
+        delivery_note = "我会把成品截图和项目 zip 直接发到当前对话，你先看截图，再打开 zip。"
     elif "send_project_package" in action_types:
-        delivery_note = "我现在把 zip 包发到当前对话；zip 里包含 README、启动入口和主要代码，运行方式先看 README。"
+        delivery_note = "我会把项目 zip 直接发到当前对话。"
     elif "send_project_screenshot" in action_types:
-        delivery_note = "我先把成品截图发到当前对话，你可以先看界面效果。"
-    if _looks_internal(text):
-        text = "项目已经整理好。我会先发成品截图，再发 zip 包；zip 里包含 README、启动入口和主要代码，先看 README 里的运行方式。"
+        delivery_note = "我先把成品截图直接发到当前对话。"
     if delivery_note and delivery_note not in text:
         text = f"{text}\n\n{delivery_note}" if text else delivery_note
     return text
@@ -108,7 +132,8 @@ def inject_ready_delivery_actions(
     if not isinstance(delivery_state, dict) or not is_verify_pass_delivery_context(project_context):
         return out
     types = {str(item.get("type", "")).strip().lower() for item in out}
-    screenshot_count = len([x for x in delivery_state.get("screenshot_files", []) if str(x).strip()])
+    screenshot_files = prioritize_screenshot_files(delivery_state.get("screenshot_files", []) or [])
+    screenshot_count = len(screenshot_files)
     if bool(delivery_state.get("screenshot_ready", False)) and screenshot_count > 0 and "send_project_screenshot" not in types:
         out.append({"type": "send_project_screenshot", "count": min(2, screenshot_count)})
         types.add("send_project_screenshot")

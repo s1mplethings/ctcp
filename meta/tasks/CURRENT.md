@@ -9,6 +9,7 @@
 ## Context
 
 - Why this item now: the real Telegram-bound run `20260409-215339-177800-orchestrate` is no longer blocked on generation truth. It now proves a narrower delivery gap: the generation chain can reach `verify PASS`, but GUI/web outputs still leave `visual_evidence_status=placeholder_only`, no real screenshot artifacts are surfaced, and the Telegram-facing final result can end with artifact hints instead of a real zip plus screenshot delivery record.
+- Current tranche note (2026-04-12): this scoped stopgap now directly hardens the full public-delivery path in the five user-requested files: `frontend/delivery_reply_actions.py`, `frontend/support_reply_policy.py`, `scripts/project_delivery_evidence_bridge.py`, `tools/providers/project_generation_source_helpers.py`, and `scripts/ctcp_support_bot.py`, plus the matching delivery/proactive/http regressions under the same queue item.
 - Dependency check: `ADHOC-20260410-project-generation-launcher-syntax-fix` = `done`.
 - Scope boundary: repair the post-generation delivery chain only. Add real screenshot evidence for GUI/web project outputs, make verify-pass delivery send actual package/photo files, and keep invalid or placeholder-only artifacts from counting as successful delivery. Do not reopen watchdog/state-machine architecture in this patch.
 
@@ -139,16 +140,16 @@
 - [x] Research logged (delivery gap + live evidence captured)
 - [x] Code changes allowed (scoped generator/delivery/tests/meta only)
 - [x] Patch scope aligned with user request
-- [ ] `scripts/verify_repo.*` passes
-- [ ] Demo report updated: `meta/reports/LAST.md`
+- [x] `scripts/verify_repo.*` passes
+- [x] Demo report updated: `meta/reports/LAST.md`
 
 ## Plan
 
-1. Add a real visual evidence capture step after GUI/web runtime probes and propagate the resulting screenshot truth into source-generation reports and manifests.
-2. Tighten GUI/web gates so `placeholder_only` no longer counts as a successful source-generation/manifest result.
-3. Make the Telegram final delivery path auto-synthesize and send zip/screenshot files when verify-pass delivery truth exists.
-4. Add focused regressions for screenshot generation, delivery manifest population, and final delivery reply actions.
-5. Exercise one real Telegram-lane outbound delivery and run canonical verify.
+1. Align `frontend/delivery_reply_actions.py` and `scripts/ctcp_support_bot.py` to the same public-delivery contract: stable screenshot priority, verify-pass action injection, and hard `photo` / `document` `sent` checks for both ordinary and proactive result paths.
+2. Rewrite `frontend/support_reply_policy.py` fallback delivery/progress wording so `deliver_result` stays user-readable and no longer re-appends artifact filename lists.
+3. Reorder screenshot evidence selection in `scripts/project_delivery_evidence_bridge.py` and stabilize GUI/web visual evidence naming in `tools/providers/project_generation_source_helpers.py` around `artifacts/screenshots/final-ui.png`.
+4. Run the focused delivery regressions for wording, proactive delivery, screenshot ordering, Telegram HTTP transport, then run canonical verify.
+5. Record the stopgap and a fresh delivery-proof run in `meta/reports/LAST.md`.
 
 ## Check / Contrast / Fix Loop Evidence
 
@@ -169,7 +170,8 @@
 ## Notes / Decisions
 
 - Default choices made: keep the existing live Telegram session `6092527664` and the bound run `20260409-215339-177800-orchestrate` as the delivery evidence target rather than inventing a fake transport.
+- Current stopgap default: preserve the existing queue item/topic and fix the user-visible delivery stopgap in-place instead of rebinding a new ADHOC item, because the work remains inside the same public-delivery defect family.
 - Alternatives considered: fix only support reply wording or relax `placeholder_only` gate acceptance; rejected because neither would produce real visual evidence or usable delivery files.
 - Any contract exception reference: none.
 - Issue memory decision: yes; record “verify-pass generated project lacks screenshot/package delivery evidence even though support can consume such files” as a user-visible delivery regression if this lands cleanly.
-- Skill decision (`skillized: yes` or `skillized: no, because ...`): `skillized: no, because this patch is a CTCP-local generator/delivery repair tightly coupled to the repo’s project-generation and Telegram support contracts rather than a reusable workflow asset.`
+- Skill decision (`skillized: yes` or `skillized: no, because ...`): `skillized: no, because this patch is a CTCP-local delivery stopgap tightly coupled to the repo’s project-generation and Telegram support contracts rather than a reusable workflow asset.`

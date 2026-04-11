@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from difflib import SequenceMatcher
 import hashlib
+from pathlib import Path
 import re
 from typing import Any, Literal, Mapping
 
@@ -111,19 +112,22 @@ _FILLER_RE = re.compile(
 def _public_delivery_result_text(*, delivery: Mapping[str, str], lang_hint: str) -> str:
     use_en = _norm(lang_hint).lower().startswith("en")
     entry = _norm(delivery.get("startup_entrypoint", ""))
-    readme = _norm(delivery.get("startup_readme", "")) or "README.md"
-    entry_name = entry.replace("\\", "/").rsplit("/", 1)[-1] if entry else "README 里的启动入口"
+    readme = _norm(delivery.get("startup_readme", ""))
+    entry_name = Path(entry).name if entry else ("project entry file" if use_en else "项目入口文件")
+    readme_name = Path(readme).name if readme else "README"
     if use_en:
         return (
-            "The project is packaged and ready to review.\n\n"
-            "Start with the final screenshot, then open the zip package.\n\n"
-            f"The zip includes {readme}, the startup entry `{entry_name}`, and the main source code. "
-            f"Use the README run instructions first; this is delivered as a runnable project package."
+            "The project is ready for review.\n\n"
+            "Please check the final screenshot first to confirm the visible result, "
+            "then open the zip package for the full code.\n\n"
+            f"The zip includes {readme_name}, the startup entry {entry_name}, and the main source files. "
+            f"Run it by following the steps in {readme_name}."
         )
     return (
-        "项目已经整理好，可以直接查看和运行。\n\n"
-        "你先看成品截图确认界面效果，再打开 zip 包看完整代码。\n\n"
-        f"zip 里包含 {readme}、启动入口 `{entry_name}` 和主要代码；运行方式先按 README 说明执行。当前按可运行项目包交付。"
+        "项目已经整理好了，你可以直接开始查看。\n\n"
+        "你先看我发的成品截图确认界面和结果，再打开 zip 包看完整代码。\n\n"
+        f"zip 里包含 {readme_name}、启动入口 {entry_name} 和主要代码；"
+        f"运行方式先按 {readme_name} 里的说明执行。"
     )
 
 
@@ -190,7 +194,6 @@ def render_fallback_reply(
     render = render_snapshot(project_context)
     progress = _norm(render.get("progress_summary", ""))
     pending_question = decision_prompt(project_context) or _norm(next_question)
-    artifacts = artifact_labels(project_context)
     visible_state = _norm(render.get("visible_state", "")).upper()
     delivery = delivery_summary(project_context)
 
@@ -216,11 +219,7 @@ def render_fallback_reply(
                 question = f"{question}?"
             return {"reply_text": f"I am missing one key detail to continue: {question}", "next_question": question}
         if intent == "deliver_result":
-            if any(delivery.values()):
-                return {"reply_text": _public_delivery_result_text(delivery=delivery, lang_hint=lang_hint), "next_question": ""}
-            if artifacts:
-                return {"reply_text": _public_delivery_result_text(delivery=delivery, lang_hint=lang_hint), "next_question": ""}
-            return {"reply_text": "The result is ready. I can walk you through what was produced and continue with your next preference.", "next_question": ""}
+            return {"reply_text": _public_delivery_result_text(delivery=delivery, lang_hint=lang_hint), "next_question": ""}
         if intent in {"explain_error", "guide_recovery"}:
             if truth_text:
                 return {"reply_text": truth_text, "next_question": ""}
@@ -246,11 +245,11 @@ def render_fallback_reply(
     truth_text = context_truth_reply(project_context, lang_hint=lang_hint)
     if intent == "progress_update":
         if progress:
-            text = f"同步一下进展：我现在在处理这一步：{progress}。有可见变化我会第一时间告诉你。"
+            text = "我这边还在继续推进，等有值得你先看的实质结果后，我会第一时间直接发你。"
         else:
-            text = "同步一下进展：当前还没有新的可见后端里程碑；一旦有确认过的变化我会马上同步你。"
+            text = "目前还没有新的最终结果可以给你确认；一旦有成品截图、代码包或明确结论，我会马上发你。"
         if _norm(previous_reply_text) == _norm(text):
-            text = "当前还没有新的可见里程碑；等后端给出新的实质变化后我再同步你。"
+            text = "这边还在继续处理，等有新的成品结果我再直接同步你。"
         return {"reply_text": text, "next_question": ""}
     if intent == "ask_decision":
         question = pending_question or "这一步你更希望我优先走哪种方案？"
@@ -264,13 +263,7 @@ def render_fallback_reply(
             question = f"{question}？"
         return {"reply_text": f"我还缺一个关键信息才能继续：{question}", "next_question": question}
     if intent == "deliver_result":
-        if any(delivery.values()):
-            return {"reply_text": _public_delivery_result_text(delivery=delivery, lang_hint=lang_hint), "next_question": ""}
-        if artifacts:
-            return {"reply_text": _public_delivery_result_text(delivery=delivery, lang_hint=lang_hint), "next_question": ""}
-        if visible_state == "DONE":
-            return {"reply_text": _public_delivery_result_text(delivery=delivery, lang_hint=lang_hint), "next_question": ""}
-        return {"reply_text": "项目结果已经整理好；我会先给你看成品截图，再给 zip 包和 README 运行说明。", "next_question": ""}
+        return {"reply_text": _public_delivery_result_text(delivery=delivery, lang_hint=lang_hint), "next_question": ""}
     if intent in {"explain_error", "guide_recovery"}:
         if truth_text:
             return {"reply_text": truth_text, "next_question": ""}
@@ -635,11 +628,6 @@ def _policy_delivery_result_text(text: str, project_context: Mapping[str, Any] |
     delivery = delivery_summary(project_context)
     if any(delivery.values()):
         return _public_delivery_result_text(delivery=delivery, lang_hint=lang_hint), "delivery_result_humanized"
-    artifacts = artifact_labels(project_context)
-    if artifacts:
-        updated = _append_artifact_hint(text, artifacts, lang_hint=lang_hint)
-        if updated != text:
-            return updated, "artifact_hint_added"
     return text, ""
 
 

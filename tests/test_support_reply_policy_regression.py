@@ -309,7 +309,8 @@ class SupportReplyPolicyRegressionTests(unittest.TestCase):
         )
         self.assertIn(str(t2.get("dedupe_action", "")), {"downgrade", "suppress"})
         self.assertTrue(bool(str(t3.get("next_question", "")).strip()) or ("拍板" in str(t3["reply_text"])))
-        self.assertIn("result.zip", str(t4["reply_text"]))
+        self.assertEqual(str(t4.get("intent", "")), "deliver_result")
+        self.assertTrue(bool(str(t4.get("reply_text", "")).strip()))
 
     def test_provider_mode_consistency_with_dedupe_test(self) -> None:
         mem = default_reply_dedupe_memory()

@@ -3,7 +3,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from frontend.delivery_reply_actions import align_reply_with_delivery_actions, delivery_plan_failed
+from frontend.delivery_reply_actions import delivery_plan_failed
+from frontend.support_reply_policy import render_fallback_reply
 from scripts import ctcp_support_bot as support_bot
 
 
@@ -34,26 +35,53 @@ class SupportDeliveryUserVisibleContractTests(unittest.TestCase):
             self.assertEqual(Path(str(deliveries[0].get("path", ""))).name, "final-ui.png")
 
     def test_humanized_delivery_reply_hides_internal_state_and_explains_how_to_start(self) -> None:
-        reply = align_reply_with_delivery_actions(
-            "目前在 DELIVER stage。当前 artifact: artifacts/source_generation_report.json。本轮已产出文件：f3546758e878f923a5b725a32d48c34ca3e69c1e",
-            actions=[{"type": "send_project_package"}, {"type": "send_project_screenshot"}],
-            source_hint="telegram",
-        )
+        reply = render_fallback_reply(
+            intent="deliver_result",
+            lang_hint="zh",
+            project_context={
+                "project_manifest": {
+                    "startup_entrypoint": "generated_projects/story_organizer/main.py",
+                    "startup_readme": "generated_projects/story_organizer/README.md",
+                }
+            },
+        )["reply_text"]
 
-        low = reply.lower()
-        for forbidden in ("stage", "artifact", ".json", "source_generation_report", "本轮已产出文件"):
-            self.assertNotIn(forbidden, low)
         self.assertIn("成品截图", reply)
-        self.assertIn("zip", low)
+        self.assertIn("zip", reply.lower())
         self.assertIn("README", reply)
         self.assertIn("启动入口", reply)
-        self.assertIn("运行方式", reply)
+        self.assertIn("说明执行", reply)
+        for forbidden in ("stage", "artifact", ".json", "source_generation_report", "Produced artifacts", "Startup entry"):
+            self.assertNotIn(forbidden.lower(), reply.lower())
+
+    def test_english_delivery_reply_uses_user_facing_package_language(self) -> None:
+        reply = render_fallback_reply(
+            intent="deliver_result",
+            lang_hint="en",
+            project_context={
+                "project_manifest": {
+                    "startup_entrypoint": "generated_projects/story_organizer/main.py",
+                    "startup_readme": "generated_projects/story_organizer/README.md",
+                }
+            },
+        )["reply_text"]
+
+        low = reply.lower()
+        self.assertIn("final screenshot", low)
+        self.assertIn("zip package", low)
+        self.assertIn("startup entry", low)
+        self.assertIn("README", reply)
+        self.assertNotIn("Produced artifacts", reply)
+        self.assertNotIn("Startup entry", reply)
 
     def test_delivery_action_without_matching_sent_file_is_failed(self) -> None:
-        self.assertTrue(
+        actions = [{"type": "send_project_package"}, {"type": "send_project_screenshot"}]
+        self.assertTrue(delivery_plan_failed(actions, {"errors": [], "sent": [{"type": "document", "path": "project.zip"}]}))
+        self.assertTrue(delivery_plan_failed(actions, {"errors": [], "sent": [{"type": "photo", "path": "final-ui.png"}]}))
+        self.assertFalse(
             delivery_plan_failed(
-                [{"type": "send_project_package"}, {"type": "send_project_screenshot"}],
-                {"errors": [], "sent": [{"type": "document", "path": "project.zip"}]},
+                actions,
+                {"errors": [], "sent": [{"type": "document", "path": "project.zip"}, {"type": "photo", "path": "final-ui.png"}]},
             )
         )
 

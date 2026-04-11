@@ -11,6 +11,8 @@ from typing import Any
 
 from tools.providers.project_generation_decisions import CLI_SHAPE, GUI_SHAPE, PRODUCTION_MODE, TOOL_SHAPE, WEB_SHAPE
 
+FINAL_UI_SCREENSHOT_NAME = "final-ui.png"
+
 _FONT_5X7: dict[str, tuple[str, ...]] = {
     " ": ("00000", "00000", "00000", "00000", "00000", "00000", "00000"),
     "-": ("00000", "00000", "00000", "01110", "00000", "00000", "00000"),
@@ -340,7 +342,7 @@ def _capture_visual_evidence(
         _write_visual_failure_note(project_artifacts_dir, reason)
         return {"status": "capture_failed", "reason": reason, "files": [], "source_files": []}
 
-    screenshot_path = screenshots_dir / "final-ui.png"
+    screenshot_path = screenshots_dir / FINAL_UI_SCREENSHOT_NAME
     title = "CTCP VISUAL EVIDENCE"
     subtitle = f"{shape.upper()} {Path(entry_script).name}"
     detail_lines = [

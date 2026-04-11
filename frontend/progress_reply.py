@@ -11,6 +11,23 @@ _PROGRESS_UPDATE_PATTERNS_EN = (
     ),
 )
 
+_PROGRESS_HUMANIZE_RULES_ZH: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"^waiting for file_request\.json$", re.IGNORECASE), "需求整理这一步还没落下来，当前还在等需求清单生成出来"),
+    (re.compile(r"^retry planner intake synthesis and verify file_request\.json lands$", re.IGNORECASE), "重试需求整理，并确认需求清单真正生成出来"),
+    (re.compile(r"^补齐\s*file_request\.json\s*并继续推进执行阶段$", re.IGNORECASE), "把需求清单整理出来，再继续往下推进当前阶段"),
+)
+_PROGRESS_HUMANIZE_RULES_EN: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"^waiting for file_request\.json$", re.IGNORECASE), "the request brief has not landed yet"),
+    (re.compile(r"^retry planner intake synthesis and verify file_request\.json lands$", re.IGNORECASE), "retry the request-brief synthesis and confirm it is generated"),
+    (re.compile(r"^补齐\s*file_request\.json\s*并继续推进执行阶段$", re.IGNORECASE), "prepare the request brief and continue the current execution step"),
+)
+_PROGRESS_TOKEN_LABELS_ZH = {
+    "file_request.json": "需求清单",
+}
+_PROGRESS_TOKEN_LABELS_EN = {
+    "file_request.json": "request brief",
+}
+
 
 def _dedupe_items(items: list[str], *, limit: int = 2) -> list[str]:
     seen: set[str] = set()
@@ -26,6 +43,25 @@ def _dedupe_items(items: list[str], *, limit: int = 2) -> list[str]:
         out.append(text)
         if len(out) >= max(1, limit):
             break
+    return out
+
+
+def humanize_progress_runtime_text(text: str, *, lang: str) -> str:
+    raw = re.sub(r"\s+", " ", str(text or "").strip())
+    if not raw:
+        return ""
+    use_en = str(lang or "").strip().lower().startswith("en")
+    rules = _PROGRESS_HUMANIZE_RULES_EN if use_en else _PROGRESS_HUMANIZE_RULES_ZH
+    for pattern, replacement in rules:
+        if pattern.match(raw):
+            return replacement
+
+    token_map = _PROGRESS_TOKEN_LABELS_EN if use_en else _PROGRESS_TOKEN_LABELS_ZH
+    out = raw
+    for needle, replacement in token_map.items():
+        out = re.sub(re.escape(needle), replacement, out, flags=re.IGNORECASE)
+    if not use_en:
+        out = out.replace("继续推进执行阶段", "继续往下推进当前阶段")
     return out
 
 
@@ -97,8 +133,8 @@ def compose_progress_update_reply(
 ) -> tuple[str, list[str]]:
     done_items = _dedupe_items(list(binding.get("last_confirmed_items", []) or []), limit=3)
     phase = re.sub(r"\s+", " ", str(binding.get("current_phase", "")).strip())
-    blocker = re.sub(r"\s+", " ", str(binding.get("current_blocker", "")).strip())
-    next_action = re.sub(r"\s+", " ", str(binding.get("next_action", "")).strip())
+    blocker = humanize_progress_runtime_text(str(binding.get("current_blocker", "")), lang=lang)
+    next_action = humanize_progress_runtime_text(str(binding.get("next_action", "")), lang=lang)
     question_needed = str(binding.get("question_needed", "")).strip().lower() in {"yes", "true", "1"}
     blocking_question = re.sub(r"\s+", " ", str(binding.get("blocking_question", "")).strip()) or re.sub(
         r"\s+", " ", str(fallback_question or "").strip()

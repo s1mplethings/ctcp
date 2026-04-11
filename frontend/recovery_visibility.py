@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
+from .progress_reply import humanize_progress_runtime_text
+
 
 def _norm(value: Any) -> str:
     return " ".join(str(value or "").strip().split())
@@ -159,11 +161,8 @@ def render_backend_truth_text(
 ) -> str:
     lang = _norm(lang_hint).lower()
     truth = _norm(status).lower()
-    clean_reason = _norm(reason)
-    if clean_reason.lower().startswith("waiting for "):
-        missing_target = clean_reason[12:].strip()
-        clean_reason = f"the missing item is {missing_target}" if lang.startswith("en") else f"当前缺的是 {missing_target}"
-    clean_next_action = _norm(next_action)
+    clean_reason = humanize_progress_runtime_text(reason, lang=lang)
+    clean_next_action = humanize_progress_runtime_text(next_action, lang=lang)
     low_confidence = _norm(source_confidence).lower() == "low"
     clean_phase = _norm(current_phase)
     done_items = _dedupe_items([str(item or "") for item in list(last_confirmed_items or [])], limit=3)

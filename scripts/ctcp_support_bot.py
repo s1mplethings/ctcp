@@ -22,6 +22,7 @@ SCRIPTS_DIR = Path(__file__).resolve().parent
 
 if str(ROOT) not in sys.path: sys.path.insert(0, str(ROOT))
 from frontend.delivery_reply_actions import align_reply_with_delivery_actions, delivery_plan_failed, inject_ready_delivery_actions, prioritize_screenshot_files
+from frontend.progress_reply import humanize_progress_runtime_text
 from frontend.telegram_http_client import telegram_post_form, telegram_post_multipart
 PROMPT_TEMPLATE_PATH = ROOT / "agents" / "prompts" / "support_lead_reply.md"
 SUPPORT_INBOX_REL_PATH = Path("artifacts") / "support_inbox.jsonl"
@@ -4439,8 +4440,8 @@ def _reply_transition_incomplete(reply_text: str, *, has_next_action: bool, lang
 
 def _compose_grounded_progress_reply(*, binding: dict[str, Any], lang: str, no_change: bool = False) -> tuple[str, str]:
     phase = sanitize_inline_text(str(binding.get("current_phase", "")), max_chars=80) or ("execution" if lang == "en" else "执行推进")
-    blocker = sanitize_inline_text(str(binding.get("current_blocker", "")), max_chars=160)
-    next_action = sanitize_inline_text(str(binding.get("next_action", "")), max_chars=220)
+    blocker = sanitize_inline_text(humanize_progress_runtime_text(str(binding.get("current_blocker", "")), lang=lang), max_chars=160)
+    next_action = sanitize_inline_text(humanize_progress_runtime_text(str(binding.get("next_action", "")), lang=lang), max_chars=220)
     done_items = [
         sanitize_inline_text(str(item), max_chars=80)
         for item in list(binding.get("last_confirmed_items", []) or [])[:3]
@@ -4450,7 +4451,6 @@ def _compose_grounded_progress_reply(*, binding: dict[str, Any], lang: str, no_c
     blocking_question = sanitize_inline_text(str(binding.get("blocking_question", "")), max_chars=140)
     rows: list[str] = []
     next_question = ""
-
     if lang == "en":
         if no_change:
             rows.append(f"Current status is unchanged from the previous update; I am still in {phase} and the same blocker truth remains.")
@@ -4468,7 +4468,6 @@ def _compose_grounded_progress_reply(*, binding: dict[str, Any], lang: str, no_c
             next_question = normalize_question(blocking_question)
             rows.append(f"I need one decision before I continue: {blocking_question}")
         return "\n\n".join([x for x in rows if x]).strip(), next_question
-
     if no_change:
         rows.append(f"当前状态和上一条一致，我还在{phase}阶段处理同一个卡点。")
     else:
@@ -4485,7 +4484,6 @@ def _compose_grounded_progress_reply(*, binding: dict[str, Any], lang: str, no_c
         next_question = normalize_question(blocking_question)
         rows.append(f"继续前我只需要你确认这一项：{blocking_question}")
     return "\n\n".join([x for x in rows if x]).strip(), next_question
-
 def _load_previous_reply_snapshot(run_dir: Path) -> tuple[str, str]:
     doc = read_json_doc(run_dir / SUPPORT_REPLY_REL_PATH)
     if not isinstance(doc, dict):

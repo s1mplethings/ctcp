@@ -652,10 +652,10 @@ class FrontendRenderingBoundaryTests(unittest.TestCase):
                 "recent_user_messages": ["做一个本地可运行的 VN 项目助手 MVP"],
             },
         )
-        self.assertIn("当前后端卡在：当前缺的是 file_request.json。", result.reply_text)
+        self.assertIn("当前后端卡在：需求整理这一步还没落下来，当前还在等需求清单生成出来。", result.reply_text)
         self.assertIn("当前阶段：执行推进。", result.reply_text)
         self.assertIn("已确认进展：项目已接到后台流程、需求摘要已写入当前 run。", result.reply_text)
-        self.assertIn("下一步我会先处理：补齐 file_request.json 并继续推进执行阶段。", result.reply_text)
+        self.assertIn("下一步我会先处理：把需求清单整理出来，再继续往下推进当前阶段。", result.reply_text)
         self.assertNotIn("我继续推进", result.reply_text)
 
     def test_internal_pipeline_state_shape_exists(self) -> None:

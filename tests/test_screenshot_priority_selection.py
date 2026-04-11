@@ -19,15 +19,17 @@ class ScreenshotPrioritySelectionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="ctcp_screenshot_priority_") as td:
             root = Path(td)
             overview = self._png(root / "artifacts" / "screenshots" / "overview.png")
+            debug = self._png(root / "artifacts" / "screenshots" / "debug.png")
+            result = self._png(root / "artifacts" / "screenshots" / "result.png")
             final_ui = self._png(root / "artifacts" / "screenshots" / "final-ui.png")
 
-            ordered = prioritize_screenshot_files([str(overview), str(final_ui)])
+            ordered = prioritize_screenshot_files([str(overview), str(debug), str(result), str(final_ui)])
             self.assertEqual(Path(str(ordered[0])).name, "final-ui.png")
 
             plan = support_bot.resolve_public_delivery_plan(
                 run_dir=root,
                 actions=[{"type": "send_project_screenshot", "count": 1}],
-                delivery_state={"screenshot_files": [str(overview), str(final_ui)]},
+                delivery_state={"screenshot_files": [str(overview), str(debug), str(result), str(final_ui)]},
             )
             self.assertEqual(Path(str(plan["deliveries"][0]["path"])).name, "final-ui.png")
 
@@ -44,7 +46,7 @@ class ScreenshotPrioritySelectionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="ctcp_delivery_bridge_priority_") as td:
             run_dir = Path(td)
             self._png(run_dir / "screenshots" / "overview.png")
-            self._png(run_dir / "screenshots" / "app-home.png")
+            self._png(run_dir / "screenshots" / "final-ui.png")
             manifest = build_delivery_evidence_manifest(
                 run_id="run-priority",
                 run_dir=run_dir,
@@ -56,13 +58,13 @@ class ScreenshotPrioritySelectionTests(unittest.TestCase):
                 },
                 artifacts=[
                     {"rel_path": "screenshots/overview.png", "kind": "image", "mime_type": "image/png"},
-                    {"rel_path": "screenshots/app-home.png", "kind": "image", "mime_type": "image/png"},
+                    {"rel_path": "screenshots/final-ui.png", "kind": "image", "mime_type": "image/png"},
                 ],
                 verify_report={"result": "PASS"},
             )
 
             screenshots = list(manifest.get("screenshots", []))
-            self.assertEqual(Path(str(dict(screenshots[0]).get("path", ""))).name, "app-home.png")
+            self.assertEqual(Path(str(dict(screenshots[0]).get("path", ""))).name, "final-ui.png")
 
 
 if __name__ == "__main__":

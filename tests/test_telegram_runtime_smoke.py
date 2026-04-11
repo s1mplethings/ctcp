@@ -145,7 +145,7 @@ class TelegramRuntimeSmokeTests(unittest.TestCase):
             session_dir = Path(session_td)
             self._setup_smoke_dirs(run_dir, session_dir)
             reply_markers = {
-                "artifacts/file_request.json": ("file_request.json",),
+                "artifacts/file_request.json": ("需求清单", "需求整理", "file_request.json"),
                 "artifacts/context_pack.json": ("context_pack.json", "资料检索"),
                 "artifacts/PLAN_draft.md": ("PLAN_draft.md", "方案整理"),
             }
