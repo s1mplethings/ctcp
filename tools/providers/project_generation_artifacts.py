@@ -915,6 +915,8 @@ def normalize_project_manifest(doc: dict[str, Any] | None, *, goal: str, run_dir
         "screenshot_required": bool(source_stage_doc.get("screenshot_required", lists.get("screenshot_required", False))),
         "visual_evidence_status": str(source_stage_doc.get("visual_evidence_status", "")).strip() or str(lists.get("visual_evidence_status", "not_requested")),
         "visual_evidence_files": _normalize_rel_list([str(x) for x in source_stage_doc.get("visual_evidence_files", [])]) if isinstance(source_stage_doc.get("visual_evidence_files"), list) else [],
+        "visual_type": str(source_stage_doc.get("visual_type", "")).strip()
+        or str(dict(source_stage_doc.get("visual_evidence_capture", {})).get("visual_type", "")).strip(),
         "benchmark_sample_applied": bool(source_stage_doc.get("benchmark_sample_applied", lists.get("benchmark_sample_applied", False))),
         "decision_nodes": _normalize_rel_list([str(x) for x in source_stage_doc.get("decision_nodes", lists.get("decision_nodes", []))]),
         "flow_nodes": _normalize_rel_list([str(x) for x in source_stage_doc.get("flow_nodes", lists.get("flow_nodes", []))]),
@@ -978,6 +980,7 @@ def normalize_deliverable_index(doc: dict[str, Any] | None, *, goal: str, run_di
         "screenshot_required": bool(manifest_doc.get("screenshot_required", False)),
         "visual_evidence_status": str(manifest_doc.get("visual_evidence_status", "not_requested")).strip(),
         "visual_evidence_files": _normalize_rel_list([str(x) for x in manifest_doc.get("visual_evidence_files", [])]) if isinstance(manifest_doc.get("visual_evidence_files"), list) else [],
+        "visual_type": str(manifest_doc.get("visual_type", "")).strip(),
         "generic_validation": manifest_doc.get("generic_validation", {}) if isinstance(manifest_doc.get("generic_validation"), dict) else {},
         "domain_validation": manifest_doc.get("domain_validation", {}) if isinstance(manifest_doc.get("domain_validation"), dict) else {},
         "business_deliverables": _normalize_rel_list([str(x) for x in manifest_doc.get("business_files_generated", [])]) if isinstance(manifest_doc.get("business_files_generated"), list) else [],

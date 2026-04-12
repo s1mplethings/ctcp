@@ -9,58 +9,42 @@
 ## Context
 
 - Why this item now: the real Telegram-bound run `20260409-215339-177800-orchestrate` is no longer blocked on generation truth. It now proves a narrower delivery gap: the generation chain can reach `verify PASS`, but GUI/web outputs still leave `visual_evidence_status=placeholder_only`, no real screenshot artifacts are surfaced, and the Telegram-facing final result can end with artifact hints instead of a real zip plus screenshot delivery record.
-- Current tranche note (2026-04-12): this scoped stopgap now directly hardens the full public-delivery path in the five user-requested files: `frontend/delivery_reply_actions.py`, `frontend/support_reply_policy.py`, `scripts/project_delivery_evidence_bridge.py`, `tools/providers/project_generation_source_helpers.py`, and `scripts/ctcp_support_bot.py`, plus the matching delivery/proactive/http regressions under the same queue item.
+- Current tranche note (2026-04-12): this narrowed follow-up only repairs generator-side visual capture truth in `tools/providers/project_generation_source_helpers.py` and the manifest/test propagation around it. Delivery sending rules and the reply wording shell are frozen in this tranche.
 - Dependency check: `ADHOC-20260410-project-generation-launcher-syntax-fix` = `done`.
 - Scope boundary: repair the post-generation delivery chain only. Add real screenshot evidence for GUI/web project outputs, make verify-pass delivery send actual package/photo files, and keep invalid or placeholder-only artifacts from counting as successful delivery. Do not reopen watchdog/state-machine architecture in this patch.
 
 ## Task Truth Source (single source for current task)
 
 - task_purpose:
-  - add a real final-product screenshot capture step for `gui_first` / `web_first` generated projects after the runtime probes actually launch/export the generated output
-  - persist screenshot artifacts under the generated project or run artifacts and propagate them into `source_generation_report.json`, `project_manifest.json`, and delivery evidence
-  - ensure Telegram/public delivery emits real zip and final-product screenshot files, records them in `support_public_delivery.json`, and does not treat text-only delivery as success
-  - prove the back-half flow with focused tests and one real Telegram-lane delivery send
+  - prefer a real GUI/web/export-page screenshot for `artifacts/screenshots/final-ui.png`
+  - only fall back to the synthetic evidence card when real page capture is unavailable
+  - persist `visual_type` into `source_generation_report.json` and `project_manifest.json`
+  - prove the change with focused generation/screenshot regressions and one fresh local run
 - allowed_behavior_change:
   - `tools/providers/project_generation_source_helpers.py`
   - `tools/providers/project_generation_artifacts.py`
-  - `tools/providers/project_generation_business_templates.py`
-  - `tools/providers/project_generation_generic_archetypes.py`
-  - `scripts/project_generation_gate.py`
-  - `scripts/project_delivery_evidence_bridge.py`
-  - `scripts/ctcp_support_bot.py`
-  - `frontend/delivery_reply_actions.py`
-  - `frontend/support_reply_policy.py`
-  - `frontend/telegram_http_client.py`
   - `tests/test_project_generation_artifacts.py`
-  - `tests/test_support_public_delivery_state.py`
-  - `tests/test_support_bot_humanization.py`
-  - `tests/test_support_proactive_delivery.py`
-  - `tests/test_support_delivery_user_visible_contract.py`
   - `tests/test_screenshot_priority_selection.py`
-  - `tests/test_delivery_evidence_bridge.py`
-  - `tests/test_telegram_http_client.py`
-  - `ai_context/problem_registry.md`
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/CURRENT.md`
   - `meta/reports/LAST.md`
 - in_scope_modules:
   - GUI/web source-generation visual evidence capture
-  - manifest/report propagation for screenshot evidence
-  - verify-pass delivery action synthesis and file send plan
-  - focused delivery regressions and one live Telegram delivery evidence run
+  - manifest/report propagation for `visual_type`
+  - focused screenshot-priority regressions and one local visual-evidence proof run
 - out_of_scope_modules:
   - watchdog/front-bridge/recovery truth redesign
   - provider/router refactors unrelated to delivery evidence
   - weakening any result/verify gate to tolerate placeholder-only evidence
 - forbidden_goal_shift:
   - do not mark `visual_evidence_status=provided` unless a real image file is produced from the launched/exported output path
-  - do not treat `placeholder_only` as delivery complete
-  - do not replace file delivery with hash-only or path-only text
-  - do not claim a Telegram delivery success without an updated `support_public_delivery.json`
+  - do not claim a real UI capture when the generator only produced the fallback evidence card
+  - do not touch the public delivery send contract or reply wording shell in this tranche
 - completion_evidence:
   - GUI/web generation tests show screenshot files exist and `visual_evidence_status` is no longer `placeholder_only`
-  - support delivery tests show zip + screenshot records populate `support_public_delivery.json`
-  - a real Telegram-lane outbound delivery writes `deliveries` and `sent` entries for actual files
+  - source-generation tests show `visual_type=real_export_page` when browser capture succeeds
+  - fallback tests show `visual_type=evidence_card` only when browser/page capture fails
+  - a fresh local run writes `final-ui.png` plus `visual_type=real_export_page` into source-generation and manifest artifacts
   - canonical verify passes
 
 ## Analysis / Find (before plan)
@@ -145,11 +129,11 @@
 
 ## Plan
 
-1. Align `frontend/delivery_reply_actions.py` and `scripts/ctcp_support_bot.py` to the same public-delivery contract: stable screenshot priority, verify-pass action injection, and hard `photo` / `document` `sent` checks for both ordinary and proactive result paths.
-2. Rewrite `frontend/support_reply_policy.py` fallback delivery/progress wording so `deliver_result` stays user-readable and no longer re-appends artifact filename lists.
-3. Reorder screenshot evidence selection in `scripts/project_delivery_evidence_bridge.py` and stabilize GUI/web visual evidence naming in `tools/providers/project_generation_source_helpers.py` around `artifacts/screenshots/final-ui.png`.
-4. Run the focused delivery regressions for wording, proactive delivery, screenshot ordering, Telegram HTTP transport, then run canonical verify.
-5. Record the stopgap and a fresh delivery-proof run in `meta/reports/LAST.md`.
+1. Add a real page capture path in `tools/providers/project_generation_source_helpers.py` that renders/export-captures `final-ui.png` before falling back to the evidence card.
+2. Propagate `visual_type` into `source_generation_report.json` and `project_manifest.json`.
+3. Tighten focused regressions so GUI/web runs assert `real_export_page`, fallback asserts `evidence_card`, and screenshot ordering still prefers the real UI image.
+4. Run focused tests and canonical verify.
+5. Record one fresh local proof run in `meta/reports/LAST.md`.
 
 ## Check / Contrast / Fix Loop Evidence
 

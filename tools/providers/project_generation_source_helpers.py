@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import html
 import json
+import shutil
 import struct
 import subprocess
 import sys
@@ -12,6 +14,8 @@ from typing import Any
 from tools.providers.project_generation_decisions import CLI_SHAPE, GUI_SHAPE, PRODUCTION_MODE, TOOL_SHAPE, WEB_SHAPE
 
 FINAL_UI_SCREENSHOT_NAME = "final-ui.png"
+REAL_UI_VISUAL_TYPE = "real_export_page"
+EVIDENCE_CARD_VISUAL_TYPE = "evidence_card"
 
 _FONT_5X7: dict[str, tuple[str, ...]] = {
     " ": ("00000", "00000", "00000", "00000", "00000", "00000", "00000"),
@@ -101,9 +105,11 @@ def build_missing_context_extra(*, lists: dict[str, Any], project_id: str, proje
         "visual_evidence_capture": {
             "status": "missing_context_pack",
             "reason": "missing context pack",
+            "visual_type": "",
             "files": [],
             "source_files": [],
         },
+        "visual_type": "",
         "context_pack_error": "missing_or_empty_context_pack",
     }
 
@@ -155,6 +161,7 @@ def build_success_extra(
         "screenshot_required": bool(lists.get("screenshot_required", False)),
         "visual_evidence_status": str(visual_evidence.get("status", "")).strip() or str(lists.get("visual_evidence_status", "not_requested")),
         "visual_evidence_files": list(visual_evidence.get("files", [])) if isinstance(visual_evidence.get("files", []), list) else [],
+        "visual_type": str(visual_evidence.get("visual_type", "")).strip(),
         "benchmark_sample_applied": bool(lists.get("benchmark_sample_applied", False)),
         "decision_nodes": list(lists.get("decision_nodes", [])),
         "flow_nodes": list(lists.get("flow_nodes", [])),
@@ -181,6 +188,23 @@ def _run_command_capture(cmd: list[str], *, cwd: Path) -> dict[str, Any]:
         "stderr_tail": "\n".join(str(proc.stderr or "").splitlines()[-12:]),
         "status": "pass" if int(proc.returncode) == 0 else "blocked",
     }
+
+
+def _browser_screenshot_binary() -> str:
+    candidates = [
+        shutil.which("msedge.exe"),
+        shutil.which("chrome.exe"),
+        shutil.which("chromium.exe"),
+        str(Path(r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe")),
+        str(Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe")),
+    ]
+    for raw in candidates:
+        if not raw:
+            continue
+        path = Path(str(raw))
+        if path.exists():
+            return str(path)
+    return ""
 
 
 def _safe_ascii_line(text: str, *, max_chars: int = 44) -> str:
@@ -290,6 +314,139 @@ def _render_visual_evidence_png(
     _write_png(path, width=width, height=height, rgb=rgb)
 
 
+def _read_preview_block(path: Path, *, max_chars: int = 900) -> str:
+    suffix = path.suffix.lower()
+    if suffix not in {".json", ".md", ".txt", ".html", ".htm"}:
+        return ""
+    try:
+        raw = path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return ""
+    text = " ".join(str(raw).split())
+    return text[:max_chars]
+
+
+def _preferred_preview_files(exported_files: list[Path]) -> list[Path]:
+    def _key(path: Path) -> tuple[int, str]:
+        low = path.name.lower()
+        if path.suffix.lower() in {".html", ".htm"} and any(token in low for token in ("preview", "index", "result", "final", "summary")):
+            return (0, low)
+        if path.suffix.lower() in {".html", ".htm"}:
+            return (1, low)
+        if path.suffix.lower() in {".json", ".md", ".txt"}:
+            return (2, low)
+        return (3, low)
+
+    return sorted(exported_files, key=_key)
+
+
+def _build_export_preview_html(*, preview_path: Path, delivery_shape: str, entry_script: str, exported_files: list[Path]) -> Path:
+    cards: list[str] = []
+    for path in _preferred_preview_files(exported_files)[:6]:
+        preview = html.escape(_read_preview_block(path) or f"{path.name} generated successfully.")
+        cards.append(
+            "<section class='card'>"
+            f"<h2>{html.escape(path.name)}</h2>"
+            f"<div class='meta'>{html.escape(path.suffix.lower() or 'file')}</div>"
+            f"<pre>{preview}</pre>"
+            "</section>"
+        )
+    if not cards:
+        cards.append("<section class='card'><h2>Export Ready</h2><pre>No previewable export text was available.</pre></section>")
+    page = (
+        "<!doctype html><html><head><meta charset='utf-8'>"
+        "<title>Project Preview</title>"
+        "<style>"
+        ":root{color-scheme:light;font-family:'Segoe UI',sans-serif;}"
+        "body{margin:0;background:linear-gradient(180deg,#f7fafc,#e2e8f0);color:#0f172a;}"
+        ".hero{padding:40px 48px 24px;background:#ffffffcc;border-bottom:1px solid #cbd5e1;backdrop-filter:blur(8px);}"
+        ".hero h1{margin:0;font-size:34px;line-height:1.15;}"
+        ".hero p{margin:12px 0 0;font-size:16px;color:#334155;}"
+        ".grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;padding:24px 32px 40px;}"
+        ".card{background:#fff;border:1px solid #cbd5e1;border-radius:18px;box-shadow:0 18px 40px rgba(15,23,42,.08);padding:18px;min-height:220px;}"
+        ".card h2{margin:0 0 6px;font-size:20px;}"
+        ".meta{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#2563eb;margin-bottom:10px;}"
+        "pre{white-space:pre-wrap;word-break:break-word;font:13px/1.5 'Cascadia Code','Consolas',monospace;color:#0f172a;background:#f8fafc;border-radius:12px;padding:14px;overflow:hidden;}"
+        "</style></head><body>"
+        "<header class='hero'>"
+        f"<h1>{html.escape(Path(entry_script).name)} export preview</h1>"
+        f"<p>Delivery shape: {html.escape(str(delivery_shape).upper())}. This page is built from actual generated export files.</p>"
+        "</header>"
+        f"<main class='grid'>{''.join(cards)}</main>"
+        "</body></html>"
+    )
+    preview_path.parent.mkdir(parents=True, exist_ok=True)
+    preview_path.write_text(page, encoding="utf-8")
+    return preview_path
+
+
+def _capture_html_page_screenshot(page_path: Path, screenshot_path: Path) -> tuple[bool, str]:
+    browser = _browser_screenshot_binary()
+    if not browser:
+        return False, "no headless browser is available for screenshot capture"
+    screenshot_path.parent.mkdir(parents=True, exist_ok=True)
+    attempts = (
+        [
+            browser,
+            "--headless=new",
+            "--disable-gpu",
+            "--hide-scrollbars",
+            "--force-device-scale-factor=1",
+            "--window-size=1440,1080",
+            f"--screenshot={screenshot_path}",
+            page_path.resolve().as_uri(),
+        ],
+        [
+            browser,
+            "--headless",
+            "--disable-gpu",
+            "--hide-scrollbars",
+            "--force-device-scale-factor=1",
+            "--window-size=1440,1080",
+            f"--screenshot={screenshot_path}",
+            page_path.resolve().as_uri(),
+        ],
+    )
+    for cmd in attempts:
+        proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if proc.returncode == 0 and screenshot_path.exists() and screenshot_path.stat().st_size > 0:
+            return True, ""
+    return False, "browser screenshot command did not produce final-ui.png"
+
+
+def _capture_real_visual_preview(
+    *,
+    delivery_shape: str,
+    entry_script: str,
+    screenshot_path: Path,
+    preview_source_path: Path,
+    exported_files: list[Path],
+) -> dict[str, Any] | None:
+    html_candidate = next((path for path in _preferred_preview_files(exported_files) if path.suffix.lower() in {".html", ".htm"}), None)
+    if html_candidate is not None:
+        preview_source_path.parent.mkdir(parents=True, exist_ok=True)
+        preview_source_path.write_text(html_candidate.read_text(encoding="utf-8", errors="replace"), encoding="utf-8")
+        page_path = preview_source_path
+    else:
+        page_path = _build_export_preview_html(
+            preview_path=preview_source_path,
+            delivery_shape=delivery_shape,
+            entry_script=entry_script,
+            exported_files=exported_files,
+        )
+    ok, reason = _capture_html_page_screenshot(page_path, screenshot_path)
+    if not ok:
+        return None
+    return {
+        "status": "provided",
+        "reason": "runtime probes passed and a real export page screenshot was captured",
+        "visual_type": REAL_UI_VISUAL_TYPE,
+        "files": [screenshot_path],
+        "source_files": [path.resolve() for path in exported_files[:8]],
+        "preview_source": page_path.resolve(),
+    }
+
+
 def _write_visual_failure_note(project_artifacts_dir: Path, reason: str) -> None:
     note_path = project_artifacts_dir / "screenshots_not_available_reason.txt"
     note_path.parent.mkdir(parents=True, exist_ok=True)
@@ -334,15 +491,36 @@ def _capture_visual_evidence(
     if export_rc != 0:
         reason = "export probe must pass before screenshot capture"
         _write_visual_failure_note(project_artifacts_dir, reason)
-        return {"status": "capture_failed", "reason": reason, "files": [], "source_files": []}
+        return {"status": "capture_failed", "reason": reason, "visual_type": "", "files": [], "source_files": []}
 
     exported_files = sorted(path for path in export_dir.rglob("*") if path.is_file())
     if not exported_files:
         reason = "no exported files available to summarize into screenshot evidence"
         _write_visual_failure_note(project_artifacts_dir, reason)
-        return {"status": "capture_failed", "reason": reason, "files": [], "source_files": []}
+        return {"status": "capture_failed", "reason": reason, "visual_type": "", "files": [], "source_files": []}
 
     screenshot_path = screenshots_dir / FINAL_UI_SCREENSHOT_NAME
+    preview_source_path = screenshots_dir / "final-ui.source.html"
+    real_preview = _capture_real_visual_preview(
+        delivery_shape=shape,
+        entry_script=entry_script,
+        screenshot_path=screenshot_path,
+        preview_source_path=preview_source_path,
+        exported_files=exported_files,
+    )
+    if real_preview is not None:
+        rel_file = screenshot_path.resolve().relative_to(run_dir.resolve()).as_posix()
+        rel_sources = [path.resolve().relative_to(export_dir.resolve()).as_posix() for path in exported_files[:8]]
+        _clear_visual_failure_note(project_artifacts_dir)
+        return {
+            "status": "provided",
+            "reason": str(real_preview.get("reason", "")).strip(),
+            "visual_type": REAL_UI_VISUAL_TYPE,
+            "files": [rel_file],
+            "source_files": rel_sources,
+            "preview_source": preview_source_path.resolve().relative_to(run_dir.resolve()).as_posix(),
+        }
+
     title = "CTCP VISUAL EVIDENCE"
     subtitle = f"{shape.upper()} {Path(entry_script).name}"
     detail_lines = [
@@ -356,7 +534,8 @@ def _capture_visual_evidence(
     _clear_visual_failure_note(project_artifacts_dir)
     return {
         "status": "provided",
-        "reason": "runtime probes passed and visual evidence screenshot was captured from exported output",
+        "reason": "runtime probes passed but real page capture was unavailable, so fallback evidence card was generated",
+        "visual_type": EVIDENCE_CARD_VISUAL_TYPE,
         "files": [rel_file],
         "source_files": [path.resolve().relative_to(export_dir.resolve()).as_posix() for path in exported_files[:8]],
     }

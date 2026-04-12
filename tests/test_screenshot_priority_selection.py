@@ -66,6 +66,20 @@ class ScreenshotPrioritySelectionTests(unittest.TestCase):
             screenshots = list(manifest.get("screenshots", []))
             self.assertEqual(Path(str(dict(screenshots[0]).get("path", ""))).name, "final-ui.png")
 
+    def test_telegram_delivery_prefers_real_ui_over_evidence_card(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_screenshot_priority_") as td:
+            root = Path(td)
+            evidence_card = self._png(root / "artifacts" / "screenshots" / "evidence-card.png")
+            final_ui = self._png(root / "artifacts" / "screenshots" / "final-ui.png")
+
+            plan = support_bot.resolve_public_delivery_plan(
+                run_dir=root,
+                actions=[{"type": "send_project_screenshot", "count": 1}],
+                delivery_state={"screenshot_files": [str(evidence_card), str(final_ui)]},
+            )
+
+            self.assertEqual(Path(str(plan["deliveries"][0]["path"])).name, "final-ui.png")
+
 
 if __name__ == "__main__":
     unittest.main()

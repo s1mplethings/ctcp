@@ -7,12 +7,18 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tools.providers.project_generation_business_templates import _launcher_script
 from tools.providers.project_generation_artifacts import (
     build_default_context_request,
     normalize_output_contract_freeze,
     normalize_source_generation,
+)
+from tools.providers.project_generation_source_helpers import (
+    EVIDENCE_CARD_VISUAL_TYPE,
+    REAL_UI_VISUAL_TYPE,
+    _capture_visual_evidence,
 )
 from tools.providers.project_generation_validation import generic_validation
 
@@ -275,12 +281,16 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
             self.assertEqual(report.get("status"), "pass", msg=json.dumps(report, ensure_ascii=False))
             self.assertTrue(bool(dict(report.get("generic_validation", {})).get("passed", False)))
             self.assertEqual(str(report.get("visual_evidence_status", "")), "provided")
+            self.assertEqual(str(report.get("visual_type", "")), REAL_UI_VISUAL_TYPE)
             visual_files = [str(x) for x in list(report.get("visual_evidence_files", [])) if str(x).strip()]
             self.assertTrue(visual_files)
             screenshot_path = run_dir / visual_files[0]
             self.assertEqual(screenshot_path.name, "final-ui.png")
             self.assertTrue(screenshot_path.exists(), msg=str(screenshot_path))
             self.assertEqual(screenshot_path.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
+            capture = dict(report.get("visual_evidence_capture", {}))
+            self.assertEqual(str(capture.get("visual_type", "")), REAL_UI_VISUAL_TYPE)
+            self.assertTrue(str(capture.get("preview_source", "")).strip())
             syntax = dict(dict(report.get("generic_validation", {})).get("python_syntax", {}))
             self.assertTrue(bool(syntax.get("passed", False)))
             launcher = project_root / "scripts" / "run_project_gui.py"
@@ -466,12 +476,16 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
             self.assertEqual(str(report.get("project_archetype", "")), "web_service")
             self.assertEqual(str(dict(report.get("domain_validation", {})).get("kind", "")), "web_service")
             self.assertEqual(str(report.get("visual_evidence_status", "")), "provided")
+            self.assertEqual(str(report.get("visual_type", "")), REAL_UI_VISUAL_TYPE)
             visual_files = [str(x) for x in list(report.get("visual_evidence_files", [])) if str(x).strip()]
             self.assertTrue(visual_files)
             screenshot_path = run_dir / visual_files[0]
             self.assertEqual(screenshot_path.name, "final-ui.png")
             self.assertTrue(screenshot_path.exists(), msg=str(screenshot_path))
             self.assertEqual(screenshot_path.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
+            capture = dict(report.get("visual_evidence_capture", {}))
+            self.assertEqual(str(capture.get("visual_type", "")), REAL_UI_VISUAL_TYPE)
+            self.assertTrue(str(capture.get("preview_source", "")).strip())
             package_name = str(contract.get("package_name", "project_copilot"))
             self.assertTrue((project_root / "src" / package_name / "service_contract.py").exists())
             self.assertTrue((project_root / "src" / package_name / "app.py").exists())
@@ -502,6 +516,36 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
                 for key in ("mvp_spec_json", "service_contract_json", "sample_response_json", "acceptance_report_json", "delivery_summary_md"):
                     self.assertIn(key, export_doc)
                     self.assertTrue(Path(str(export_doc[key])).exists(), msg=key)
+
+    def test_capture_visual_evidence_falls_back_to_evidence_card_when_real_page_capture_fails(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_pg_visual_fallback_") as td:
+            run_dir = Path(td)
+            export_dir = run_dir / "tmp_export"
+            export_dir.mkdir(parents=True, exist_ok=True)
+            (export_dir / "deliverables").mkdir(parents=True, exist_ok=True)
+            (export_dir / "deliverables" / "project_bundle.json").write_text(
+                json.dumps({"project_name": "Fallback Demo", "routes": ["/health", "/generate"]}, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            with mock.patch(
+                "tools.providers.project_generation_source_helpers._capture_html_page_screenshot",
+                return_value=(False, "browser unavailable"),
+            ):
+                result = _capture_visual_evidence(
+                    run_dir=run_dir,
+                    project_root="project_output/demo",
+                    delivery_shape="web_first",
+                    entry_script="project_output/demo/scripts/run_project_web.py",
+                    behavior_probe={"rc": 0},
+                    export_probe={"rc": 0},
+                    export_dir=export_dir,
+                )
+
+            self.assertEqual(str(result.get("status", "")), "provided")
+            self.assertEqual(str(result.get("visual_type", "")), EVIDENCE_CARD_VISUAL_TYPE)
+            files = [str(x) for x in list(result.get("files", [])) if str(x).strip()]
+            self.assertTrue(files)
+            self.assertTrue((run_dir / files[0]).exists())
 
     def test_source_generation_data_pipeline_goal_exports_pipeline_bundle(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_pipeline_") as td:
