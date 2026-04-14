@@ -2,7 +2,7 @@ Status: SIGNED
 Scope-Allow: AGENTS.md,README.md,BUILD.md,PATCH_README.md,APPLY_OVERLAY.md,CMakeLists.txt,.gitignore,VERSION,test_support_flow.py,test_support_flow_fixed.py,test_support_flow_simple.py,test_final.py,.github/,_tmp_final_patch.diff,_tmp_final_user.diff,_tmp_final_user_small.diff,diff.patch,final_output.patch,final_patch_out.diff,src/,include/,resources/,scripts/,tools/,agents/,ai_context/,docs/,contracts/,policy/,shared/,apps/,web/,frontend/,bridge/,tests/,simlab/,artifacts/,meta/,persona_lab/,workflow_registry/,templates/,llm_core/,ctcp_adapters/,ctcp_cos_user_v2p_taskpack/,ctcp_pointcloud_full_project_taskpack/,ctcp_pointcloud_concrete_impl_taskpack/,ctcp_v2p_fixture_clean_taskpack/,generated_projects/
 Scope-Deny: .git/,build/,build_lite/,build_verify/,dist/,runs/,simlab/_runs/,meta/runs/
 Gates: lite,workflow_gate,plan_check,patch_check,behavior_catalog_check,contract_checks,doc_index_check,code_health_check,lite_replay,python_unit_tests
-Budgets: max_iterations=3,max_files=200,max_total_bytes=300000
+Budgets: max_iterations=3,max_files=240,max_total_bytes=300000
 Stop: scope_violation=true,repeated_failure=2,missing_plan_fields=true,docs_plan_mismatch=true
 Behaviors: B001,B002,B003,B004,B005,B006,B007,B008,B009,B010,B011,B012,B015,B016,B017,B018,B019,B020,B021,B022,B023,B024,B025,B026,B027,B028,B029,B030,B031,B032,B033,B034,B035,B037,B038
 Results: R001,R002,R003,R004,R005

@@ -280,6 +280,36 @@ class FrontendRenderingBoundaryTests(unittest.TestCase):
         self.assertIn("我会继续处理：先处理合同评审卡住的点", result.reply_text)
         self.assertNotEqual(result.reply_text.strip(), "这边已经进入处理阶段。")
 
+    def test_progress_binding_surfaces_visible_evidence_refs(self) -> None:
+        result = render_frontend_output(
+            raw_backend_state={
+                "stage": "executing",
+                "run_status": "running",
+                "progress_binding": {
+                    "current_task_goal": "继续整理我的本地工具项目",
+                    "current_phase": "结果整理",
+                    "last_confirmed_items": ["核心流程已经跑通"],
+                    "current_blocker": "none",
+                    "message_purpose": "progress",
+                    "question_needed": "no",
+                    "next_action": "继续整理 README 和交付包",
+                    "proof_refs": [
+                        "artifacts/screenshots/final-ui.png",
+                        "artifacts/support_exports/story_organizer.zip",
+                    ],
+                },
+            },
+            task_summary="继续整理我的本地工具项目",
+            raw_reply_text="",
+            raw_next_question="",
+            notes={
+                "lang": "zh",
+                "recent_user_messages": ["现在有能先看的吗"],
+            },
+        )
+        self.assertIn("成品截图已经可查看", result.reply_text)
+        self.assertIn("代码包已经整理好", result.reply_text)
+
     def test_internal_recovery_block_on_project_detail_exposes_real_status(self) -> None:
         result = render_frontend_output(
             raw_backend_state={

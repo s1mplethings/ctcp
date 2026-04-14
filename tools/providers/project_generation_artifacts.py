@@ -26,6 +26,7 @@ from tools.providers.project_generation_validation import (
     domain_validation as _domain_validation,
     generic_validation as _generic_validation,
     pipeline_contract as _pipeline_contract,
+    product_validation as _product_validation,
     resolve_project_intent as _resolve_project_intent,
     resolve_project_spec as _resolve_project_spec,
 )
@@ -76,7 +77,9 @@ def build_default_context_request(goal: str) -> dict[str, Any]:
 
     return {
         "needs": [
+            {"path": "AGENTS.md", "mode": "snippets", "line_ranges": [[1, 140]]},
             {"path": "README.md", "mode": "snippets", "line_ranges": [[1, 120]]},
+            {"path": "docs/01_north_star.md", "mode": "snippets", "line_ranges": [[1, 200]]},
             {"path": "docs/04_execution_flow.md", "mode": "snippets", "line_ranges": [[1, 220]]},
             {"path": "docs/41_low_capability_project_generation.md", "mode": "snippets", "line_ranges": [[1, 220]]},
             {"path": "docs/backend_interface_contract.md", "mode": "snippets", "line_ranges": [[1, 220]]},
@@ -89,7 +92,7 @@ def build_default_context_request(goal: str) -> dict[str, Any]:
             {"path": "scripts/project_manifest_bridge.py", "mode": "full"},
             {"path": "scripts/ctcp_librarian.py", "mode": "snippets", "line_ranges": [[1, 360]]},
         ],
-        "budget": {"max_files": 18, "max_total_bytes": 220000},
+        "budget": {"max_files": 20, "max_total_bytes": 250000},
         "reason": "project-generation repo context for business code materialization",
     }
 
@@ -724,6 +727,16 @@ def normalize_source_generation(doc: dict[str, Any] | None, *, goal: str, run_di
         startup_readme=str(lists.get("startup_readme", "")),
         run_dir=run_dir,
     )
+    product_validation = _product_validation(
+        goal=goal_text,
+        project_intent=project_intent,
+        project_spec=project_spec,
+        project_type=project_type,
+        project_archetype=project_archetype,
+        startup_entrypoint=entry_script,
+        generated_files=generated_files,
+        run_dir=run_dir,
+    )
 
     generated_files = _collect_project_files(run_dir, project_root)
     report = _stage_report(
@@ -756,6 +769,7 @@ def normalize_source_generation(doc: dict[str, Any] | None, *, goal: str, run_di
     report["pipeline_contract"] = pipeline_contract
     report["generic_validation"] = generic_validation
     report["domain_validation"] = domain_validation
+    report["product_validation"] = product_validation
     if (
         not gate_layers["structural"]["passed"]
         or not gate_layers["behavioral"]["passed"]
@@ -763,6 +777,7 @@ def normalize_source_generation(doc: dict[str, Any] | None, *, goal: str, run_di
         or str(scaffold.get("status", "")).strip().lower() != "pass"
         or not bool(generic_validation.get("passed", False))
         or not bool(domain_validation.get("passed", False))
+        or not bool(product_validation.get("passed", False))
     ):
         report["status"] = "blocked"
     return report
@@ -869,6 +884,9 @@ def normalize_project_manifest(doc: dict[str, Any] | None, *, goal: str, run_dir
     domain_validation = source_stage_doc.get("domain_validation") if isinstance(source_stage_doc.get("domain_validation"), dict) else {}
     if not isinstance(domain_validation, dict):
         domain_validation = {}
+    product_validation = source_stage_doc.get("product_validation") if isinstance(source_stage_doc.get("product_validation"), dict) else {}
+    if not isinstance(product_validation, dict):
+        product_validation = {}
 
     return {
         "schema_version": "ctcp-project-manifest-v1",
@@ -925,6 +943,7 @@ def normalize_project_manifest(doc: dict[str, Any] | None, *, goal: str, run_dir
         "visual_evidence_capture": source_stage_doc.get("visual_evidence_capture") if isinstance(source_stage_doc.get("visual_evidence_capture"), dict) else {},
         "generic_validation": generic_validation,
         "domain_validation": domain_validation,
+        "product_validation": product_validation,
         "artifacts": output_refs,
     }
 
@@ -983,6 +1002,7 @@ def normalize_deliverable_index(doc: dict[str, Any] | None, *, goal: str, run_di
         "visual_type": str(manifest_doc.get("visual_type", "")).strip(),
         "generic_validation": manifest_doc.get("generic_validation", {}) if isinstance(manifest_doc.get("generic_validation"), dict) else {},
         "domain_validation": manifest_doc.get("domain_validation", {}) if isinstance(manifest_doc.get("domain_validation"), dict) else {},
+        "product_validation": manifest_doc.get("product_validation", {}) if isinstance(manifest_doc.get("product_validation"), dict) else {},
         "business_deliverables": _normalize_rel_list([str(x) for x in manifest_doc.get("business_files_generated", [])]) if isinstance(manifest_doc.get("business_files_generated"), list) else [],
         "deliverables": sorted(set(deliverables)),
         "delivery_note": str(src.get("delivery_note", "")).strip() or "deliver artifacts are indexed for bridge consumption and mode-aware verify handoff",

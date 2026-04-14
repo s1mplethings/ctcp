@@ -10,19 +10,58 @@ Human navigation map:
 - Frontend/backend separation boundary: `docs/42_frontend_backend_separation_contract.md`
 
 This README is human-oriented quickstart and navigation. It does not act as the root agent contract.
+CTCP focuses on structured execution, customized delivery, visible progress, and token-efficient reliability rather than brute-force giant-context generation.
 
 ---
 
 ## Product Promise
 
-CTCP 的核心不是“把流程、合约、证据跑正确”，而是：
+CTCP is not a brute-force coding agent.
 
-`模糊目标 -> ProjectIntent -> Spec -> Scaffold -> Core Feature -> Smoke Run -> Delivery Package`
+CTCP is a structured goal-to-delivery generation system that turns vague user goals into customized runnable MVPs, visible progress evidence, and verifiable delivery packages.
 
-仓库里的 audit、manifest、verify、run artifacts 仍然保留，但它们现在明确属于支撑层：
-- 用来证明生成链路真的走通
-- 用来暴露首个失败点
-- 不再冒充“项目已经生成完成”本身
+Its mainline is:
+
+`Goal -> Intent -> Spec -> Scaffold -> Core Feature -> Smoke Run -> Demo Evidence -> Delivery Package`
+
+CTCP does not optimize for giant-context code dumping or generic one-shot project generation.  
+It optimizes for making projects **more structured, more customized, more visible during execution, and more reliable to deliver**.
+
+### What CTCP is good at
+
+- **Structured execution**  
+  Work advances through explicit stages instead of freeform generation drift.
+
+- **Customized runnable MVPs**  
+  Output should match the user's actual goal, constraints, style, and delivery shape rather than a generic demo.
+
+- **Visible progress**  
+  Intermediate tests, screenshots, previews, smoke results, or other user-visible checkpoints should appear whenever the routed task supports them.
+
+- **Token-efficient reliability**  
+  CTCP prefers stage artifacts, bounded context, and verify-driven repair loops over repeatedly reloading the entire repo into context.
+
+- **Verify-gated completion**  
+  Completion means more than generating files. The result should be suitable for inspection, testing, demonstration, and user-facing delivery.
+
+### What CTCP is not
+
+- Not a generic bigger-context-is-better shell.
+- Not a brute-force project generator that treats raw code volume as success.
+- Not an artifact-first shell where verify, manifest, or evidence impersonate generated product value.
+- Not a black-box run-until-done system when visible intermediate evidence can be shown.
+
+### Supporting layer vs product value
+
+Audit, verify, manifest, and evidence artifacts still matter. They remain essential support-layer components for:
+
+- proving that the generation chain actually ran,
+- exposing the first failure point,
+- enabling minimal repair loops,
+- and strengthening delivery trust.
+
+But they are not the product by themselves.  
+The product is the structured generation and delivery mainline that turns a vague goal into a runnable, testable, demoable, deliverable MVP.
 
 ---
 

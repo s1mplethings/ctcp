@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "reasons": [],
+  "required_sent_types": [
+    "document",
+    "photo"
+  ],
+  "sent_types": [
+    "document",
+    "photo"
+  ],
+  "selected_document": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-csv-cleaner-review\\artifacts\\support_exports\\csv-cleaner-web-tool.zip",
+  "selected_photo": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-csv-cleaner-review\\project_output\\csv-cleaner-web-tool\\artifacts\\screenshots\\final-ui.png",
+  "manifest_path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-csv-cleaner-review\\artifacts\\support_public_delivery.json",
+  "cold_replay_required": true,
+  "cold_replay_passed": true,
+  "replay_report_path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-csv-cleaner-review\\artifacts\\delivery_replay\\replay_artifacts\\replay_report.json",
+  "replay_screenshot_path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-csv-cleaner-review\\artifacts\\delivery_replay\\replay_artifacts\\replayed_screenshot.png"
+}

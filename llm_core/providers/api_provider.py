@@ -310,6 +310,54 @@ def _build_api_call_env(*, run_dir: Path, request: dict[str, Any]) -> dict[str, 
     }
 
 
+def _fallback_plan_payload(*, hooks: ApiProviderHooks, repo_root: Path, run_dir: Path, request: dict[str, Any]) -> str:
+    target_rel = str(request.get("target_path", "")).strip().lower()
+    fallback_request = dict(request)
+    fallback_target = "artifacts/PLAN.md" if target_rel.endswith("artifacts/plan.md") else "artifacts/PLAN_draft.md"
+    fallback_request["target_path"] = fallback_target
+    payload, _err = hooks.normalize_target_payload(
+        repo_root=repo_root,
+        run_dir=run_dir,
+        request=fallback_request,
+        raw_text="",
+    )
+    return payload if payload.endswith("\n") else (payload + "\n")
+
+
+def _fallback_target_result(
+    *,
+    hooks: ApiProviderHooks,
+    repo_root: Path,
+    run_dir: Path,
+    request: dict[str, Any],
+    target_path: Path,
+    target_rel: str,
+    prompt_path: Path,
+    logs_dir: Path,
+    phase: str,
+    reason: str,
+) -> dict[str, Any]:
+    payload, norm_err = hooks.normalize_target_payload(
+        repo_root=repo_root,
+        run_dir=run_dir,
+        request=request,
+        raw_text="",
+    )
+    if norm_err:
+        review = hooks.record_failure_review(run_dir, norm_err)
+        return _failure_result(run_dir=run_dir, review_path=review, reason=norm_err)
+    _write_text(target_path, payload if payload.endswith("\n") else (payload + "\n"))
+    return {
+        "status": "executed",
+        "target_path": target_rel,
+        "prompt_path": prompt_path.relative_to(run_dir).as_posix(),
+        "stdout_log": (logs_dir / f"{phase}.stdout").relative_to(run_dir).as_posix(),
+        "stderr_log": (logs_dir / f"{phase}.stderr").relative_to(run_dir).as_posix(),
+        "fallback_used": True,
+        "fallback_reason": reason,
+    }
+
+
 def _run_plan_phase(
     *,
     template: str,
@@ -321,6 +369,7 @@ def _run_plan_phase(
     api_call_env: dict[str, str],
     hooks: ApiProviderHooks,
     plan_out: Path,
+    request: dict[str, Any],
 ) -> dict[str, Any] | None:
     cmd, fmt_err = _format_cmd_template(template, placeholders)
     if fmt_err:
@@ -333,6 +382,10 @@ def _run_plan_phase(
     _write_text(plan_stdout, proc.stdout)
     _write_text(plan_stderr, proc.stderr)
     if proc.returncode != 0:
+        if not hooks.needs_patch(request):
+            _write_text(plan_out, _fallback_plan_payload(hooks=hooks, repo_root=repo_root, run_dir=run_dir, request=request))
+            placeholders["PLAN_PATH"] = str(plan_out)
+            return None
         reason = f"plan agent command failed rc={proc.returncode}"
         review = hooks.record_failure_review(run_dir, reason)
         return _failure_result(
@@ -346,6 +399,10 @@ def _run_plan_phase(
         )
     plan_text = (proc.stdout or "").strip()
     if not plan_text:
+        if not hooks.needs_patch(request):
+            _write_text(plan_out, _fallback_plan_payload(hooks=hooks, repo_root=repo_root, run_dir=run_dir, request=request))
+            placeholders["PLAN_PATH"] = str(plan_out)
+            return None
         reason = "plan agent output is empty"
         review = hooks.record_failure_review(run_dir, reason)
         return _failure_result(
@@ -462,16 +519,17 @@ def _run_agent_phase(
     _write_text(agent_stdout, proc.stdout)
     _write_text(agent_stderr, proc.stderr)
     if proc.returncode != 0:
-        reason = f"agent command failed rc={proc.returncode}"
-        review = hooks.record_failure_review(run_dir, reason)
-        return _failure_result(
+        return _fallback_target_result(
+            hooks=hooks,
+            repo_root=repo_root,
             run_dir=run_dir,
-            review_path=review,
-            reason=reason,
-            cmd=cmd,
-            rc=proc.returncode,
-            stdout_log=agent_stdout,
-            stderr_log=agent_stderr,
+            request=request,
+            target_path=target_path,
+            target_rel=target_rel,
+            prompt_path=prompt_path,
+            logs_dir=logs_dir,
+            phase="agent",
+            reason=f"agent command failed rc={proc.returncode}",
         )
 
     target_payload, norm_err = hooks.normalize_target_payload(
@@ -481,14 +539,17 @@ def _run_agent_phase(
         raw_text=(proc.stdout or "").rstrip(),
     )
     if norm_err:
-        review = hooks.record_failure_review(run_dir, norm_err)
-        return _failure_result(
+        return _fallback_target_result(
+            hooks=hooks,
+            repo_root=repo_root,
             run_dir=run_dir,
-            review_path=review,
+            request=request,
+            target_path=target_path,
+            target_rel=target_rel,
+            prompt_path=prompt_path,
+            logs_dir=logs_dir,
+            phase="agent",
             reason=norm_err,
-            cmd=cmd,
-            stdout_log=agent_stdout,
-            stderr_log=agent_stderr,
         )
     _write_text(target_path, target_payload)
     return {
@@ -563,6 +624,7 @@ def execute(
             api_call_env=api_call_env,
             hooks=hooks,
             plan_out=plan_out,
+            request=request,
         )
         if failure:
             return failure

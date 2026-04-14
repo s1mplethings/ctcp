@@ -93,6 +93,60 @@ class ApiProviderCoreTests(unittest.TestCase):
             self.assertTrue((run_dir / "outbox" / "AGENT_PROMPT_chair_plan_draft.md").exists())
             self.assertTrue((run_dir / "logs" / "agent.stdout").exists())
 
+    def test_execute_falls_back_to_normalized_target_when_agent_command_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            repo_root = root / "repo"
+            run_dir = root / "run"
+            repo_root.mkdir(parents=True, exist_ok=True)
+            run_dir.mkdir(parents=True, exist_ok=True)
+
+            agent_script = repo_root / "agent_fail.py"
+            agent_script.write_text("import sys\nsys.exit(1)\n", encoding="utf-8")
+
+            evidence = {}
+            for name in ("context", "constraints", "fix_brief", "externals"):
+                path = run_dir / "outbox" / f"{name}.md"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(f"# {name}\n", encoding="utf-8")
+                evidence[name] = path
+
+            def _record_failure(run_path: Path, reason: str) -> Path:
+                review = run_path / "reviews" / "review_api_agent.md"
+                review.parent.mkdir(parents=True, exist_ok=True)
+                review.write_text(reason, encoding="utf-8")
+                return review
+
+            hooks = api_provider.ApiProviderHooks(
+                resolve_templates=lambda _repo_root, _request: ({"agent": f'"{sys.executable}" "{agent_script}"'}, ""),
+                build_evidence_pack=lambda **_: evidence,
+                render_prompt=lambda **_: "prompt-text",
+                record_failure_review=_record_failure,
+                needs_patch=lambda _request: False,
+                normalize_patch_payload=lambda text: (text, ""),
+                normalize_target_payload=lambda **_: ("# Analysis\n\n## Core Goal\n- fallback-goal\n", ""),
+            )
+
+            result = api_provider.execute(
+                repo_root=repo_root,
+                run_dir=run_dir,
+                request={
+                    "role": "chair",
+                    "action": "plan_draft",
+                    "target_path": "artifacts/analysis.md",
+                    "goal": "fallback goal",
+                    "reason": "test reason",
+                },
+                config={"budgets": {"max_outbox_prompts": 8}},
+                guardrails_budgets={},
+                hooks=hooks,
+            )
+
+            self.assertEqual(result.get("status"), "executed", msg=str(result))
+            self.assertTrue(bool(result.get("fallback_used", False)))
+            self.assertIn("agent command failed", str(result.get("fallback_reason", "")))
+            self.assertIn("fallback-goal", (run_dir / "artifacts" / "analysis.md").read_text(encoding="utf-8"))
+
 
 if __name__ == "__main__":
     unittest.main()

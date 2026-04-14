@@ -1,0 +1,28 @@
+{
+  "schema_version": "ctcp-project-manifest-v1",
+  "project_id": "csv-cleaner-web-tool",
+  "project_root": "project_output/csv-cleaner-web-tool",
+  "project_type": "generic_copilot",
+  "project_archetype": "web_service",
+  "delivery_shape": "web_first",
+  "startup_entrypoint": "project_output/csv-cleaner-web-tool/scripts/run_project_web.py",
+  "startup_readme": "project_output/csv-cleaner-web-tool/README.md",
+  "business_files_generated": [
+    "project_output/csv-cleaner-web-tool/app.py",
+    "project_output/csv-cleaner-web-tool/src/csv_cleaner_web/service.py",
+    "project_output/csv-cleaner-web-tool/static/index.html",
+    "project_output/csv-cleaner-web-tool/static/app.css",
+    "project_output/csv-cleaner-web-tool/static/app.js",
+    "project_output/csv-cleaner-web-tool/tests/test_csv_cleaner_service.py"
+  ],
+  "generated_files": [
+    "project_output/csv-cleaner-web-tool/app.py",
+    "project_output/csv-cleaner-web-tool/README.md",
+    "project_output/csv-cleaner-web-tool/scripts/run_project_web.py",
+    "project_output/csv-cleaner-web-tool/artifacts/smoke_result.json",
+    "project_output/csv-cleaner-web-tool/artifacts/screenshots/final-ui.png"
+  ],
+  "visual_evidence_files": [
+    "project_output/csv-cleaner-web-tool/artifacts/screenshots/final-ui.png"
+  ]
+}

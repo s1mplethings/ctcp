@@ -1,0 +1,18 @@
+id: S28_lite_virtual_delivery_e2e
+name: virtual delivery golden e2e
+suite: lite
+steps:
+  - run:
+      cmd: python tests/support_virtual_delivery_e2e_runner.py --json-out artifacts/_virtual_delivery_e2e.json
+      expect_exit: 0
+  - expect_path:
+      path: artifacts/_virtual_delivery_e2e.json
+      exists: true
+  - expect_text:
+      path: artifacts/_virtual_delivery_e2e.json
+      includes:
+        - '"passed": true'
+        - '"sent_types": ['
+        - '"document"'
+        - '"photo"'
+        - 'final-ui.png'

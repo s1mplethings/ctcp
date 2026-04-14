@@ -1,0 +1,224 @@
+{
+  "support_run_dir": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session",
+  "bound_run_dir": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\runs\\bound-story",
+  "project_dir": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\generated_projects\\story_organizer",
+  "manifest_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\support_public_delivery.json",
+  "actions": [
+    {
+      "type": "send_project_screenshot",
+      "count": 2
+    },
+    {
+      "type": "send_project_package",
+      "format": "zip"
+    }
+  ],
+  "delivery_state": {
+    "channel": "telegram",
+    "channel_can_send_files": true,
+    "bound_run_id": "run-story",
+    "bound_run_dir": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\runs\\bound-story",
+    "package_source_dirs": [
+      "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\generated_projects\\story_organizer"
+    ],
+    "ctcp_package_source_dirs": [
+      "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\generated_projects\\story_organizer"
+    ],
+    "placeholder_package_source_dirs": [],
+    "existing_package_files": [],
+    "screenshot_files": [
+      "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\generated_projects\\story_organizer\\artifacts\\screenshots\\final-ui.png",
+      "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\generated_projects\\story_organizer\\artifacts\\screenshots\\overview.png"
+    ],
+    "project_name_hint": "story_organizer",
+    "package_delivery_mode": "zip_existing_ctcp_project",
+    "package_structure_hint": [
+      "artifacts/",
+      "docs/",
+      "meta/",
+      "scripts/",
+      "tests/",
+      "app.py",
+      "manifest.json",
+      "README.md"
+    ],
+    "package_ready": true,
+    "package_delivery_allowed": true,
+    "package_blocked_reason": "",
+    "package_quality_ready": true,
+    "package_quality_score": 100,
+    "package_quality_tier": "high",
+    "package_quality_subject": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\generated_projects\\story_organizer",
+    "package_quality_reason": "",
+    "screenshot_ready": true
+  },
+  "plan": {
+    "schema_version": "ctcp-support-public-delivery-v1",
+    "ts": "2026-04-14T00:52:50Z",
+    "requested_actions": [
+      {
+        "type": "send_project_screenshot",
+        "count": 2
+      },
+      {
+        "type": "send_project_package",
+        "format": "zip"
+      }
+    ],
+    "deliveries": [
+      {
+        "type": "photo",
+        "path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\generated_projects\\story_organizer\\artifacts\\screenshots\\final-ui.png",
+        "caption": "这是当前项目可直接发送的截图。"
+      },
+      {
+        "type": "photo",
+        "path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\generated_projects\\story_organizer\\artifacts\\screenshots\\overview.png",
+        "caption": ""
+      },
+      {
+        "type": "document",
+        "path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\support_exports\\story_organizer.zip",
+        "caption": "按你刚才确认的格式，这里是当前项目 zip 包。"
+      }
+    ],
+    "errors": [],
+    "delivery_mode": "e2e_virtual_delivery",
+    "manifest_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\support_public_delivery.json",
+    "sent": [
+      {
+        "type": "photo",
+        "path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\generated_projects\\story_organizer\\artifacts\\screenshots\\final-ui.png",
+        "caption": "这是当前项目可直接发送的截图。",
+        "transport": "virtual_delivery",
+        "delivery_mode": "e2e_virtual_delivery",
+        "delivered_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\support_exports\\virtual_delivery\\sent\\photos\\final-ui.png",
+        "source_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\generated_projects\\story_organizer\\artifacts\\screenshots\\final-ui.png",
+        "chat_id": 123,
+        "bytes": 8,
+        "sha256": "4c4b6a3be1314ab86138bef4314dde022e600960d8689a2c8f8631802d20dab6"
+      },
+      {
+        "type": "photo",
+        "path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\generated_projects\\story_organizer\\artifacts\\screenshots\\overview.png",
+        "caption": "",
+        "transport": "virtual_delivery",
+        "delivery_mode": "e2e_virtual_delivery",
+        "delivered_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\support_exports\\virtual_delivery\\sent\\photos\\overview.png",
+        "source_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\generated_projects\\story_organizer\\artifacts\\screenshots\\overview.png",
+        "chat_id": 123,
+        "bytes": 8,
+        "sha256": "4c4b6a3be1314ab86138bef4314dde022e600960d8689a2c8f8631802d20dab6"
+      },
+      {
+        "type": "document",
+        "path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\support_exports\\story_organizer.zip",
+        "caption": "按你刚才确认的格式，这里是当前项目 zip 包。",
+        "transport": "virtual_delivery",
+        "delivery_mode": "e2e_virtual_delivery",
+        "delivered_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\support_exports\\virtual_delivery\\sent\\documents\\story_organizer.zip",
+        "source_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\support_exports\\story_organizer.zip",
+        "chat_id": 123,
+        "bytes": 2176,
+        "sha256": "ffb8f29d9dd539b1c9dceaf7c56518f7f0691cd14b69d8b3b6560f82f52b42ef"
+      }
+    ],
+    "completion_gate": {
+      "passed": true,
+      "reasons": [],
+      "required_sent_types": [
+        "document",
+        "photo"
+      ],
+      "sent_types": [
+        "document",
+        "photo"
+      ],
+      "selected_document": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\support_exports\\story_organizer.zip",
+      "selected_photo": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\generated_projects\\story_organizer\\artifacts\\screenshots\\final-ui.png",
+      "manifest_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\support_public_delivery.json",
+      "cold_replay_required": true,
+      "cold_replay_passed": true,
+      "replay_report_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\delivery_replay\\replay_artifacts\\replay_report.json",
+      "replay_screenshot_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\delivery_replay\\replay_artifacts\\replayed_screenshot.png"
+    },
+    "replay_report": {
+      "package_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\support_exports\\story_organizer.zip",
+      "extracted_dir": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\delivery_replay\\extracted",
+      "entrypoint_detected": "app.py",
+      "startup_command": "D:\\anaconda\\python.exe D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\delivery_replay\\extracted\\story_organizer\\app.py",
+      "startup_pass": true,
+      "minimal_flow_pass": true,
+      "replay_screenshot_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\delivery_replay\\replay_artifacts\\replayed_screenshot.png",
+      "overall_pass": true,
+      "first_failure_stage": "",
+      "short_reason": "",
+      "report_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\delivery_replay\\replay_artifacts\\replay_report.json"
+    },
+    "delivery_completion": {
+      "passed": true,
+      "reasons": [],
+      "required_sent_types": [
+        "document",
+        "photo"
+      ],
+      "sent_types": [
+        "document",
+        "photo"
+      ],
+      "selected_document": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\support_exports\\story_organizer.zip",
+      "selected_photo": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\generated_projects\\story_organizer\\artifacts\\screenshots\\final-ui.png",
+      "manifest_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\support_public_delivery.json",
+      "cold_replay_required": true,
+      "cold_replay_passed": true,
+      "replay_report_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\delivery_replay\\replay_artifacts\\replay_report.json",
+      "replay_screenshot_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\delivery_replay\\replay_artifacts\\replayed_screenshot.png"
+    },
+    "product_completion": {
+      "profile": "standard",
+      "required": false,
+      "passed": false,
+      "checks": [],
+      "missing": [],
+      "reasons": [
+        "generic validation not passed",
+        "domain validation not passed"
+      ],
+      "fallback_detected": false
+    },
+    "overall_completion": {
+      "passed": false,
+      "delivery_passed": true,
+      "product_passed": false,
+      "reasons": [
+        "generic validation not passed",
+        "domain validation not passed"
+      ]
+    }
+  },
+  "completion_gate": {
+    "passed": true,
+    "reasons": [],
+    "required_sent_types": [
+      "document",
+      "photo"
+    ],
+    "sent_types": [
+      "document",
+      "photo"
+    ],
+    "selected_document": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\support_exports\\story_organizer.zip",
+    "selected_photo": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\generated_projects\\story_organizer\\artifacts\\screenshots\\final-ui.png",
+    "manifest_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\support_public_delivery.json",
+    "cold_replay_required": false,
+    "cold_replay_passed": true,
+    "replay_report_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\delivery_replay\\replay_artifacts\\replay_report.json",
+    "replay_screenshot_path": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\delivery_replay\\replay_artifacts\\replayed_screenshot.png"
+  },
+  "selected_photo": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\generated_projects\\story_organizer\\artifacts\\screenshots\\final-ui.png",
+  "selected_document": "D:\\.c_projects\\adc\\ctcp\\artifacts\\_virtual_delivery_e2e_run\\support-session\\artifacts\\support_exports\\story_organizer.zip",
+  "sent_types": [
+    "document",
+    "photo"
+  ]
+}

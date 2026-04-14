@@ -1,0 +1,10 @@
+{
+  "checks": [
+    "Browser upload parses CSV text",
+    "Raw preview renders first rows",
+    "Remove empty rows",
+    "Remove duplicate rows",
+    "Keep selected columns",
+    "Export cleaned CSV"
+  ]
+}

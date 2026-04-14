@@ -192,6 +192,8 @@ class BackendInterfaceContractApiTests(unittest.TestCase):
                 self.assertIn("generic_validation", manifest)
                 self.assertIn("domain_validation", manifest)
                 self.assertIn("artifacts", manifest)
+                stage_names = [str(dict(row).get("name", "")) for row in list(dict(manifest.get("pipeline_contract", {})).get("stages", [])) if isinstance(row, dict)]
+                self.assertIn("demo_evidence", stage_names)
 
                 current = ctcp_front_bridge.get_current_state_snapshot("run-x")
                 self.assertIn("task_id", current)
@@ -204,6 +206,48 @@ class BackendInterfaceContractApiTests(unittest.TestCase):
                 self.assertIn("visible_state", render)
                 self.assertIn("decision_cards", render)
                 self.assertIn("progress_summary", render)
+
+    def test_render_snapshot_prefers_visible_evidence_summary_when_proof_refs_exist(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_iface_proof_refs_") as td:
+            run_dir = Path(td)
+            _state, fake = _make_fake_runtime(run_dir)
+            _write_json(
+                run_dir / "artifacts" / "support_runtime_state.json",
+                {
+                    "schema_version": "ctcp-support-runtime-state-v1",
+                    "run_id": "run-x",
+                    "run_dir": str(run_dir),
+                    "phase": "EXECUTE",
+                    "run_status": "running",
+                    "blocking_reason": "",
+                    "needs_user_decision": False,
+                    "pending_decisions": [],
+                    "decisions": [],
+                    "latest_result": {"verify_result": "", "verify_gate": "", "iterations": {}, "gate": {}, "status_raw": {}},
+                    "error": {"has_error": False},
+                    "recovery": {"needed": False, "hint": "", "status": "none"},
+                    "gate": {"state": "open", "owner": "", "path": "", "reason": ""},
+                    "iterations": {"current": 0, "max": 0, "source": ""},
+                    "verify_result": "",
+                    "verify_gate": "",
+                    "decisions_needed_count": 0,
+                    "open_decisions_count": 0,
+                    "submitted_decisions_count": 0,
+                    "core_hash": "seed",
+                    "proof_refs": ["artifacts/screenshots/final-ui.png", "artifacts/support_exports/demo.zip"],
+                    "updated_at": "2026-04-12T00:00:00Z",
+                    "snapshot_source": "test",
+                },
+            )
+
+            with mock.patch.object(ctcp_front_bridge, "_resolve_run_dir", return_value=run_dir), mock.patch.object(
+                ctcp_front_bridge, "_run_cmd", side_effect=fake
+            ):
+                render = ctcp_front_bridge.get_render_state_snapshot("run-x")
+
+            summary = str(render.get("progress_summary", ""))
+            self.assertIn("Visible checkpoint", summary)
+            self.assertIn("UI screenshot", summary)
 
     def test_bridge_does_not_peek_outbox_or_questions_for_primary_decision_truth(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_iface_no_file_peek_") as td:

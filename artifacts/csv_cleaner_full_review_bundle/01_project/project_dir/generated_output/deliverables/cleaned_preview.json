@@ -1,0 +1,30 @@
+{
+  "rows": [
+    {
+      "order_id": "1001",
+      "customer": "Ada",
+      "amount": "120"
+    },
+    {
+      "order_id": "1002",
+      "customer": "Ben",
+      "amount": "85"
+    },
+    {
+      "order_id": "1003",
+      "customer": "Caro",
+      "amount": "210"
+    },
+    {
+      "order_id": "1004",
+      "customer": "Dan",
+      "amount": "64"
+    }
+  ],
+  "stats": {
+    "input_rows": 6,
+    "output_rows": 4,
+    "removed_empty_rows": 1,
+    "removed_duplicate_rows": 1
+  }
+}

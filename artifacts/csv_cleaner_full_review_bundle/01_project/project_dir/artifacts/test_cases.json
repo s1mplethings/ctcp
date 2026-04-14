@@ -1,0 +1,7 @@
+{
+  "cases": [
+    "unit: clean_csv_text removes empty and duplicate rows",
+    "unit: clean_csv_text keeps selected columns",
+    "manual: browser upload + clean + export"
+  ]
+}

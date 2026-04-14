@@ -39,6 +39,7 @@ def _launcher_script(*, package_name: str, startup_rel: str, mode_label: str) ->
         '    parser.add_argument("--goal", default="project generation request")',
         '    parser.add_argument("--project-name", default="Project Copilot")',
         '    parser.add_argument("--out", default=str(ROOT / "generated_output"))',
+        '    parser.add_argument("--headless", action="store_true")',
         '    parser.add_argument("--serve", action="store_true")',
         "    args = parser.parse_args()",
     ]

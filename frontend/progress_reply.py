@@ -2,11 +2,11 @@ import re
 from typing import Any, Mapping
 
 _PROGRESS_UPDATE_PATTERNS_ZH = (
-    re.compile(r"(进度|状态|做到什么程度|做到哪|做到哪一步|到哪了|到哪一步|做了什么|现在什么情况|到什么阶段|卡在哪)"),
+    re.compile(r"(进度|状态|做到什么程度|做到哪|做到哪一步|到哪了|到哪一步|做了什么|现在什么情况|到什么阶段|卡在哪|先看什么|能先看|有什么能看|有什么可看)"),
 )
 _PROGRESS_UPDATE_PATTERNS_EN = (
     re.compile(
-        r"\b(progress|status|how far|where are we|what(?:'| i)?s done|what has been done|what did you do|what.?s the update|what.?s the status)\b",
+        r"\b(progress|status|how far|where are we|what(?:'| i)?s done|what has been done|what did you do|what.?s the update|what.?s the status|anything visible|anything to preview|can i see)\b",
         re.IGNORECASE,
     ),
 )
@@ -44,6 +44,37 @@ def _dedupe_items(items: list[str], *, limit: int = 2) -> list[str]:
         if len(out) >= max(1, limit):
             break
     return out
+
+
+def summarize_progress_evidence_refs(proof_refs: Any, *, lang: str) -> str:
+    if not isinstance(proof_refs, list):
+        return ""
+    refs = _dedupe_items([str(item or "").strip() for item in proof_refs], limit=3)
+    if not refs:
+        return ""
+    use_en = str(lang or "").strip().lower().startswith("en")
+    labels: list[str] = []
+    for ref in refs:
+        low = ref.lower().replace("\\", "/")
+        if any(token in low for token in ("final-ui", "screenshot", "screen", "preview", ".png", ".jpg", ".jpeg", ".webp", ".bmp")):
+            labels.append("a reviewable UI screenshot is ready" if use_en else "成品截图已经可查看")
+            continue
+        if low.endswith(".zip") or "/support_exports/" in low or "package" in low:
+            labels.append("a reviewable package is ready" if use_en else "代码包已经整理好")
+            continue
+        if any(token in low for token in ("verify_report", "smoke", "test_summary", "acceptance", "demo_trace")):
+            labels.append("verification evidence is available" if use_en else "阶段验证结果已经落地")
+            continue
+        if low.startswith("run_id="):
+            labels.append("this run already has a visible checkpoint" if use_en else "当前 run 已经有一轮可查看结果")
+            continue
+        labels.append(ref)
+    visible = _dedupe_items(labels, limit=2)
+    if not visible:
+        return ""
+    if use_en:
+        return "Visible checkpoint: " + "; ".join(visible) + "."
+    return "目前已经有可直接查看的阶段结果：" + "；".join(visible) + "。"
 
 
 def humanize_progress_runtime_text(text: str, *, lang: str) -> str:
@@ -135,6 +166,7 @@ def compose_progress_update_reply(
     phase = re.sub(r"\s+", " ", str(binding.get("current_phase", "")).strip())
     blocker = humanize_progress_runtime_text(str(binding.get("current_blocker", "")), lang=lang)
     next_action = humanize_progress_runtime_text(str(binding.get("next_action", "")), lang=lang)
+    evidence = summarize_progress_evidence_refs(binding.get("proof_refs", []), lang=lang)
     question_needed = str(binding.get("question_needed", "")).strip().lower() in {"yes", "true", "1"}
     blocking_question = re.sub(r"\s+", " ", str(binding.get("blocking_question", "")).strip()) or re.sub(
         r"\s+", " ", str(fallback_question or "").strip()
@@ -145,6 +177,8 @@ def compose_progress_update_reply(
     if lang == "en":
         if done_items:
             rows.append(f"Confirmed progress so far: {'; '.join(done_items)}.")
+        if evidence:
+            rows.append(evidence)
         if blocker and blocker.lower() != "none":
             if phase:
                 rows.append(f"Current phase: {phase}. The blocker is {blocker}.")
@@ -162,6 +196,8 @@ def compose_progress_update_reply(
 
     if done_items:
         rows.append("我这边已经完成：" + "、".join(done_items) + "。")
+    if evidence:
+        rows.append(evidence)
     if blocker and blocker.lower() != "none":
         if phase:
             rows.append(f"目前在{phase}这个阶段，当前卡点是：{blocker}。")

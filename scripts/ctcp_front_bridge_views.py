@@ -4,6 +4,8 @@ import hashlib
 from pathlib import Path
 from typing import Any, Callable
 
+from frontend.progress_reply import summarize_progress_evidence_refs
+
 
 def _classify_artifact(rel_path: str) -> str:
     suffix = Path(rel_path).suffix.lower()
@@ -154,7 +156,11 @@ def _build_render_state_snapshot(*, current_snapshot: dict[str, Any], runtime_st
         ui_badge = "done"
     elif visible_state == "BLOCKED_NEEDS_INPUT":
         ui_badge = "blocked"
-    progress_summary = str(current_snapshot.get("current_blocker", "")).strip() or "runtime progressing"
+    progress_summary = (
+        summarize_progress_evidence_refs(current_snapshot.get("proof_refs", []), lang="en")
+        or str(current_snapshot.get("current_blocker", "")).strip()
+        or "runtime progressing"
+    )
     return {
         "task_id": str(current_snapshot.get("task_id", "")).strip(),
         "ui_badge": ui_badge,

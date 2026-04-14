@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CSV Cleaner Studio</title>
+  <link rel="stylesheet" href="/assets/app.css" />
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">CSV Cleaner Studio</p>
+        <h1>Upload a CSV, clean it in place, and export a ready-to-share file.</h1>
+        <p class="lede">Designed for operations, sales, and support teams that need a quick browser-based cleanup pass before handing data downstream.</p>
+      </div>
+      <div class="hero-card">
+        <div class="metric"><span id="inputRows">0</span><label>Input rows</label></div>
+        <div class="metric"><span id="outputRows">0</span><label>Output rows</label></div>
+        <div class="metric"><span id="removedRows">0</span><label>Rows removed</label></div>
+      </div>
+    </section>
+
+    <section class="panel controls">
+      <div class="upload-box">
+        <label for="csvFile">CSV file</label>
+        <input id="csvFile" type="file" accept=".csv,text/csv" />
+        <p id="fileName">No file selected.</p>
+      </div>
+      <div class="toggle-group">
+        <label><input id="removeEmpty" type="checkbox" checked /> Remove empty rows</label>
+        <label><input id="removeDuplicates" type="checkbox" checked /> Remove duplicate rows</label>
+      </div>
+      <div class="column-picker">
+        <p>Keep columns</p>
+        <div id="columnOptions" class="column-options"></div>
+      </div>
+      <div class="button-row">
+        <button id="processBtn" class="primary">Clean Data</button>
+        <button id="exportBtn" class="secondary" disabled>Export Cleaned CSV</button>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="panel table-panel">
+        <div class="panel-head">
+          <h2>Raw preview</h2>
+          <span>First 8 rows</span>
+        </div>
+        <div class="table-wrap"><table id="rawTable"></table></div>
+      </article>
+      <article class="panel table-panel">
+        <div class="panel-head">
+          <h2>Cleaned preview</h2>
+          <span>After selected operations</span>
+        </div>
+        <div class="table-wrap"><table id="cleanedTable"></table></div>
+      </article>
+    </section>
+  </main>
+  <script src="/assets/app.js"></script>
+</body>
+</html>

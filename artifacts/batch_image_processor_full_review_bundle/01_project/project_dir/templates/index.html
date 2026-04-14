@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Batch Image Processor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Batch Image Processor</p>
+          <h1>批量图片处理，一次做完缩放、转格式和打包下载</h1>
+          <p class="lead">适合电商图片整理、文档插图归档和统一规格输出。上传多张图片后，可以统一处理并直接下载单张结果或整包 zip。</p>
+        </div>
+        <div class="hero-card">
+          <div class="hero-metric"><span>支持格式</span><strong>JPG / JPEG / PNG</strong></div>
+          <div class="hero-metric"><span>处理能力</span><strong>尺寸 / 比例 / 格式 / 质量</strong></div>
+          <div class="hero-metric"><span>下载方式</span><strong>单张 / 批量 ZIP</strong></div>
+        </div>
+      </header>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <section class="status-panel">
+        {% for category, message in messages %}<div class="status-chip status-{{ category }}">{{ message }}</div>{% endfor %}
+      </section>
+      {% endif %}
+      {% endwith %}
+      <main class="grid">
+        <section class="card form-card">
+          <h2>上传与参数</h2>
+          <form action="{{ url_for('process') }}" method="post" enctype="multipart/form-data">
+            <label class="field"><span>上传图片</span><input id="images" type="file" name="images" accept=".jpg,.jpeg,.png" multiple required></label>
+            <div class="field-grid">
+              <label class="field"><span>处理模式</span><select name="resize_mode" id="resize_mode"><option value="fixed" {% if settings.resize_mode == 'fixed' %}selected{% endif %}>统一宽高</option><option value="ratio" {% if settings.resize_mode == 'ratio' %}selected{% endif %}>按比例缩放</option></select></label>
+              <label class="field"><span>输出格式</span><select name="output_format"><option value="jpg" {% if settings.output_format == 'jpg' %}selected{% endif %}>JPG</option><option value="png" {% if settings.output_format == 'png' %}selected{% endif %}>PNG</option></select></label>
+            </div>
+            <div class="field-grid" id="fixed_fields">
+              <label class="field"><span>输出宽度</span><input type="number" name="width" min="1" max="4000" value="{{ settings.width }}"></label>
+              <label class="field"><span>输出高度</span><input type="number" name="height" min="1" max="4000" value="{{ settings.height }}"></label>
+            </div>
+            <div class="field-grid" id="ratio_fields">
+              <label class="field"><span>缩放比例（%）</span><input type="number" name="scale_percent" min="5" max="400" value="{{ settings.scale_percent }}"></label>
+              <label class="field checkbox-field"><span>固定宽高时保持比例</span><input type="checkbox" name="keep_aspect" value="1" {% if settings.keep_aspect == '1' %}checked{% endif %}></label>
+            </div>
+            <div class="field-grid">
+              <label class="field"><span>压缩质量（JPG）</span><input type="number" name="quality" min="30" max="95" value="{{ settings.quality }}"></label>
+              <label class="field"><span>重命名规则</span><select name="rename_rule"><option value="preserve" {% if settings.rename_rule == 'preserve' %}selected{% endif %}>保留原文件名</option><option value="prefix" {% if settings.rename_rule == 'prefix' %}selected{% endif %}>增加前缀</option><option value="sequence" {% if settings.rename_rule == 'sequence' %}selected{% endif %}>增加序号</option></select></label>
+            </div>
+            <label class="field"><span>文件名前缀</span><input type="text" name="prefix" value="{{ settings.prefix }}"></label>
+            <button class="primary-btn" type="submit">开始处理</button>
+          </form>
+        </section>
+        <section class="card preview-card">
+          <div class="section-head"><h2>原图预览</h2><span class="muted">上传后会在这里显示缩略图和文件名</span></div>
+          <div id="upload_preview" class="preview-grid empty-state"><div class="empty-box">等待选择图片</div></div>
+        </section>
+        <section class="card result-card">
+          <div class="section-head"><h2>处理结果</h2><span class="muted">完成后可直接单张下载，或一键打包下载</span></div>
+          {% if job %}
+          <div class="download-bar"><div><strong>{{ job.success_count }}</strong> 张成功 <span class="muted"> / {{ job.error_count }} 张失败</span></div>{% if job.zip_name %}<a class="secondary-btn" href="{{ url_for('download_zip', job_id=current_job_id) }}">下载全部 ZIP</a>{% endif %}</div>
+          <div class="result-list">{% for item in job.results %}<article class="result-item"><div class="thumb-pair">{% if not item.error %}<img src="{{ url_for('preview', kind='original', job_id=current_job_id, filename=item.stored_name) }}" alt="原图预览"><img src="{{ url_for('preview', kind='processed', job_id=current_job_id, filename=item.processed_name) }}" alt="结果预览">{% else %}<div class="error-box">处理失败</div>{% endif %}</div><div class="result-meta"><h3>{{ item.original_name }}</h3>{% if item.error %}<p class="error-text">{{ item.error }}</p>{% else %}<ul><li>原始尺寸：{{ item.original_size[0] }} × {{ item.original_size[1] }}</li><li>输出尺寸：{{ item.processed_size[0] }} × {{ item.processed_size[1] }}</li><li>输出格式：{{ item.output_format|upper }}</li><li>结果大小：{{ item.processed_bytes }} bytes</li></ul><a class="inline-link" href="{{ url_for('download', job_id=current_job_id, filename=item.processed_name) }}">下载当前结果</a>{% endif %}</div></article>{% endfor %}</div>
+          {% else %}
+          <div class="empty-box">处理完成后，这里会显示结果缩略图、尺寸信息和下载入口。</div>
+          {% endif %}
+        </section>
+      </main>
+    </div>
+    <script>
+      const input = document.getElementById('images');
+      const preview = document.getElementById('upload_preview');
+      const resizeMode = document.getElementById('resize_mode');
+      const fixedFields = document.getElementById('fixed_fields');
+      const ratioFields = document.getElementById('ratio_fields');
+      function syncMode() {
+        const fixed = resizeMode.value === 'fixed';
+        fixedFields.style.display = fixed ? 'grid' : 'none';
+        ratioFields.style.display = fixed ? 'grid' : 'none';
+      }
+      function drawPreview(files) {
+        preview.innerHTML = '';
+        if (!files.length) { preview.classList.add('empty-state'); preview.innerHTML = '<div class="empty-box">等待选择图片</div>'; return; }
+        preview.classList.remove('empty-state');
+        [...files].forEach((file) => {
+          const card = document.createElement('div'); card.className = 'upload-item';
+          const img = document.createElement('img'); const name = document.createElement('p'); name.textContent = file.name;
+          card.appendChild(img); card.appendChild(name); preview.appendChild(card);
+          const reader = new FileReader(); reader.onload = (e) => img.src = e.target.result; reader.readAsDataURL(file);
+        });
+      }
+      input.addEventListener('change', () => drawPreview(input.files));
+      resizeMode.addEventListener('change', syncMode);
+      syncMode();
+    </script>
+  </body>
+</html>

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -24,6 +25,21 @@ def _replace_once(text: str, old: str, new: str, label: str) -> str:
     return updated
 
 
+def _insert_after_heading(text: str, heading: str, insertion: str, label: str) -> str:
+    pattern = re.compile(rf"(^#+[ \t]+{re.escape(heading)}\r?\n(?:\r?\n)?)", re.MULTILINE)
+    match = pattern.search(text)
+    if not match:
+        raise SystemExit(f"[generate_s16_fix_patch] missing anchor for {label}")
+    return text[: match.end()] + insertion + text[match.end() :]
+
+
+def _insert_after_pattern(text: str, pattern: str, insertion: str, label: str) -> str:
+    match = re.search(pattern, text, re.MULTILINE)
+    if not match:
+        raise SystemExit(f"[generate_s16_fix_patch] missing anchor for {label}")
+    return text[: match.end()] + insertion + text[match.end() :]
+
+
 def build_patch(repo_root: Path, run_dir: Path) -> Path:
     temp_root = repo_root / ".agent_private"
     temp_root.mkdir(parents=True, exist_ok=True)
@@ -44,13 +60,12 @@ def build_patch(repo_root: Path, run_dir: Path) -> Path:
 
         readme = tmp_dir / "README.md"
         readme_text = readme.read_text(encoding="utf-8")
-        decision_log_line = "- [ai_context/decision_log.md](ai_context/decision_log.md)\n"
-        if decision_log_line not in readme_text:
+        decision_log_ref = "[ai_context/decision_log.md](ai_context/decision_log.md)"
+        if decision_log_ref not in readme_text:
             readme.write_text(
-                _replace_once(
+                _insert_after_pattern(
                     readme_text,
-                    "- [ai_context/problem_registry.md](ai_context/problem_registry.md)\n",
-                    "- [ai_context/problem_registry.md](ai_context/problem_registry.md)\n"
+                    r"^- \[ai_context/problem_registry\.md\]\(ai_context/problem_registry\.md\)\r?\n",
                     "- [ai_context/decision_log.md](ai_context/decision_log.md)\n",
                     "README.md",
                 ),
@@ -61,10 +76,10 @@ def build_patch(repo_root: Path, run_dir: Path) -> Path:
         current_task = tmp_dir / "meta/tasks/CURRENT.md"
         current_task_text = current_task.read_text(encoding="utf-8")
         current_task.write_text(
-            _replace_once(
+            _insert_after_heading(
                 current_task_text,
-                "## Queue Binding\n\n",
-                "## Queue Binding\n\n<!-- simlab-s16-touch-current -->\n\n",
+                "Queue Binding",
+                "<!-- simlab-s16-touch-current -->\n\n",
                 "meta/tasks/CURRENT.md",
             ),
             encoding="utf-8",
@@ -74,10 +89,10 @@ def build_patch(repo_root: Path, run_dir: Path) -> Path:
         last_report = tmp_dir / "meta/reports/LAST.md"
         last_report_text = last_report.read_text(encoding="utf-8")
         last_report.write_text(
-            _replace_once(
+            _insert_after_heading(
                 last_report_text,
-                "### Changes\n\n",
-                "### Changes\n\n<!-- simlab-s16-touch-report -->\n\n",
+                "Changes",
+                "<!-- simlab-s16-touch-report -->\n\n",
                 "meta/reports/LAST.md",
             ),
             encoding="utf-8",

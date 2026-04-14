@@ -1,0 +1,19 @@
+{
+  "status": "pass",
+  "goal": "smoke export",
+  "project_name": "CSV Cleaner Studio",
+  "checks": [
+    "upload CSV text",
+    "preview raw rows",
+    "remove empty rows",
+    "remove duplicate rows",
+    "keep selected columns",
+    "export cleaned CSV"
+  ],
+  "stats": {
+    "input_rows": 6,
+    "output_rows": 4,
+    "removed_empty_rows": 1,
+    "removed_duplicate_rows": 1
+  }
+}

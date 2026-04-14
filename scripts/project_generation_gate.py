@@ -104,10 +104,11 @@ def _validate_pipeline_contract(doc: dict[str, Any]) -> tuple[bool, str]:
         "scaffold",
         "core_feature_implementation",
         "smoke_run",
+        "demo_evidence",
         "delivery_package",
     ]
     if names != expected:
-        return False, "pipeline_contract.stages must follow project_intent -> spec -> scaffold -> core_feature_implementation -> smoke_run -> delivery_package"
+        return False, "pipeline_contract.stages must follow project_intent -> spec -> scaffold -> core_feature_implementation -> smoke_run -> demo_evidence -> delivery_package"
     return True, "ok"
 
 
@@ -141,6 +142,26 @@ def _validate_domain_validation(doc: dict[str, Any]) -> tuple[bool, str]:
     checks = domain.get("checks")
     if not isinstance(checks, list) or not checks:
         return False, "domain_validation.checks must be non-empty array"
+    return True, "ok"
+
+
+def _validate_product_validation(doc: dict[str, Any]) -> tuple[bool, str]:
+    ok, msg = _validate_json_object_field(doc, "product_validation")
+    if not ok:
+        return False, msg
+    product = doc.get("product_validation")
+    if "required" not in product:
+        return False, "product_validation.required is required"
+    if "passed" not in product:
+        return False, "product_validation.passed is required"
+    for field in ("checks", "missing", "reasons", "detected_groups"):
+        value = product.get(field)
+        if not isinstance(value, list):
+            return False, f"product_validation.{field} must be array"
+    if not isinstance(product.get("evidence"), dict):
+        return False, "product_validation.evidence must be object"
+    if bool(product.get("required", False)) and not bool(product.get("passed", False)):
+        return False, "product_validation.passed must be true for required product profiles"
     return True, "ok"
 
 
@@ -327,6 +348,7 @@ def _validate_project_manifest(path: Path) -> tuple[bool, str]:
         _validate_pipeline_contract,
         _validate_generic_validation,
         _validate_domain_validation,
+        _validate_product_validation,
     ):
         ok, inner = validator(doc)
         if not ok:
@@ -452,6 +474,7 @@ def _validate_stage_report(path: Path, *, stage: str) -> tuple[bool, str]:
             _validate_pipeline_contract,
             _validate_generic_validation,
             _validate_domain_validation,
+            _validate_product_validation,
         ):
             ok, inner = validator(doc)
             if not ok:
@@ -576,6 +599,7 @@ def _validate_deliverable_index(path: Path) -> tuple[bool, str]:
         _validate_pipeline_contract,
         _validate_generic_validation,
         _validate_domain_validation,
+        _validate_product_validation,
     ):
         ok, inner = validator(doc)
         if not ok:

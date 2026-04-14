@@ -158,10 +158,14 @@ def load_dispatch_config(run_dir: Path) -> tuple[dict[str, Any] | None, str]:
     providers = raw.get("providers", {})
     if not isinstance(providers, dict):
         providers = {}
+    public_delivery = raw.get("public_delivery", {})
+    if not isinstance(public_delivery, dict):
+        public_delivery = {}
 
     return {
         "schema_version": "ctcp-dispatch-config-v1",
         "mode": mode,
+        "public_delivery": public_delivery,
         "role_providers": role_providers,
         "budgets": budgets,
         "providers": providers,

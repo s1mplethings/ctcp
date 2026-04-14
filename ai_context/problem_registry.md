@@ -815,3 +815,32 @@ When to add:
   任何声称“已交付”的 support/Telegram 改动都必须同时验证 text、photo、document、`support_public_delivery.json.sent`、首图优先级和用户可读启动说明；只有 json 或文本存在不算交付完成。
 - Tags:
   telegram, support, public-delivery, screenshot, zip, humanization, proactive
+
+## Example 31
+
+- Symptom:
+  仓库顶层文档已经把 CTCP 定位成 `structured goal-to-delivery`、强调 `demo evidence` 和 `visible progress`，但实际 generation gate、默认 context request、以及 progress rendering 仍按旧主链或 blocker-only 逻辑运行。
+- Repro:
+  1. 阅读 `README.md`、`docs/01_north_star.md`、`AGENTS.md`，确认主链已声明为 `... -> smoke -> demo evidence -> delivery package`，且 visible progress 应优先展示可见 checkpoint。
+  2. 检查 `scripts/project_generation_gate.py`、`tools/providers/project_generation_artifacts.py::build_default_context_request()`、`scripts/ctcp_front_bridge_views.py` / `frontend/progress_reply.py`。
+  3. 观察 gate 仍缺 `demo_evidence`、context request 不读新的 purpose docs、progress reply 即使已有 `proof_refs` 也只报 blocker。
+- Root cause:
+  顶层 authority 文档更新后，没有同步收敛到 generation contract validator、default context read set、以及 progress evidence consumer，导致 repo purpose 和 runtime behavior 分叉。
+- Affected entrypoint:
+  `tools/providers/project_generation_artifacts.py::build_default_context_request`, `scripts/project_generation_gate.py::_validate_pipeline_contract`, `frontend/response_composer.py` -> `frontend/progress_reply.py::compose_progress_update_reply`
+- Affected modules:
+  `tools/providers/project_generation_validation.py`, `tools/providers/project_generation_artifacts.py`, `scripts/project_generation_gate.py`, `scripts/project_manifest_bridge.py`, `frontend/progress_reply.py`, `scripts/ctcp_front_bridge_views.py`, `scripts/ctcp_support_bot.py`
+- Observed fallback behavior:
+  生成链默认上下文更像 implementation-first；pipeline contract 对 `demo evidence` 不可见；用户问进度时即使已有截图/包/验证证据，也可能只收到 blocker/phase 播报。
+- Expected correct behavior:
+  generation contract、default context、bridge manifest 和 progress reply 都应与新的 repo purpose 一致：主链包含 `demo evidence`，default context 读取新的 purpose/agent authorities，visible progress 优先展示 proof refs/checkpoints。
+- Fix:
+  在 pipeline contract 和 inferred manifest 中插入 `demo_evidence`；把 `AGENTS.md` 与 `docs/01_north_star.md` 纳入 default context request；让 frontend/support progress reply 消费 `proof_refs` 并显示可见 checkpoint 摘要，同时保留 runtime snapshot 中的 `proof_refs`。
+- Fix attempt status:
+  2026-04-12 scoped alignment bound under `ADHOC-20260412-mainline-doc-alignment`.
+- Regression test status:
+  Covered by `tests/test_project_generation_artifacts.py`, `tests/test_backend_interface_contract_apis.py`, `tests/test_frontend_rendering_boundary.py`, and `tests/test_runtime_wiring_contract.py`.
+- Prevention:
+  任何 repo purpose 或 root contract 的主链更新，都必须同步检查 generation gate、default context request、bridge/render snapshot、以及 progress reply consumer 是否一起收敛；只改顶层 md 不算完成。
+- Tags:
+  contract-drift, generation, progress, visible-evidence, runtime-wiring, docs-alignment

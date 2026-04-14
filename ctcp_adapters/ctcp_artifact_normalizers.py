@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from ctcp_adapters.analysis_md_normalizer import normalize_analysis_md as _normalize_analysis_md
 from llm_core.providers.api_provider import _read_text, _slug, _write_text
 from tools import contrast_rules, contract_guard, local_librarian
 from tools.providers.project_generation_artifacts import (
@@ -902,6 +903,8 @@ def normalize_target_payload(*, repo_root: Path, run_dir: Path, request: dict[st
         )
     if target_rel.lower().endswith("guardrails.md"):
         return _normalize_guardrails_md(raw_text), ""
+    if target_rel.lower().endswith("analysis.md"):
+        return _normalize_analysis_md(raw_text, goal=str(request.get("goal", "")).strip()), ""
     if target_rel.lower().endswith("artifacts/plan.md"):
         return _normalize_plan_md(raw_text, signed=True, goal=str(request.get("goal", "")).strip()), ""
     if target_rel.lower().endswith("artifacts/plan_draft.md"):

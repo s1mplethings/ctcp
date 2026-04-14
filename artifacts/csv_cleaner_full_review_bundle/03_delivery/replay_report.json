@@ -1,0 +1,12 @@
+{
+  "package_path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-csv-cleaner-review\\artifacts\\support_exports\\csv-cleaner-web-tool.zip",
+  "extracted_dir": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-csv-cleaner-review\\artifacts\\delivery_replay\\extracted",
+  "entrypoint_detected": "scripts/run_project_web.py",
+  "startup_command": "D:\\anaconda\\python.exe C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-csv-cleaner-review\\artifacts\\delivery_replay\\extracted\\csv-cleaner-web-tool\\scripts\\run_project_web.py --serve",
+  "startup_pass": true,
+  "minimal_flow_pass": true,
+  "replay_screenshot_path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-csv-cleaner-review\\artifacts\\delivery_replay\\replay_artifacts\\replayed_screenshot.png",
+  "overall_pass": true,
+  "first_failure_stage": "",
+  "short_reason": ""
+}

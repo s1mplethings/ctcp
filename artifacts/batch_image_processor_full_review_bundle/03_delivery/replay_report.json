@@ -1,0 +1,12 @@
+{
+  "package_path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\support-session\\artifacts\\support_exports\\batch_image_processor.zip",
+  "extracted_dir": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\support-session\\artifacts\\delivery_replay\\extracted",
+  "entrypoint_detected": "app.py",
+  "startup_command": "D:\\anaconda\\python.exe C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\support-session\\artifacts\\delivery_replay\\extracted\\batch_image_processor\\app.py",
+  "startup_pass": true,
+  "minimal_flow_pass": true,
+  "replay_screenshot_path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\support-session\\artifacts\\delivery_replay\\replay_artifacts\\replayed_screenshot.png",
+  "overall_pass": true,
+  "first_failure_stage": "",
+  "short_reason": ""
+}

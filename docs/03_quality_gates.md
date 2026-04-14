@@ -12,7 +12,7 @@ Only these commands are valid acceptance gate entrypoints:
 No alternative `scripts/verify.*` family is authoritative for DoD in this repo.
 
 Verify is the canonical acceptance entrypoint, but it is not the product mainline. The product mainline is:
-`ProjectIntent -> Spec -> Scaffold -> Core Feature Implementation -> Smoke Run -> Delivery Package`.
+`ProjectIntent -> Spec -> Scaffold -> Core Feature Implementation -> Smoke Run -> Demo Evidence -> Delivery Package`.
 The job of verify is to prove that this chain really produced a runnable MVP, not to substitute for that chain.
 
 ## 2) Verify Evidence Naming (Unified Contract)

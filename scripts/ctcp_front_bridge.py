@@ -498,6 +498,7 @@ def _refresh_runtime_state(run_dir: Path) -> dict[str, Any]:
         verify_result=verify_result,
         verify_gate=verify_gate,
         submitted_open=submitted_open,
+        proof_refs=list(previous_state.get("proof_refs", [])) if isinstance(previous_state.get("proof_refs", []), list) else [],
         now_ts=now_ts,
         runtime_core_hash=_runtime_core_hash,
         run_id_from_dir=_run_id_from_dir,

@@ -30,6 +30,10 @@ FIXED_NARRATIVE_GOAL = (
 GENERIC_GOAL = "请生成一个工具库型项目，用于整理任务规划和 JSON 导出。"
 WEB_SERVICE_GOAL = "请生成一个本地 HTTP 服务 MVP，用于把模糊项目目标整理成结构化 spec、workflow plan 和 acceptance 摘要 JSON。"
 DATA_PIPELINE_GOAL = "请生成一个数据处理 pipeline MVP，用于把原始项目目标转换成结构化 spec、sample output 和 acceptance 报告。"
+ANNOTATION_WORKBENCH_GOAL = (
+    "Build a local interactive Annotation Review Workbench that loads an image folder, lets users create/move/resize/delete "
+    "bounding boxes with labels, track per-image review status and notes, autosave/restore state, and export YOLO annotations with a stats report."
+)
 PRODUCTION_GUI_NARRATIVE_GOAL = (
     "做一个本地可运行的 VN 项目助手 MVP："
     "输入角色资料、章节大纲、场景列表，生成一个可视化整理工具。"
@@ -92,6 +96,18 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
         self.assertIn("pipeline_contract", doc)
         self.assertFalse(bool(doc.get("benchmark_sample_applied", False)))
         self.assertIn(str(doc.get("delivery_shape", "")), {"cli_first", "gui_first", "web_first", "tool_library_first"})
+        self.assertEqual(
+            [str(dict(row).get("name", "")) for row in list(dict(doc.get("pipeline_contract", {})).get("stages", [])) if isinstance(row, dict)],
+            [
+                "project_intent",
+                "spec",
+                "scaffold",
+                "core_feature_implementation",
+                "smoke_run",
+                "demo_evidence",
+                "delivery_package",
+            ],
+        )
         business_files = list(doc.get("business_files", []))
         self.assertNotIn("project_output/narrative-copilot/src/narrative_copilot/story/chapter_planner.py", business_files)
         self.assertTrue(any("/story/stage_planner.py" in row for row in business_files))
@@ -335,13 +351,15 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
     def test_build_default_context_request_expands_project_generation_inputs(self) -> None:
         request = build_default_context_request(FIXED_NARRATIVE_GOAL)
         paths = {str(dict(item).get("path", "")) for item in list(request.get("needs", [])) if isinstance(item, dict)}
+        self.assertIn("AGENTS.md", paths)
         self.assertIn("README.md", paths)
+        self.assertIn("docs/01_north_star.md", paths)
         self.assertIn("workflow_registry/wf_project_generation_manifest/recipe.yaml", paths)
         self.assertIn("tools/providers/project_generation_artifacts.py", paths)
         self.assertIn("scripts/ctcp_dispatch.py", paths)
         self.assertIn("scripts/ctcp_front_bridge.py", paths)
         self.assertIn("scripts/project_generation_gate.py", paths)
-        self.assertGreaterEqual(int(dict(request.get("budget", {})).get("max_files", 0) or 0), 12)
+        self.assertGreaterEqual(int(dict(request.get("budget", {})).get("max_files", 0) or 0), 14)
 
     def test_source_generation_generic_goal_exports_spec_and_workflow_bundle(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_generic_") as td:
@@ -424,6 +442,59 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
                 for key in ("mvp_spec_json", "cli_command_plan_json", "operator_checklist_md", "acceptance_report_json"):
                     self.assertIn(key, export_doc)
                     self.assertTrue(Path(str(export_doc[key])).exists(), msg=key)
+
+    def test_source_generation_generic_gui_goal_accepts_headless_export_probe(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_pg_generic_gui_") as td:
+            run_dir = Path(td)
+            gui_goal = "Build a local GUI project workbench that exports a structured acceptance bundle."
+            _write_json(
+                run_dir / "artifacts" / "frontend_request.json",
+                {
+                    "schema_version": "ctcp-frontend-request-v1",
+                    "goal": gui_goal,
+                    "constraints": {"delivery_shape": "gui_first"},
+                    "project_intent": {
+                        "goal_summary": "Generate a local GUI workbench MVP",
+                        "target_user": "internal operator",
+                        "problem_to_solve": "run a local GUI-first project shell that still supports headless export for verify",
+                        "mvp_scope": ["local launcher", "headless export path", "acceptance bundle export"],
+                        "required_inputs": ["goal text"],
+                        "required_outputs": ["project bundle json", "workflow plan json", "acceptance report json"],
+                        "hard_constraints": ["delivery_shape=gui_first"],
+                        "assumptions": ["GUI-first projects still need a scripted export path"],
+                        "open_questions": [],
+                        "acceptance_criteria": ["headless export probe passes", "source_generation reaches pass"],
+                    },
+                    "attachments": [],
+                },
+            )
+            contract = normalize_output_contract_freeze(None, goal=gui_goal, run_dir=run_dir)
+            _write_json(run_dir / "artifacts" / "output_contract_freeze.json", contract)
+            _write_json(
+                run_dir / "artifacts" / "context_pack.json",
+                {
+                    "schema_version": "ctcp-context-pack-v1",
+                    "goal": gui_goal,
+                    "repo_slug": "ctcp",
+                    "summary": "generic gui project generation context",
+                    "files": [
+                        {"path": "docs/backend_interface_contract.md", "why": "contract", "content": "project manifest readable api"},
+                        {"path": "workflow_registry/wf_project_generation_manifest/recipe.yaml", "why": "workflow", "content": "source_generation deliver"},
+                        {"path": "scripts/project_generation_gate.py", "why": "gate", "content": "generic validation"},
+                        {"path": "scripts/project_manifest_bridge.py", "why": "bridge", "content": "manifest fields"},
+                    ],
+                    "omitted": [],
+                },
+            )
+            project_root = run_dir / "project_output" / str(contract.get("project_id", "project-copilot"))
+            _write_json(project_root / "meta" / "manifest.json", {"schema_version": "ctcp-pointcloud-manifest-v1"})
+
+            report = normalize_source_generation(None, goal=gui_goal, run_dir=run_dir)
+
+            self.assertEqual(report.get("status"), "pass", msg=json.dumps(report, ensure_ascii=False))
+            export_probe = dict(dict(report.get("behavioral_checks", {})).get("export_probe", {}))
+            self.assertEqual(int(export_probe.get("rc", 1)), 0)
+            self.assertIn("--headless", str(export_probe.get("command", "")))
 
     def test_source_generation_web_service_goal_exports_service_contract_bundle(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_web_") as td:
@@ -615,6 +686,75 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
                 for key in ("mvp_spec_json", "pipeline_plan_json", "sample_input_json", "sample_output_json", "acceptance_report_json"):
                     self.assertIn(key, export_doc)
                     self.assertTrue(Path(str(export_doc[key])).exists(), msg=key)
+
+    def test_source_generation_annotation_workbench_fallback_is_blocked_by_product_validation(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_pg_annotation_workbench_") as td:
+            run_dir = Path(td)
+            _write_json(
+                run_dir / "artifacts" / "frontend_request.json",
+                {
+                    "schema_version": "ctcp-frontend-request-v1",
+                    "goal": ANNOTATION_WORKBENCH_GOAL,
+                    "constraints": {"delivery_shape": "gui_first"},
+                    "project_intent": {
+                        "goal_summary": "Generate a local interactive annotation review workbench",
+                        "target_user": "image annotation operator or reviewer",
+                        "problem_to_solve": "load image folders, create and review bounding boxes, persist project state, and export standard annotations locally",
+                        "mvp_scope": [
+                            "select image folder and browse image list",
+                            "draw/select/move/resize/delete bounding boxes",
+                            "assign class labels to boxes",
+                            "set image status and notes",
+                            "undo redo save and autosave restore",
+                            "export YOLO annotations and stats report",
+                        ],
+                        "required_inputs": ["local image folder with at least jpg png images"],
+                        "required_outputs": ["saved project state", "YOLO annotation export", "stats report", "high-value UI evidence"],
+                        "hard_constraints": ["local runnable project", "strong interactive UI", "delivery_shape=gui_first"],
+                        "assumptions": ["single-user local workflow", "desktop-style interaction is acceptable"],
+                        "open_questions": [],
+                        "acceptance_criteria": [
+                            "can load at least three images",
+                            "can create move resize and delete boxes",
+                            "can save and reopen state",
+                            "can export YOLO plus stats report",
+                        ],
+                    },
+                    "attachments": [],
+                },
+            )
+            _write_json(
+                run_dir / "artifacts" / "context_pack.json",
+                {
+                    "schema_version": "ctcp-context-pack-v1",
+                    "goal": ANNOTATION_WORKBENCH_GOAL,
+                    "repo_slug": "ctcp",
+                    "summary": "annotation workbench generation context",
+                    "files": [
+                        {"path": "docs/backend_interface_contract.md", "why": "contract", "content": "project manifest readable api"},
+                        {"path": "workflow_registry/wf_project_generation_manifest/recipe.yaml", "why": "workflow", "content": "source_generation deliver"},
+                        {"path": "scripts/project_generation_gate.py", "why": "gate", "content": "generic validation and product capability validation"},
+                        {"path": "scripts/project_manifest_bridge.py", "why": "bridge", "content": "manifest fields"},
+                    ],
+                    "omitted": [],
+                },
+            )
+            contract = normalize_output_contract_freeze(None, goal=ANNOTATION_WORKBENCH_GOAL, run_dir=run_dir)
+            _write_json(run_dir / "artifacts" / "output_contract_freeze.json", contract)
+            project_root = run_dir / "project_output" / str(contract.get("project_id", "annotation-workbench"))
+            _write_json(project_root / "meta" / "manifest.json", {"schema_version": "ctcp-pointcloud-manifest-v1"})
+
+            report = normalize_source_generation(None, goal=ANNOTATION_WORKBENCH_GOAL, run_dir=run_dir)
+
+            self.assertEqual(str(report.get("project_type", "")), "generic_copilot")
+            self.assertEqual(str(report.get("project_archetype", "")), "generic_copilot")
+            self.assertEqual(report.get("status"), "blocked", msg=json.dumps(report, ensure_ascii=False))
+            product_validation = dict(report.get("product_validation", {}))
+            self.assertTrue(bool(product_validation.get("required", False)))
+            self.assertFalse(bool(product_validation.get("passed", True)))
+            self.assertTrue(bool(product_validation.get("fallback_detected", False)))
+            self.assertIn("high-interaction request degraded to generic_copilot/generic fallback", list(product_validation.get("reasons", [])))
+            self.assertIn("bbox editing capability missing", list(product_validation.get("missing", [])))
 
 
 if __name__ == "__main__":

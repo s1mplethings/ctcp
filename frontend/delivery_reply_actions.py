@@ -37,6 +37,10 @@ _INTERNAL_REPLY_MARKERS = (
 )
 
 
+def _supports_public_delivery_channel(source_hint: str) -> bool:
+    return str(source_hint or "").strip().lower() in {"telegram", "virtual_delivery", "e2e_virtual_delivery"}
+
+
 def _screenshot_priority_key(value: Any) -> tuple[int, str]:
     name = Path(str(value or "")).name.lower()
     if any(marker in name for marker in _HIGH_VALUE_SCREENSHOT_MARKERS):
@@ -62,7 +66,7 @@ def _looks_internal(text: str) -> bool:
 
 def align_reply_with_delivery_actions(reply_text: str, *, actions: list[dict[str, Any]], source_hint: str) -> str:
     text = str(reply_text or "").strip()
-    if str(source_hint or "").strip().lower() != "telegram":
+    if not _supports_public_delivery_channel(source_hint):
         return text
     action_types = {str(item.get("type", "")).strip().lower() for item in actions if isinstance(item, dict)}
     if not (_DELIVERY_ACTION_TYPES & action_types):
@@ -127,7 +131,7 @@ def inject_ready_delivery_actions(
     source_hint: str,
 ) -> list[dict[str, Any]]:
     out = [dict(item) for item in actions if isinstance(item, dict)]
-    if str(source_hint or "").strip().lower() != "telegram":
+    if not _supports_public_delivery_channel(source_hint):
         return out
     if not isinstance(delivery_state, dict) or not is_verify_pass_delivery_context(project_context):
         return out
@@ -142,17 +146,145 @@ def inject_ready_delivery_actions(
     return out
 
 
+def _required_sent_types(actions: list[dict[str, Any]] | None) -> set[str]:
+    required: set[str] = set()
+    action_types = {str(item.get("type", "")).strip().lower() for item in actions or [] if isinstance(item, dict)}
+    if "send_project_package" in action_types:
+        required.add("document")
+    if "send_project_screenshot" in action_types:
+        required.add("photo")
+    return required
+
+
+def _existing_sent_paths(plan: dict[str, Any] | None, *, delivery_type: str, require_existing_files: bool) -> list[str]:
+    out: list[str] = []
+    for item in plan.get("sent", []) if isinstance(plan, dict) else []:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("type", "")).strip().lower() != delivery_type:
+            continue
+        path = str(item.get("path", "")).strip()
+        if not path:
+            continue
+        if require_existing_files and not Path(path).exists():
+            continue
+        out.append(path)
+    return out
+
+
+def evaluate_delivery_completion(
+    actions: list[dict[str, Any]] | None,
+    plan: dict[str, Any] | None,
+    *,
+    manifest_path: str = "",
+    require_existing_files: bool = False,
+    require_cold_replay: bool = False,
+) -> dict[str, Any]:
+    required_sent_types = _required_sent_types(actions)
+    sent_types = {
+        str(item.get("type", "")).strip().lower()
+        for item in plan.get("sent", []) if isinstance(plan, dict)
+        for _ in [item]
+        if isinstance(item, dict)
+    }
+    errors = [str(item).strip() for item in plan.get("errors", []) if str(item).strip()] if isinstance(plan, dict) else []
+    manifest_text = str(manifest_path or (plan or {}).get("manifest_path", "")).strip()
+    reasons: list[str] = []
+    if manifest_text and (not Path(manifest_text).exists()):
+        reasons.append("support_public_delivery manifest missing")
+    if errors:
+        reasons.append("delivery errors present")
+    for sent_type in sorted(required_sent_types):
+        if sent_type not in sent_types:
+            reasons.append(f"missing sent type: {sent_type}")
+    document_paths = _existing_sent_paths(plan, delivery_type="document", require_existing_files=require_existing_files)
+    photo_paths = _existing_sent_paths(plan, delivery_type="photo", require_existing_files=require_existing_files)
+    if "document" in required_sent_types and not document_paths:
+        reasons.append("document artifact missing")
+    first_photo = photo_paths[0] if photo_paths else ""
+    if "photo" in required_sent_types and not photo_paths:
+        reasons.append("photo artifact missing")
+    prioritized_photos = prioritize_screenshot_files(photo_paths)
+    if first_photo and prioritized_photos and first_photo != prioritized_photos[0]:
+        reasons.append("first delivered photo is not the highest-value screenshot")
+    first_photo_name = Path(first_photo).name.lower() if first_photo else ""
+    if first_photo_name and any(marker in first_photo_name for marker in _LOW_VALUE_SCREENSHOT_MARKERS):
+        reasons.append("first delivered photo is low-value")
+    replay_report = dict(plan.get("replay_report", {})) if isinstance(plan, dict) and isinstance(plan.get("replay_report", {}), dict) else {}
+    if require_cold_replay:
+        replay_passed = bool(replay_report.get("overall_pass", False))
+        if not replay_passed:
+            reasons.append("cold replay not passed")
+    return {
+        "passed": not reasons,
+        "reasons": reasons,
+        "required_sent_types": sorted(required_sent_types),
+        "sent_types": sorted(sent_types),
+        "selected_document": document_paths[0] if document_paths else "",
+        "selected_photo": first_photo,
+        "manifest_path": manifest_text,
+        "cold_replay_required": bool(require_cold_replay),
+        "cold_replay_passed": bool(replay_report.get("overall_pass", False)),
+        "replay_report_path": str(replay_report.get("report_path", "")),
+        "replay_screenshot_path": str(replay_report.get("replay_screenshot_path", "")),
+    }
+
+
+def evaluate_product_completion(project_manifest: dict[str, Any] | None) -> dict[str, Any]:
+    manifest = dict(project_manifest) if isinstance(project_manifest, dict) else {}
+    product = dict(manifest.get("product_validation", {})) if isinstance(manifest.get("product_validation", {}), dict) else {}
+    if product:
+        return {
+            "profile": str(product.get("profile", "standard")).strip() or "standard",
+            "required": bool(product.get("required", False)),
+            "passed": bool(product.get("passed", False)),
+            "checks": list(product.get("checks", [])) if isinstance(product.get("checks", []), list) else [],
+            "missing": list(product.get("missing", [])) if isinstance(product.get("missing", []), list) else [],
+            "reasons": list(product.get("reasons", [])) if isinstance(product.get("reasons", []), list) else [],
+            "fallback_detected": bool(product.get("fallback_detected", False)),
+        }
+    generic = dict(manifest.get("generic_validation", {})) if isinstance(manifest.get("generic_validation", {}), dict) else {}
+    domain = dict(manifest.get("domain_validation", {})) if isinstance(manifest.get("domain_validation", {}), dict) else {}
+    passed = bool(generic.get("passed", False)) and bool(domain.get("passed", False))
+    reasons: list[str] = []
+    if not bool(generic.get("passed", False)):
+        reasons.append("generic validation not passed")
+    if not bool(domain.get("passed", False)):
+        reasons.append("domain validation not passed")
+    return {
+        "profile": "standard",
+        "required": False,
+        "passed": passed,
+        "checks": ["fallback to generic/domain product signal"] if passed else [],
+        "missing": [],
+        "reasons": reasons,
+        "fallback_detected": False,
+    }
+
+
+def evaluate_overall_completion(
+    *,
+    delivery_completion: dict[str, Any] | None,
+    project_manifest: dict[str, Any] | None,
+) -> dict[str, Any]:
+    delivery = dict(delivery_completion) if isinstance(delivery_completion, dict) else {}
+    product = evaluate_product_completion(project_manifest)
+    reasons: list[str] = []
+    if not bool(delivery.get("passed", False)):
+        reasons.extend(str(item) for item in delivery.get("reasons", []) if str(item).strip())
+    if not bool(product.get("passed", False)):
+        reasons.extend(str(item) for item in product.get("missing", []) if str(item).strip())
+        reasons.extend(str(item) for item in product.get("reasons", []) if str(item).strip())
+    return {
+        "passed": bool(delivery.get("passed", False)) and bool(product.get("passed", False)),
+        "delivery_passed": bool(delivery.get("passed", False)),
+        "product_passed": bool(product.get("passed", False)),
+        "reasons": reasons,
+    }
+
+
 def delivery_plan_failed(actions: list[dict[str, Any]] | None, plan: dict[str, Any] | None) -> bool:
     action_types = {str(item.get("type", "")).strip().lower() for item in actions or [] if isinstance(item, dict)}
     if not (_DELIVERY_ACTION_TYPES & action_types):
         return False
-    if not isinstance(plan, dict):
-        return True
-    sent = [item for item in plan.get("sent", []) if isinstance(item, dict)]
-    errors = [item for item in plan.get("errors", []) if str(item).strip()]
-    sent_types = {str(item.get("type", "")).strip().lower() for item in sent}
-    if "send_project_package" in action_types and "document" not in sent_types:
-        return True
-    if "send_project_screenshot" in action_types and "photo" not in sent_types:
-        return True
-    return bool(errors) or not sent
+    return not bool(evaluate_delivery_completion(actions, plan).get("passed", False))

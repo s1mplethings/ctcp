@@ -3898,6 +3898,362 @@
       },
       "status": "doing",
       "notes": "Active on 2026-04-10: generation truth is now passing, but the real delivery chain still lacks true screenshot evidence and Telegram-visible package delivery; this task adds real visual evidence capture plus public zip/photo delivery without weakening verify truth."
+    },
+    {
+      "id": "ADHOC-20260412-mainline-doc-alignment",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "Align generation mainline, default context, and visible progress rendering to the new structured goal-to-delivery repo purpose",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260410-real-visual-evidence-and-public-delivery"
+      ],
+      "dod": [
+        "Project-generation pipeline contracts and inferred manifests include demo evidence between smoke run and delivery package",
+        "Default project-generation context requests read the new repo purpose and root agent contract instead of relying only on execution-flow and implementation files",
+        "User-visible progress replies consume proof refs as visible checkpoints rather than reducing progress to blocker-only status text"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/providers/project_generation_validation.py",
+          "tools/providers/project_generation_artifacts.py",
+          "scripts/project_generation_gate.py",
+          "scripts/project_manifest_bridge.py",
+          "frontend/progress_reply.py",
+          "scripts/ctcp_front_bridge_views.py",
+          "scripts/ctcp_support_bot.py",
+          "tests/test_project_generation_artifacts.py",
+          "tests/test_backend_interface_contract_apis.py",
+          "tests/test_frontend_rendering_boundary.py",
+          "docs/03_quality_gates.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_project_generation_artifacts.py\" -v",
+          "python -m unittest discover -s tests -p \"test_backend_interface_contract_apis.py\" -v",
+          "python -m unittest discover -s tests -p \"test_frontend_rendering_boundary.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "doing",
+      "notes": "Active on 2026-04-12: the repo docs now define CTCP as a structured goal-to-delivery system with visible progress and demo evidence, but gate/context/progress code still lagged behind that contract."
+    },
+    {
+      "id": "ADHOC-20260412-virtual-delivery-e2e-closure",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Close the virtual delivery loop with a testable support delivery gate and golden E2E replay",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260410-real-visual-evidence-and-public-delivery",
+        "ADHOC-20260412-mainline-doc-alignment"
+      ],
+      "dod": [
+        "support delivery has one reusable completion gate that requires manifest, package, screenshot, sent photo/document, no errors, and non-low-value first screenshot",
+        "a dedicated non-network virtual delivery mode writes delivery receipts without changing production manual/Telegram defaults",
+        "a golden E2E replay produces screenshot, package, support_public_delivery.json, sent photo/document, and empty errors",
+        "the golden replay is covered by focused tests and SimLab lite so verify exercises the real delivery record"
+      ],
+      "artifacts": {
+        "produces": [
+          "frontend/delivery_reply_actions.py",
+          "scripts/support_public_delivery.py",
+          "scripts/ctcp_support_bot.py",
+          "ctcp_adapters/dispatch_request_mapper.py",
+          "tests/support_virtual_delivery_e2e_runner.py",
+          "tests/test_support_virtual_delivery_e2e.py",
+          "simlab/scenarios/S28_lite_virtual_delivery_e2e.yaml",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python tests/support_virtual_delivery_e2e_runner.py --json-out artifacts/_virtual_delivery_e2e_check.json",
+          "python -m unittest discover -s tests -p \"test_support_virtual_delivery_e2e.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_delivery_user_visible_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_proactive_delivery.py\" -v",
+          "python simlab/run.py --suite lite",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "doing",
+      "notes": "Active on 2026-04-12: closes the last offline/testable support-delivery loop without changing production manual-outbox defaults."
+    },
+    {
+      "id": "ADHOC-20260412-output-quality-benchmark",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Benchmark CTCP output quality and delivery quality across six fixed layers",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260412-virtual-delivery-e2e-closure"
+      ],
+      "dod": [
+        "At least five representative tasks are evaluated and each task is run at least three times",
+        "Each run records Intent, Spec, Smoke, Screenshot, Package, Delivery, Verify, first_failure_stage, and short_reason",
+        "Canonical verify, SimLab lite, and the virtual delivery E2E path are executed and referenced in the report",
+        "A readable benchmark report is written under artifacts/ or meta/reports/ with task texts, run table, aggregate pass rates, failure examples, and top repair priorities"
+      ],
+      "artifacts": {
+        "produces": [
+          "artifacts/benchmark_output_quality_report.md",
+          "artifacts/benchmark_output_quality_runs.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code",
+          "python simlab/run.py --suite lite",
+          "python tests/support_virtual_delivery_e2e_runner.py --json-out artifacts/_virtual_delivery_e2e_check.json"
+        ]
+      },
+      "status": "doing",
+      "notes": "Active on 2026-04-12: benchmark first, no broad product refactor; diagnose which layer fails first across representative output tasks."
+    },
+    {
+      "id": "ADHOC-20260412-spec-delivery-repair-loop",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Repair spec materialization stability and auto-close successful runs into package plus delivery",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260412-output-quality-benchmark"
+      ],
+      "dod": [
+        "Spec materialization pass rate improves versus the benchmark baseline by reducing blocked or rc=1 failures on analysis plus PLAN_draft plus source_generation paths",
+        "Successful verify-pass runs with high-value screenshots can auto-materialize a package artifact and a support_public_delivery.json manifest through the non-network virtual delivery closure",
+        "Focused stepwise tests run after each small change and the final tranche reruns simlab lite, canonical verify, and the benchmark report"
+      ],
+      "artifacts": {
+        "produces": [
+          "ctcp_adapters/ctcp_artifact_normalizers.py",
+          "llm_core/providers/api_provider.py",
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_orchestrate.py",
+          "tests/test_api_provider_core.py",
+          "tests/test_api_agent_templates.py",
+          "tests/test_support_public_delivery_state.py",
+          "tests/test_ctcp_orchestrate_delivery_closure.py",
+          "artifacts/benchmark_output_quality_runs.json",
+          "artifacts/benchmark_output_quality_report.md",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_api_provider_core.py\" -v",
+          "python -m unittest discover -s tests -p \"test_api_agent_templates.py\" -v",
+          "python tests/support_virtual_delivery_e2e_runner.py --json-out artifacts/_virtual_delivery_e2e_check.json",
+          "python simlab/run.py --suite lite",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "doing",
+      "notes": "Active on 2026-04-12: small-step repair loop from the benchmark baseline only; fix spec materialization stability first, then wire general successful runs into package plus delivery without changing production Telegram defaults."
+    },
+    {
+      "id": "ADHOC-20260413-cold-delivery-replay-gate",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Add cold package replay validation so delivered outputs must re-run from the final package",
+      "owner_role": "Local Verifier",
+      "deps": [
+        "ADHOC-20260412-virtual-delivery-e2e-closure",
+        "ADHOC-20260412-spec-delivery-repair-loop"
+      ],
+      "dod": [
+        "A repeatable cold replay validator exists that only needs the final package plus in-package startup hints, extracts into a fresh temp dir, and writes replay_report.json plus a replay screenshot",
+        "The delivery/completion success definition now requires verify pass, package pass, delivery pass, and cold replay pass through one authority path instead of parallel success rules",
+        "Focused replay success/failure tests, virtual delivery E2E, simlab lite, and canonical verify all pass without adding network or human steps"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/support_public_delivery.py",
+          "scripts/delivery_replay_validator.py",
+          "frontend/delivery_reply_actions.py",
+          "scripts/ctcp_orchestrate.py",
+          "tests/test_delivery_replay_validator.py",
+          "tests/test_support_public_delivery_state.py",
+          "tests/test_ctcp_orchestrate_delivery_closure.py",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_delivery_replay_validator.py\" -v",
+          "python tests/support_virtual_delivery_e2e_runner.py --json-out artifacts/_virtual_delivery_e2e_check.json",
+          "python simlab/run.py --suite lite",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "doing",
+      "notes": "Active on 2026-04-13: add one anti-hallucination back-half gate that proves the delivered package can cold-start and regenerate runnable evidence in a clean directory."
+    },
+    {
+      "id": "ADHOC-20260413-csv-cleaner-full-review-bundle",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Run a real CSV cleaner web-tool delivery exercise and package the full external review bundle",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260412-virtual-delivery-e2e-closure",
+        "ADHOC-20260413-cold-delivery-replay-gate"
+      ],
+      "dod": [
+        "A real runnable CSV upload/clean/export web tool is produced with README, smoke evidence, packaged project artifact, and a high-value finished screenshot",
+        "The support delivery closure emits support_public_delivery.json with sent photo/document, completion_gate.passed true, and cold replay evidence including replay_report.json plus replayed_screenshot.png",
+        "A reviewer-facing bundle under artifacts contains task record, process log, environment manifest, delivery evidence, verify/simlab/workflow outputs, and an INDEX that explains how to re-check the run"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "artifacts/csv_cleaner_full_review_bundle.zip"
+        ],
+        "tests": [
+          "python scripts/workflow_checks.py",
+          "python simlab/run.py --suite lite",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code",
+          "python tests/support_virtual_delivery_e2e_runner.py --json-out artifacts/_virtual_delivery_e2e_check.json"
+        ]
+      },
+      "status": "doing",
+      "notes": "Active on 2026-04-13: execute one genuine CTCP project-delivery rehearsal for a CSV cleaner web tool and package the full evidence chain for external review."
+    },
+    {
+      "id": "ADHOC-20260413-s16-fixer-loop-pass",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Repair the SimLab lite S16 fixer-loop scenario without weakening delivery or replay gates",
+      "owner_role": "Local Verifier",
+      "deps": [
+        "ADHOC-20260413-cold-delivery-replay-gate",
+        "ADHOC-20260413-csv-cleaner-full-review-bundle"
+      ],
+      "dod": [
+        "The real root cause of S16_lite_fixer_loop_pass is identified from the scenario definition, logs, and first failing command instead of guesswork",
+        "A minimal repo change makes S16_lite_fixer_loop_pass pass again without lowering replay, completion-gate, or delivery standards",
+        "After the fix, simlab lite, virtual delivery E2E, and canonical verify pass so the repo-level closure matches the already-working project-level delivery chain"
+      ],
+      "artifacts": {
+        "produces": [
+          "simlab/generate_s16_fix_patch.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python simlab/generate_s16_fix_patch.py --run-dir-file <captured s16 run dir file>",
+          "python simlab/run.py --suite lite",
+          "python tests/support_virtual_delivery_e2e_runner.py --json-out artifacts/_virtual_delivery_e2e_check.json",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "doing",
+      "notes": "Active on 2026-04-13: fix only the S16 fixer-loop regression and prove it does not break the delivery/replay mainline."
+    },
+    {
+      "id": "ADHOC-20260413-batch-image-processor-delivery",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Generate and deliver a real Batch Image Processor web tool with package, public delivery, and cold replay evidence",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260412-virtual-delivery-e2e-closure",
+        "ADHOC-20260413-cold-delivery-replay-gate",
+        "ADHOC-20260413-s16-fixer-loop-pass"
+      ],
+      "dod": [
+        "A runnable local web project exists that supports batch image upload, real processing, preview, single download, and zip download with README and clear entrypoint",
+        "The project emits a real high-value screenshot, a final project package, support_public_delivery.json with sent photo and document, empty errors, and completion_gate.passed true",
+        "Cold replay succeeds from the final package and writes replay_report.json plus replayed_screenshot.png, with final answer reporting concrete artifact paths or the first real failure point"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "external run_dir project output",
+          "support_public_delivery.json",
+          "replay_report.json",
+          "replayed_screenshot.png"
+        ],
+        "tests": [
+          "project-local smoke",
+          "python tests/support_virtual_delivery_e2e_runner.py --json-out artifacts/_virtual_delivery_e2e_check.json",
+          "python simlab/run.py --suite lite",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "doing",
+      "notes": "Active on 2026-04-13: produce one serious Batch Image Processor rehearsal using the repo's real package, delivery, and cold replay chain."
+    },
+    {
+      "id": "ADHOC-20260413-batch-image-processor-d-drive-bundle",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Rebundle the completed Batch Image Processor delivery artifacts onto D drive as one reviewer-facing package",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260413-batch-image-processor-delivery"
+      ],
+      "dod": [
+        "A D-drive review directory contains the final project package, unpacked project copy, screenshots, delivery manifest, replay evidence, and reviewer-facing task/process/environment records",
+        "The review directory is compressed into one zip under repo artifacts and its INDEX clearly explains contents plus any missing or failed items",
+        "The final answer reports the D-drive bundle path together with the retained project package, screenshot, support_public_delivery.json, and replay_report.json paths"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "artifacts/batch_image_processor_full_review_bundle.zip"
+        ],
+        "tests": [
+          "artifact existence checks against the completed external run",
+          "bundle zip creation on D drive"
+        ]
+      },
+      "status": "doing",
+      "notes": "Active on 2026-04-13: no project regeneration; only reorganize the completed external run artifacts into one D-drive review bundle."
+    },
+    {
+      "id": "ADHOC-20260414-annotation-review-workbench-delivery",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Generate and deliver a real Annotation Review Workbench with interactive box editing, project persistence, export, and cold replay evidence",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260412-virtual-delivery-e2e-closure",
+        "ADHOC-20260413-cold-delivery-replay-gate",
+        "ADHOC-20260413-s16-fixer-loop-pass"
+      ],
+      "dod": [
+        "A runnable local interactive tool exists that loads an image set, supports bounding-box create/select/move/resize/delete with class labels, image navigation, per-image status and notes, undo/redo, auto-save, and project restore",
+        "The project can save state and export at least one standard annotation format plus a simple statistics report, and it ships with README, package, and a high-value screenshot",
+        "The support delivery closure emits support_public_delivery.json with sent photo/document and completion_gate.passed true, and cold replay writes replay_report.json plus replayed_screenshot.png with final answer reporting the concrete artifact paths or the first real failure point"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "external run_dir project output",
+          "support_public_delivery.json",
+          "replay_report.json",
+          "replayed_screenshot.png"
+        ],
+        "tests": [
+          "project-local smoke with load/annotate/save/restore/export path",
+          "python tests/support_virtual_delivery_e2e_runner.py --json-out artifacts/_virtual_delivery_e2e_check.json",
+          "python simlab/run.py --suite lite",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "doing",
+      "notes": "Active on 2026-04-14: build one harder, reviewer-visible annotation workbench with real interaction, persistence, export, package delivery, and cold replay evidence."
     }
   ]
 }

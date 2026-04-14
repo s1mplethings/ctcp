@@ -54,6 +54,7 @@ def _infer_project_manifest(run_id: str, run_dir: Path, artifacts: list[dict[str
                 {"name": "scaffold", "artifact": "project_root", "status": "unknown"},
                 {"name": "core_feature_implementation", "artifact": "core_feature_files", "status": "unknown"},
                 {"name": "smoke_run", "artifact": "startup_entrypoint", "status": "unknown"},
+                {"name": "demo_evidence", "artifact": "demo_evidence", "status": "unknown"},
                 {"name": "delivery_package", "artifact": "acceptance_files", "status": "unknown"},
             ],
         },
@@ -105,6 +106,17 @@ def _infer_project_manifest(run_id: str, run_dir: Path, artifacts: list[dict[str
             "smoke_run": {"passed": False},
         },
         "domain_validation": {"kind": "generic", "passed": False, "checks": []},
+        "product_validation": {
+            "profile": "standard",
+            "required": False,
+            "passed": False,
+            "checks": [],
+            "missing": [],
+            "reasons": ["declared product validation is unavailable"],
+            "fallback_detected": False,
+            "detected_groups": [],
+            "evidence": {},
+        },
         "artifacts": artifacts,
     }
 
@@ -119,7 +131,7 @@ def resolve_project_manifest(
     inferred = _infer_project_manifest(run_id, run_dir, artifacts)
     if isinstance(declared, dict):
         out = dict(inferred)
-        for field in ("project_intent", "project_spec", "pipeline_contract", "generic_validation", "domain_validation"):
+        for field in ("project_intent", "project_spec", "pipeline_contract", "generic_validation", "domain_validation", "product_validation"):
             value = declared.get(field)
             if isinstance(value, dict):
                 out[field] = value

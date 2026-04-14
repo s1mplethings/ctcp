@@ -7,6 +7,68 @@ from typing import Any
 
 from contracts.schemas.project_intent import ProjectIntent
 
+_SOURCE_SCAN_EXTS = {".py", ".js", ".jsx", ".ts", ".tsx", ".html", ".css"}
+_HIGH_INTERACTION_GROUP_RULES: dict[str, tuple[str, ...]] = {
+    "image_workspace": (
+        "image folder",
+        "file browser",
+        "image list",
+        "thumbnail",
+        "workspace",
+        ".jpg",
+        ".jpeg",
+        ".png",
+    ),
+    "annotation_canvas": (
+        "annotation",
+        "annotate",
+        "bounding box",
+        "bbox",
+        "keypoints",
+        "canvas",
+    ),
+    "interactive_editing": (
+        "drag",
+        "move",
+        "resize",
+        "delete",
+        "select",
+        "undo",
+        "redo",
+    ),
+    "state_persistence": (
+        "autosave",
+        "save state",
+        "restore state",
+        "project state",
+        "persistence",
+        "persist",
+    ),
+    "standard_export": (
+        "yolo",
+        "coco",
+        "annotation format",
+        "standard annotation",
+    ),
+    "review_workbench": (
+        "review workflow",
+        "reviewer",
+        "workbench",
+        "desktop-style tool",
+    ),
+}
+_HIGH_INTERACTION_CAPABILITY_RULES: dict[str, tuple[str, ...]] = {
+    "image_loading": ("image folder", "load image", "image list", "thumbnail", ".jpg", ".jpeg", ".png"),
+    "image_navigation": ("previous image", "next image", "image index", "thumbnail list", "current image"),
+    "bbox_model": ("bounding box", "bbox", "annotation box", "x1", "y1", "x2", "y2"),
+    "bbox_create": ("create box", "new bbox", "draw box", "mouse drag", "canvas"),
+    "bbox_move": ("move box", "drag box", "reposition", "move annotation"),
+    "bbox_resize": ("resize box", "resize annotation", "handle drag"),
+    "bbox_delete": ("delete box", "remove box", "delete annotation"),
+    "state_persistence": ("autosave", "save state", "restore state", "project state", "load state", "persist"),
+    "standard_export": ("yolo", "coco", "annotation format", "standard annotation"),
+}
+
 
 def read_frontend_request(run_dir: Path | None) -> dict[str, Any]:
     if run_dir is None:
@@ -73,6 +135,7 @@ def pipeline_contract(*, project_root: str, startup_entrypoint: str, startup_rea
             {"name": "scaffold", "artifact": "project_root", "status": "planned", "project_root": project_root},
             {"name": "core_feature_implementation", "artifact": "core_feature_files", "status": "planned", "core_feature_files": core_feature_files},
             {"name": "smoke_run", "artifact": "startup_entrypoint", "status": "planned", "startup_entrypoint": startup_entrypoint},
+            {"name": "demo_evidence", "artifact": "demo_evidence", "status": "planned"},
             {"name": "delivery_package", "artifact": "acceptance_files", "status": "planned", "acceptance_files": list(acceptance_files), "startup_readme": startup_readme},
         ],
     }
@@ -196,6 +259,166 @@ def _normalized_paths(rows: list[str]) -> list[str]:
         seen.add(value)
         out.append(value)
     return out
+
+
+def _intent_signal(goal: str, project_intent: dict[str, Any] | None, project_spec: dict[str, Any] | None) -> str:
+    parts: list[str] = [str(goal or "").strip()]
+    for doc in (project_intent or {}, project_spec or {}):
+        if not isinstance(doc, dict):
+            continue
+        for key, value in doc.items():
+            if isinstance(value, str):
+                parts.append(value)
+            elif isinstance(value, list):
+                parts.extend(str(item).strip() for item in value if str(item).strip())
+    return "\n".join(part for part in parts if part)
+
+
+def classify_product_profile(*, goal: str, project_intent: dict[str, Any] | None, project_spec: dict[str, Any] | None) -> dict[str, Any]:
+    signal = _intent_signal(goal, project_intent, project_spec).lower()
+    detected_groups: list[str] = []
+    matched_keywords: dict[str, list[str]] = {}
+    for group, keywords in _HIGH_INTERACTION_GROUP_RULES.items():
+        hits = sorted({keyword for keyword in keywords if keyword.lower() in signal})
+        if hits:
+            detected_groups.append(group)
+            matched_keywords[group] = hits
+    requires_gate = (
+        len(detected_groups) >= 3
+        and any(group in detected_groups for group in ("annotation_canvas", "interactive_editing", "standard_export"))
+    )
+    profile = "high_interaction_software" if requires_gate else "standard"
+    reasons = [f"{group}: {', '.join(matched_keywords[group][:4])}" for group in detected_groups]
+    return {
+        "profile": profile,
+        "required": requires_gate,
+        "detected_groups": detected_groups,
+        "matched_keywords": matched_keywords,
+        "reasons": reasons,
+    }
+
+
+def _scan_source_texts(*, run_dir: Path, rel_paths: list[str]) -> dict[str, str]:
+    texts: dict[str, str] = {}
+    for rel in rel_paths:
+        normalized = str(rel or "").strip().replace("\\", "/")
+        if not normalized:
+            continue
+        path = (run_dir / normalized).resolve()
+        if not path.exists() or path.suffix.lower() not in _SOURCE_SCAN_EXTS:
+            continue
+        try:
+            texts[normalized] = path.read_text(encoding="utf-8", errors="replace").lower()
+        except Exception:
+            continue
+    return texts
+
+
+def _capability_hits(*, source_texts: dict[str, str], keywords: tuple[str, ...]) -> list[str]:
+    hits: list[str] = []
+    seen: set[str] = set()
+    for rel, text in source_texts.items():
+        if any(keyword.lower() in text for keyword in keywords):
+            if rel not in seen:
+                seen.add(rel)
+                hits.append(rel)
+    return hits
+
+
+def product_validation(
+    *,
+    goal: str,
+    project_intent: dict[str, Any],
+    project_spec: dict[str, Any],
+    project_type: str,
+    project_archetype: str,
+    startup_entrypoint: str,
+    generated_files: list[str],
+    run_dir: Path,
+) -> dict[str, Any]:
+    profile = classify_product_profile(goal=goal, project_intent=project_intent, project_spec=project_spec)
+    if not bool(profile.get("required", False)):
+        return {
+            "profile": str(profile.get("profile", "standard")),
+            "required": False,
+            "passed": True,
+            "checks": ["product capability gate not required for this task profile"],
+            "missing": [],
+            "reasons": list(profile.get("reasons", [])),
+            "fallback_detected": False,
+            "detected_groups": list(profile.get("detected_groups", [])),
+            "evidence": {},
+        }
+
+    source_texts = _scan_source_texts(run_dir=run_dir, rel_paths=generated_files)
+    capability_hits = {
+        name: _capability_hits(source_texts=source_texts, keywords=keywords)
+        for name, keywords in _HIGH_INTERACTION_CAPABILITY_RULES.items()
+    }
+    edit_subchecks = {
+        "move": bool(capability_hits["bbox_move"]),
+        "resize": bool(capability_hits["bbox_resize"]),
+        "delete": bool(capability_hits["bbox_delete"]),
+    }
+    generic_fallback = str(project_type or "").strip() == "generic_copilot" and str(project_archetype or "").strip() == "generic_copilot"
+    checks: list[str] = []
+    missing: list[str] = []
+    if capability_hits["image_loading"]:
+        checks.append("image loading/workspace capability detected")
+    else:
+        missing.append("image loading/workspace capability missing")
+    if capability_hits["image_navigation"]:
+        checks.append("image navigation capability detected")
+    else:
+        missing.append("image navigation capability missing")
+    if capability_hits["bbox_model"]:
+        checks.append("bbox data model detected")
+    else:
+        missing.append("bbox data model missing")
+    if capability_hits["bbox_create"]:
+        checks.append("bbox creation capability detected")
+    else:
+        missing.append("bbox creation capability missing")
+    edit_hits = sum(1 for passed in edit_subchecks.values() if passed)
+    if edit_hits >= 2:
+        checks.append("bbox editing capability detected")
+    else:
+        missing.append("bbox editing capability missing")
+    if capability_hits["state_persistence"]:
+        checks.append("save/restore state capability detected")
+    else:
+        missing.append("save/restore state capability missing")
+    if capability_hits["standard_export"]:
+        checks.append("standard annotation export capability detected")
+    else:
+        missing.append("standard annotation export capability missing")
+    reasons = list(profile.get("reasons", []))
+    if generic_fallback:
+        reasons.append("high-interaction request degraded to generic_copilot/generic fallback")
+    if not str(startup_entrypoint or "").strip():
+        missing.append("startup entrypoint missing")
+    evidence = {
+        "image_loading": capability_hits["image_loading"],
+        "image_navigation": capability_hits["image_navigation"],
+        "bbox_model": capability_hits["bbox_model"],
+        "bbox_create": capability_hits["bbox_create"],
+        "bbox_move": capability_hits["bbox_move"],
+        "bbox_resize": capability_hits["bbox_resize"],
+        "bbox_delete": capability_hits["bbox_delete"],
+        "state_persistence": capability_hits["state_persistence"],
+        "standard_export": capability_hits["standard_export"],
+    }
+    return {
+        "profile": str(profile.get("profile", "high_interaction_software")),
+        "required": True,
+        "passed": (not generic_fallback) and (not missing),
+        "checks": checks,
+        "missing": missing,
+        "reasons": reasons,
+        "fallback_detected": generic_fallback,
+        "detected_groups": list(profile.get("detected_groups", [])),
+        "evidence": evidence,
+    }
 
 
 def _matching_suffix(rows: list[str], suffix: str) -> str:

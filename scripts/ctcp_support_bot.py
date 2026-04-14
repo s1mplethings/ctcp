@@ -21,8 +21,8 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = Path(__file__).resolve().parent
 
 if str(ROOT) not in sys.path: sys.path.insert(0, str(ROOT))
-from frontend.delivery_reply_actions import align_reply_with_delivery_actions, delivery_plan_failed, inject_ready_delivery_actions, prioritize_screenshot_files
-from frontend.progress_reply import humanize_progress_runtime_text
+from frontend.delivery_reply_actions import align_reply_with_delivery_actions, delivery_plan_failed, evaluate_delivery_completion, inject_ready_delivery_actions, prioritize_screenshot_files
+from frontend.progress_reply import humanize_progress_runtime_text, summarize_progress_evidence_refs
 from frontend.telegram_http_client import telegram_post_form, telegram_post_multipart
 PROMPT_TEMPLATE_PATH = ROOT / "agents" / "prompts" / "support_lead_reply.md"
 SUPPORT_INBOX_REL_PATH = Path("artifacts") / "support_inbox.jsonl"
@@ -363,6 +363,9 @@ except ModuleNotFoundError:
         sys.path.insert(0, str(ROOT))
     from tools.run_paths import get_repo_slug, get_runs_root
 
+if str(SCRIPTS_DIR) not in sys.path: sys.path.insert(0, str(SCRIPTS_DIR))
+from support_public_delivery import build_public_delivery_transport, resolve_public_delivery_mode
+
 try:
     from llm_core.providers import runtime as provider_runtime
     from tools.providers import api_agent, codex_agent, manual_outbox, mock_agent, ollama_agent
@@ -640,6 +643,7 @@ def default_support_dispatch_config() -> dict[str, Any]:
     return {
         "schema_version": "ctcp-dispatch-config-v1",
         "mode": "manual_outbox",
+        "public_delivery": {"mode": "telegram_live"},
         "role_providers": {
             "support_lead": PRIMARY_SUPPORT_PROVIDER,
             "support_local_fallback": LOCAL_SUPPORT_REPLY_PROVIDERS[0],
@@ -648,28 +652,10 @@ def default_support_dispatch_config() -> dict[str, Any]:
         },
         "budgets": {"max_outbox_prompts": 20},
         "providers": {
-            "codex_agent": {
-                "enabled": False,
-                "dry_run": True,
-                "cmd": "codex",
-                "model": "",
-                "timeout_sec": 900,
-                "fallback_to_manual_outbox": True,
-            },
-            "ollama_agent": {
-                "base_url": "http://127.0.0.1:11434/v1",
-                "api_key": "ollama",
-                "model": "qwen2.5:7b-instruct",
-                "auto_start": True,
-                "start_timeout_sec": 20,
-                "start_cmd": "ollama serve",
-            },
+            "codex_agent": {"enabled": False, "dry_run": True, "cmd": "codex", "model": "", "timeout_sec": 900, "fallback_to_manual_outbox": True},
+            "ollama_agent": {"base_url": "http://127.0.0.1:11434/v1", "api_key": "ollama", "model": "qwen2.5:7b-instruct", "auto_start": True, "start_timeout_sec": 20, "start_cmd": "ollama serve"},
         },
-        "support_mode_router": {
-            "enabled": True,
-            "min_confidence": 0.62,
-            "max_history": 8,
-        },
+        "support_mode_router": {"enabled": True, "min_confidence": 0.62, "max_history": 8},
     }
 
 def ensure_dispatch_config(run_dir: Path) -> Path:
@@ -3728,7 +3714,7 @@ def _delivery_project_name_hint(
     return "project"
 
 def can_channel_send_files(source: str) -> bool:
-    return str(source or "").strip().lower() == "telegram"
+    return str(source or "").strip().lower() in {"telegram", "virtual_delivery", "e2e_virtual_delivery"}
 
 def collect_public_delivery_state(
     *,
@@ -4442,11 +4428,8 @@ def _compose_grounded_progress_reply(*, binding: dict[str, Any], lang: str, no_c
     phase = sanitize_inline_text(str(binding.get("current_phase", "")), max_chars=80) or ("execution" if lang == "en" else "执行推进")
     blocker = sanitize_inline_text(humanize_progress_runtime_text(str(binding.get("current_blocker", "")), lang=lang), max_chars=160)
     next_action = sanitize_inline_text(humanize_progress_runtime_text(str(binding.get("next_action", "")), lang=lang), max_chars=220)
-    done_items = [
-        sanitize_inline_text(str(item), max_chars=80)
-        for item in list(binding.get("last_confirmed_items", []) or [])[:3]
-        if sanitize_inline_text(str(item), max_chars=80)
-    ]
+    evidence = sanitize_inline_text(summarize_progress_evidence_refs(binding.get("proof_refs", []), lang=lang), max_chars=220)
+    done_items = [sanitize_inline_text(str(item), max_chars=80) for item in list(binding.get("last_confirmed_items", []) or [])[:3] if sanitize_inline_text(str(item), max_chars=80)]
     question_needed = str(binding.get("question_needed", "")).strip().lower() in {"yes", "true", "1"}
     blocking_question = sanitize_inline_text(str(binding.get("blocking_question", "")), max_chars=140)
     rows: list[str] = []
@@ -4458,6 +4441,7 @@ def _compose_grounded_progress_reply(*, binding: dict[str, Any], lang: str, no_c
             rows.append(f"Current phase: {phase}.")
         if done_items and not no_change:
             rows.append(f"Completed so far: {'; '.join(done_items)}.")
+        if evidence: rows.append(evidence)
         if blocker and blocker.lower() != "none":
             rows.append(f"Current blocker: {blocker}.")
         else:
@@ -4474,6 +4458,7 @@ def _compose_grounded_progress_reply(*, binding: dict[str, Any], lang: str, no_c
         rows.append(f"目前在{phase}这个阶段。")
     if done_items and (not no_change):
         rows.append("我这边已完成：" + "、".join(done_items) + "。")
+    if evidence: rows.append(evidence)
     if blocker and blocker.lower() != "none":
         rows.append(f"当前卡点是：{blocker}。")
     else:
@@ -5879,7 +5864,10 @@ def emit_public_delivery(
     actions: list[dict[str, Any]] | None,
     delivery_state: dict[str, Any] | None,
 ) -> dict[str, Any]:
+    manifest_path = (run_dir / SUPPORT_PUBLIC_DELIVERY_REL_PATH).resolve()
     plan = resolve_public_delivery_plan(run_dir=run_dir, actions=actions, delivery_state=delivery_state)
+    plan["delivery_mode"] = str(getattr(tg, "mode", "")).strip().lower() or resolve_public_delivery_mode(None)
+    plan["manifest_path"] = str(manifest_path)
     sent: list[dict[str, Any]] = []
     errors = list(plan.get("errors", [])) if isinstance(plan.get("errors", []), list) else []
     for item in plan.get("deliveries", []):
@@ -5891,17 +5879,23 @@ def emit_public_delivery(
             errors.append(f"delivery file missing: {path}")
             continue
         delivery_type = str(item.get("type", "")).strip().lower()
+        receipt: dict[str, Any] = {}
         if delivery_type == "document":
-            tg.send_document(chat_id, path, caption=caption)
+            maybe_receipt = tg.send_document(chat_id, path, caption=caption)
         elif delivery_type == "photo":
-            tg.send_photo(chat_id, path, caption=caption)
+            maybe_receipt = tg.send_photo(chat_id, path, caption=caption)
         else:
             errors.append(f"unsupported delivery type: {delivery_type}")
             continue
-        sent.append({"type": delivery_type, "path": str(path), "caption": caption})
+        if isinstance(maybe_receipt, dict): receipt = maybe_receipt
+        sent_item = {"type": delivery_type, "path": str(path), "caption": caption}
+        sent_item.update(receipt)
+        sent.append(sent_item)
     plan["sent"] = sent
     plan["errors"] = errors
-    write_json(run_dir / SUPPORT_PUBLIC_DELIVERY_REL_PATH, plan)
+    write_json(manifest_path, plan)
+    plan["completion_gate"] = evaluate_delivery_completion(actions, plan, manifest_path=str(manifest_path), require_existing_files=True)
+    write_json(manifest_path, plan)
     if sent:
         append_event(run_dir, "SUPPORT_PUBLIC_DELIVERY_SENT", SUPPORT_PUBLIC_DELIVERY_REL_PATH.as_posix(), count=len(sent))
     elif errors:
@@ -6089,7 +6083,8 @@ def _emit_controller_outbound_jobs(
         try:
             emit_public_message(tg, chat_id, reply_text)
             if reply_actions:
-                plan = emit_public_delivery(tg, chat_id=chat_id, run_dir=run_dir, actions=reply_actions, delivery_state=reply_delivery_state)
+                config, _ = load_dispatch_config(run_dir)
+                plan = emit_public_delivery(build_public_delivery_transport(config=config, run_dir=run_dir, live_transport=tg), chat_id=chat_id, run_dir=run_dir, actions=reply_actions, delivery_state=reply_delivery_state)
                 if delivery_plan_failed(reply_actions, plan): raise RuntimeError("public delivery action produced no sent files")
         except Exception as exc:
             ctcp_support_controller.requeue_outbound_job(session_state, job, sanitize_inline_text=sanitize_inline_text)
@@ -6431,8 +6426,9 @@ def run_telegram_mode(token: str, poll_seconds: int, allowlist_raw: str, provide
                         source="telegram",
                         support_run_dir=support_run_dir,
                     )
+                    config, _ = load_dispatch_config(support_run_dir)
                     plan = emit_public_delivery(
-                        tg,
+                        build_public_delivery_transport(config=config, run_dir=support_run_dir, live_transport=tg),
                         chat_id=chat_id,
                         run_dir=support_run_dir,
                         actions=list(doc.get("actions", []) or []),

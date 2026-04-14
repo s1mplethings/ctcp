@@ -548,15 +548,12 @@ def finish_verify_pass(run_dir: Path, run_doc: dict[str, Any], *, rc: int, itera
     run_doc["status"] = "pass"
     run_doc.pop("blocked_reason", None)
     save_run_doc(run_dir, run_doc)
-    append_event(
-        run_dir,
-        "Local Verifier",
-        "VERIFY_PASSED",
-        "artifacts/verify_report.json",
-        rc=rc,
-        iteration=iteration,
-    )
+    append_event(run_dir, "Local Verifier", "VERIFY_PASSED", "artifacts/verify_report.json", rc=rc, iteration=iteration)
     append_event(run_dir, "Local Verifier", "run_pass", "artifacts/verify_report.json")
+    try:
+        from support_public_delivery import auto_close_public_delivery_after_verify_pass; auto_close_public_delivery_after_verify_pass(run_dir)  # type: ignore
+    except Exception as exc:
+        append_log(run_dir / "logs" / "orchestrate.debug.log", f"[{now_iso()}] public delivery auto-close failed: {exc}\n")
     print("[ctcp_orchestrate] PASS: verify succeeded")
     return 0
 

@@ -1,0 +1,104 @@
+{
+  "schema_version": "ctcp-support-public-delivery-v1",
+  "ts": "2026-04-13T09:59:25Z",
+  "requested_actions": [
+    {
+      "type": "send_project_screenshot",
+      "count": 2
+    },
+    {
+      "type": "send_project_package",
+      "format": "zip"
+    }
+  ],
+  "deliveries": [
+    {
+      "type": "photo",
+      "path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\generated_projects\\batch_image_processor\\artifacts\\screenshots\\final-ui.png",
+      "caption": "这是当前项目可直接发送的截图。"
+    },
+    {
+      "type": "photo",
+      "path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\generated_projects\\batch_image_processor\\artifacts\\uploads\\5bc477d8484b\\01_alpha.png",
+      "caption": ""
+    },
+    {
+      "type": "document",
+      "path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\support-session\\artifacts\\support_exports\\batch_image_processor.zip",
+      "caption": "按你刚才确认的格式，这里是当前项目 zip 包。"
+    }
+  ],
+  "errors": [],
+  "delivery_mode": "e2e_virtual_delivery",
+  "manifest_path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\support-session\\artifacts\\support_public_delivery.json",
+  "sent": [
+    {
+      "type": "photo",
+      "path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\generated_projects\\batch_image_processor\\artifacts\\screenshots\\final-ui.png",
+      "caption": "这是当前项目可直接发送的截图。",
+      "transport": "virtual_delivery",
+      "delivery_mode": "e2e_virtual_delivery",
+      "delivered_path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\support-session\\artifacts\\support_exports\\virtual_delivery\\sent\\photos\\final-ui.png",
+      "source_path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\generated_projects\\batch_image_processor\\artifacts\\screenshots\\final-ui.png",
+      "chat_id": 123,
+      "bytes": 365359,
+      "sha256": "1f4963f49978ed73cf9f7b8ae63181b93cad69fc75aaed87c640de2e2cfc7bdb"
+    },
+    {
+      "type": "photo",
+      "path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\generated_projects\\batch_image_processor\\artifacts\\uploads\\5bc477d8484b\\01_alpha.png",
+      "caption": "",
+      "transport": "virtual_delivery",
+      "delivery_mode": "e2e_virtual_delivery",
+      "delivered_path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\support-session\\artifacts\\support_exports\\virtual_delivery\\sent\\photos\\01_alpha.png",
+      "source_path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\generated_projects\\batch_image_processor\\artifacts\\uploads\\5bc477d8484b\\01_alpha.png",
+      "chat_id": 123,
+      "bytes": 5828,
+      "sha256": "dd933d2c6916fc32e44727129bc41f50160e6b7e290489063ad3c38aa6b33d1d"
+    },
+    {
+      "type": "document",
+      "path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\support-session\\artifacts\\support_exports\\batch_image_processor.zip",
+      "caption": "按你刚才确认的格式，这里是当前项目 zip 包。",
+      "transport": "virtual_delivery",
+      "delivery_mode": "e2e_virtual_delivery",
+      "delivered_path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\support-session\\artifacts\\support_exports\\virtual_delivery\\sent\\documents\\batch_image_processor.zip",
+      "source_path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\support-session\\artifacts\\support_exports\\batch_image_processor.zip",
+      "chat_id": 123,
+      "bytes": 600764,
+      "sha256": "82a8bb0227f1dc8297907baefc6ccb94b3605a80cc1dccdbf11a14842e1b4ce8"
+    }
+  ],
+  "completion_gate": {
+    "passed": true,
+    "reasons": [],
+    "required_sent_types": [
+      "document",
+      "photo"
+    ],
+    "sent_types": [
+      "document",
+      "photo"
+    ],
+    "selected_document": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\support-session\\artifacts\\support_exports\\batch_image_processor.zip",
+    "selected_photo": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\generated_projects\\batch_image_processor\\artifacts\\screenshots\\final-ui.png",
+    "manifest_path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\support-session\\artifacts\\support_public_delivery.json",
+    "cold_replay_required": true,
+    "cold_replay_passed": true,
+    "replay_report_path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\support-session\\artifacts\\delivery_replay\\replay_artifacts\\replay_report.json",
+    "replay_screenshot_path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\support-session\\artifacts\\delivery_replay\\replay_artifacts\\replayed_screenshot.png"
+  },
+  "replay_report": {
+    "package_path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\support-session\\artifacts\\support_exports\\batch_image_processor.zip",
+    "extracted_dir": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\support-session\\artifacts\\delivery_replay\\extracted",
+    "entrypoint_detected": "app.py",
+    "startup_command": "D:\\anaconda\\python.exe C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\support-session\\artifacts\\delivery_replay\\extracted\\batch_image_processor\\app.py",
+    "startup_pass": true,
+    "minimal_flow_pass": true,
+    "replay_screenshot_path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\support-session\\artifacts\\delivery_replay\\replay_artifacts\\replayed_screenshot.png",
+    "overall_pass": true,
+    "first_failure_stage": "",
+    "short_reason": "",
+    "report_path": "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\support-session\\artifacts\\delivery_replay\\replay_artifacts\\replay_report.json"
+  }
+}

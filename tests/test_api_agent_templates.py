@@ -203,6 +203,49 @@ class ApiAgentTemplateTests(unittest.TestCase):
             self.assertIn("Goal: 第一行需求 第二行需求 第三行需求", text)
             self.assertIn("Reason: waiting for analysis.md and planner retry", text)
 
+    def test_execute_plan_only_falls_back_to_normalized_analysis_when_plan_command_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo_root = Path(td) / "repo"
+            run_dir = repo_root / "runs" / "r1"
+            repo_root.mkdir(parents=True, exist_ok=True)
+            run_dir.mkdir(parents=True, exist_ok=True)
+
+            fail_script = repo_root / "plan_fail.py"
+            fail_script.write_text("import sys\nsys.exit(1)\n", encoding="utf-8")
+
+            request = {
+                "role": "chair",
+                "action": "plan_draft",
+                "target_path": "artifacts/analysis.md",
+                "reason": "waiting for analysis.md",
+                "goal": "做一个上传 CSV 并导出结果的本地轻应用",
+            }
+            with mock.patch.dict(
+                os.environ,
+                {
+                    "SDDAI_PLAN_CMD": f'"{sys.executable}" "{fail_script}"',
+                    "SDDAI_AGENT_CMD": "",
+                    "SDDAI_PATCH_CMD": "",
+                    "OPENAI_API_KEY": "",
+                    "OPENAI_BASE_URL": "",
+                },
+                clear=False,
+            ):
+                result = api_agent.execute(
+                    repo_root=repo_root,
+                    run_dir=run_dir,
+                    request=request,
+                    config={"budgets": {"max_outbox_prompts": 8}},
+                    guardrails_budgets={},
+                )
+
+            self.assertEqual(result.get("status"), "executed", msg=str(result))
+            self.assertTrue(bool(result.get("fallback_used", False)))
+            text = (run_dir / "artifacts" / "analysis.md").read_text(encoding="utf-8")
+            self.assertIn("## Core Goal", text)
+            self.assertIn("## Single User Path", text)
+            self.assertIn("上传输入文件", text)
+
     def test_execute_file_request_normalizes_non_json_output(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             repo_root = Path(td) / "repo"
