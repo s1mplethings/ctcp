@@ -25,6 +25,16 @@ Hard rule:
 - out_of_scope_modules:
 - completion_evidence:
 
+## Write Scope / Protection
+
+- Allowed Write Paths:
+- Protected Paths:
+- Frozen Kernels Touched: `false`
+- Explicit Elevation Required: `false`
+- Explicit Elevation Signal: `none`
+- Forbidden Bypass:
+- Acceptance Checks:
+
 ## Analysis / Find (before plan)
 
 - Entrypoint analysis: `<one line>`
@@ -83,6 +93,7 @@ Hard rule:
   - `<one line or None>`
 - Issue memory decision: `<one line>`
 - Skill decision (`skillized: yes` or `skillized: no, because ...`): `<one line>`
+- persona_lab_impact: `<none|one line>`
 
 ## Results
 

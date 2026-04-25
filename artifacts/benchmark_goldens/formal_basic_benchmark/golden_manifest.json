@@ -1,0 +1,44 @@
+{
+  "schema_version": "ctcp-benchmark-golden-v1",
+  "profile": "basic",
+  "source_run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_deliver_retry_final_20260422-152011\\runs\\ctcp\\20260422-152013-552970-orchestrate",
+  "created_at": "2026-04-23T00:22:30",
+  "files": {
+    "formal_transcript.md": {
+      "present": true,
+      "source": "reconstructed_from_benchmark_scripted_turns_and_run_metadata"
+    },
+    "api_calls.jsonl": {
+      "present": true,
+      "source": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_deliver_retry_final_20260422-152011\\runs\\ctcp\\20260422-152013-552970-orchestrate\\api_calls.jsonl"
+    },
+    "project_spec.json": {
+      "present": true,
+      "source": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_deliver_retry_final_20260422-152011\\runs\\ctcp\\20260422-152013-552970-orchestrate\\artifacts\\project_spec.json"
+    },
+    "output_contract_freeze.json": {
+      "present": true,
+      "source": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_deliver_retry_final_20260422-152011\\runs\\ctcp\\20260422-152013-552970-orchestrate\\artifacts\\output_contract_freeze.json"
+    },
+    "verify_report.json": {
+      "present": true,
+      "source": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_deliver_retry_final_20260422-152011\\runs\\ctcp\\20260422-152013-552970-orchestrate\\artifacts\\verify_report.json"
+    },
+    "support_public_delivery.json": {
+      "present": true,
+      "source": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_deliver_retry_final_20260422-152011\\runs\\ctcp\\20260422-152013-552970-orchestrate\\artifacts\\support_public_delivery.json"
+    },
+    "final_project_bundle.zip": {
+      "present": true,
+      "source": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_deliver_retry_final_20260422-152011\\runs\\ctcp\\20260422-152013-552970-orchestrate\\artifacts\\final_project_bundle.zip"
+    },
+    "intermediate_evidence_bundle.zip": {
+      "present": true,
+      "source": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_deliver_retry_final_20260422-152011\\runs\\ctcp\\20260422-152013-552970-orchestrate\\artifacts\\intermediate_evidence_bundle.zip"
+    },
+    "summary.json": {
+      "present": true,
+      "source": "artifacts\\benchmark_goldens\\formal_basic_benchmark\\summary.json"
+    }
+  }
+}

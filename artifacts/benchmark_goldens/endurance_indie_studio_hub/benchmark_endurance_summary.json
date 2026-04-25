@@ -1,0 +1,217 @@
+{
+  "schema_version": "ctcp-formal-benchmark-summary-v2",
+  "benchmark_entry": "formal_endurance_benchmark",
+  "generated_at": "2026-04-25T02:46:27",
+  "benchmark_source": "embedded_endurance_rough_goal",
+  "provider_summary": {
+    "provider": "api_agent",
+    "model": "gpt-4.1-mini",
+    "base_url": "https://api.gptsapi.net/v1",
+    "key_mask": "",
+    "project": "",
+    "organization": "",
+    "confirmed_non_mock": "true"
+  },
+  "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate",
+  "support_session_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\support_sessions\\indie-studio-endurance-sanitized-20260424",
+  "workflow_id": "wf_project_generation_manifest",
+  "project_generation_goal": true,
+  "project_domain": "indie_studio_production_hub",
+  "project_type": "indie_studio_hub",
+  "project_archetype": "indie_studio_hub_web",
+  "package_name": "project_5_20_bug",
+  "spec_freeze": {
+    "project_domain": "indie_studio_production_hub",
+    "project_type": "indie_studio_hub",
+    "project_archetype": "indie_studio_hub_web",
+    "build_profile": "high_quality_extended",
+    "product_depth": "extended",
+    "required_pages": 13,
+    "required_screenshots": 10,
+    "package_name": "project_5_20_bug"
+  },
+  "api_usage_summary": {
+    "api_calls_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\api_calls.jsonl",
+    "total": 15,
+    "ok": 15,
+    "err": 0,
+    "request_ids": [
+      "chatcmpl-DY9an3SFif0lJdqnncE5J7Mo7CNUK",
+      "chatcmpl-DY9auGZdF4MUJg6EYwlyqIedZahaM",
+      "chatcmpl-DY9bjziSS792y90TaFQ4BITP9ojJa",
+      "chatcmpl-DY9cmTlRhRv814X84VlSH69lOgRkG",
+      "chatcmpl-DY9cuGBBDMFRuyqFnZ7D4Senx0nDK",
+      "chatcmpl-DY9d5zpyzru2hcipSjZ5G67mY8eeQ",
+      "chatcmpl-DY9dD4pQYQOPI3Vjd80V1jzmlL6PT",
+      "chatcmpl-DY9dSOe86CSKrZnmwjVnkK3fj24U6",
+      "chatcmpl-DY9dZ5UvRXAbn8SO206p130NpDUtj",
+      "chatcmpl-DY9dgQEv3s5uWfcEeFehYtvNsDoOS",
+      "chatcmpl-DY9durgMN5wJFAhHtf8os18LDXHlV",
+      "chatcmpl-DY9eA5dY3Saf32cviCYZGCu8PK1om",
+      "chatcmpl-DY9eTjocM2mW3FQyHlwWzgcw6gfEh",
+      "chatcmpl-DY9enwYr3Rj1jlluup6d2NcVa7c8E",
+      "chatcmpl-DY9ex28SgDg7HOEiaAqdoqISW68Cr"
+    ],
+    "true_remote_api_used": true
+  },
+  "source_generation_summary": {
+    "path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\source_generation_report.json",
+    "status": "pass",
+    "package_name": "project_5_20_bug",
+    "generic_validation_passed": true,
+    "python_syntax_passed": true
+  },
+  "acceptance_summary": {
+    "triplet_dir_count": 13,
+    "ledger_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\acceptance\\ledger.jsonl",
+    "ledger_lines": 13,
+    "missing_triplets": [],
+    "fallback_accepted_as_passed": [],
+    "complete": true
+  },
+  "verify_summary": {
+    "path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\verify_report.json",
+    "result": "PASS",
+    "first_failure_point": ""
+  },
+  "delivery_summary": {
+    "support_public_delivery_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\support_public_delivery.json",
+    "completion_gate_passed": true,
+    "cold_replay_passed": true,
+    "overall_completion_passed": true,
+    "internal_runtime_status": "PASS",
+    "user_acceptance_status": "PASS",
+    "product_completion_passed": true,
+    "user_acceptance_passed": true,
+    "delivery_completion_passed": true,
+    "replay_summary": {
+      "overall_pass": true,
+      "startup_pass": true,
+      "minimal_flow_pass": true,
+      "report_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\delivery_replay\\replay_artifacts\\replay_report.json",
+      "replay_screenshot_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\delivery_replay\\replay_artifacts\\replayed_screenshot.png",
+      "first_failure_stage": ""
+    }
+  },
+  "replay_summary": {
+    "overall_pass": true,
+    "startup_pass": true,
+    "minimal_flow_pass": true,
+    "report_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\delivery_replay\\replay_artifacts\\replay_report.json",
+    "replay_screenshot_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\delivery_replay\\replay_artifacts\\replayed_screenshot.png",
+    "first_failure_stage": ""
+  },
+  "bundle_summary": {
+    "final_project_bundle": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\final_project_bundle.zip",
+    "final_project_bundle_exists": true,
+    "intermediate_evidence_bundle": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\intermediate_evidence_bundle.zip",
+    "intermediate_evidence_bundle_exists": true
+  },
+  "extended_coverage_summary": {
+    "ledger_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\extended_coverage_ledger.json",
+    "ledger_exists": true,
+    "ledger_passed": true,
+    "implemented_pages": [
+      "dashboard",
+      "project_list",
+      "project_overview",
+      "milestone_backlog",
+      "task_board",
+      "task_list",
+      "task_detail",
+      "asset_library",
+      "asset_detail",
+      "bug_tracker",
+      "build_release_center",
+      "activity_feed",
+      "docs_center",
+      "project_settings"
+    ],
+    "implemented_capabilities": [],
+    "documentation_files": [
+      "project_output/5-20-bug/docs/feature_matrix.md",
+      "project_output/5-20-bug/docs/page_map.md",
+      "project_output/5-20-bug/docs/data_model_summary.md",
+      "project_output/5-20-bug/docs/milestone_plan.md",
+      "project_output/5-20-bug/docs/startup_guide.md",
+      "project_output/5-20-bug/docs/replay_guide.md",
+      "project_output/5-20-bug/docs/mid_stage_review.md"
+    ],
+    "screenshot_files": [
+      "project_output/5-20-bug/artifacts/screenshots/final-ui.png",
+      "project_output/5-20-bug/artifacts/screenshots/02-project_list.png",
+      "project_output/5-20-bug/artifacts/screenshots/03-project_overview.png",
+      "project_output/5-20-bug/artifacts/screenshots/04-milestone_backlog.png",
+      "project_output/5-20-bug/artifacts/screenshots/05-task_board.png",
+      "project_output/5-20-bug/artifacts/screenshots/06-task_list.png",
+      "project_output/5-20-bug/artifacts/screenshots/07-task_detail.png",
+      "project_output/5-20-bug/artifacts/screenshots/08-asset_library.png",
+      "project_output/5-20-bug/artifacts/screenshots/09-asset_detail.png",
+      "project_output/5-20-bug/artifacts/screenshots/10-bug_tracker.png"
+    ],
+    "screenshot_count": 10,
+    "coverage": {
+      "pages": {
+        "required": 13,
+        "actual": 14,
+        "passed": true
+      },
+      "screenshots": {
+        "required": 10,
+        "actual": 10,
+        "passed": true
+      },
+      "feature_matrix": {
+        "passed": true
+      },
+      "page_map": {
+        "passed": true
+      },
+      "data_model_summary": {
+        "passed": true
+      },
+      "search": {
+        "passed": true
+      },
+      "import_export": {
+        "passed": true
+      },
+      "dashboard_or_project_overview": {
+        "passed": true
+      },
+      "asset_library": {
+        "passed": true
+      },
+      "asset_detail": {
+        "passed": true
+      },
+      "bug_tracker": {
+        "passed": true
+      },
+      "build_release_center": {
+        "passed": true
+      },
+      "docs_center": {
+        "passed": true
+      },
+      "milestone_plan": {
+        "passed": true
+      },
+      "startup_guide": {
+        "passed": true
+      },
+      "replay_guide": {
+        "passed": true
+      },
+      "mid_stage_review": {
+        "passed": true
+      }
+    }
+  },
+  "internal_runtime_status": "PASS",
+  "user_acceptance_status": "PASS",
+  "run_status": "pass",
+  "repo_level_verify_note": "Benchmark PASS is reported separately from repo-level canonical verify; dirty worktree/module protection failures are separate repo gates.",
+  "verdict": "PASS",
+  "first_failure_point": ""
+}

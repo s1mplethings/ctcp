@@ -39,12 +39,14 @@ No additional execution control operation is allowed.
 
 1. Authoritative engineering state is the CTCP run package:
    - `RUN.json`
+   - `artifacts/run_manifest.json`
    - `events.jsonl`
    - `TRACE.md`
    - `artifacts/*`
 2. Frontend session memory is non-authoritative context cache only.
 3. Any status claim shown to user must be derivable from run artifacts.
 4. Completion claims require artifact evidence (for example `artifacts/verify_report.json` with `result=PASS`).
+5. Claims that the default mainline passed through Librarian, ADLC, Whiteboard, and Bridge must be backed by `artifacts/run_manifest.json`.
 
 ## Status Rendering Rules
 

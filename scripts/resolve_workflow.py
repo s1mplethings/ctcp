@@ -12,6 +12,39 @@ ROOT = Path(__file__).resolve().parents[1]
 INDEX_PATH = ROOT / "workflow_registry" / "index.json"
 DEFAULT_OUT = ROOT / "artifacts" / "find_result.json"
 PROJECT_GENERATION_WORKFLOW_ID = "wf_project_generation_manifest"
+_TASK_BINDING_HINTS = (
+    "绑定任务",
+    "绑定一个新任务",
+    "绑定新任务",
+    "新任务",
+    "bind a new task",
+    "bind this task",
+)
+_DOMAIN_LIFT_HINTS = (
+    "domain lift",
+    "domain-lift",
+    "域提升",
+    "完整产品域",
+    "coverage gate",
+    "user_acceptance_status",
+    "internal_runtime_status",
+)
+_RERUN_HINTS = (
+    "重跑生成测试",
+    "重跑测试",
+    "重新生成",
+    "rerun generation test",
+    "rerun the generation test",
+    "rerun",
+)
+_ROUGH_GOAL_PRODUCT_HINTS = (
+    "粗目标",
+    "不要细规格",
+    "自己做产品定义并生成",
+    "rough goal",
+    "product definition",
+    "project generation",
+)
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -36,6 +69,10 @@ def _is_project_generation_goal(goal: str) -> bool:
     if not text:
         return False
     lower = text.lower()
+    task_binding = any(key in text or key in lower for key in _TASK_BINDING_HINTS)
+    domain_lift = any(key in text or key in lower for key in _DOMAIN_LIFT_HINTS)
+    rerun_signal = any(key in text or key in lower for key in _RERUN_HINTS)
+    rough_goal_signal = any(key in text or key in lower for key in _ROUGH_GOAL_PRODUCT_HINTS)
     has_generate_signal = any(
         key in lower
         for key in (
@@ -46,6 +83,8 @@ def _is_project_generation_goal(goal: str) -> bool:
             "scaffold",
             "build a project",
             "project generation",
+            "generation test",
+            "generation repair",
         )
     )
     has_build_signal = any(
@@ -67,11 +106,41 @@ def _is_project_generation_goal(goal: str) -> bool:
             "project",
             "repo",
             "repository",
+            "app",
+            "application",
+            "platform",
+            "workspace",
+            "dashboard",
+            "portal",
+            "task management",
+            "task collaboration",
+            "team task",
+            "plane-lite",
+            "focalboard-lite",
             "项目",
             "工程",
+            "应用",
+            "平台",
+            "工作台",
+            "管理平台",
+            "协作平台",
+            "任务协作",
+            "团队任务",
+            "任务管理",
+            "看板",
             "结构化",
             "交付",
             "workflow",
+            "asset library",
+            "bug tracker",
+            "build / release",
+            "docs center",
+            "独立游戏",
+            "素材",
+            "bug",
+            "构建",
+            "发布",
+            "文档中心",
         )
     )
     has_runnable_delivery_signal = any(
@@ -89,9 +158,15 @@ def _is_project_generation_goal(goal: str) -> bool:
             "web app",
             "landing page",
             "index.html",
+            "local-first",
+            "local first",
+            "本地部署",
+            "本地优先",
         )
     )
-    return bool((has_generate_signal or has_build_signal) and (has_project_signal or has_runnable_delivery_signal))
+    if (task_binding and (domain_lift or rerun_signal) and (has_project_signal or rough_goal_signal or has_generate_signal)):
+        return True
+    return bool((has_generate_signal or has_build_signal or rough_goal_signal) and (has_project_signal or has_runnable_delivery_signal or domain_lift or rerun_signal))
 
 
 def _collect_history(repo: Path, fallback_workflow_id: str) -> dict[str, int]:

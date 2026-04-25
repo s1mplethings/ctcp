@@ -1,0 +1,691 @@
+{
+  "schema_version": "ctcp-project-output-contract-v1",
+  "stage": "output_contract_freeze",
+  "goal": "我们这次不是要最小 MVP。请按 Plane-lite / Focalboard-lite 风格做一个更厚、更像正式产品的小团队任务协作平台：本地部署、中文优先、不要实时协作/多租户/RBAC/OAuth/AI 排期。必须包含 Dashboard、项目列表、单项目总览、任务列表、看板、任务详情、活动流、设置/项目配置；任务 CRUD、board/list 双视图、assignee/priority/due date/labels、评论或 activity timeline、search/filter/sort、多项目切换、demo workspace +",
+  "project_intent": {
+    "goal_summary": "我们这次不是要最小 MVP",
+    "target_user": "希望尽快验证想法的项目发起人",
+    "problem_to_solve": "把模糊目标收束成一个最小可运行项目，而不是只停留在流程和证明工件上",
+    "mvp_scope": [
+      "提供可运行入口和 README 启动说明",
+      "至少打通一条核心用户流程",
+      "支持世界线/时间线记录与整理"
+    ],
+    "required_inputs": [
+      "用户目标描述"
+    ],
+    "required_outputs": [
+      "可运行项目代码",
+      "README 启动说明",
+      "至少一条核心流程的验证结果"
+    ],
+    "hard_constraints": [
+      "runtime_target=realtime",
+      "respect explicit negative requirements from the user text"
+    ],
+    "assumptions": [
+      "默认先生成最小可运行版本，再逐步扩展非核心能力",
+      "默认交付形态采用最容易验证的闭环入口"
+    ],
+    "open_questions": [
+      "非阻塞待确认: 尚未明确交付形态，先按最小闭环入口假设"
+    ],
+    "acceptance_criteria": [
+      "README 能指导启动项目",
+      "项目存在真实可运行入口",
+      "至少一条核心用户流程通过 smoke run",
+      "世界线整理流程可执行"
+    ]
+  },
+  "project_spec": {
+    "schema_version": "ctcp-project-spec-v2",
+    "goal_summary": "我们这次不是要最小 MVP",
+    "target_user": "希望尽快验证想法的项目发起人",
+    "problem_to_solve": "把模糊目标收束成一个最小可运行项目，而不是只停留在流程和证明工件上",
+    "mvp_scope": [
+      "提供可运行入口和 README 启动说明",
+      "至少打通一条核心用户流程",
+      "支持世界线/时间线记录与整理"
+    ],
+    "required_inputs": [
+      "用户目标描述"
+    ],
+    "required_outputs": [
+      "可运行项目代码",
+      "README 启动说明",
+      "至少一条核心流程的验证结果"
+    ],
+    "hard_constraints": [
+      "runtime_target=realtime",
+      "respect explicit negative requirements from the user text"
+    ],
+    "assumptions": [
+      "默认先生成最小可运行版本，再逐步扩展非核心能力",
+      "默认交付形态采用最容易验证的闭环入口"
+    ],
+    "open_questions": [
+      "非阻塞待确认: 尚未明确交付形态，先按最小闭环入口假设"
+    ],
+    "acceptance_criteria": [
+      "README 能指导启动项目",
+      "项目存在真实可运行入口",
+      "至少一条核心用户流程通过 smoke run",
+      "世界线整理流程可执行"
+    ],
+    "constraint_snapshot": {
+      "runtime_target": "realtime",
+      "worldline_management": "required"
+    },
+    "project_domain": "team_task_management",
+    "scaffold_family": "team_task_pm",
+    "project_type": "team_task_pm",
+    "project_archetype": "team_task_pm_web",
+    "delivery_shape": "web_first",
+    "core_modules": [
+      "auth_seed",
+      "workspace_project_model",
+      "task_board",
+      "task_list",
+      "task_detail",
+      "comments_activity",
+      "filters",
+      "demo_data",
+      "dashboard",
+      "search",
+      "import_export",
+      "settings",
+      "extended_coverage"
+    ],
+    "required_pages_or_views": [
+      "login",
+      "workspace_project_switcher",
+      "dashboard",
+      "project_list",
+      "project_overview",
+      "kanban_board",
+      "task_list",
+      "task_detail_drawer",
+      "activity_feed",
+      "project_settings"
+    ],
+    "data_models": [
+      "user",
+      "workspace",
+      "project",
+      "task",
+      "task_status",
+      "task_label",
+      "comment",
+      "activity_event"
+    ],
+    "key_interactions": [
+      "login_with_demo_user",
+      "create_project",
+      "create_task",
+      "edit_task_fields",
+      "move_task_status",
+      "comment_on_task",
+      "filter_tasks",
+      "view_task_detail",
+      "view_activity_feed",
+      "export_demo_workspace",
+      "search_tasks",
+      "sort_tasks",
+      "import_workspace_json",
+      "view_dashboard_stats"
+    ],
+    "build_profile": "high_quality_extended",
+    "product_depth": "extended",
+    "required_pages": 8,
+    "required_screenshots": 8,
+    "require_feature_matrix": true,
+    "require_page_map": true,
+    "require_data_model_summary": true,
+    "require_search": true,
+    "require_import_or_export": "both",
+    "require_dashboard_or_project_overview": true,
+    "task_fields": [
+      "title",
+      "description",
+      "status",
+      "priority",
+      "assignee",
+      "due_date",
+      "labels"
+    ],
+    "export_targets": [
+      "demo_workspace.json",
+      "import_template.json",
+      "feature_matrix.md",
+      "page_map.md",
+      "data_model_summary.md",
+      "acceptance_bundle.zip"
+    ],
+    "sample_content_plan": {
+      "pipeline_id": "team_pm_demo_seed",
+      "minimum_depth": {
+        "workspaces": 1,
+        "projects": 2,
+        "tasks": 8,
+        "comments": 3
+      },
+      "steps": [
+        "demo_users",
+        "workspace_seed",
+        "project_seed",
+        "task_seed",
+        "comment_activity_seed"
+      ],
+      "api_merge_targets": []
+    },
+    "delivery_requirements": [
+      "final_project_bundle.zip",
+      "README",
+      "startup_steps",
+      "screenshots",
+      "verify_summary"
+    ],
+    "explicit_non_goals": [
+      "realtime websocket collaboration",
+      "RBAC",
+      "notifications",
+      "gantt or roadmap planning",
+      "OAuth"
+    ]
+  },
+  "project_spec_path": "artifacts/project_spec.json",
+  "capability_plan": {
+    "schema_version": "ctcp-capability-plan-v1",
+    "project_domain": "team_task_management",
+    "scaffold_family": "team_task_pm",
+    "family_key": "team_task_pm_web",
+    "required_bundles": [
+      "auth_workspace",
+      "project_board",
+      "task_crud_detail",
+      "filters_activity",
+      "preview_export",
+      "delivery_ready"
+    ],
+    "materialize_bundles": [
+      "auth_workspace",
+      "project_board",
+      "task_crud_detail",
+      "filters_activity",
+      "preview_export",
+      "delivery_ready"
+    ],
+    "sample_generation_steps": [
+      "demo_users",
+      "workspace_seed",
+      "project_seed",
+      "task_seed",
+      "comment_activity_seed"
+    ],
+    "coverage_target": {
+      "required_bundle_ratio": 1.0,
+      "required_views": [
+        "activity_feed",
+        "kanban_board",
+        "login",
+        "task_detail_drawer",
+        "task_list",
+        "workspace_project_switcher"
+      ],
+      "required_interactions": [
+        "comment_on_task",
+        "create_project",
+        "create_task",
+        "edit_task_fields",
+        "export_demo_workspace",
+        "filter_tasks",
+        "login_with_demo_user",
+        "move_task_status"
+      ]
+    },
+    "bundles": [
+      {
+        "bundle_id": "auth_workspace",
+        "required": true,
+        "enabled_for_materialization": true,
+        "summary": "Demo user login plus workspace and project model.",
+        "required_views": [
+          "login",
+          "workspace_project_switcher"
+        ],
+        "required_interactions": [
+          "login_with_demo_user",
+          "create_project"
+        ],
+        "required_file_suffixes": [
+          "/models.py",
+          "/seed.py",
+          "/workspace.py"
+        ]
+      },
+      {
+        "bundle_id": "project_board",
+        "required": true,
+        "enabled_for_materialization": true,
+        "summary": "Kanban board and task list surfaces for small-team task coordination.",
+        "required_views": [
+          "kanban_board",
+          "task_list"
+        ],
+        "required_interactions": [
+          "move_task_status",
+          "filter_tasks"
+        ],
+        "required_file_suffixes": [
+          "/board.py",
+          "/filters.py"
+        ]
+      },
+      {
+        "bundle_id": "task_crud_detail",
+        "required": true,
+        "enabled_for_materialization": true,
+        "summary": "Task create/edit/detail flow with assignee, priority, status, labels, and due date fields.",
+        "required_views": [
+          "task_detail_drawer"
+        ],
+        "required_interactions": [
+          "create_task",
+          "edit_task_fields"
+        ],
+        "required_file_suffixes": [
+          "/tasks.py",
+          "/service.py"
+        ]
+      },
+      {
+        "bundle_id": "filters_activity",
+        "required": true,
+        "enabled_for_materialization": true,
+        "summary": "Task filters plus comment and activity history.",
+        "required_views": [
+          "activity_feed"
+        ],
+        "required_interactions": [
+          "comment_on_task",
+          "filter_tasks"
+        ],
+        "required_file_suffixes": [
+          "/activity.py",
+          "/filters.py"
+        ]
+      },
+      {
+        "bundle_id": "preview_export",
+        "required": true,
+        "enabled_for_materialization": true,
+        "summary": "Web preview and demo workspace export for acceptance review.",
+        "required_views": [
+          "kanban_board",
+          "task_list",
+          "task_detail_drawer"
+        ],
+        "required_interactions": [
+          "export_demo_workspace"
+        ],
+        "required_file_suffixes": [
+          "/app.py",
+          "/exporter.py"
+        ]
+      },
+      {
+        "bundle_id": "delivery_ready",
+        "required": true,
+        "enabled_for_materialization": true,
+        "summary": "README, verify entry, manifest metadata, and package handoff.",
+        "required_views": [],
+        "required_interactions": [],
+        "required_file_suffixes": [
+          "/README.md",
+          "/scripts/verify_repo.ps1",
+          "/meta/manifest.json"
+        ]
+      }
+    ],
+    "project_spec_views": [
+      "login",
+      "workspace_project_switcher",
+      "dashboard",
+      "project_list",
+      "project_overview",
+      "kanban_board",
+      "task_list",
+      "task_detail_drawer",
+      "activity_feed",
+      "project_settings"
+    ],
+    "project_spec_interactions": [
+      "login_with_demo_user",
+      "create_project",
+      "create_task",
+      "edit_task_fields",
+      "move_task_status",
+      "comment_on_task",
+      "filter_tasks",
+      "view_task_detail",
+      "view_activity_feed",
+      "export_demo_workspace",
+      "search_tasks",
+      "sort_tasks",
+      "import_workspace_json",
+      "view_dashboard_stats"
+    ],
+    "contract_source": "D:/.c_projects/adc/ctcp/contracts/project_capability_bundles.json"
+  },
+  "capability_plan_path": "artifacts/capability_plan.json",
+  "sample_generation_plan": {
+    "pipeline_id": "team_pm_demo_seed",
+    "minimum_depth": {
+      "workspaces": 1,
+      "projects": 2,
+      "tasks": 8,
+      "comments": 3
+    },
+    "steps": [
+      "demo_users",
+      "workspace_seed",
+      "project_seed",
+      "task_seed",
+      "comment_activity_seed"
+    ],
+    "api_merge_targets": []
+  },
+  "sample_generation_artifacts": [
+    "artifacts/sample_generation/demo_users.json",
+    "artifacts/sample_generation/workspace_seed.json",
+    "artifacts/sample_generation/project_seed.json",
+    "artifacts/sample_generation/task_seed.json",
+    "artifacts/sample_generation/comment_activity_seed.json"
+  ],
+  "generation_quality_report_path": "artifacts/generation_quality_report.json",
+  "pipeline_contract": {
+    "schema_version": "ctcp-project-generation-pipeline-v1",
+    "stages": [
+      {
+        "name": "project_intent",
+        "artifact": "project_intent",
+        "status": "ready"
+      },
+      {
+        "name": "spec",
+        "artifact": "artifacts/project_spec.json",
+        "status": "ready"
+      },
+      {
+        "name": "capability_plan",
+        "artifact": "artifacts/capability_plan.json",
+        "status": "ready"
+      },
+      {
+        "name": "sample_generation_plan",
+        "artifact": "artifacts/sample_generation",
+        "status": "ready"
+      },
+      {
+        "name": "scaffold",
+        "artifact": "project_root",
+        "status": "planned",
+        "project_root": "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das"
+      },
+      {
+        "name": "core_feature_implementation",
+        "artifact": "core_feature_files",
+        "status": "planned",
+        "core_feature_files": [
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/data_model_summary.md",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/feature_matrix.md",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/mid_stage_evidence.md",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/page_map.md",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/scripts/run_project_web.py",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/activity.py",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/app.py",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/board.py",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/dashboard.py",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/exporter.py",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/filters.py",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/import_export.py",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/models.py",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/pages.py",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/search.py",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/seed.py",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/service.py",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/settings.py",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/tasks.py",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/workspace.py",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/tests/test_mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das_service.py"
+        ]
+      },
+      {
+        "name": "refinement",
+        "artifact": "artifacts/generation_quality_report.json",
+        "status": "planned"
+      },
+      {
+        "name": "smoke_run",
+        "artifact": "startup_entrypoint",
+        "status": "planned",
+        "startup_entrypoint": "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/scripts/run_project_web.py"
+      },
+      {
+        "name": "demo_evidence",
+        "artifact": "demo_evidence",
+        "status": "planned"
+      },
+      {
+        "name": "delivery_package",
+        "artifact": "acceptance_files",
+        "status": "planned",
+        "acceptance_files": [
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/README.md",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/scripts/run_project_web.py",
+          "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/mid_stage_evidence.md"
+        ],
+        "startup_readme": "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/README.md"
+      }
+    ]
+  },
+  "project_id": "mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das",
+  "project_root": "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das",
+  "project_domain": "team_task_management",
+  "scaffold_family": "team_task_pm",
+  "project_type": "team_task_pm",
+  "project_archetype": "team_task_pm_web",
+  "package_name": "mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das",
+  "project_profile": "team_task_pm_high_quality_extended",
+  "generation_mode": "production_team_task_pm_high_quality_extended",
+  "execution_mode": "production",
+  "benchmark_case": "",
+  "delivery_shape": "web_first",
+  "project_domain_decision_source": "signal_keywords",
+  "scaffold_family_decision_source": "project_domain:team_task_management",
+  "project_type_decision_source": "goal_or_context",
+  "project_archetype_decision_source": "project_domain:team_task_management",
+  "shape_decision_source": "project_domain:team_task_management",
+  "target_files": [
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/README.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/00_CORE.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/data_model_summary.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/feature_matrix.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/mid_stage_evidence.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/page_map.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/web_workflow.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/meta/manifest.json",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/meta/reports/LAST.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/meta/tasks/CURRENT.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/pyproject.toml",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/scripts/run_project_web.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/scripts/verify_repo.ps1",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/__init__.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/activity.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/app.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/board.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/dashboard.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/exporter.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/filters.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/import_export.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/models.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/pages.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/search.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/seed.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/service.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/settings.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/tasks.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/workspace.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/tests/test_mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das_service.py"
+  ],
+  "source_files": [
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/pyproject.toml",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/scripts/run_project_web.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/__init__.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/models.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/seed.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/workspace.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/tasks.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/board.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/filters.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/activity.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/app.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/exporter.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/service.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/tests/test_mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das_service.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/dashboard.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/pages.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/search.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/import_export.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/settings.py"
+  ],
+  "doc_files": [
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/README.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/00_CORE.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/web_workflow.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/feature_matrix.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/page_map.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/data_model_summary.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/mid_stage_evidence.md"
+  ],
+  "workflow_files": [
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/meta/tasks/CURRENT.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/meta/reports/LAST.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/meta/manifest.json",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/scripts/verify_repo.ps1"
+  ],
+  "business_files": [
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/scripts/run_project_web.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/models.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/seed.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/workspace.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/tasks.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/board.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/filters.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/activity.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/app.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/exporter.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/service.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/tests/test_mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das_service.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/dashboard.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/pages.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/search.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/import_export.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/settings.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/feature_matrix.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/page_map.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/data_model_summary.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/mid_stage_evidence.md"
+  ],
+  "business_capabilities": [
+    "auth_workspace",
+    "project_board",
+    "task_crud_detail",
+    "filters_activity",
+    "preview_export",
+    "delivery_ready"
+  ],
+  "materialize_capabilities": [
+    "auth_workspace",
+    "project_board",
+    "task_crud_detail",
+    "filters_activity",
+    "preview_export",
+    "delivery_ready"
+  ],
+  "generated_files": [],
+  "missing_files": [
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/README.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/00_CORE.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/data_model_summary.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/feature_matrix.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/mid_stage_evidence.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/page_map.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/web_workflow.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/meta/manifest.json",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/meta/reports/LAST.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/meta/tasks/CURRENT.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/pyproject.toml",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/scripts/run_project_web.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/scripts/verify_repo.ps1",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/__init__.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/activity.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/app.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/board.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/dashboard.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/exporter.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/filters.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/import_export.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/models.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/pages.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/search.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/seed.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/service.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/settings.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/tasks.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/src/mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das/workspace.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/tests/test_mvp_plane_lite_focalboard_lite_rbac_oauth_ai_das_service.py"
+  ],
+  "acceptance_files": [
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/README.md",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/scripts/run_project_web.py",
+    "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/docs/mid_stage_evidence.md"
+  ],
+  "startup_entrypoint": "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/scripts/run_project_web.py",
+  "startup_readme": "project_output/mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das/README.md",
+  "reference_project_mode": {
+    "enabled": true,
+    "mode": "structure_workflow_docs"
+  },
+  "reference_style_applied": [
+    "repo_script_layout",
+    "workflow_manifest_stage_chain",
+    "bridge_readable_manifest"
+  ],
+  "demo_required": true,
+  "visual_evidence_required": true,
+  "screenshot_required": true,
+  "visual_evidence_status": "placeholder_only",
+  "benchmark_sample_applied": false,
+  "build_profile": "high_quality_extended",
+  "product_depth": "extended",
+  "required_pages": 8,
+  "required_screenshots": 8,
+  "require_feature_matrix": true,
+  "require_page_map": true,
+  "require_data_model_summary": true,
+  "require_search": true,
+  "require_import_or_export": "both",
+  "require_dashboard_or_project_overview": true,
+  "decision_nodes": [
+    "chair.output_contract_freeze",
+    "chair.source_generation"
+  ],
+  "flow_nodes": [
+    "librarian.context_pack",
+    "chair.docs_generation",
+    "chair.workflow_generation",
+    "chair.artifact_manifest_build",
+    "chair.deliver"
+  ]
+}

@@ -1,3 +1,0 @@
-CTCP showcase package for S17-S25
-Included: patch, task/report, and SimLab S17-S25 scenarios
-Verify: simlab lite PASS 17/17; compileall PASS; verify_repo PASS

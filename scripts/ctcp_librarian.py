@@ -13,12 +13,14 @@ LAST_RUN_POINTER = ROOT / "meta" / "run_pointers" / "LAST_RUN.txt"
 try:
     from tools.run_paths import get_repo_slug
     from tools.librarian_context_pack import LibrarianContractError, build_context_pack, write_failure_doc
+    from tools.run_manifest import update_librarian_context
 except ModuleNotFoundError:
     import sys
 
     sys.path.insert(0, str(ROOT))
     from tools.run_paths import get_repo_slug
     from tools.librarian_context_pack import LibrarianContractError, build_context_pack, write_failure_doc
+    from tools.run_manifest import update_librarian_context
 
 
 def _is_within(child: Path, parent: Path) -> bool:
@@ -80,6 +82,7 @@ def main() -> int:
             request_path=request_path,
             target_path=out_path,
         )
+        update_librarian_context(run_dir, success=False, reason="missing file_request")
         print(f"[ctcp_librarian] missing file_request: {request_path}")
         return 1
 
@@ -94,12 +97,14 @@ def main() -> int:
             request_path=request_path,
             target_path=out_path,
         )
+        update_librarian_context(run_dir, success=False, reason="invalid file_request json")
         print(f"[ctcp_librarian] invalid file_request json: {exc}")
         return 1
 
     try:
         context_pack = _build_context_pack(file_request)
         _write_json(out_path, context_pack)
+        update_librarian_context(run_dir, success=True)
     except LibrarianContractError as exc:
         write_failure_doc(
             run_dir,
@@ -111,6 +116,7 @@ def main() -> int:
             failed_path=exc.failed_path,
             details=exc.details,
         )
+        update_librarian_context(run_dir, success=False, reason=str(exc))
         print(str(exc))
         return 1
     except Exception as exc:
@@ -122,6 +128,7 @@ def main() -> int:
             request_path=request_path,
             target_path=out_path,
         )
+        update_librarian_context(run_dir, success=False, reason=str(exc))
         print(f"[ctcp_librarian] failed to write context_pack: {exc}")
         return 1
 

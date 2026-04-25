@@ -1,0 +1,526 @@
+{
+  "schema_version": "ctcp-project-domain-matrix-v1",
+  "default_domain": "generic_software_project",
+  "domains": {
+    "narrative_vn_editor": {
+      "scaffold_family": "narrative_gui_editor",
+      "project_type": "narrative_copilot",
+      "default_archetype": "narrative_gui_editor",
+      "default_delivery_shape": "gui_first",
+      "keywords": [
+        "narrative",
+        "story",
+        "storyline",
+        "story bible",
+        "visual novel",
+        "vn",
+        "renpy",
+        "ren'py",
+        "gui editor",
+        "editor",
+        "authoring",
+        "branching",
+        "branch",
+        "choice",
+        "scene graph",
+        "story graph",
+        "scene",
+        "chapter",
+        "character",
+        "cast",
+        "asset management",
+        "background",
+        "stage",
+        "剧情",
+        "叙事",
+        "视觉小说",
+        "编辑器",
+        "分支",
+        "选项",
+        "场景图",
+        "剧情图",
+        "角色卡",
+        "资产管理",
+        "立绘",
+        "背景"
+      ],
+      "allowed_families": [
+        "narrative_gui_editor"
+      ],
+      "incompatible_families": [
+        "pointcloud_reconstruction"
+      ],
+      "contamination_markers": [
+        "scripts/run_v2p.py",
+        "scripts/eval_v2p.py",
+        "scripts/make_synth_fixture.py",
+        "tests/test_pipeline_synth.py",
+        "tests/test_clean_project.py",
+        "pointcloud",
+        "v2p",
+        "reconstruction",
+        "voxel",
+        "ply",
+        "las"
+      ],
+      "readme_required_sections": [
+        "what_this_project_is",
+        "implemented",
+        "not_implemented",
+        "how_to_run",
+        "sample_data",
+        "directory_map",
+        "limitations"
+      ],
+      "ux_preview_keywords": [
+        "editor",
+        "workspace",
+        "branch",
+        "scene",
+        "asset",
+        "graph"
+      ]
+    },
+    "admin_dashboard": {
+      "scaffold_family": "admin_dashboard",
+      "project_type": "generic_copilot",
+      "default_archetype": "web_service",
+      "default_delivery_shape": "web_first",
+      "keywords": [
+        "dashboard",
+        "admin dashboard",
+        "admin panel",
+        "ops dashboard",
+        "analytics board",
+        "后台",
+        "仪表盘",
+        "管理台",
+        "控制台"
+      ],
+      "allowed_families": [
+        "admin_dashboard"
+      ],
+      "incompatible_families": [
+        "pointcloud_reconstruction"
+      ],
+      "contamination_markers": [
+        "pointcloud",
+        "v2p",
+        "reconstruction"
+      ],
+      "readme_required_sections": [
+        "what_this_project_is",
+        "implemented",
+        "not_implemented",
+        "how_to_run",
+        "sample_data",
+        "directory_map",
+        "limitations"
+      ],
+      "ux_preview_keywords": [
+        "dashboard",
+        "panel",
+        "overview"
+      ]
+    },
+    "team_task_management": {
+      "scaffold_family": "team_task_pm",
+      "project_type": "team_task_pm",
+      "default_archetype": "team_task_pm_web",
+      "default_delivery_shape": "web_first",
+      "keywords": [
+        "plane_lite_team_pm",
+        "plane-lite",
+        "plane lite",
+        "focalboard-lite",
+        "focalboard lite",
+        "focalboard",
+        "task collaboration",
+        "task management",
+        "team task",
+        "project management",
+        "kanban",
+        "board",
+        "task board",
+        "任务协作平台",
+        "任务协作",
+        "任务管理",
+        "团队任务",
+        "项目协作",
+        "看板"
+      ],
+      "allowed_families": [
+        "team_task_pm"
+      ],
+      "incompatible_families": [
+        "generic_copilot",
+        "web_service",
+        "pointcloud_reconstruction"
+      ],
+      "contamination_markers": [
+        "service_contract.py",
+        "generic_copilot",
+        "planner.py",
+        "pointcloud",
+        "v2p",
+        "reconstruction"
+      ],
+      "readme_required_sections": [
+        "what_this_project_is",
+        "implemented",
+        "not_implemented",
+        "how_to_run",
+        "sample_data",
+        "directory_map",
+        "limitations"
+      ],
+      "ux_preview_keywords": [
+        "kanban",
+        "board",
+        "task",
+        "activity",
+        "filter",
+        "workspace"
+      ]
+    },
+    "indie_studio_production_hub": {
+      "scaffold_family": "indie_studio_hub",
+      "project_type": "indie_studio_hub",
+      "default_archetype": "indie_studio_hub_web",
+      "default_delivery_shape": "web_first",
+      "keywords": [
+        "indie studio",
+        "indie game team",
+        "game production hub",
+        "vn team",
+        "visual novel team",
+        "studio production",
+        "production hub",
+        "task asset bug release",
+        "asset library",
+        "asset detail",
+        "bug tracker",
+        "build release",
+        "release center",
+        "docs center",
+        "milestone plan",
+        "startup guide",
+        "replay guide",
+        "独立游戏团队",
+        "独立团队",
+        "本地生产协作平台",
+        "游戏团队协作",
+        "素材管理",
+        "资产库",
+        "资产详情",
+        "bug 管理",
+        "bug 跟踪",
+        "版本进度",
+        "构建发布",
+        "发布中心",
+        "文档中心",
+        "里程碑计划",
+        "启动指南",
+        "回放指南"
+      ],
+      "allowed_families": [
+        "indie_studio_hub"
+      ],
+      "incompatible_families": [
+        "team_task_pm",
+        "generic_copilot",
+        "web_service",
+        "pointcloud_reconstruction"
+      ],
+      "contamination_markers": [
+        "service_contract.py",
+        "generic_copilot",
+        "planner.py",
+        "pointcloud",
+        "v2p",
+        "reconstruction"
+      ],
+      "readme_required_sections": [
+        "what_this_project_is",
+        "implemented",
+        "not_implemented",
+        "how_to_run",
+        "sample_data",
+        "directory_map",
+        "limitations"
+      ],
+      "ux_preview_keywords": [
+        "dashboard",
+        "asset",
+        "bug",
+        "build",
+        "release",
+        "docs",
+        "milestone"
+      ]
+    },
+    "data_tool": {
+      "scaffold_family": "data_tool",
+      "project_type": "generic_copilot",
+      "default_archetype": "data_pipeline",
+      "default_delivery_shape": "cli_first",
+      "keywords": [
+        "data tool",
+        "data pipeline",
+        "csv",
+        "etl",
+        "transform",
+        "dataset",
+        "batch",
+        "数据工具",
+        "数据处理",
+        "数据管道"
+      ],
+      "allowed_families": [
+        "data_tool"
+      ],
+      "incompatible_families": [
+        "pointcloud_reconstruction"
+      ],
+      "contamination_markers": [
+        "run_v2p.py",
+        "eval_v2p.py",
+        "pointcloud",
+        "reconstruction"
+      ],
+      "readme_required_sections": [
+        "what_this_project_is",
+        "implemented",
+        "not_implemented",
+        "how_to_run",
+        "sample_data",
+        "directory_map",
+        "limitations"
+      ],
+      "ux_preview_keywords": []
+    },
+    "media_tool": {
+      "scaffold_family": "media_tool",
+      "project_type": "generic_copilot",
+      "default_archetype": "cli_toolkit",
+      "default_delivery_shape": "gui_first",
+      "keywords": [
+        "media tool",
+        "image tool",
+        "video tool",
+        "audio tool",
+        "asset browser",
+        "thumbnail",
+        "batch image",
+        "媒体工具",
+        "图片工具",
+        "视频工具",
+        "音频工具",
+        "素材管理"
+      ],
+      "allowed_families": [
+        "media_tool"
+      ],
+      "incompatible_families": [
+        "pointcloud_reconstruction"
+      ],
+      "contamination_markers": [
+        "run_v2p.py",
+        "eval_v2p.py",
+        "pointcloud",
+        "reconstruction"
+      ],
+      "readme_required_sections": [
+        "what_this_project_is",
+        "implemented",
+        "not_implemented",
+        "how_to_run",
+        "sample_data",
+        "directory_map",
+        "limitations"
+      ],
+      "ux_preview_keywords": [
+        "preview",
+        "media",
+        "browser",
+        "asset"
+      ]
+    },
+    "computer_vision_demo": {
+      "scaffold_family": "computer_vision_demo",
+      "project_type": "generic_copilot",
+      "default_archetype": "web_service",
+      "default_delivery_shape": "gui_first",
+      "keywords": [
+        "computer vision",
+        "cv demo",
+        "object detection",
+        "segmentation",
+        "ocr",
+        "vision demo",
+        "图像识别",
+        "目标检测",
+        "分割",
+        "OCR"
+      ],
+      "allowed_families": [
+        "computer_vision_demo"
+      ],
+      "incompatible_families": [
+        "pointcloud_reconstruction"
+      ],
+      "contamination_markers": [
+        "run_v2p.py",
+        "eval_v2p.py",
+        "pointcloud",
+        "reconstruction"
+      ],
+      "readme_required_sections": [
+        "what_this_project_is",
+        "implemented",
+        "not_implemented",
+        "how_to_run",
+        "sample_data",
+        "directory_map",
+        "limitations"
+      ],
+      "ux_preview_keywords": [
+        "preview",
+        "result",
+        "detection",
+        "segmentation"
+      ]
+    },
+    "pointcloud_pipeline": {
+      "scaffold_family": "pointcloud_reconstruction",
+      "project_type": "generic_copilot",
+      "default_archetype": "pointcloud_pipeline",
+      "default_delivery_shape": "cli_first",
+      "keywords": [
+        "pointcloud",
+        "point cloud",
+        "ply",
+        "las",
+        "pcd",
+        "mapping",
+        "建图",
+        "点云"
+      ],
+      "allowed_families": [
+        "pointcloud_reconstruction"
+      ],
+      "incompatible_families": [
+        "narrative_gui_editor",
+        "admin_dashboard",
+        "data_tool",
+        "media_tool",
+        "computer_vision_demo"
+      ],
+      "contamination_markers": [],
+      "readme_required_sections": [
+        "what_this_project_is",
+        "implemented",
+        "not_implemented",
+        "how_to_run",
+        "sample_data",
+        "directory_map",
+        "limitations"
+      ],
+      "ux_preview_keywords": []
+    },
+    "v2p_pipeline": {
+      "scaffold_family": "pointcloud_reconstruction",
+      "project_type": "generic_copilot",
+      "default_archetype": "pointcloud_pipeline",
+      "default_delivery_shape": "cli_first",
+      "keywords": [
+        "v2p",
+        "voxel",
+        "point reconstruction",
+        "点云重建",
+        "体素"
+      ],
+      "allowed_families": [
+        "pointcloud_reconstruction"
+      ],
+      "incompatible_families": [
+        "narrative_gui_editor",
+        "admin_dashboard",
+        "data_tool",
+        "media_tool",
+        "computer_vision_demo"
+      ],
+      "contamination_markers": [],
+      "readme_required_sections": [
+        "what_this_project_is",
+        "implemented",
+        "not_implemented",
+        "how_to_run",
+        "sample_data",
+        "directory_map",
+        "limitations"
+      ],
+      "ux_preview_keywords": []
+    },
+    "reconstruction_pipeline": {
+      "scaffold_family": "pointcloud_reconstruction",
+      "project_type": "generic_copilot",
+      "default_archetype": "pointcloud_pipeline",
+      "default_delivery_shape": "cli_first",
+      "keywords": [
+        "reconstruction",
+        "3d reconstruction",
+        "multiview reconstruction",
+        "三维重建",
+        "重建"
+      ],
+      "allowed_families": [
+        "pointcloud_reconstruction"
+      ],
+      "incompatible_families": [
+        "narrative_gui_editor",
+        "admin_dashboard",
+        "data_tool",
+        "media_tool",
+        "computer_vision_demo"
+      ],
+      "contamination_markers": [],
+      "readme_required_sections": [
+        "what_this_project_is",
+        "implemented",
+        "not_implemented",
+        "how_to_run",
+        "sample_data",
+        "directory_map",
+        "limitations"
+      ],
+      "ux_preview_keywords": []
+    },
+    "generic_software_project": {
+      "scaffold_family": "generic_copilot",
+      "project_type": "generic_copilot",
+      "default_archetype": "cli_toolkit",
+      "default_delivery_shape": "cli_first",
+      "keywords": [],
+      "allowed_families": [
+        "generic_copilot",
+        "data_tool",
+        "media_tool",
+        "computer_vision_demo",
+        "admin_dashboard"
+      ],
+      "incompatible_families": [],
+      "contamination_markers": [],
+      "readme_required_sections": [
+        "what_this_project_is",
+        "implemented",
+        "not_implemented",
+        "how_to_run",
+        "sample_data",
+        "directory_map",
+        "limitations"
+      ],
+      "ux_preview_keywords": []
+    }
+  }
+}

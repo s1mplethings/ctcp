@@ -74,6 +74,16 @@ CURRENT_TASK_TRUTH_FIELDS = (
     "completion_evidence:",
 )
 
+CURRENT_WRITE_SCOPE_FIELDS = (
+    "allowed write paths:",
+    "protected paths:",
+    "frozen kernels touched:",
+    "explicit elevation required:",
+    "explicit elevation signal:",
+    "forbidden bypass:",
+    "acceptance checks:",
+)
+
 REPORT_REQUIRED_PATTERNS = (
     ("Readlist section", re.compile(r"(?im)^###\s*Readlist\b")),
     ("Plan section", re.compile(r"(?im)^###\s*Plan\b")),
@@ -176,6 +186,13 @@ def main() -> int:
     if missing_task_truth_fields:
         print("[workflow_checks][error] CURRENT.md missing mandatory task truth fields:")
         for field in missing_task_truth_fields:
+            print(f"  - {field}")
+        return 1
+
+    missing_write_scope_fields = [field for field in CURRENT_WRITE_SCOPE_FIELDS if field not in lowered_current]
+    if missing_write_scope_fields:
+        print("[workflow_checks][error] CURRENT.md missing mandatory write scope / protection fields:")
+        for field in missing_write_scope_fields:
             print(f"  - {field}")
         return 1
 

@@ -655,6 +655,77 @@ class RuntimeWiringContractTests(unittest.TestCase):
             mode = support_bot.detect_conversation_mode(run_dir, "你先做出第一版给我看，然后我在做调整", state)
             self.assertEqual(mode, "PROJECT_DETAIL")
 
+    def test_support_bot_domain_lift_request_is_not_status_query(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_runtime_support_domain_lift_mode_") as td:
+            run_dir = Path(td)
+            state = support_bot.default_support_session_state("domain-lift-mode-demo")
+            mode = support_bot.detect_conversation_mode(
+                run_dir,
+                "绑定一个新任务：Indie Studio Hub Domain Lift。不要再只做 team_task_pm_web。用同类粗目标重跑生成测试，区分 internal_runtime_status 和 user_acceptance_status，并强化 Asset/Bug/Build-Release/Docs/10+ screenshots 的 coverage gate。",
+                state,
+            )
+            self.assertEqual(mode, "PROJECT_DETAIL")
+
+    def test_support_bot_domain_lift_request_binds_real_run(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_runtime_support_domain_lift_bind_") as td:
+            run_dir = Path(td)
+            state = support_bot.default_support_session_state("domain-lift-bind-demo")
+            request = (
+                "绑定一个新任务：Indie Studio Hub Domain Lift。不要再只做 team_task_pm_web。"
+                "用同类粗目标重跑生成测试，区分 internal_runtime_status 和 user_acceptance_status，"
+                "并强化 Asset/Bug/Build-Release/Docs/10+ screenshots 的 coverage gate。"
+            )
+            context_doc = {
+                "run_id": "r-domain-lift",
+                "run_dir": "D:/tmp/r-domain-lift",
+                "goal": request,
+                "status": {
+                    "run_status": "running",
+                    "verify_result": "",
+                    "needs_user_decision": False,
+                    "decisions_needed_count": 0,
+                    "gate": {"state": "open", "owner": "", "reason": ""},
+                },
+                "whiteboard": {},
+            }
+            with mock.patch.object(
+                support_bot.ctcp_front_bridge,
+                "ctcp_new_run",
+                return_value={"run_id": "r-domain-lift", "run_dir": "D:/tmp/r-domain-lift"},
+            ) as new_run_spy, mock.patch.object(
+                support_bot.ctcp_front_bridge,
+                "ctcp_record_support_turn",
+                return_value={"status": "recorded"},
+            ) as record_spy, mock.patch.object(
+                support_bot.ctcp_front_bridge,
+                "ctcp_advance",
+                return_value={"status": "advanced"},
+            ) as advance_spy, mock.patch.object(
+                support_bot,
+                "fetch_support_context_with_recovery",
+                side_effect=[(context_doc, False), (context_doc, False)],
+            ), mock.patch.object(
+                support_bot,
+                "maybe_recover_previous_outline_context",
+                side_effect=lambda **kwargs: (kwargs["project_context"], kwargs["session_state"], None),
+            ):
+                project_context, updated_state = support_bot.sync_project_context(
+                    run_dir=run_dir,
+                    chat_id="domain-lift-bind-demo",
+                    user_text=request,
+                    source="stdin",
+                    conversation_mode="PROJECT_DETAIL",
+                    session_state=state,
+                )
+
+            self.assertEqual(str(project_context.get("run_id", "")), "r-domain-lift")
+            self.assertEqual(str(updated_state.get("bound_run_id", "")), "r-domain-lift")
+            self.assertEqual(str(updated_state.get("bound_run_dir", "")), "D:/tmp/r-domain-lift")
+            self.assertTrue(bool(str(updated_state.get("active_goal", "")).strip()))
+            new_run_spy.assert_called_once()
+            record_spy.assert_called_once()
+            advance_spy.assert_called_once_with("r-domain-lift", max_steps=2)
+
     def test_support_bot_capability_query_stays_non_project_mode(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_runtime_support_capability_mode_") as td:
             run_dir = Path(td)
@@ -775,7 +846,7 @@ class RuntimeWiringContractTests(unittest.TestCase):
             self.assertEqual(fake.sent_messages, [(123, "项目包我直接发到当前对话。")])
             self.assertEqual(len(fake.sent_documents), 1)
             self.assertTrue(fake.sent_documents[0][1].exists(), msg=str(fake.sent_documents[0][1]))
-            self.assertEqual(fake.sent_documents[0][1].name, "story_organizer.zip")
+            self.assertEqual(fake.sent_documents[0][1].name, "final_project_bundle.zip")
             process_spy.assert_called_once_with(chat_id="123", user_text="zip就行", source="telegram", provider_override="")
             manifest = json.loads((support_run_dir / support_bot.SUPPORT_PUBLIC_DELIVERY_REL_PATH).read_text(encoding="utf-8"))
             self.assertEqual(len(list(manifest.get("sent", []))), 1)

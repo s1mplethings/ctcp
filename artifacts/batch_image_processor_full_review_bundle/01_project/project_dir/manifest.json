@@ -1,5 +1,0 @@
-{
-  "name": "batch-image-processor",
-  "entrypoint": "python app.py --serve",
-  "type": "local_web_tool"
-}

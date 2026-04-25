@@ -1,7 +1,0 @@
-order_id,customer,city,amount,notes
-1001,Ada,Shanghai,120,priority
-1002,Ben,,85,
-,,,,
-1002,Ben,,85,
-1003,Caro,Shenzhen,210,follow-up
-1004,Dan,Hangzhou,64,

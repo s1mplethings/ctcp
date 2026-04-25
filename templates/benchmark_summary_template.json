@@ -1,0 +1,100 @@
+{
+  "schema_version": "ctcp-formal-benchmark-summary-v2",
+  "benchmark_entry": "formal_basic_benchmark | formal_hq_benchmark | formal_endurance_benchmark",
+  "generated_at": "ISO-8601 timestamp",
+  "benchmark_source": "benchmark zip path or embedded rough goal label",
+  "provider_summary": {
+    "provider": "api_agent",
+    "model": "model name",
+    "base_url": "OpenAI-compatible base URL",
+    "key_mask": "masked key only",
+    "project": "",
+    "organization": "",
+    "confirmed_non_mock": "true"
+  },
+  "run_dir": "absolute CTCP run directory",
+  "support_session_dir": "absolute support session directory when available",
+  "workflow_id": "wf_project_generation_manifest",
+  "project_generation_goal": true,
+  "project_domain": "team_task_management | indie_studio_production_hub",
+  "project_type": "team_task_pm | indie_studio_hub",
+  "project_archetype": "team_task_pm_web | indie_studio_hub_web",
+  "package_name": "python package name when the generated project has one",
+  "spec_freeze": {
+    "project_domain": "team_task_management | indie_studio_production_hub",
+    "project_type": "team_task_pm | indie_studio_hub",
+    "project_archetype": "team_task_pm_web | indie_studio_hub_web",
+    "build_profile": "standard_mvp | high_quality_extended",
+    "product_depth": "mvp | extended",
+    "required_pages": 0,
+    "required_screenshots": 1,
+    "package_name": ""
+  },
+  "api_usage_summary": {
+    "api_calls_path": "run_dir/api_calls.jsonl",
+    "total": 0,
+    "ok": 0,
+    "err": 0,
+    "request_ids": [],
+    "true_remote_api_used": false
+  },
+  "acceptance_summary": {
+    "triplet_dir_count": 0,
+    "ledger_path": "run_dir/artifacts/acceptance/ledger.jsonl",
+    "ledger_lines": 0,
+    "missing_triplets": [],
+    "fallback_accepted_as_passed": [],
+    "complete": false
+  },
+  "source_generation_summary": {
+    "path": "run_dir/artifacts/source_generation_report.json",
+    "status": "PASS | FAIL",
+    "package_name": "",
+    "generic_validation_passed": false,
+    "python_syntax_passed": false
+  },
+  "verify_summary": {
+    "path": "run_dir/artifacts/verify_report.json",
+    "result": "PASS | FAIL",
+    "first_failure_point": ""
+  },
+  "delivery_summary": {
+    "support_public_delivery_path": "run_dir/artifacts/support_public_delivery.json",
+    "completion_gate_passed": false,
+    "cold_replay_passed": false,
+    "overall_completion_passed": false,
+    "internal_runtime_status": "PASS | BLOCKED | FAIL",
+    "user_acceptance_status": "PASS | PARTIAL | NEEDS_REWORK"
+  },
+  "replay_summary": {
+    "overall_pass": false,
+    "startup_pass": false,
+    "minimal_flow_pass": false,
+    "report_path": "",
+    "replay_screenshot_path": "",
+    "first_failure_stage": ""
+  },
+  "bundle_summary": {
+    "final_project_bundle": "run_dir/artifacts/final_project_bundle.zip",
+    "final_project_bundle_exists": false,
+    "intermediate_evidence_bundle": "run_dir/artifacts/intermediate_evidence_bundle.zip",
+    "intermediate_evidence_bundle_exists": false
+  },
+  "extended_coverage_summary": {
+    "ledger_path": "run_dir/artifacts/extended_coverage_ledger.json",
+    "ledger_exists": false,
+    "ledger_passed": false,
+    "implemented_pages": [],
+    "implemented_capabilities": [],
+    "documentation_files": [],
+    "screenshot_files": [],
+    "screenshot_count": 0,
+    "coverage": {}
+  },
+  "internal_runtime_status": "PASS | BLOCKED | FAIL",
+  "user_acceptance_status": "PASS | PARTIAL | NEEDS_REWORK",
+  "run_status": "pass | fail | running",
+  "repo_level_verify_note": "Benchmark PASS is reported separately from repo-level canonical verify.",
+  "verdict": "PASS | FAIL",
+  "first_failure_point": ""
+}

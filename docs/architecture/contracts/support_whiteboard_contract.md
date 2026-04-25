@@ -7,6 +7,9 @@ The support whiteboard is a **shared append-only log** that records all signific
 - Multi-agent dispatch results to be visible to support replies
 - Progress tracking across support turns and backend execution
 
+The whiteboard is a visible progress layer, not the unified run truth source.
+Every successful whiteboard write MUST also update `${run_dir}/artifacts/run_manifest.json` with `whiteboard_present=true` and `whiteboard_path=artifacts/support_whiteboard.json`.
+
 ## Schema Version
 
 `ctcp-support-whiteboard-v1`
@@ -210,6 +213,7 @@ To verify whiteboard is working:
 Regression tests:
 - `tests/test_runtime_wiring_contract.py` — verifies support → bridge → whiteboard → support path
 - `tests/test_support_bot_humanization.py` — verifies support replies consume whiteboard data
+- `tests/integration/test_mainline_run_contract.py` — verifies whiteboard evidence is reflected in the same run manifest as Librarian, ADLC, and Bridge evidence
 
 ## Related Contracts
 

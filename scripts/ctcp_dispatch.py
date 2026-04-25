@@ -23,6 +23,8 @@ try:
     from llm_core.providers import runtime as provider_runtime
     from tools import local_librarian
     from tools.dispatch_result_contract import apply_dispatch_evidence, normalize_executed_target_result, provider_mode
+    from tools.formal_api_lock import append_provider_ledger, formal_api_only_enabled, requires_formal_api
+    from tools.run_manifest import update_whiteboard_state
     from tools.providers import api_agent, codex_agent, local_exec, manual_outbox, mock_agent, ollama_agent
 except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
@@ -31,6 +33,8 @@ except ModuleNotFoundError:
     from llm_core.providers import runtime as provider_runtime
     from tools import local_librarian
     from tools.dispatch_result_contract import apply_dispatch_evidence, normalize_executed_target_result, provider_mode
+    from tools.formal_api_lock import append_provider_ledger, formal_api_only_enabled, requires_formal_api
+    from tools.run_manifest import update_whiteboard_state
     from tools.providers import api_agent, codex_agent, local_exec, manual_outbox, mock_agent, ollama_agent
 
 KNOWN_PROVIDERS = {"manual_outbox", "ollama_agent", "api_agent", "codex_agent", "mock_agent", "local_exec"}
@@ -92,6 +96,11 @@ def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
 
 def _now_iso() -> str:
     return datetime.now().isoformat(timespec="seconds")
+
+def _sanitize(value: str) -> str:
+    text = re.sub(r"[^a-z0-9_]+", "_", str(value or "").strip().lower())
+    text = re.sub(r"_+", "_", text).strip("_")
+    return text or "item"
 
 def _forced_provider() -> str:
     raw = str(os.environ.get("CTCP_FORCE_PROVIDER", "")).strip().lower()
@@ -305,7 +314,7 @@ def record_support_turn_whiteboard(
     conversation_mode: str,
     chat_id: str = "",
 ) -> dict[str, Any]:
-    return dispatch_whiteboard.record_support_turn_whiteboard(
+    context = dispatch_whiteboard.record_support_turn_whiteboard(
         run_dir=run_dir,
         repo_root=repo_root,
         text=text,
@@ -313,6 +322,8 @@ def record_support_turn_whiteboard(
         conversation_mode=conversation_mode,
         chat_id=chat_id,
     )
+    update_whiteboard_state(run_dir)
+    return context
 
 
 def _dispatch_whiteboard_query(request: dict[str, Any]) -> str:
@@ -351,11 +362,13 @@ def _prepare_dispatch_whiteboard_context(
     repo_root: Path,
     request: dict[str, Any],
 ) -> dict[str, Any]:
-    return dispatch_whiteboard.prepare_dispatch_whiteboard_context(
+    context = dispatch_whiteboard.prepare_dispatch_whiteboard_context(
         run_dir=run_dir,
         repo_root=repo_root,
         request=request,
     )
+    update_whiteboard_state(run_dir)
+    return context
 
 
 def _append_dispatch_result_whiteboard(
@@ -364,11 +377,13 @@ def _append_dispatch_result_whiteboard(
     request: dict[str, Any],
     result: dict[str, Any],
 ) -> dict[str, Any]:
-    return dispatch_whiteboard.append_dispatch_result_whiteboard(
+    context = dispatch_whiteboard.append_dispatch_result_whiteboard(
         run_dir=run_dir,
         request=request,
         result=result,
     )
+    update_whiteboard_state(run_dir)
+    return context
 
 
 def _live_provider_violation(
@@ -379,17 +394,14 @@ def _live_provider_violation(
     provider: str,
     note: str,
 ) -> dict[str, Any] | None:
-    forced = _forced_provider()
-    if forced != "api_agent":
+    if not formal_api_only_enabled():
+        return None
+    role = str(request.get("role", "")).strip()
+    action = str(request.get("action", "")).strip()
+    if not requires_formal_api(role, action):
         return None
     if provider == "api_agent":
         return None
-
-    role = str(request.get("role", "")).strip()
-    hard_provider = HARD_ROLE_PROVIDERS.get(role.lower(), "")
-    if hard_provider and provider == hard_provider:
-        return None
-    action = str(request.get("action", "")).strip()
     gate_state = str(gate.get("state", "")).strip()
     gate_owner = str(gate.get("owner", "")).strip()
     gate_path = str(gate.get("path", "")).strip()
@@ -493,6 +505,96 @@ def _append_step_meta(
         "error": error,
     }
     _append_jsonl(run_dir / STEP_META_PATH, row)
+
+
+def _output_exists(run_dir: Path, rel_path: str) -> bool:
+    value = str(rel_path or "").strip().replace("\\", "/")
+    if not value:
+        return False
+    return (run_dir / value).exists()
+
+
+def _review_step_requires_remote_success(request: dict[str, Any]) -> bool:
+    role = str(request.get("role", "")).strip().lower()
+    action = str(request.get("action", "")).strip().lower()
+    return role in {"contract_guardian", "cost_controller"} or action.startswith("review_") or "review" in action
+
+
+def _true_api_mode(provider: str, result: dict[str, Any]) -> bool:
+    forced = _forced_provider()
+    chosen = str(result.get("chosen_provider", provider)).strip().lower()
+    mode = str(result.get("provider_mode", "")).strip().lower()
+    return (
+        forced == "api_agent"
+        or chosen == "api_agent"
+        or str(provider or "").strip().lower() == "api_agent"
+        or mode == "remote"
+        or str(os.environ.get("CTCP_TRUE_API_REQUIRED", "")).strip().lower() in {"1", "true", "yes", "on"}
+    )
+
+
+def _write_step_acceptance(
+    *,
+    run_dir: Path,
+    gate: dict[str, str],
+    request: dict[str, Any],
+    provider: str,
+    result: dict[str, Any],
+) -> None:
+    ts = _now_iso()
+    stamp = re.sub(r"[^0-9A-Za-z]+", "", ts)[:15] or "step"
+    role = _sanitize(str(request.get("role", "")).strip() or "role")
+    action = _sanitize(str(request.get("action", "")).strip() or "action")
+    step_dir = run_dir / "artifacts" / "acceptance" / f"{stamp}_{role}_{action}"
+    step_dir.mkdir(parents=True, exist_ok=True)
+    output_paths = _output_paths(request, result)
+    missing_outputs = [
+        path
+        for path in output_paths
+        if path and path.startswith("artifacts/") and not _output_exists(run_dir, path)
+    ]
+    status = str(result.get("status", "")).strip()
+    reasons: list[str] = []
+    if status != "executed":
+        reasons.append(str(result.get("reason", "")).strip() or f"provider status was {status or 'empty'}")
+    if missing_outputs:
+        reasons.append(f"declared outputs missing: {', '.join(missing_outputs)}")
+    if _review_step_requires_remote_success(request):
+        if bool(result.get("fallback_used", False)):
+            reasons.append("review step used provider fallback")
+        if str(result.get("provider_mode", "")).strip() == "local_fallback":
+            reasons.append("review step used local fallback")
+        if str(result.get("reason", "")).strip() and status != "executed":
+            reasons.append("review step has provider error")
+    if bool(result.get("fallback_used", False)) and _true_api_mode(provider, result):
+        reasons.append("api_fallback_not_allowed")
+    acceptance = {
+        "schema_version": "ctcp-step-acceptance-v1",
+        "timestamp": ts,
+        "gate": {
+            "state": str(gate.get("state", "")).strip(),
+            "owner": str(gate.get("owner", "")).strip(),
+            "path": str(gate.get("path", "")).strip(),
+            "reason": str(gate.get("reason", "")).strip(),
+        },
+        "role": str(request.get("role", "")).strip(),
+        "action": str(request.get("action", "")).strip(),
+        "provider": provider,
+        "chosen_provider": str(result.get("chosen_provider", provider)).strip() or provider,
+        "provider_mode": str(result.get("provider_mode", "")).strip() or provider_mode(provider),
+        "request_path": (step_dir / "request.json").relative_to(run_dir).as_posix(),
+        "result_path": (step_dir / "result.json").relative_to(run_dir).as_posix(),
+        "acceptance_path": (step_dir / "acceptance.json").relative_to(run_dir).as_posix(),
+        "outputs": output_paths,
+        "missing_outputs": missing_outputs,
+        "passed": not reasons,
+        "result": "OK" if not reasons else "ERR",
+        "reasons": reasons,
+    }
+    _write_json(step_dir / "request.json", request)
+    _write_json(step_dir / "result.json", result)
+    _write_json(step_dir / "acceptance.json", acceptance)
+    _append_jsonl(run_dir / "artifacts" / "acceptance" / "ledger.jsonl", acceptance)
 
 
 def _selected_workflow_id(run_dir: Path) -> str:
@@ -613,6 +715,58 @@ def _resolve_provider(config: dict[str, Any], role: str, action: str) -> tuple[s
     )
 
 
+def _is_patchmaker_fallback_candidate(request: dict[str, Any], result: dict[str, Any], run_dir: Path) -> bool:
+    if formal_api_only_enabled():
+        return False
+    if _forced_provider():
+        return False
+    if str(result.get("status", "")).strip() != "exec_failed":
+        return False
+    role = str(request.get("role", "")).strip().lower()
+    action = str(request.get("action", "")).strip().lower()
+    target_rel = str(request.get("target_path", "")).strip()
+    if role not in {"patchmaker", "fixer"} or action not in {"make_patch", "fix_patch"}:
+        return False
+    if target_rel not in {"artifacts/diff.patch", "artifacts/diff.patch.v2"}:
+        return False
+    return not (run_dir / target_rel).exists()
+
+
+def _run_patchmaker_local_fallback(
+    *,
+    repo_root: Path,
+    run_dir: Path,
+    request: dict[str, Any],
+    config: dict[str, Any],
+    provider: str,
+    result: dict[str, Any],
+) -> tuple[str, dict[str, Any]]:
+    fallback_config = dict(config)
+    fallback_config["mode"] = "mock_agent"
+    fallback_result = mock_agent.execute(
+        repo_root=repo_root,
+        run_dir=run_dir,
+        request=request,
+        config=fallback_config,
+        guardrails_budgets=_parse_guardrails_budgets(run_dir),
+    )
+    fallback_result["fallback_from_provider"] = provider
+    fallback_result["fallback_reason"] = str(result.get("reason", "")).strip() or "provider exec_failed"
+    fallback_result["chosen_provider"] = "mock_agent"
+    fallback_result["provider_mode"] = "local_fallback"
+    if str(fallback_result.get("status", "")) == "executed":
+        _append_trace(
+            run_dir,
+            f"PatchMaker provider fallback: {provider} failed; mock_agent wrote {fallback_result.get('target_path', '')}",
+        )
+        return "mock_agent", fallback_result
+    _append_trace(
+        run_dir,
+        f"PatchMaker provider fallback failed after {provider}: {fallback_result.get('reason', '')}",
+    )
+    return provider, result
+
+
 def dispatch_preview(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str]) -> dict[str, Any]:
     config, cfg_msg = load_dispatch_config(run_dir)
     if config is None:
@@ -665,6 +819,15 @@ def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], 
         hard_role_providers=HARD_ROLE_PROVIDERS,
         live_policy=lambda **kwargs: _live_provider_violation(gate=gate, **kwargs),
     )
+    if _is_patchmaker_fallback_candidate(request, result, run_dir):
+        provider, result = _run_patchmaker_local_fallback(
+            repo_root=repo_root,
+            run_dir=run_dir,
+            request=request,
+            config=config,
+            provider=provider,
+            result=result,
+        )
     result_snapshot = _append_dispatch_result_whiteboard(
         run_dir=run_dir,
         request=request,
@@ -677,7 +840,21 @@ def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], 
         "lookup_error": str(whiteboard_context.get("lookup_error", "")),
         "snapshot": result_snapshot,
     }
+    append_provider_ledger(
+        run_dir,
+        role=str(request.get("role", "")),
+        action=str(request.get("action", "")),
+        provider_used=provider,
+        result=result,
+    )
     _append_step_meta(
+        run_dir=run_dir,
+        gate=gate,
+        request=request,
+        provider=provider,
+        result=result,
+    )
+    _write_step_acceptance(
         run_dir=run_dir,
         gate=gate,
         request=request,

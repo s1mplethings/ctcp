@@ -1,0 +1,65 @@
+{
+  "schema_version": "ctcp-mainline-freeze-manifest-v1",
+  "freeze_version": "default-mainline-freeze-20260421-v1",
+  "created_at": "2026-04-21T12:10:00Z",
+  "freeze_scope": "default CTCP runtime mainline: goal/task input -> librarian/context_pack -> ADLC phase judgment + plan/gate -> execution lane -> whiteboard progress emission -> frontend/backend bridge consumption -> delivery/gate result -> run_manifest finalization",
+  "unfreeze_requirement": "User must explicitly say 解冻主线, unfreeze the mainline, or equivalent before protected files may change.",
+  "protected_files": [
+    {
+      "path": "docs/02_workflow.md",
+      "sha256": "54c7d7ab718835f7ccab6c42773a653b11d2e74b53184aa7a74843cf361f74b8"
+    },
+    {
+      "path": "docs/architecture/contracts/run_manifest_contract.md",
+      "sha256": "0adaf3f1fd7c87e01daa834f9eef64002cbd140e5ac98ad0b062c9fef8bd7048"
+    },
+    {
+      "path": "docs/architecture/contracts/support_whiteboard_contract.md",
+      "sha256": "b6fb3ce1c46b4092b34ce820d4f21cfb88545bbe65df04b79e3d20b330e9071a"
+    },
+    {
+      "path": "docs/architecture/contracts/frontend_bridge_contract.md",
+      "sha256": "8886d21576ec6e67ae57008f9f4e37afc9e6772d605db9d8ca5f16f6716fb639"
+    },
+    {
+      "path": "docs/architecture/contracts/default_mainline_freeze_contract.md",
+      "sha256": "a7f29443aedc5a7b7196322b779c22e4595926e0cdb5ebfac1919fdb9e2879aa"
+    },
+    {
+      "path": "scripts/ctcp_orchestrate.py",
+      "sha256": "264c0f81c7f1ad8c3857c471b611d0ee7415344687ba2404f1e50d96abb217e1"
+    },
+    {
+      "path": "scripts/ctcp_librarian.py",
+      "sha256": "c169449b7ecb3f80a0093715c094182334ec1d59d2109e034e54442926ae1733"
+    },
+    {
+      "path": "scripts/ctcp_front_bridge.py",
+      "sha256": "b0f7c512f6b0e4373578950c17e8ae7cf6b67fb89a98d8c6e88c96a090c1080f"
+    },
+    {
+      "path": "scripts/ctcp_dispatch.py",
+      "sha256": "cf3dab654b1aaffe2aa091f204f191b64845b1380cfa92197dbf92f7b22e8e49"
+    },
+    {
+      "path": "scripts/workflows/adlc_self_improve_core.py",
+      "sha256": "f2dc3058b938e81ac44466f1ddc379f27c1bc032112d5785f822ddff8371d4ff"
+    },
+    {
+      "path": "tools/adlc_gate.py",
+      "sha256": "c4c74e8431d47e2209908b3c3fbda603e392b84fb1ba3c1c6cd0720cb550da66"
+    },
+    {
+      "path": "tools/run_manifest.py",
+      "sha256": "5f4b4fe5725eaa9a18cd31d8f035395d561078ef76f09954607a46fdd42463ac"
+    },
+    {
+      "path": "tests/integration/test_mainline_run_contract.py",
+      "sha256": "770a80227f912a648a6509a0beec2501d2a57c17e9d8e87c59a25f8329edbbd3"
+    },
+    {
+      "path": "tests/integration/test_mainline_freeze_manifest.py",
+      "sha256": "f7811bfadc693f962ced257dadcd541a734493fa1d9a839d4f416d91ee900c3a"
+    }
+  ]
+}

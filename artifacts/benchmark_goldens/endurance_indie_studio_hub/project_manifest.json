@@ -1,0 +1,2241 @@
+{
+  "schema_version": "ctcp-project-manifest-v1",
+  "stage": "artifact_manifest_build",
+  "goal": "我想做一个给独立游戏团队用的本地生产协作平台。\n团队大概 5 到 20 人，主要有策划、程序、美术、测试、制作人。\n我不想只要普通任务看板，我希望它能把任务、素材、Bug、版本进度、发布准备这些东西放在一起。\n不要做成很重的企业系统，但最终要像一个真的可以长期使用的产品。",
+  "project_intent": {
+    "goal_summary": "做一个给独立游戏团队用的本地生产协作平台",
+    "target_user": "希望尽快验证想法的项目发起人",
+    "problem_to_solve": "把模糊目标收束成一个最小可运行项目，而不是只停留在流程和证明工件上",
+    "mvp_scope": [
+      "提供可运行入口和 README 启动说明",
+      "至少打通一条核心用户流程"
+    ],
+    "required_inputs": [
+      "用户目标描述"
+    ],
+    "required_outputs": [
+      "可运行项目代码",
+      "README 启动说明",
+      "至少一条核心流程的验证结果"
+    ],
+    "hard_constraints": [
+      "respect explicit negative requirements from the user text"
+    ],
+    "assumptions": [
+      "默认先生成最小可运行版本，再逐步扩展非核心能力",
+      "默认交付形态采用最容易验证的闭环入口",
+      "未指定部署环境时默认按本地可运行优先"
+    ],
+    "open_questions": [
+      "非阻塞待确认: 尚未明确交付形态，先按最小闭环入口假设",
+      "非阻塞待确认: 尚未明确运行环境，先按本地 smoke run 假设"
+    ],
+    "acceptance_criteria": [
+      "README 能指导启动项目",
+      "项目存在真实可运行入口",
+      "至少一条核心用户流程通过 smoke run"
+    ]
+  },
+  "project_spec": {
+    "schema_version": "ctcp-project-spec-v2",
+    "goal_summary": "做一个给独立游戏团队用的本地生产协作平台",
+    "target_user": "希望尽快验证想法的项目发起人",
+    "problem_to_solve": "把模糊目标收束成一个最小可运行项目，而不是只停留在流程和证明工件上",
+    "mvp_scope": [
+      "提供可运行入口和 README 启动说明",
+      "至少打通一条核心用户流程"
+    ],
+    "required_inputs": [
+      "用户目标描述"
+    ],
+    "required_outputs": [
+      "可运行项目代码",
+      "README 启动说明",
+      "至少一条核心流程的验证结果"
+    ],
+    "hard_constraints": [
+      "respect explicit negative requirements from the user text"
+    ],
+    "assumptions": [
+      "默认先生成最小可运行版本，再逐步扩展非核心能力",
+      "默认交付形态采用最容易验证的闭环入口",
+      "未指定部署环境时默认按本地可运行优先"
+    ],
+    "open_questions": [
+      "非阻塞待确认: 尚未明确交付形态，先按最小闭环入口假设",
+      "非阻塞待确认: 尚未明确运行环境，先按本地 smoke run 假设"
+    ],
+    "acceptance_criteria": [
+      "README 能指导启动项目",
+      "项目存在真实可运行入口",
+      "至少一条核心用户流程通过 smoke run"
+    ],
+    "constraint_snapshot": {
+      "系统规模": "适合5-20人小团队，轻量化设计，反对复杂企业级冗余功能",
+      "本地部署": "保证数据安全和自主可控",
+      "长期可用": "稳定性和易维护性"
+    },
+    "project_domain": "indie_studio_production_hub",
+    "scaffold_family": "indie_studio_hub",
+    "project_type": "indie_studio_hub",
+    "project_archetype": "indie_studio_hub_web",
+    "delivery_shape": "web_first",
+    "build_profile": "high_quality_extended",
+    "product_depth": "extended",
+    "required_pages": 13,
+    "required_screenshots": 10,
+    "require_feature_matrix": true,
+    "require_page_map": true,
+    "require_data_model_summary": true,
+    "require_search": true,
+    "require_import_or_export": "both",
+    "require_dashboard_or_project_overview": true,
+    "core_modules": [
+      "workspace_project_model",
+      "milestone_backlog",
+      "task_board",
+      "task_list",
+      "task_detail",
+      "comments_activity",
+      "asset_library",
+      "asset_detail",
+      "bug_tracker",
+      "build_release_center",
+      "docs_center",
+      "dashboard",
+      "search",
+      "import_export",
+      "settings",
+      "extended_coverage"
+    ],
+    "required_pages_or_views": [
+      "dashboard",
+      "project_list",
+      "project_overview",
+      "milestone_backlog",
+      "kanban_board",
+      "task_list",
+      "task_detail",
+      "asset_library",
+      "asset_detail",
+      "bug_tracker",
+      "build_release_center",
+      "activity_feed",
+      "docs_center",
+      "project_settings"
+    ],
+    "data_models": [
+      "user",
+      "workspace",
+      "project",
+      "milestone",
+      "task",
+      "asset",
+      "asset_link",
+      "bug",
+      "build_record",
+      "release_summary",
+      "doc_entry",
+      "activity_event"
+    ],
+    "key_interactions": [
+      "create_project",
+      "view_milestones",
+      "create_task",
+      "edit_task_fields",
+      "move_task_status",
+      "comment_on_task",
+      "search_tasks",
+      "filter_tasks",
+      "sort_tasks",
+      "view_asset_library",
+      "view_asset_detail",
+      "link_asset_to_task",
+      "create_bug",
+      "update_bug_status",
+      "view_build_records",
+      "generate_release_summary",
+      "view_docs_center",
+      "export_project_data",
+      "view_activity_feed"
+    ],
+    "task_fields": [
+      "title",
+      "description",
+      "status",
+      "priority",
+      "assignee",
+      "due_date",
+      "labels",
+      "linked_assets",
+      "linked_bugs",
+      "milestone"
+    ],
+    "export_targets": [
+      "demo_workspace.json",
+      "asset_library.json",
+      "bug_tracker.json",
+      "release_summary.json",
+      "feature_matrix.md",
+      "page_map.md",
+      "data_model_summary.md",
+      "milestone_plan.md",
+      "startup_guide.md",
+      "replay_guide.md",
+      "mid_stage_review.md",
+      "acceptance_bundle.zip"
+    ],
+    "sample_content_plan": {
+      "pipeline_id": "indie_studio_hub_demo_seed",
+      "minimum_depth": {
+        "projects": 2,
+        "tasks": 10,
+        "assets": 6,
+        "bugs": 4,
+        "builds": 3,
+        "docs": 4
+      },
+      "steps": [
+        "demo_users",
+        "workspace_seed",
+        "project_seed",
+        "task_seed",
+        "asset_seed",
+        "bug_seed",
+        "build_seed",
+        "doc_seed"
+      ],
+      "api_merge_targets": []
+    },
+    "delivery_requirements": [
+      "final_project_bundle.zip",
+      "README",
+      "milestone_plan.md",
+      "startup_guide.md",
+      "replay_guide.md",
+      "mid_stage_review.md",
+      "screenshots",
+      "verify_summary"
+    ],
+    "required_doc_files": [
+      "docs/feature_matrix.md",
+      "docs/page_map.md",
+      "docs/data_model_summary.md",
+      "docs/milestone_plan.md",
+      "docs/startup_guide.md",
+      "docs/replay_guide.md",
+      "docs/mid_stage_review.md"
+    ],
+    "user_acceptance_required_views": [
+      "asset_library",
+      "asset_detail",
+      "bug_tracker",
+      "build_release_center",
+      "docs_center"
+    ],
+    "explicit_non_goals": [
+      "realtime websocket collaboration",
+      "OAuth",
+      "multi-tenant SaaS",
+      "complex RBAC",
+      "cloud sync",
+      "AI automatic scheduling",
+      "payment flows"
+    ]
+  },
+  "project_spec_path": "artifacts/project_spec.json",
+  "capability_plan": {
+    "schema_version": "ctcp-capability-plan-v1",
+    "project_domain": "indie_studio_production_hub",
+    "scaffold_family": "indie_studio_hub",
+    "family_key": "indie_studio_hub_web",
+    "required_bundles": [
+      "workspace_milestones",
+      "task_management",
+      "asset_management",
+      "bug_tracking",
+      "build_release",
+      "docs_delivery"
+    ],
+    "materialize_bundles": [
+      "asset_management",
+      "bug_tracking",
+      "build_release",
+      "docs_delivery"
+    ],
+    "sample_generation_steps": [
+      "demo_users",
+      "workspace_seed",
+      "project_seed",
+      "task_seed",
+      "asset_seed",
+      "bug_seed",
+      "build_seed",
+      "doc_seed"
+    ],
+    "coverage_target": {
+      "required_bundle_ratio": 1.0,
+      "required_views": [
+        "asset_detail",
+        "asset_library",
+        "bug_tracker",
+        "build_release_center",
+        "dashboard",
+        "docs_center",
+        "kanban_board",
+        "milestone_backlog",
+        "project_list",
+        "project_overview",
+        "task_detail",
+        "task_list"
+      ],
+      "required_interactions": [
+        "comment_on_task",
+        "create_bug",
+        "create_project",
+        "create_task",
+        "edit_task_fields",
+        "export_project_data",
+        "generate_release_summary",
+        "link_asset_to_task",
+        "move_task_status",
+        "update_bug_status",
+        "view_asset_library",
+        "view_build_records",
+        "view_docs_center",
+        "view_milestones"
+      ]
+    },
+    "bundles": [
+      {
+        "bundle_id": "workspace_milestones",
+        "required": true,
+        "enabled_for_materialization": false,
+        "summary": "Workspace, project overview, dashboard, and milestone planning for local studio production tracking.",
+        "required_views": [
+          "dashboard",
+          "project_list",
+          "project_overview",
+          "milestone_backlog"
+        ],
+        "required_interactions": [
+          "create_project",
+          "view_milestones"
+        ],
+        "required_file_suffixes": [
+          "/models.py",
+          "/seed.py",
+          "/workspace.py",
+          "/dashboard.py"
+        ]
+      },
+      {
+        "bundle_id": "task_management",
+        "required": true,
+        "enabled_for_materialization": false,
+        "summary": "Task board/list/detail with comments, activity, filters, search, and sorting.",
+        "required_views": [
+          "kanban_board",
+          "task_list",
+          "task_detail"
+        ],
+        "required_interactions": [
+          "create_task",
+          "edit_task_fields",
+          "move_task_status",
+          "comment_on_task"
+        ],
+        "required_file_suffixes": [
+          "/board.py",
+          "/tasks.py",
+          "/filters.py",
+          "/activity.py"
+        ]
+      },
+      {
+        "bundle_id": "asset_management",
+        "required": true,
+        "enabled_for_materialization": true,
+        "summary": "Asset library and asset detail with owner, state, metadata, and task linkage.",
+        "required_views": [
+          "asset_library",
+          "asset_detail"
+        ],
+        "required_interactions": [
+          "view_asset_library",
+          "link_asset_to_task"
+        ],
+        "required_file_suffixes": [
+          "/assets.py"
+        ]
+      },
+      {
+        "bundle_id": "bug_tracking",
+        "required": true,
+        "enabled_for_materialization": true,
+        "summary": "Bug tracker with severity, repro steps, linked version, and linked task or asset.",
+        "required_views": [
+          "bug_tracker"
+        ],
+        "required_interactions": [
+          "create_bug",
+          "update_bug_status"
+        ],
+        "required_file_suffixes": [
+          "/bugs.py"
+        ]
+      },
+      {
+        "bundle_id": "build_release",
+        "required": true,
+        "enabled_for_materialization": true,
+        "summary": "Build and release center with current version status, build records, and release summary export.",
+        "required_views": [
+          "build_release_center"
+        ],
+        "required_interactions": [
+          "view_build_records",
+          "generate_release_summary"
+        ],
+        "required_file_suffixes": [
+          "/releases.py"
+        ]
+      },
+      {
+        "bundle_id": "docs_delivery",
+        "required": true,
+        "enabled_for_materialization": true,
+        "summary": "Docs center, startup/replay guides, milestone plan, mid-stage review, and final delivery packaging.",
+        "required_views": [
+          "docs_center"
+        ],
+        "required_interactions": [
+          "view_docs_center",
+          "export_project_data"
+        ],
+        "required_file_suffixes": [
+          "/docs_center.py",
+          "/README.md",
+          "/scripts/verify_repo.ps1",
+          "/meta/manifest.json"
+        ]
+      }
+    ],
+    "project_spec_views": [
+      "dashboard",
+      "project_list",
+      "project_overview",
+      "milestone_backlog",
+      "kanban_board",
+      "task_list",
+      "task_detail",
+      "asset_library",
+      "asset_detail",
+      "bug_tracker",
+      "build_release_center",
+      "activity_feed",
+      "docs_center",
+      "project_settings"
+    ],
+    "project_spec_interactions": [
+      "create_project",
+      "view_milestones",
+      "create_task",
+      "edit_task_fields",
+      "move_task_status",
+      "comment_on_task",
+      "search_tasks",
+      "filter_tasks",
+      "sort_tasks",
+      "view_asset_library",
+      "view_asset_detail",
+      "link_asset_to_task",
+      "create_bug",
+      "update_bug_status",
+      "view_build_records",
+      "generate_release_summary",
+      "view_docs_center",
+      "export_project_data",
+      "view_activity_feed"
+    ],
+    "contract_source": "D:/.c_projects/adc/ctcp/contracts/project_capability_bundles.json"
+  },
+  "capability_plan_path": "artifacts/capability_plan.json",
+  "sample_generation_plan": {
+    "pipeline_id": "indie_studio_hub_demo_seed",
+    "minimum_depth": {
+      "projects": 2,
+      "tasks": 10,
+      "assets": 6,
+      "bugs": 4,
+      "builds": 3,
+      "docs": 4
+    },
+    "steps": [
+      "demo_users",
+      "workspace_seed",
+      "project_seed",
+      "task_seed",
+      "asset_seed",
+      "bug_seed",
+      "build_seed",
+      "doc_seed"
+    ],
+    "api_merge_targets": []
+  },
+  "sample_generation_artifacts": [
+    "artifacts/sample_generation/demo_users.json",
+    "artifacts/sample_generation/workspace_seed.json",
+    "artifacts/sample_generation/project_seed.json",
+    "artifacts/sample_generation/task_seed.json",
+    "artifacts/sample_generation/asset_seed.json",
+    "artifacts/sample_generation/bug_seed.json",
+    "artifacts/sample_generation/build_seed.json",
+    "artifacts/sample_generation/doc_seed.json",
+    "artifacts/sample_generation/source_map.json"
+  ],
+  "generation_quality_report_path": "artifacts/generation_quality_report.json",
+  "generation_quality": {
+    "schema_version": "ctcp-generation-quality-report-v1",
+    "project_domain": "indie_studio_production_hub",
+    "scaffold_family": "indie_studio_hub",
+    "project_id": "5-20-bug",
+    "project_spec_path": "artifacts/project_spec.json",
+    "capability_plan_path": "artifacts/capability_plan.json",
+    "sample_generation_artifacts": [
+      "artifacts/sample_generation/demo_users.json",
+      "artifacts/sample_generation/workspace_seed.json",
+      "artifacts/sample_generation/project_seed.json",
+      "artifacts/sample_generation/task_seed.json",
+      "artifacts/sample_generation/asset_seed.json",
+      "artifacts/sample_generation/bug_seed.json",
+      "artifacts/sample_generation/build_seed.json",
+      "artifacts/sample_generation/doc_seed.json",
+      "artifacts/sample_generation/source_map.json"
+    ],
+    "targeted_checks": [
+      {
+        "check_id": "spec_coverage",
+        "passed": true,
+        "details": "project spec contains modules, views, and interaction plan"
+      },
+      {
+        "check_id": "capability_coverage",
+        "passed": true,
+        "details": "all required capability bundles are covered"
+      },
+      {
+        "check_id": "sample_generation_pipeline",
+        "passed": true,
+        "details": "all staged sample artifacts exist"
+      },
+      {
+        "check_id": "sample_depth_adequacy",
+        "passed": true,
+        "details": "not required for non-narrative project domain"
+      },
+      {
+        "check_id": "editor_interaction_presence",
+        "passed": true,
+        "details": "not required for non-narrative project domain"
+      },
+      {
+        "check_id": "export_reflects_state",
+        "passed": true,
+        "details": "preview/export reflects editor state changes"
+      },
+      {
+        "check_id": "readme_spec_consistency",
+        "passed": true,
+        "details": "README passed quality checks"
+      },
+      {
+        "check_id": "final_bundle_hygiene_contract",
+        "passed": true,
+        "details": "delivery requirements retain clean final bundle contract"
+      },
+      {
+        "check_id": "high_quality_extended_coverage",
+        "passed": true,
+        "details": "{\"pages\": {\"required\": 13, \"actual\": 14, \"passed\": true}, \"screenshots\": {\"required\": 10, \"actual\": 10, \"passed\": true}, \"feature_matrix\": {\"passed\": true}, \"page_map\": {\"passed\": true}, \"data_model_summary\": {\"passed\": true}, \"search\": {\"passed\": true}, \"import_export\": {\"passed\": true}, \"dashboard_or_project_overview\": {\"passed\": true}, \"asset_library\": {\"passed\": true}, \"asset_detail\": {\"passed\": true}, \"bug_tracker\": {\"passed\": true}, \"build_release_center\": {\"passed\": true}, \"docs_center\": {\"passed\": true}, \"milestone_plan\": {\"passed\": true}, \"startup_guide\": {\"passed\": true}, \"replay_guide\": {\"passed\": true}, \"mid_stage_review\": {\"passed\": true}}"
+      }
+    ],
+    "score": 1.0,
+    "passed": true,
+    "refinement_round": 0,
+    "refinement_notes": [],
+    "sample_metrics": {},
+    "capability_validation": {
+      "passed": true,
+      "family_key": "indie_studio_hub_web",
+      "required_bundles": [
+        "workspace_milestones",
+        "task_management",
+        "asset_management",
+        "bug_tracking",
+        "build_release",
+        "docs_delivery"
+      ],
+      "covered_bundles": [
+        "asset_management",
+        "bug_tracking",
+        "build_release",
+        "docs_delivery",
+        "task_management",
+        "workspace_milestones"
+      ],
+      "missing_bundles": [],
+      "coverage_ratio": 1.0,
+      "coverage_rows": [
+        {
+          "bundle_id": "workspace_milestones",
+          "required": true,
+          "enabled_for_materialization": false,
+          "matched_files": [
+            "project_output/5-20-bug/src/project_5_20_bug/dashboard.py",
+            "project_output/5-20-bug/src/project_5_20_bug/models.py",
+            "project_output/5-20-bug/src/project_5_20_bug/seed.py",
+            "project_output/5-20-bug/src/project_5_20_bug/workspace.py"
+          ],
+          "required_file_suffixes": [
+            "/models.py",
+            "/seed.py",
+            "/workspace.py",
+            "/dashboard.py"
+          ],
+          "covered": true
+        },
+        {
+          "bundle_id": "task_management",
+          "required": true,
+          "enabled_for_materialization": false,
+          "matched_files": [
+            "project_output/5-20-bug/src/project_5_20_bug/activity.py",
+            "project_output/5-20-bug/src/project_5_20_bug/board.py",
+            "project_output/5-20-bug/src/project_5_20_bug/filters.py",
+            "project_output/5-20-bug/src/project_5_20_bug/tasks.py"
+          ],
+          "required_file_suffixes": [
+            "/board.py",
+            "/tasks.py",
+            "/filters.py",
+            "/activity.py"
+          ],
+          "covered": true
+        },
+        {
+          "bundle_id": "asset_management",
+          "required": true,
+          "enabled_for_materialization": true,
+          "matched_files": [
+            "project_output/5-20-bug/src/project_5_20_bug/assets.py"
+          ],
+          "required_file_suffixes": [
+            "/assets.py"
+          ],
+          "covered": true
+        },
+        {
+          "bundle_id": "bug_tracking",
+          "required": true,
+          "enabled_for_materialization": true,
+          "matched_files": [
+            "project_output/5-20-bug/src/project_5_20_bug/bugs.py"
+          ],
+          "required_file_suffixes": [
+            "/bugs.py"
+          ],
+          "covered": true
+        },
+        {
+          "bundle_id": "build_release",
+          "required": true,
+          "enabled_for_materialization": true,
+          "matched_files": [
+            "project_output/5-20-bug/src/project_5_20_bug/releases.py"
+          ],
+          "required_file_suffixes": [
+            "/releases.py"
+          ],
+          "covered": true
+        },
+        {
+          "bundle_id": "docs_delivery",
+          "required": true,
+          "enabled_for_materialization": true,
+          "matched_files": [
+            "project_output/5-20-bug/meta/manifest.json",
+            "project_output/5-20-bug/README.md",
+            "project_output/5-20-bug/scripts/verify_repo.ps1",
+            "project_output/5-20-bug/src/project_5_20_bug/docs_center.py"
+          ],
+          "required_file_suffixes": [
+            "/docs_center.py",
+            "/README.md",
+            "/scripts/verify_repo.ps1",
+            "/meta/manifest.json"
+          ],
+          "covered": true
+        }
+      ],
+      "view_alignment_missing": [],
+      "interaction_alignment_missing": [],
+      "reasons": [],
+      "project_root": "project_output/5-20-bug"
+    },
+    "extended_coverage": {
+      "schema_version": "ctcp-extended-coverage-ledger-v1",
+      "build_profile": "high_quality_extended",
+      "product_depth": "extended",
+      "implemented_pages": [
+        "dashboard",
+        "project_list",
+        "project_overview",
+        "milestone_backlog",
+        "task_board",
+        "task_list",
+        "task_detail",
+        "asset_library",
+        "asset_detail",
+        "bug_tracker",
+        "build_release_center",
+        "activity_feed",
+        "docs_center",
+        "project_settings"
+      ],
+      "documentation_files": [
+        "project_output/5-20-bug/docs/feature_matrix.md",
+        "project_output/5-20-bug/docs/page_map.md",
+        "project_output/5-20-bug/docs/data_model_summary.md",
+        "project_output/5-20-bug/docs/milestone_plan.md",
+        "project_output/5-20-bug/docs/startup_guide.md",
+        "project_output/5-20-bug/docs/replay_guide.md",
+        "project_output/5-20-bug/docs/mid_stage_review.md"
+      ],
+      "screenshot_files": [
+        "project_output/5-20-bug/artifacts/screenshots/final-ui.png",
+        "project_output/5-20-bug/artifacts/screenshots/02-project_list.png",
+        "project_output/5-20-bug/artifacts/screenshots/03-project_overview.png",
+        "project_output/5-20-bug/artifacts/screenshots/04-milestone_backlog.png",
+        "project_output/5-20-bug/artifacts/screenshots/05-task_board.png",
+        "project_output/5-20-bug/artifacts/screenshots/06-task_list.png",
+        "project_output/5-20-bug/artifacts/screenshots/07-task_detail.png",
+        "project_output/5-20-bug/artifacts/screenshots/08-asset_library.png",
+        "project_output/5-20-bug/artifacts/screenshots/09-asset_detail.png",
+        "project_output/5-20-bug/artifacts/screenshots/10-bug_tracker.png"
+      ],
+      "coverage": {
+        "pages": {
+          "required": 13,
+          "actual": 14,
+          "passed": true
+        },
+        "screenshots": {
+          "required": 10,
+          "actual": 10,
+          "passed": true
+        },
+        "feature_matrix": {
+          "passed": true
+        },
+        "page_map": {
+          "passed": true
+        },
+        "data_model_summary": {
+          "passed": true
+        },
+        "search": {
+          "passed": true
+        },
+        "import_export": {
+          "passed": true
+        },
+        "dashboard_or_project_overview": {
+          "passed": true
+        },
+        "asset_library": {
+          "passed": true
+        },
+        "asset_detail": {
+          "passed": true
+        },
+        "bug_tracker": {
+          "passed": true
+        },
+        "build_release_center": {
+          "passed": true
+        },
+        "docs_center": {
+          "passed": true
+        },
+        "milestone_plan": {
+          "passed": true
+        },
+        "startup_guide": {
+          "passed": true
+        },
+        "replay_guide": {
+          "passed": true
+        },
+        "mid_stage_review": {
+          "passed": true
+        }
+      },
+      "passed": true
+    }
+  },
+  "capability_validation": {
+    "passed": true,
+    "family_key": "indie_studio_hub_web",
+    "required_bundles": [
+      "workspace_milestones",
+      "task_management",
+      "asset_management",
+      "bug_tracking",
+      "build_release",
+      "docs_delivery"
+    ],
+    "covered_bundles": [
+      "asset_management",
+      "bug_tracking",
+      "build_release",
+      "docs_delivery",
+      "task_management",
+      "workspace_milestones"
+    ],
+    "missing_bundles": [],
+    "coverage_ratio": 1.0,
+    "coverage_rows": [
+      {
+        "bundle_id": "workspace_milestones",
+        "required": true,
+        "enabled_for_materialization": false,
+        "matched_files": [
+          "project_output/5-20-bug/src/project_5_20_bug/dashboard.py",
+          "project_output/5-20-bug/src/project_5_20_bug/models.py",
+          "project_output/5-20-bug/src/project_5_20_bug/seed.py",
+          "project_output/5-20-bug/src/project_5_20_bug/workspace.py"
+        ],
+        "required_file_suffixes": [
+          "/models.py",
+          "/seed.py",
+          "/workspace.py",
+          "/dashboard.py"
+        ],
+        "covered": true
+      },
+      {
+        "bundle_id": "task_management",
+        "required": true,
+        "enabled_for_materialization": false,
+        "matched_files": [
+          "project_output/5-20-bug/src/project_5_20_bug/activity.py",
+          "project_output/5-20-bug/src/project_5_20_bug/board.py",
+          "project_output/5-20-bug/src/project_5_20_bug/filters.py",
+          "project_output/5-20-bug/src/project_5_20_bug/tasks.py"
+        ],
+        "required_file_suffixes": [
+          "/board.py",
+          "/tasks.py",
+          "/filters.py",
+          "/activity.py"
+        ],
+        "covered": true
+      },
+      {
+        "bundle_id": "asset_management",
+        "required": true,
+        "enabled_for_materialization": true,
+        "matched_files": [
+          "project_output/5-20-bug/src/project_5_20_bug/assets.py"
+        ],
+        "required_file_suffixes": [
+          "/assets.py"
+        ],
+        "covered": true
+      },
+      {
+        "bundle_id": "bug_tracking",
+        "required": true,
+        "enabled_for_materialization": true,
+        "matched_files": [
+          "project_output/5-20-bug/src/project_5_20_bug/bugs.py"
+        ],
+        "required_file_suffixes": [
+          "/bugs.py"
+        ],
+        "covered": true
+      },
+      {
+        "bundle_id": "build_release",
+        "required": true,
+        "enabled_for_materialization": true,
+        "matched_files": [
+          "project_output/5-20-bug/src/project_5_20_bug/releases.py"
+        ],
+        "required_file_suffixes": [
+          "/releases.py"
+        ],
+        "covered": true
+      },
+      {
+        "bundle_id": "docs_delivery",
+        "required": true,
+        "enabled_for_materialization": true,
+        "matched_files": [
+          "project_output/5-20-bug/meta/manifest.json",
+          "project_output/5-20-bug/README.md",
+          "project_output/5-20-bug/scripts/verify_repo.ps1",
+          "project_output/5-20-bug/src/project_5_20_bug/docs_center.py"
+        ],
+        "required_file_suffixes": [
+          "/docs_center.py",
+          "/README.md",
+          "/scripts/verify_repo.ps1",
+          "/meta/manifest.json"
+        ],
+        "covered": true
+      }
+    ],
+    "view_alignment_missing": [],
+    "interaction_alignment_missing": [],
+    "reasons": [],
+    "project_root": "project_output/5-20-bug"
+  },
+  "pipeline_contract": {
+    "schema_version": "ctcp-project-generation-pipeline-v1",
+    "stages": [
+      {
+        "name": "project_intent",
+        "artifact": "project_intent",
+        "status": "ready"
+      },
+      {
+        "name": "spec",
+        "artifact": "artifacts/project_spec.json",
+        "status": "ready"
+      },
+      {
+        "name": "capability_plan",
+        "artifact": "artifacts/capability_plan.json",
+        "status": "ready"
+      },
+      {
+        "name": "sample_generation_plan",
+        "artifact": "artifacts/sample_generation",
+        "status": "ready"
+      },
+      {
+        "name": "scaffold",
+        "artifact": "project_root",
+        "status": "planned",
+        "project_root": "project_output/5-20-bug"
+      },
+      {
+        "name": "core_feature_implementation",
+        "artifact": "core_feature_files",
+        "status": "planned",
+        "core_feature_files": [
+          "project_output/5-20-bug/docs/data_model_summary.md",
+          "project_output/5-20-bug/docs/feature_matrix.md",
+          "project_output/5-20-bug/docs/mid_stage_review.md",
+          "project_output/5-20-bug/docs/milestone_plan.md",
+          "project_output/5-20-bug/docs/page_map.md",
+          "project_output/5-20-bug/docs/replay_guide.md",
+          "project_output/5-20-bug/docs/startup_guide.md",
+          "project_output/5-20-bug/scripts/run_project_web.py",
+          "project_output/5-20-bug/src/project_5_20_bug/activity.py",
+          "project_output/5-20-bug/src/project_5_20_bug/app.py",
+          "project_output/5-20-bug/src/project_5_20_bug/assets.py",
+          "project_output/5-20-bug/src/project_5_20_bug/board.py",
+          "project_output/5-20-bug/src/project_5_20_bug/bugs.py",
+          "project_output/5-20-bug/src/project_5_20_bug/dashboard.py",
+          "project_output/5-20-bug/src/project_5_20_bug/docs_center.py",
+          "project_output/5-20-bug/src/project_5_20_bug/exporter.py",
+          "project_output/5-20-bug/src/project_5_20_bug/filters.py",
+          "project_output/5-20-bug/src/project_5_20_bug/import_export.py",
+          "project_output/5-20-bug/src/project_5_20_bug/models.py",
+          "project_output/5-20-bug/src/project_5_20_bug/pages.py",
+          "project_output/5-20-bug/src/project_5_20_bug/releases.py",
+          "project_output/5-20-bug/src/project_5_20_bug/search.py",
+          "project_output/5-20-bug/src/project_5_20_bug/seed.py",
+          "project_output/5-20-bug/src/project_5_20_bug/service.py",
+          "project_output/5-20-bug/src/project_5_20_bug/settings.py",
+          "project_output/5-20-bug/src/project_5_20_bug/tasks.py",
+          "project_output/5-20-bug/src/project_5_20_bug/workspace.py",
+          "project_output/5-20-bug/tests/test_project_5_20_bug_service.py"
+        ]
+      },
+      {
+        "name": "refinement",
+        "artifact": "artifacts/generation_quality_report.json",
+        "status": "planned"
+      },
+      {
+        "name": "smoke_run",
+        "artifact": "startup_entrypoint",
+        "status": "planned",
+        "startup_entrypoint": "project_output/5-20-bug/scripts/run_project_web.py"
+      },
+      {
+        "name": "demo_evidence",
+        "artifact": "demo_evidence",
+        "status": "planned"
+      },
+      {
+        "name": "delivery_package",
+        "artifact": "acceptance_files",
+        "status": "planned",
+        "acceptance_files": [
+          "project_output/5-20-bug/README.md",
+          "project_output/5-20-bug/scripts/run_project_web.py",
+          "project_output/5-20-bug/docs/mid_stage_review.md"
+        ],
+        "startup_readme": "project_output/5-20-bug/README.md"
+      }
+    ]
+  },
+  "run_id": "20260424-200630-107859-orchestrate",
+  "project_id": "5-20-bug",
+  "project_root": "project_output/5-20-bug",
+  "project_domain": "indie_studio_production_hub",
+  "scaffold_family": "indie_studio_hub",
+  "project_type": "indie_studio_hub",
+  "project_archetype": "indie_studio_hub_web",
+  "project_profile": "indie_studio_production_hub",
+  "generation_mode": "production_indie_studio_hub_high_quality_extended",
+  "execution_mode": "production",
+  "benchmark_case": "",
+  "delivery_shape": "web_first",
+  "project_domain_decision_source": "signal_keywords",
+  "scaffold_family_decision_source": "project_domain:indie_studio_production_hub",
+  "project_type_decision_source": "goal_or_context",
+  "project_archetype_decision_source": "project_domain:indie_studio_production_hub",
+  "shape_decision_source": "project_domain:indie_studio_production_hub",
+  "source_files": [
+    "project_output/5-20-bug/pyproject.toml",
+    "project_output/5-20-bug/scripts/run_project_web.py",
+    "project_output/5-20-bug/src/project_5_20_bug/__init__.py",
+    "project_output/5-20-bug/src/project_5_20_bug/models.py",
+    "project_output/5-20-bug/src/project_5_20_bug/seed.py",
+    "project_output/5-20-bug/src/project_5_20_bug/workspace.py",
+    "project_output/5-20-bug/src/project_5_20_bug/tasks.py",
+    "project_output/5-20-bug/src/project_5_20_bug/board.py",
+    "project_output/5-20-bug/src/project_5_20_bug/filters.py",
+    "project_output/5-20-bug/src/project_5_20_bug/activity.py",
+    "project_output/5-20-bug/src/project_5_20_bug/app.py",
+    "project_output/5-20-bug/src/project_5_20_bug/exporter.py",
+    "project_output/5-20-bug/src/project_5_20_bug/service.py",
+    "project_output/5-20-bug/tests/test_project_5_20_bug_service.py",
+    "project_output/5-20-bug/src/project_5_20_bug/dashboard.py",
+    "project_output/5-20-bug/src/project_5_20_bug/pages.py",
+    "project_output/5-20-bug/src/project_5_20_bug/search.py",
+    "project_output/5-20-bug/src/project_5_20_bug/import_export.py",
+    "project_output/5-20-bug/src/project_5_20_bug/settings.py",
+    "project_output/5-20-bug/src/project_5_20_bug/assets.py",
+    "project_output/5-20-bug/src/project_5_20_bug/bugs.py",
+    "project_output/5-20-bug/src/project_5_20_bug/releases.py",
+    "project_output/5-20-bug/src/project_5_20_bug/docs_center.py"
+  ],
+  "doc_files": [
+    "project_output/5-20-bug/README.md",
+    "project_output/5-20-bug/docs/00_CORE.md",
+    "project_output/5-20-bug/docs/web_workflow.md",
+    "project_output/5-20-bug/docs/feature_matrix.md",
+    "project_output/5-20-bug/docs/page_map.md",
+    "project_output/5-20-bug/docs/data_model_summary.md",
+    "project_output/5-20-bug/docs/milestone_plan.md",
+    "project_output/5-20-bug/docs/startup_guide.md",
+    "project_output/5-20-bug/docs/replay_guide.md",
+    "project_output/5-20-bug/docs/mid_stage_review.md"
+  ],
+  "workflow_files": [
+    "project_output/5-20-bug/meta/tasks/CURRENT.md",
+    "project_output/5-20-bug/meta/reports/LAST.md",
+    "project_output/5-20-bug/meta/manifest.json",
+    "project_output/5-20-bug/scripts/verify_repo.ps1"
+  ],
+  "business_files_generated": [
+    "project_output/5-20-bug/docs/data_model_summary.md",
+    "project_output/5-20-bug/docs/feature_matrix.md",
+    "project_output/5-20-bug/docs/mid_stage_review.md",
+    "project_output/5-20-bug/docs/milestone_plan.md",
+    "project_output/5-20-bug/docs/page_map.md",
+    "project_output/5-20-bug/docs/replay_guide.md",
+    "project_output/5-20-bug/docs/startup_guide.md",
+    "project_output/5-20-bug/scripts/run_project_web.py",
+    "project_output/5-20-bug/src/project_5_20_bug/activity.py",
+    "project_output/5-20-bug/src/project_5_20_bug/app.py",
+    "project_output/5-20-bug/src/project_5_20_bug/assets.py",
+    "project_output/5-20-bug/src/project_5_20_bug/board.py",
+    "project_output/5-20-bug/src/project_5_20_bug/bugs.py",
+    "project_output/5-20-bug/src/project_5_20_bug/dashboard.py",
+    "project_output/5-20-bug/src/project_5_20_bug/docs_center.py",
+    "project_output/5-20-bug/src/project_5_20_bug/exporter.py",
+    "project_output/5-20-bug/src/project_5_20_bug/filters.py",
+    "project_output/5-20-bug/src/project_5_20_bug/import_export.py",
+    "project_output/5-20-bug/src/project_5_20_bug/models.py",
+    "project_output/5-20-bug/src/project_5_20_bug/pages.py",
+    "project_output/5-20-bug/src/project_5_20_bug/releases.py",
+    "project_output/5-20-bug/src/project_5_20_bug/search.py",
+    "project_output/5-20-bug/src/project_5_20_bug/seed.py",
+    "project_output/5-20-bug/src/project_5_20_bug/service.py",
+    "project_output/5-20-bug/src/project_5_20_bug/settings.py",
+    "project_output/5-20-bug/src/project_5_20_bug/tasks.py",
+    "project_output/5-20-bug/src/project_5_20_bug/workspace.py",
+    "project_output/5-20-bug/tests/test_project_5_20_bug_service.py"
+  ],
+  "business_files_missing": [],
+  "generated_files": [
+    "artifacts/capability_plan.json",
+    "artifacts/deliverable_index.json",
+    "artifacts/docs_generation_report.json",
+    "artifacts/generation_quality_report.json",
+    "artifacts/output_contract_freeze.json",
+    "artifacts/project_manifest.json",
+    "artifacts/project_spec.json",
+    "artifacts/source_generation_report.json",
+    "artifacts/workflow_generation_report.json",
+    "project_output/5-20-bug/README.md",
+    "project_output/5-20-bug/artifacts/screenshots/02-project_list.png",
+    "project_output/5-20-bug/artifacts/screenshots/03-project_overview.png",
+    "project_output/5-20-bug/artifacts/screenshots/04-milestone_backlog.png",
+    "project_output/5-20-bug/artifacts/screenshots/05-task_board.png",
+    "project_output/5-20-bug/artifacts/screenshots/06-task_list.png",
+    "project_output/5-20-bug/artifacts/screenshots/07-task_detail.png",
+    "project_output/5-20-bug/artifacts/screenshots/08-asset_library.png",
+    "project_output/5-20-bug/artifacts/screenshots/09-asset_detail.png",
+    "project_output/5-20-bug/artifacts/screenshots/10-bug_tracker.png",
+    "project_output/5-20-bug/artifacts/screenshots/final-ui.png",
+    "project_output/5-20-bug/artifacts/screenshots/final-ui.source.html",
+    "project_output/5-20-bug/docs/00_CORE.md",
+    "project_output/5-20-bug/docs/data_model_summary.md",
+    "project_output/5-20-bug/docs/feature_matrix.md",
+    "project_output/5-20-bug/docs/mid_stage_review.md",
+    "project_output/5-20-bug/docs/milestone_plan.md",
+    "project_output/5-20-bug/docs/page_map.md",
+    "project_output/5-20-bug/docs/replay_guide.md",
+    "project_output/5-20-bug/docs/startup_guide.md",
+    "project_output/5-20-bug/docs/web_workflow.md",
+    "project_output/5-20-bug/meta/manifest.json",
+    "project_output/5-20-bug/meta/reports/LAST.md",
+    "project_output/5-20-bug/meta/tasks/CURRENT.md",
+    "project_output/5-20-bug/pyproject.toml",
+    "project_output/5-20-bug/scripts/run_project_web.py",
+    "project_output/5-20-bug/scripts/verify_repo.ps1",
+    "project_output/5-20-bug/src/project_5_20_bug/__init__.py",
+    "project_output/5-20-bug/src/project_5_20_bug/__pycache__/__init__.cpython-312.pyc",
+    "project_output/5-20-bug/src/project_5_20_bug/__pycache__/activity.cpython-312.pyc",
+    "project_output/5-20-bug/src/project_5_20_bug/__pycache__/app.cpython-312.pyc",
+    "project_output/5-20-bug/src/project_5_20_bug/__pycache__/assets.cpython-312.pyc",
+    "project_output/5-20-bug/src/project_5_20_bug/__pycache__/board.cpython-312.pyc",
+    "project_output/5-20-bug/src/project_5_20_bug/__pycache__/bugs.cpython-312.pyc",
+    "project_output/5-20-bug/src/project_5_20_bug/__pycache__/dashboard.cpython-312.pyc",
+    "project_output/5-20-bug/src/project_5_20_bug/__pycache__/docs_center.cpython-312.pyc",
+    "project_output/5-20-bug/src/project_5_20_bug/__pycache__/exporter.cpython-312.pyc",
+    "project_output/5-20-bug/src/project_5_20_bug/__pycache__/releases.cpython-312.pyc",
+    "project_output/5-20-bug/src/project_5_20_bug/__pycache__/seed.cpython-312.pyc",
+    "project_output/5-20-bug/src/project_5_20_bug/__pycache__/service.cpython-312.pyc",
+    "project_output/5-20-bug/src/project_5_20_bug/__pycache__/tasks.cpython-312.pyc",
+    "project_output/5-20-bug/src/project_5_20_bug/__pycache__/workspace.cpython-312.pyc",
+    "project_output/5-20-bug/src/project_5_20_bug/activity.py",
+    "project_output/5-20-bug/src/project_5_20_bug/app.py",
+    "project_output/5-20-bug/src/project_5_20_bug/assets.py",
+    "project_output/5-20-bug/src/project_5_20_bug/board.py",
+    "project_output/5-20-bug/src/project_5_20_bug/bugs.py",
+    "project_output/5-20-bug/src/project_5_20_bug/dashboard.py",
+    "project_output/5-20-bug/src/project_5_20_bug/docs_center.py",
+    "project_output/5-20-bug/src/project_5_20_bug/exporter.py",
+    "project_output/5-20-bug/src/project_5_20_bug/filters.py",
+    "project_output/5-20-bug/src/project_5_20_bug/import_export.py",
+    "project_output/5-20-bug/src/project_5_20_bug/models.py",
+    "project_output/5-20-bug/src/project_5_20_bug/pages.py",
+    "project_output/5-20-bug/src/project_5_20_bug/releases.py",
+    "project_output/5-20-bug/src/project_5_20_bug/search.py",
+    "project_output/5-20-bug/src/project_5_20_bug/seed.py",
+    "project_output/5-20-bug/src/project_5_20_bug/service.py",
+    "project_output/5-20-bug/src/project_5_20_bug/settings.py",
+    "project_output/5-20-bug/src/project_5_20_bug/tasks.py",
+    "project_output/5-20-bug/src/project_5_20_bug/workspace.py",
+    "project_output/5-20-bug/tests/test_project_5_20_bug_service.py"
+  ],
+  "missing_files": [],
+  "acceptance_files": [
+    "project_output/5-20-bug/README.md",
+    "project_output/5-20-bug/scripts/run_project_web.py",
+    "project_output/5-20-bug/docs/mid_stage_review.md"
+  ],
+  "startup_entrypoint": "project_output/5-20-bug/scripts/run_project_web.py",
+  "startup_readme": "project_output/5-20-bug/README.md",
+  "scaffold_run_dir": "",
+  "reference_project_mode": {
+    "enabled": true,
+    "mode": "structure_workflow_docs"
+  },
+  "reference_style_applied": [
+    "repo_script_layout",
+    "workflow_manifest_stage_chain",
+    "bridge_readable_manifest"
+  ],
+  "business_codegen_used": true,
+  "consumed_context_pack": true,
+  "consumed_context_files": [
+    "docs/41_low_capability_project_generation.md",
+    "docs/backend_interface_contract.md",
+    "scripts/project_generation_gate.py",
+    "scripts/project_manifest_bridge.py",
+    "workflow_registry/wf_project_generation_manifest/recipe.yaml"
+  ],
+  "context_influence_summary": [
+    "docs/41_low_capability_project_generation.md reinforced production/benchmark split and layered gate semantics",
+    "docs/backend_interface_contract.md reinforced manifest and deliver bridge fields",
+    "project_generation_gate rules influenced structural/behavioral/result gate reporting",
+    "project_manifest_bridge shaped bridge-readable manifest fields",
+    "workflow recipe preserved fixed stage ordering for output_contract/source_generation/deliver"
+  ],
+  "demo_required": true,
+  "visual_evidence_required": true,
+  "screenshot_required": true,
+  "visual_evidence_status": "provided",
+  "visual_evidence_files": [
+    "project_output/5-20-bug/artifacts/screenshots/final-ui.png"
+  ],
+  "visual_type": "real_export_page",
+  "benchmark_sample_applied": false,
+  "decision_nodes": [
+    "chair.output_contract_freeze",
+    "chair.source_generation"
+  ],
+  "flow_nodes": [
+    "librarian.context_pack",
+    "chair.docs_generation",
+    "chair.workflow_generation",
+    "chair.artifact_manifest_build",
+    "chair.deliver"
+  ],
+  "gate_layers": {
+    "structural": {
+      "passed": true,
+      "reason": "required files, manifest inputs, and deliverables are all present"
+    },
+    "behavioral": {
+      "passed": true,
+      "reason": "startup and export probes passed"
+    },
+    "result": {
+      "passed": true,
+      "target": "production_request_goal",
+      "reason": "runtime probes passed and screenshot evidence captured"
+    }
+  },
+  "behavioral_checks": {
+    "startup_probe": {
+      "command": "D:\\anaconda\\python.exe C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\project_output\\5-20-bug\\scripts\\run_project_web.py --serve",
+      "rc": 0,
+      "stdout_tail": "    \"task_board\",\n    \"task_list\",\n    \"task_detail\",\n    \"asset_library\",\n    \"asset_detail\",\n    \"bug_tracker\",\n    \"build_release_center\",\n    \"activity_feed\",\n    \"docs_center\",\n    \"project_settings\"\n  ]\n}",
+      "stderr_tail": "",
+      "status": "pass"
+    },
+    "export_probe": {
+      "command": "D:\\anaconda\\python.exe C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\project_output\\5-20-bug\\scripts\\run_project_web.py --goal smoke export --project-name Smoke Project --out C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_project_export_probe_sq_21hhh",
+      "rc": 0,
+      "stdout_tail": "{\n  \"demo_workspace_json\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_project_export_probe_sq_21hhh\\\\deliverables\\\\demo_workspace.json\",\n  \"asset_library_json\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_project_export_probe_sq_21hhh\\\\deliverables\\\\asset_library.json\",\n  \"bug_tracker_json\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_project_export_probe_sq_21hhh\\\\deliverables\\\\bug_tracker.json\",\n  \"build_records_json\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_project_export_probe_sq_21hhh\\\\deliverables\\\\build_records.json\",\n  \"release_summary_json\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_project_export_probe_sq_21hhh\\\\deliverables\\\\release_summary.json\",\n  \"docs_center_json\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_project_export_probe_sq_21hhh\\\\deliverables\\\\docs_center.json\",\n  \"activity_feed_json\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_project_export_probe_sq_21hhh\\\\deliverables\\\\activity_feed.json\",\n  \"preview_html\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_project_export_probe_sq_21hhh\\\\deliverables\\\\preview.html\",\n  \"acceptance_report_json\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_project_export_probe_sq_21hhh\\\\deliverables\\\\acceptance_report.json\",\n  \"acceptance_bundle_zip\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_project_export_probe_sq_21hhh\\\\deliverables\\\\acceptance_bundle.zip\"\n}",
+      "stderr_tail": "",
+      "status": "pass"
+    }
+  },
+  "domain_compatibility": {
+    "passed": true,
+    "project_domain": "indie_studio_production_hub",
+    "scaffold_family": "indie_studio_hub",
+    "allowed_families": [
+      "indie_studio_hub"
+    ],
+    "incompatible_families": [
+      "team_task_pm",
+      "generic_copilot",
+      "web_service",
+      "pointcloud_reconstruction"
+    ],
+    "reasons": []
+  },
+  "readme_quality": {
+    "passed": true,
+    "path": "project_output/5-20-bug/README.md",
+    "required_sections": [
+      "what_this_project_is",
+      "implemented",
+      "not_implemented",
+      "how_to_run",
+      "sample_data",
+      "directory_map",
+      "limitations"
+    ],
+    "present_sections": [
+      "what_this_project_is",
+      "implemented",
+      "not_implemented",
+      "how_to_run",
+      "sample_data",
+      "directory_map",
+      "limitations"
+    ],
+    "missing_sections": [],
+    "escaped_literal_hits": [],
+    "placeholder_hits": [],
+    "goal_dump_detected": false,
+    "reasons": []
+  },
+  "ux_validation": {
+    "required": true,
+    "passed": true,
+    "visual_type": "real_export_page",
+    "files": [
+      "project_output/5-20-bug/artifacts/screenshots/final-ui.png"
+    ],
+    "preview_source": "project_output/5-20-bug/artifacts/screenshots/final-ui.source.html",
+    "matched_keywords": [
+      "dashboard",
+      "asset",
+      "bug",
+      "build",
+      "release",
+      "docs",
+      "milestone"
+    ],
+    "section_hits": {
+      "project_loader": [],
+      "story_editor": [],
+      "cast_assets": [],
+      "preview_export": []
+    },
+    "interaction_acceptance": {
+      "passed": false,
+      "control_hits": {
+        "forms": [],
+        "inputs": [],
+        "actions": [],
+        "hooks": []
+      },
+      "state_diff_present": false,
+      "interaction_trace_present": false,
+      "workspace_snapshot_present": false,
+      "applied_operation_count": 0,
+      "state_change_count": 0,
+      "reasons": [
+        "preview evidence missing interaction controls: forms",
+        "preview evidence missing interaction controls: inputs",
+        "preview evidence missing interaction controls: actions",
+        "preview evidence missing interaction controls: hooks",
+        "preview evidence missing interaction trace",
+        "preview evidence missing workspace snapshot",
+        "preview evidence missing export script"
+      ]
+    },
+    "reasons": []
+  },
+  "visual_evidence_capture": {
+    "status": "provided",
+    "reason": "runtime probes passed and a real export page screenshot was captured",
+    "visual_type": "real_export_page",
+    "files": [
+      "project_output/5-20-bug/artifacts/screenshots/final-ui.png"
+    ],
+    "source_files": [
+      "deliverables/acceptance_bundle.zip",
+      "deliverables/acceptance_report.json",
+      "deliverables/activity_feed.json",
+      "deliverables/asset_library.json",
+      "deliverables/bug_tracker.json",
+      "deliverables/build_records.json",
+      "deliverables/demo_workspace.json",
+      "deliverables/docs_center.json"
+    ],
+    "preview_source": "project_output/5-20-bug/artifacts/screenshots/final-ui.source.html"
+  },
+  "build_profile": "high_quality_extended",
+  "product_depth": "extended",
+  "required_pages": 13,
+  "required_screenshots": 10,
+  "extended_coverage": {
+    "schema_version": "ctcp-extended-coverage-ledger-v1",
+    "build_profile": "high_quality_extended",
+    "product_depth": "extended",
+    "implemented_pages": [
+      "dashboard",
+      "project_list",
+      "project_overview",
+      "milestone_backlog",
+      "task_board",
+      "task_list",
+      "task_detail",
+      "asset_library",
+      "asset_detail",
+      "bug_tracker",
+      "build_release_center",
+      "activity_feed",
+      "docs_center",
+      "project_settings"
+    ],
+    "documentation_files": [
+      "project_output/5-20-bug/docs/feature_matrix.md",
+      "project_output/5-20-bug/docs/page_map.md",
+      "project_output/5-20-bug/docs/data_model_summary.md",
+      "project_output/5-20-bug/docs/milestone_plan.md",
+      "project_output/5-20-bug/docs/startup_guide.md",
+      "project_output/5-20-bug/docs/replay_guide.md",
+      "project_output/5-20-bug/docs/mid_stage_review.md"
+    ],
+    "screenshot_files": [
+      "project_output/5-20-bug/artifacts/screenshots/final-ui.png",
+      "project_output/5-20-bug/artifacts/screenshots/02-project_list.png",
+      "project_output/5-20-bug/artifacts/screenshots/03-project_overview.png",
+      "project_output/5-20-bug/artifacts/screenshots/04-milestone_backlog.png",
+      "project_output/5-20-bug/artifacts/screenshots/05-task_board.png",
+      "project_output/5-20-bug/artifacts/screenshots/06-task_list.png",
+      "project_output/5-20-bug/artifacts/screenshots/07-task_detail.png",
+      "project_output/5-20-bug/artifacts/screenshots/08-asset_library.png",
+      "project_output/5-20-bug/artifacts/screenshots/09-asset_detail.png",
+      "project_output/5-20-bug/artifacts/screenshots/10-bug_tracker.png"
+    ],
+    "coverage": {
+      "pages": {
+        "required": 13,
+        "actual": 14,
+        "passed": true
+      },
+      "screenshots": {
+        "required": 10,
+        "actual": 10,
+        "passed": true
+      },
+      "feature_matrix": {
+        "passed": true
+      },
+      "page_map": {
+        "passed": true
+      },
+      "data_model_summary": {
+        "passed": true
+      },
+      "search": {
+        "passed": true
+      },
+      "import_export": {
+        "passed": true
+      },
+      "dashboard_or_project_overview": {
+        "passed": true
+      },
+      "asset_library": {
+        "passed": true
+      },
+      "asset_detail": {
+        "passed": true
+      },
+      "bug_tracker": {
+        "passed": true
+      },
+      "build_release_center": {
+        "passed": true
+      },
+      "docs_center": {
+        "passed": true
+      },
+      "milestone_plan": {
+        "passed": true
+      },
+      "startup_guide": {
+        "passed": true
+      },
+      "replay_guide": {
+        "passed": true
+      },
+      "mid_stage_review": {
+        "passed": true
+      }
+    },
+    "passed": true
+  },
+  "extended_coverage_ledger_path": "artifacts/extended_coverage_ledger.json",
+  "generic_validation": {
+    "passed": true,
+    "has_runnable_entrypoint": true,
+    "readme_startup_ready": true,
+    "core_user_flow": [
+      "start the generated project from README",
+      "execute one smoke export or equivalent core path"
+    ],
+    "core_feature_files": [
+      "project_output/5-20-bug/docs/data_model_summary.md",
+      "project_output/5-20-bug/docs/feature_matrix.md",
+      "project_output/5-20-bug/docs/mid_stage_review.md",
+      "project_output/5-20-bug/docs/milestone_plan.md",
+      "project_output/5-20-bug/docs/page_map.md",
+      "project_output/5-20-bug/docs/replay_guide.md",
+      "project_output/5-20-bug/docs/startup_guide.md",
+      "project_output/5-20-bug/scripts/run_project_web.py",
+      "project_output/5-20-bug/src/project_5_20_bug/activity.py",
+      "project_output/5-20-bug/src/project_5_20_bug/app.py",
+      "project_output/5-20-bug/src/project_5_20_bug/assets.py",
+      "project_output/5-20-bug/src/project_5_20_bug/board.py",
+      "project_output/5-20-bug/src/project_5_20_bug/bugs.py",
+      "project_output/5-20-bug/src/project_5_20_bug/dashboard.py",
+      "project_output/5-20-bug/src/project_5_20_bug/docs_center.py",
+      "project_output/5-20-bug/src/project_5_20_bug/exporter.py",
+      "project_output/5-20-bug/src/project_5_20_bug/filters.py",
+      "project_output/5-20-bug/src/project_5_20_bug/import_export.py",
+      "project_output/5-20-bug/src/project_5_20_bug/models.py",
+      "project_output/5-20-bug/src/project_5_20_bug/pages.py",
+      "project_output/5-20-bug/src/project_5_20_bug/releases.py",
+      "project_output/5-20-bug/src/project_5_20_bug/search.py",
+      "project_output/5-20-bug/src/project_5_20_bug/seed.py",
+      "project_output/5-20-bug/src/project_5_20_bug/service.py",
+      "project_output/5-20-bug/src/project_5_20_bug/settings.py",
+      "project_output/5-20-bug/src/project_5_20_bug/tasks.py",
+      "project_output/5-20-bug/src/project_5_20_bug/workspace.py",
+      "project_output/5-20-bug/tests/test_project_5_20_bug_service.py"
+    ],
+    "placeholder_hits": [],
+    "python_syntax": {
+      "checked_files": [
+        "project_output/5-20-bug/scripts/run_project_web.py",
+        "project_output/5-20-bug/src/project_5_20_bug/activity.py",
+        "project_output/5-20-bug/src/project_5_20_bug/app.py",
+        "project_output/5-20-bug/src/project_5_20_bug/assets.py",
+        "project_output/5-20-bug/src/project_5_20_bug/board.py",
+        "project_output/5-20-bug/src/project_5_20_bug/bugs.py",
+        "project_output/5-20-bug/src/project_5_20_bug/dashboard.py",
+        "project_output/5-20-bug/src/project_5_20_bug/docs_center.py",
+        "project_output/5-20-bug/src/project_5_20_bug/exporter.py",
+        "project_output/5-20-bug/src/project_5_20_bug/filters.py",
+        "project_output/5-20-bug/src/project_5_20_bug/import_export.py",
+        "project_output/5-20-bug/src/project_5_20_bug/models.py",
+        "project_output/5-20-bug/src/project_5_20_bug/pages.py",
+        "project_output/5-20-bug/src/project_5_20_bug/releases.py",
+        "project_output/5-20-bug/src/project_5_20_bug/search.py",
+        "project_output/5-20-bug/src/project_5_20_bug/seed.py",
+        "project_output/5-20-bug/src/project_5_20_bug/service.py",
+        "project_output/5-20-bug/src/project_5_20_bug/settings.py",
+        "project_output/5-20-bug/src/project_5_20_bug/tasks.py",
+        "project_output/5-20-bug/src/project_5_20_bug/workspace.py",
+        "project_output/5-20-bug/tests/test_project_5_20_bug_service.py"
+      ],
+      "syntax_errors": [],
+      "passed": true
+    },
+    "delivery_package": [
+      "project_output/5-20-bug/README.md",
+      "project_output/5-20-bug/scripts/run_project_web.py",
+      "project_output/5-20-bug/docs/mid_stage_review.md"
+    ],
+    "smoke_run": {
+      "startup_probe": {
+        "command": "D:\\anaconda\\python.exe C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\project_output\\5-20-bug\\scripts\\run_project_web.py --serve",
+        "rc": 0,
+        "stdout_tail": "    \"task_board\",\n    \"task_list\",\n    \"task_detail\",\n    \"asset_library\",\n    \"asset_detail\",\n    \"bug_tracker\",\n    \"build_release_center\",\n    \"activity_feed\",\n    \"docs_center\",\n    \"project_settings\"\n  ]\n}",
+        "stderr_tail": "",
+        "status": "pass"
+      },
+      "export_probe": {
+        "command": "D:\\anaconda\\python.exe C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\project_output\\5-20-bug\\scripts\\run_project_web.py --goal smoke export --project-name Smoke Project --out C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_project_export_probe_sq_21hhh",
+        "rc": 0,
+        "stdout_tail": "{\n  \"demo_workspace_json\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_project_export_probe_sq_21hhh\\\\deliverables\\\\demo_workspace.json\",\n  \"asset_library_json\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_project_export_probe_sq_21hhh\\\\deliverables\\\\asset_library.json\",\n  \"bug_tracker_json\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_project_export_probe_sq_21hhh\\\\deliverables\\\\bug_tracker.json\",\n  \"build_records_json\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_project_export_probe_sq_21hhh\\\\deliverables\\\\build_records.json\",\n  \"release_summary_json\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_project_export_probe_sq_21hhh\\\\deliverables\\\\release_summary.json\",\n  \"docs_center_json\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_project_export_probe_sq_21hhh\\\\deliverables\\\\docs_center.json\",\n  \"activity_feed_json\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_project_export_probe_sq_21hhh\\\\deliverables\\\\activity_feed.json\",\n  \"preview_html\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_project_export_probe_sq_21hhh\\\\deliverables\\\\preview.html\",\n  \"acceptance_report_json\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_project_export_probe_sq_21hhh\\\\deliverables\\\\acceptance_report.json\",\n  \"acceptance_bundle_zip\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_project_export_probe_sq_21hhh\\\\deliverables\\\\acceptance_bundle.zip\"\n}",
+        "stderr_tail": "",
+        "status": "pass"
+      },
+      "passed": true
+    }
+  },
+  "domain_validation": {
+    "kind": "indie_studio_production_hub",
+    "passed": true,
+    "checks": [
+      "generated /workspace.py",
+      "generated /tasks.py",
+      "generated /board.py",
+      "generated /filters.py",
+      "generated /activity.py",
+      "generated /assets.py",
+      "generated /bugs.py",
+      "generated /releases.py",
+      "generated /docs_center.py",
+      "generated /app.py",
+      "generated /exporter.py",
+      "generated /service.py",
+      "indie studio hub task_management capability detected",
+      "indie studio hub asset_management capability detected",
+      "indie studio hub bug_tracking capability detected",
+      "indie studio hub build_release capability detected",
+      "indie studio hub docs_delivery capability detected",
+      "indie studio hub startup entrypoint present",
+      "README explains Indie Studio Hub startup and domain surfaces"
+    ],
+    "missing": [],
+    "contamination_hits": []
+  },
+  "product_validation": {
+    "profile": "indie_studio_hub",
+    "required": true,
+    "passed": true,
+    "checks": [
+      "indie studio hub capability detected: task_management",
+      "indie studio hub capability detected: asset_management",
+      "indie studio hub capability detected: bug_tracking",
+      "indie studio hub capability detected: build_release",
+      "indie studio hub capability detected: docs_delivery"
+    ],
+    "missing": [],
+    "reasons": [],
+    "fallback_detected": false,
+    "detected_groups": [
+      "asset_management",
+      "bug_tracking",
+      "build_release",
+      "docs_delivery",
+      "task_management"
+    ],
+    "evidence": {
+      "task_management": [
+        "project_output/5-20-bug/src/project_5_20_bug/app.py",
+        "project_output/5-20-bug/src/project_5_20_bug/board.py",
+        "project_output/5-20-bug/src/project_5_20_bug/exporter.py",
+        "project_output/5-20-bug/src/project_5_20_bug/pages.py",
+        "project_output/5-20-bug/src/project_5_20_bug/seed.py",
+        "project_output/5-20-bug/src/project_5_20_bug/service.py",
+        "project_output/5-20-bug/src/project_5_20_bug/tasks.py"
+      ],
+      "asset_management": [
+        "project_output/5-20-bug/src/project_5_20_bug/app.py",
+        "project_output/5-20-bug/src/project_5_20_bug/assets.py",
+        "project_output/5-20-bug/src/project_5_20_bug/dashboard.py",
+        "project_output/5-20-bug/src/project_5_20_bug/exporter.py",
+        "project_output/5-20-bug/src/project_5_20_bug/pages.py",
+        "project_output/5-20-bug/src/project_5_20_bug/seed.py",
+        "project_output/5-20-bug/src/project_5_20_bug/service.py",
+        "project_output/5-20-bug/tests/test_project_5_20_bug_service.py"
+      ],
+      "bug_tracking": [
+        "project_output/5-20-bug/src/project_5_20_bug/app.py",
+        "project_output/5-20-bug/src/project_5_20_bug/bugs.py",
+        "project_output/5-20-bug/src/project_5_20_bug/dashboard.py",
+        "project_output/5-20-bug/src/project_5_20_bug/exporter.py",
+        "project_output/5-20-bug/src/project_5_20_bug/pages.py",
+        "project_output/5-20-bug/src/project_5_20_bug/releases.py",
+        "project_output/5-20-bug/src/project_5_20_bug/seed.py",
+        "project_output/5-20-bug/src/project_5_20_bug/service.py",
+        "project_output/5-20-bug/tests/test_project_5_20_bug_service.py"
+      ],
+      "build_release": [
+        "project_output/5-20-bug/src/project_5_20_bug/app.py",
+        "project_output/5-20-bug/src/project_5_20_bug/dashboard.py",
+        "project_output/5-20-bug/src/project_5_20_bug/exporter.py",
+        "project_output/5-20-bug/src/project_5_20_bug/pages.py",
+        "project_output/5-20-bug/src/project_5_20_bug/releases.py",
+        "project_output/5-20-bug/src/project_5_20_bug/seed.py",
+        "project_output/5-20-bug/tests/test_project_5_20_bug_service.py"
+      ],
+      "docs_delivery": [
+        "project_output/5-20-bug/src/project_5_20_bug/app.py",
+        "project_output/5-20-bug/src/project_5_20_bug/docs_center.py",
+        "project_output/5-20-bug/src/project_5_20_bug/exporter.py",
+        "project_output/5-20-bug/src/project_5_20_bug/pages.py",
+        "project_output/5-20-bug/src/project_5_20_bug/search.py",
+        "project_output/5-20-bug/src/project_5_20_bug/seed.py",
+        "project_output/5-20-bug/src/project_5_20_bug/service.py",
+        "project_output/5-20-bug/src/project_5_20_bug/settings.py",
+        "project_output/5-20-bug/tests/test_project_5_20_bug_service.py"
+      ]
+    }
+  },
+  "artifacts": [
+    {
+      "rel_path": "api_calls.jsonl",
+      "size_bytes": 2724
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200651_chair_plan_draft/acceptance.json",
+      "size_bytes": 838
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200651_chair_plan_draft/request.json",
+      "size_bytes": 3415
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200651_chair_plan_draft/result.json",
+      "size_bytes": 3448
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200739_chair_file_request/acceptance.json",
+      "size_bytes": 866
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200739_chair_file_request/request.json",
+      "size_bytes": 4290
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200739_chair_file_request/result.json",
+      "size_bytes": 3307
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200830_librarian_context_pack/acceptance.json",
+      "size_bytes": 893
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200830_librarian_context_pack/request.json",
+      "size_bytes": 3614
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200830_librarian_context_pack/result.json",
+      "size_bytes": 3203
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200856_chair_plan_draft/acceptance.json",
+      "size_bytes": 844
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200856_chair_plan_draft/request.json",
+      "size_bytes": 3619
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200856_chair_plan_draft/result.json",
+      "size_bytes": 2959
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200906_contract_guardian_review_contract/acceptance.json",
+      "size_bytes": 944
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200906_contract_guardian_review_contract/request.json",
+      "size_bytes": 3669
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200906_contract_guardian_review_contract/result.json",
+      "size_bytes": 3041
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200918_cost_controller_review_cost/acceptance.json",
+      "size_bytes": 900
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200918_cost_controller_review_cost/request.json",
+      "size_bytes": 3669
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200918_cost_controller_review_cost/result.json",
+      "size_bytes": 3049
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200934_chair_plan_signed/acceptance.json",
+      "size_bytes": 838
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200934_chair_plan_signed/request.json",
+      "size_bytes": 3665
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200934_chair_plan_signed/result.json",
+      "size_bytes": 2978
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200946_chair_output_contract_freeze/acceptance.json",
+      "size_bytes": 941
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200946_chair_output_contract_freeze/request.json",
+      "size_bytes": 3685
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T200946_chair_output_contract_freeze/result.json",
+      "size_bytes": 3028
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T201001_chair_source_generation/acceptance.json",
+      "size_bytes": 915
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T201001_chair_source_generation/request.json",
+      "size_bytes": 3691
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T201001_chair_source_generation/result.json",
+      "size_bytes": 3054
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T201018_chair_docs_generation/acceptance.json",
+      "size_bytes": 899
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T201018_chair_docs_generation/request.json",
+      "size_bytes": 3736
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T201018_chair_docs_generation/result.json",
+      "size_bytes": 3058
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T201041_chair_workflow_generation/acceptance.json",
+      "size_bytes": 931
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T201041_chair_workflow_generation/request.json",
+      "size_bytes": 3743
+    },
+    {
+      "rel_path": "artifacts/acceptance/20260424T201041_chair_workflow_generation/result.json",
+      "size_bytes": 3077
+    },
+    {
+      "rel_path": "artifacts/acceptance/ledger.jsonl",
+      "size_bytes": 8808
+    },
+    {
+      "rel_path": "artifacts/analysis.md",
+      "size_bytes": 3781
+    },
+    {
+      "rel_path": "artifacts/capability_plan.json",
+      "size_bytes": 5662
+    },
+    {
+      "rel_path": "artifacts/context_pack.json",
+      "size_bytes": 2288
+    },
+    {
+      "rel_path": "artifacts/delivery_evidence_manifest.json",
+      "size_bytes": 5210
+    },
+    {
+      "rel_path": "artifacts/dispatch_config.json",
+      "size_bytes": 191
+    },
+    {
+      "rel_path": "artifacts/docs_generation_report.json",
+      "size_bytes": 5480
+    },
+    {
+      "rel_path": "artifacts/extended_coverage_ledger.json",
+      "size_bytes": 2709
+    },
+    {
+      "rel_path": "artifacts/file_request.json",
+      "size_bytes": 2816
+    },
+    {
+      "rel_path": "artifacts/find_result.json",
+      "size_bytes": 2854
+    },
+    {
+      "rel_path": "artifacts/frontend_request.json",
+      "size_bytes": 1923
+    },
+    {
+      "rel_path": "artifacts/generation_quality_report.json",
+      "size_bytes": 9513
+    },
+    {
+      "rel_path": "artifacts/guardrails.md",
+      "size_bytes": 161
+    },
+    {
+      "rel_path": "artifacts/guardrails.template.md",
+      "size_bytes": 161
+    },
+    {
+      "rel_path": "artifacts/output_contract_freeze.json",
+      "size_bytes": 29755
+    },
+    {
+      "rel_path": "artifacts/PLAN.md",
+      "size_bytes": 1357
+    },
+    {
+      "rel_path": "artifacts/PLAN_draft.md",
+      "size_bytes": 1356
+    },
+    {
+      "rel_path": "artifacts/project_spec.json",
+      "size_bytes": 5426
+    },
+    {
+      "rel_path": "artifacts/run_manifest.json",
+      "size_bytes": 850
+    },
+    {
+      "rel_path": "artifacts/sample_generation/asset_seed.json",
+      "size_bytes": 179
+    },
+    {
+      "rel_path": "artifacts/sample_generation/bug_seed.json",
+      "size_bytes": 177
+    },
+    {
+      "rel_path": "artifacts/sample_generation/build_seed.json",
+      "size_bytes": 179
+    },
+    {
+      "rel_path": "artifacts/sample_generation/demo_users.json",
+      "size_bytes": 179
+    },
+    {
+      "rel_path": "artifacts/sample_generation/doc_seed.json",
+      "size_bytes": 177
+    },
+    {
+      "rel_path": "artifacts/sample_generation/project_seed.json",
+      "size_bytes": 181
+    },
+    {
+      "rel_path": "artifacts/sample_generation/source_map.json",
+      "size_bytes": 179
+    },
+    {
+      "rel_path": "artifacts/sample_generation/task_seed.json",
+      "size_bytes": 178
+    },
+    {
+      "rel_path": "artifacts/sample_generation/workspace_seed.json",
+      "size_bytes": 183
+    },
+    {
+      "rel_path": "artifacts/source_generation_report.json",
+      "size_bytes": 62384
+    },
+    {
+      "rel_path": "artifacts/support_frontend_turns.jsonl",
+      "size_bytes": 594
+    },
+    {
+      "rel_path": "artifacts/support_runtime_state.json",
+      "size_bytes": 3195
+    },
+    {
+      "rel_path": "artifacts/support_whiteboard.json",
+      "size_bytes": 11377
+    },
+    {
+      "rel_path": "artifacts/support_whiteboard.md",
+      "size_bytes": 1649
+    },
+    {
+      "rel_path": "artifacts/workflow_generation_report.json",
+      "size_bytes": 5173
+    },
+    {
+      "rel_path": "events.jsonl",
+      "size_bytes": 3225
+    },
+    {
+      "rel_path": "logs/agent.attempt_01.stderr",
+      "size_bytes": 0
+    },
+    {
+      "rel_path": "logs/agent.attempt_01.stdout",
+      "size_bytes": 1940
+    },
+    {
+      "rel_path": "logs/agent.stderr",
+      "size_bytes": 0
+    },
+    {
+      "rel_path": "logs/agent.stdout",
+      "size_bytes": 1940
+    },
+    {
+      "rel_path": "logs/find.stderr.log",
+      "size_bytes": 0
+    },
+    {
+      "rel_path": "logs/find.stdout.log",
+      "size_bytes": 195
+    },
+    {
+      "rel_path": "logs/ollama_librarian.stderr.log",
+      "size_bytes": 0
+    },
+    {
+      "rel_path": "logs/ollama_librarian.stdout.log",
+      "size_bytes": 4769
+    },
+    {
+      "rel_path": "logs/plan_agent.stderr",
+      "size_bytes": 0
+    },
+    {
+      "rel_path": "logs/plan_agent.stdout",
+      "size_bytes": 2148
+    },
+    {
+      "rel_path": "project_output/5-20-bug/artifacts/screenshots/02-project_list.png",
+      "size_bytes": 1708
+    },
+    {
+      "rel_path": "project_output/5-20-bug/artifacts/screenshots/03-project_overview.png",
+      "size_bytes": 1792
+    },
+    {
+      "rel_path": "project_output/5-20-bug/artifacts/screenshots/04-milestone_backlog.png",
+      "size_bytes": 1806
+    },
+    {
+      "rel_path": "project_output/5-20-bug/artifacts/screenshots/05-task_board.png",
+      "size_bytes": 1683
+    },
+    {
+      "rel_path": "project_output/5-20-bug/artifacts/screenshots/06-task_list.png",
+      "size_bytes": 1671
+    },
+    {
+      "rel_path": "project_output/5-20-bug/artifacts/screenshots/07-task_detail.png",
+      "size_bytes": 1663
+    },
+    {
+      "rel_path": "project_output/5-20-bug/artifacts/screenshots/08-asset_library.png",
+      "size_bytes": 1688
+    },
+    {
+      "rel_path": "project_output/5-20-bug/artifacts/screenshots/09-asset_detail.png",
+      "size_bytes": 1653
+    },
+    {
+      "rel_path": "project_output/5-20-bug/artifacts/screenshots/10-bug_tracker.png",
+      "size_bytes": 1723
+    },
+    {
+      "rel_path": "project_output/5-20-bug/artifacts/screenshots/final-ui.png",
+      "size_bytes": 79625
+    },
+    {
+      "rel_path": "project_output/5-20-bug/artifacts/screenshots/final-ui.source.html",
+      "size_bytes": 4966
+    },
+    {
+      "rel_path": "project_output/5-20-bug/docs/00_CORE.md",
+      "size_bytes": 336
+    },
+    {
+      "rel_path": "project_output/5-20-bug/docs/data_model_summary.md",
+      "size_bytes": 142
+    },
+    {
+      "rel_path": "project_output/5-20-bug/docs/feature_matrix.md",
+      "size_bytes": 217
+    },
+    {
+      "rel_path": "project_output/5-20-bug/docs/mid_stage_review.md",
+      "size_bytes": 111
+    },
+    {
+      "rel_path": "project_output/5-20-bug/docs/milestone_plan.md",
+      "size_bytes": 95
+    },
+    {
+      "rel_path": "project_output/5-20-bug/docs/page_map.md",
+      "size_bytes": 250
+    },
+    {
+      "rel_path": "project_output/5-20-bug/docs/replay_guide.md",
+      "size_bytes": 121
+    },
+    {
+      "rel_path": "project_output/5-20-bug/docs/startup_guide.md",
+      "size_bytes": 115
+    },
+    {
+      "rel_path": "project_output/5-20-bug/docs/web_workflow.md",
+      "size_bytes": 378
+    },
+    {
+      "rel_path": "project_output/5-20-bug/meta/manifest.json",
+      "size_bytes": 642
+    },
+    {
+      "rel_path": "project_output/5-20-bug/meta/reports/LAST.md",
+      "size_bytes": 436
+    },
+    {
+      "rel_path": "project_output/5-20-bug/meta/tasks/CURRENT.md",
+      "size_bytes": 153
+    },
+    {
+      "rel_path": "project_output/5-20-bug/pyproject.toml",
+      "size_bytes": 184
+    },
+    {
+      "rel_path": "project_output/5-20-bug/README.md",
+      "size_bytes": 2667
+    },
+    {
+      "rel_path": "project_output/5-20-bug/scripts/run_project_web.py",
+      "size_bytes": 1216
+    },
+    {
+      "rel_path": "project_output/5-20-bug/scripts/verify_repo.ps1",
+      "size_bytes": 359
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/__init__.py",
+      "size_bytes": 39
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/__pycache__/__init__.cpython-312.pyc",
+      "size_bytes": 288
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/__pycache__/activity.cpython-312.pyc",
+      "size_bytes": 1674
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/__pycache__/app.cpython-312.pyc",
+      "size_bytes": 12964
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/__pycache__/assets.cpython-312.pyc",
+      "size_bytes": 2074
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/__pycache__/board.cpython-312.pyc",
+      "size_bytes": 1761
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/__pycache__/bugs.cpython-312.pyc",
+      "size_bytes": 1737
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/__pycache__/dashboard.cpython-312.pyc",
+      "size_bytes": 1254
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/__pycache__/docs_center.cpython-312.pyc",
+      "size_bytes": 1008
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/__pycache__/exporter.cpython-312.pyc",
+      "size_bytes": 4078
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/__pycache__/releases.cpython-312.pyc",
+      "size_bytes": 2012
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/__pycache__/seed.cpython-312.pyc",
+      "size_bytes": 4435
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/__pycache__/service.cpython-312.pyc",
+      "size_bytes": 2850
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/__pycache__/tasks.cpython-312.pyc",
+      "size_bytes": 2474
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/__pycache__/workspace.cpython-312.pyc",
+      "size_bytes": 3249
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/activity.py",
+      "size_bytes": 1066
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/app.py",
+      "size_bytes": 6702
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/assets.py",
+      "size_bytes": 1326
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/board.py",
+      "size_bytes": 798
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/bugs.py",
+      "size_bytes": 1062
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/dashboard.py",
+      "size_bytes": 623
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/docs_center.py",
+      "size_bytes": 638
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/exporter.py",
+      "size_bytes": 3353
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/filters.py",
+      "size_bytes": 722
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/import_export.py",
+      "size_bytes": 429
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/models.py",
+      "size_bytes": 1339
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/pages.py",
+      "size_bytes": 383
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/releases.py",
+      "size_bytes": 1280
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/search.py",
+      "size_bytes": 568
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/seed.py",
+      "size_bytes": 5529
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/service.py",
+      "size_bytes": 2031
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/settings.py",
+      "size_bytes": 352
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/tasks.py",
+      "size_bytes": 1786
+    },
+    {
+      "rel_path": "project_output/5-20-bug/src/project_5_20_bug/workspace.py",
+      "size_bytes": 1760
+    },
+    {
+      "rel_path": "project_output/5-20-bug/tests/test_project_5_20_bug_service.py",
+      "size_bytes": 2059
+    },
+    {
+      "rel_path": "repo_ref.json",
+      "size_bytes": 233
+    },
+    {
+      "rel_path": "reviews/review_contract.md",
+      "size_bytes": 103
+    },
+    {
+      "rel_path": "reviews/review_cost.md",
+      "size_bytes": 99
+    },
+    {
+      "rel_path": "RUN.json",
+      "size_bytes": 832
+    },
+    {
+      "rel_path": "step_meta.jsonl",
+      "size_bytes": 6645
+    },
+    {
+      "rel_path": "TRACE.md",
+      "size_bytes": 1710
+    }
+  ]
+}

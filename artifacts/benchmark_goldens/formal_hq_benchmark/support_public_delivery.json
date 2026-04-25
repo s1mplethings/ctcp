@@ -1,0 +1,144 @@
+{
+  "schema_version": "ctcp-support-public-delivery-v1",
+  "ts": "2026-04-22T11:39:20Z",
+  "requested_actions": [
+    {
+      "type": "send_project_screenshot",
+      "count": 2
+    },
+    {
+      "type": "send_project_package",
+      "format": "zip"
+    }
+  ],
+  "deliveries": [
+    {
+      "type": "photo",
+      "path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\project_output\\mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das\\artifacts\\screenshots\\final-ui.png",
+      "caption": "这是当前项目可直接发送的截图。"
+    },
+    {
+      "type": "photo",
+      "path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\project_output\\mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das\\artifacts\\screenshots\\02-project_list.png",
+      "caption": ""
+    },
+    {
+      "type": "document",
+      "path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\artifacts\\final_project_bundle.zip",
+      "caption": "这里是当前可直接交付的 final project bundle zip。"
+    }
+  ],
+  "internal_artifacts": [],
+  "errors": [],
+  "delivery_mode": "e2e_virtual_delivery",
+  "manifest_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\artifacts\\support_public_delivery.json",
+  "sent": [
+    {
+      "type": "photo",
+      "path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\project_output\\mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das\\artifacts\\screenshots\\final-ui.png",
+      "caption": "这是当前项目可直接发送的截图。",
+      "transport": "virtual_delivery",
+      "delivery_mode": "e2e_virtual_delivery",
+      "delivered_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\artifacts\\support_exports\\virtual_delivery\\sent\\photos\\final-ui.png",
+      "source_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\project_output\\mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das\\artifacts\\screenshots\\final-ui.png",
+      "chat_id": 0,
+      "bytes": 92488,
+      "sha256": "a10bcad2b8784d293e6cd31462cf30c95d6971f936f28f8f7e007c8f51a35e5a"
+    },
+    {
+      "type": "photo",
+      "path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\project_output\\mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das\\artifacts\\screenshots\\02-project_list.png",
+      "caption": "",
+      "transport": "virtual_delivery",
+      "delivery_mode": "e2e_virtual_delivery",
+      "delivered_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\artifacts\\support_exports\\virtual_delivery\\sent\\photos\\02-project_list.png",
+      "source_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\project_output\\mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das\\artifacts\\screenshots\\02-project_list.png",
+      "chat_id": 0,
+      "bytes": 1563,
+      "sha256": "68328fca9c8685377642a59c76063065b922206d9faffc5a06d3a6d0d3e80082"
+    },
+    {
+      "type": "document",
+      "path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\artifacts\\final_project_bundle.zip",
+      "caption": "这里是当前可直接交付的 final project bundle zip。",
+      "transport": "virtual_delivery",
+      "delivery_mode": "e2e_virtual_delivery",
+      "delivered_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\artifacts\\support_exports\\virtual_delivery\\sent\\documents\\final_project_bundle.zip",
+      "source_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\artifacts\\final_project_bundle.zip",
+      "chat_id": 0,
+      "bytes": 132526,
+      "sha256": "dd6e491dc283dd646627b7a8bdf5dfcde34594202629c4c3518dcf0227f03820"
+    }
+  ],
+  "completion_gate": {
+    "passed": true,
+    "reasons": [],
+    "required_sent_types": [
+      "document",
+      "photo"
+    ],
+    "sent_types": [
+      "document",
+      "photo"
+    ],
+    "selected_document": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\artifacts\\final_project_bundle.zip",
+    "selected_photo": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\project_output\\mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das\\artifacts\\screenshots\\final-ui.png",
+    "manifest_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\artifacts\\support_public_delivery.json",
+    "cold_replay_required": true,
+    "cold_replay_passed": true,
+    "replay_report_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\artifacts\\delivery_replay\\replay_artifacts\\replay_report.json",
+    "replay_screenshot_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\artifacts\\delivery_replay\\replay_artifacts\\replayed_screenshot.png"
+  },
+  "replay_report": {
+    "package_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\artifacts\\final_project_bundle.zip",
+    "extracted_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\artifacts\\delivery_replay\\extracted",
+    "entrypoint_detected": "scripts/run_project_web.py",
+    "startup_command": "D:\\anaconda\\python.exe C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\artifacts\\delivery_replay\\extracted\\scripts\\run_project_web.py --serve",
+    "startup_pass": true,
+    "minimal_flow_pass": true,
+    "replay_screenshot_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\artifacts\\delivery_replay\\replay_artifacts\\replayed_screenshot.png",
+    "overall_pass": true,
+    "first_failure_stage": "",
+    "short_reason": "",
+    "report_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\artifacts\\delivery_replay\\replay_artifacts\\replay_report.json"
+  },
+  "delivery_completion": {
+    "passed": true,
+    "reasons": [],
+    "required_sent_types": [
+      "document",
+      "photo"
+    ],
+    "sent_types": [
+      "document",
+      "photo"
+    ],
+    "selected_document": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\artifacts\\final_project_bundle.zip",
+    "selected_photo": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\project_output\\mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das\\artifacts\\screenshots\\final-ui.png",
+    "manifest_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\artifacts\\support_public_delivery.json",
+    "cold_replay_required": true,
+    "cold_replay_passed": true,
+    "replay_report_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\artifacts\\delivery_replay\\replay_artifacts\\replay_report.json",
+    "replay_screenshot_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\artifacts\\delivery_replay\\replay_artifacts\\replayed_screenshot.png"
+  },
+  "product_completion": {
+    "profile": "team_task_pm",
+    "required": true,
+    "passed": true,
+    "checks": [
+      "team task PM capability detected: board",
+      "team task PM capability detected: task_crud",
+      "team task PM capability detected: filters",
+      "team task PM capability detected: activity"
+    ],
+    "missing": [],
+    "reasons": [],
+    "fallback_detected": false
+  },
+  "overall_completion": {
+    "passed": true,
+    "delivery_passed": true,
+    "product_passed": true,
+    "reasons": []
+  }
+}

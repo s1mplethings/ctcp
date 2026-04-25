@@ -1,0 +1,165 @@
+{
+  "schema_version": "ctcp-support-public-delivery-v1",
+  "ts": "2026-04-24T12:11:46Z",
+  "requested_actions": [
+    {
+      "type": "send_project_screenshot",
+      "count": 2
+    },
+    {
+      "type": "send_project_package",
+      "format": "zip"
+    }
+  ],
+  "deliveries": [
+    {
+      "type": "photo",
+      "path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\project_output\\5-20-bug\\artifacts\\screenshots\\final-ui.png",
+      "caption": "这是当前项目可直接发送的截图。"
+    },
+    {
+      "type": "photo",
+      "path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\project_output\\5-20-bug\\artifacts\\screenshots\\02-project_list.png",
+      "caption": ""
+    },
+    {
+      "type": "document",
+      "path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\final_project_bundle.zip",
+      "caption": "这里是当前可直接交付的 final project bundle zip。"
+    }
+  ],
+  "internal_artifacts": [],
+  "errors": [],
+  "delivery_mode": "e2e_virtual_delivery",
+  "manifest_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\support_public_delivery.json",
+  "sent": [
+    {
+      "type": "photo",
+      "path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\project_output\\5-20-bug\\artifacts\\screenshots\\final-ui.png",
+      "caption": "这是当前项目可直接发送的截图。",
+      "transport": "virtual_delivery",
+      "delivery_mode": "e2e_virtual_delivery",
+      "delivered_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\support_exports\\virtual_delivery\\sent\\photos\\final-ui.png",
+      "source_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\project_output\\5-20-bug\\artifacts\\screenshots\\final-ui.png",
+      "chat_id": 0,
+      "bytes": 79625,
+      "sha256": "371ed17548b2754015d36edee8555ee1399a7b39697b8c769fa27be7dc558511"
+    },
+    {
+      "type": "photo",
+      "path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\project_output\\5-20-bug\\artifacts\\screenshots\\02-project_list.png",
+      "caption": "",
+      "transport": "virtual_delivery",
+      "delivery_mode": "e2e_virtual_delivery",
+      "delivered_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\support_exports\\virtual_delivery\\sent\\photos\\02-project_list.png",
+      "source_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\project_output\\5-20-bug\\artifacts\\screenshots\\02-project_list.png",
+      "chat_id": 0,
+      "bytes": 1708,
+      "sha256": "8ae8951b1fe6d0a3fb06f7ed8954b641eba05531bb50380b3dd7e8c815ede980"
+    },
+    {
+      "type": "document",
+      "path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\final_project_bundle.zip",
+      "caption": "这里是当前可直接交付的 final project bundle zip。",
+      "transport": "virtual_delivery",
+      "delivery_mode": "e2e_virtual_delivery",
+      "delivered_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\support_exports\\virtual_delivery\\sent\\documents\\final_project_bundle.zip",
+      "source_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\final_project_bundle.zip",
+      "chat_id": 0,
+      "bytes": 135288,
+      "sha256": "e1b061a4fdf48b2f6701ff7bb7654836c441d8cb367521f433dbc302812e0ff4"
+    }
+  ],
+  "completion_gate": {
+    "passed": true,
+    "reasons": [],
+    "required_sent_types": [
+      "document",
+      "photo"
+    ],
+    "sent_types": [
+      "document",
+      "photo"
+    ],
+    "selected_document": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\final_project_bundle.zip",
+    "selected_photo": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\project_output\\5-20-bug\\artifacts\\screenshots\\final-ui.png",
+    "manifest_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\support_public_delivery.json",
+    "cold_replay_required": true,
+    "cold_replay_passed": true,
+    "replay_report_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\delivery_replay\\replay_artifacts\\replay_report.json",
+    "replay_screenshot_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\delivery_replay\\replay_artifacts\\replayed_screenshot.png"
+  },
+  "replay_report": {
+    "package_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\final_project_bundle.zip",
+    "extracted_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\delivery_replay\\extracted",
+    "entrypoint_detected": "scripts/run_project_web.py",
+    "startup_command": "D:\\anaconda\\python.exe C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\delivery_replay\\extracted\\scripts\\run_project_web.py --serve",
+    "startup_pass": true,
+    "minimal_flow_pass": true,
+    "replay_screenshot_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\delivery_replay\\replay_artifacts\\replayed_screenshot.png",
+    "overall_pass": true,
+    "first_failure_stage": "",
+    "short_reason": "",
+    "report_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\delivery_replay\\replay_artifacts\\replay_report.json"
+  },
+  "delivery_completion": {
+    "passed": true,
+    "reasons": [],
+    "required_sent_types": [
+      "document",
+      "photo"
+    ],
+    "sent_types": [
+      "document",
+      "photo"
+    ],
+    "selected_document": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\final_project_bundle.zip",
+    "selected_photo": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\project_output\\5-20-bug\\artifacts\\screenshots\\final-ui.png",
+    "manifest_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\support_public_delivery.json",
+    "cold_replay_required": true,
+    "cold_replay_passed": true,
+    "replay_report_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\delivery_replay\\replay_artifacts\\replay_report.json",
+    "replay_screenshot_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\delivery_replay\\replay_artifacts\\replayed_screenshot.png"
+  },
+  "product_completion": {
+    "profile": "indie_studio_hub",
+    "required": true,
+    "passed": true,
+    "checks": [
+      "indie studio hub capability detected: task_management",
+      "indie studio hub capability detected: asset_management",
+      "indie studio hub capability detected: bug_tracking",
+      "indie studio hub capability detected: build_release",
+      "indie studio hub capability detected: docs_delivery"
+    ],
+    "missing": [],
+    "reasons": [],
+    "fallback_detected": false
+  },
+  "user_acceptance": {
+    "required": true,
+    "status": "PASS",
+    "passed": true,
+    "checks": [
+      "user acceptance coverage passed: asset_library",
+      "user acceptance coverage passed: asset_detail",
+      "user acceptance coverage passed: bug_tracker",
+      "user acceptance coverage passed: build_release_center",
+      "user acceptance coverage passed: docs_center",
+      "user acceptance coverage passed: milestone_plan",
+      "user acceptance coverage passed: startup_guide",
+      "user acceptance coverage passed: replay_guide",
+      "user acceptance coverage passed: mid_stage_review"
+    ],
+    "missing": [],
+    "reasons": []
+  },
+  "internal_runtime_status": "PASS",
+  "user_acceptance_status": "PASS",
+  "overall_completion": {
+    "passed": true,
+    "delivery_passed": true,
+    "product_passed": true,
+    "reasons": []
+  }
+}

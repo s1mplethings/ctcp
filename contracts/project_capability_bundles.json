@@ -1,0 +1,496 @@
+{
+  "schema_version": "ctcp-project-capability-bundles-v1",
+  "families": {
+    "narrative_gui_editor": {
+      "required_bundles": [
+        "editor_core",
+        "scene_branching",
+        "character_asset_management",
+        "sample_content_generation",
+        "preview_export",
+        "delivery_ready"
+      ],
+      "bundles": {
+        "editor_core": {
+          "summary": "Project/sample loading plus editor workspace and action wiring.",
+          "required_views": [
+            "project_loader",
+            "story_scene_branch_editor",
+            "character_asset_manager",
+            "preview_export_panel"
+          ],
+          "required_interactions": [
+            "load_sample",
+            "reset_sample",
+            "save_state",
+            "export_project"
+          ],
+          "required_file_suffixes": [
+            "/editor/workspace.py",
+            "/editor/actions.py",
+            "/seed.py"
+          ]
+        },
+        "scene_branching": {
+          "summary": "Story/scene/choice graph editing and branching data model.",
+          "required_views": [
+            "story_scene_branch_editor"
+          ],
+          "required_interactions": [
+            "add_scene",
+            "update_scene",
+            "update_branch"
+          ],
+          "required_file_suffixes": [
+            "/story/scene_graph.py",
+            "/sample_data/pipeline/chapter_plan.json",
+            "/sample_data/pipeline/scene_graph.json",
+            "/sample_data/pipeline/choice_map.json"
+          ]
+        },
+        "character_asset_management": {
+          "summary": "Character cards plus asset placeholder catalog management.",
+          "required_views": [
+            "character_asset_manager"
+          ],
+          "required_interactions": [
+            "update_character",
+            "bind_background"
+          ],
+          "required_file_suffixes": [
+            "/cast/schema.py",
+            "/assets/catalog.py",
+            "/sample_data/pipeline/cast_cards.json",
+            "/sample_data/pipeline/asset_placeholders.json"
+          ]
+        },
+        "sample_content_generation": {
+          "summary": "Staged narrative sample generation artifacts and provenance chain.",
+          "required_views": [],
+          "required_interactions": [],
+          "required_file_suffixes": [
+            "/sample_data/example_project.json",
+            "/sample_data/source_map.json",
+            "/sample_data/pipeline/theme_brief.json",
+            "/sample_data/pipeline/chapter_plan.json"
+          ]
+        },
+        "preview_export": {
+          "summary": "Preview/export pipeline tied to current editor state.",
+          "required_views": [
+            "preview_export_panel"
+          ],
+          "required_interactions": [
+            "export_project"
+          ],
+          "required_file_suffixes": [
+            "/pipeline/prompt_pipeline.py",
+            "/exporters/deliver.py",
+            "/service.py"
+          ]
+        },
+        "delivery_ready": {
+          "summary": "Readable README, verify entry, manifest metadata, and user-facing project packaging contract.",
+          "required_views": [],
+          "required_interactions": [],
+          "required_file_suffixes": [
+            "/README.md",
+            "/scripts/verify_repo.ps1",
+            "/meta/manifest.json"
+          ]
+        }
+      },
+      "sample_generation_steps": [
+        "theme_brief",
+        "cast_cards",
+        "chapter_plan",
+        "scene_graph",
+        "choice_map",
+        "asset_placeholders",
+        "source_map"
+      ]
+    },
+    "web_service": {
+      "required_bundles": [
+        "service_contract",
+        "transport_surface",
+        "sample_exchange",
+        "delivery_ready"
+      ],
+      "bundles": {
+        "service_contract": {
+          "summary": "Typed service contract and response model.",
+          "required_views": [],
+          "required_interactions": [],
+          "required_file_suffixes": [
+            "/service_contract.py",
+            "/models.py"
+          ]
+        },
+        "transport_surface": {
+          "summary": "HTTP app entry and service implementation.",
+          "required_views": [],
+          "required_interactions": [],
+          "required_file_suffixes": [
+            "/app.py",
+            "/service.py"
+          ]
+        },
+        "sample_exchange": {
+          "summary": "Example exporter or response serialization path.",
+          "required_views": [],
+          "required_interactions": [],
+          "required_file_suffixes": [
+            "/exporter.py"
+          ]
+        },
+        "delivery_ready": {
+          "summary": "README and verify artifacts.",
+          "required_views": [],
+          "required_interactions": [],
+          "required_file_suffixes": [
+            "/README.md",
+            "/scripts/verify_repo.ps1"
+          ]
+        }
+      },
+      "sample_generation_steps": []
+    },
+    "team_task_pm_web": {
+      "required_bundles": [
+        "auth_workspace",
+        "project_board",
+        "task_crud_detail",
+        "filters_activity",
+        "preview_export",
+        "delivery_ready"
+      ],
+      "bundles": {
+        "auth_workspace": {
+          "summary": "Demo user login plus workspace and project model.",
+          "required_views": [
+            "login",
+            "workspace_project_switcher"
+          ],
+          "required_interactions": [
+            "login_with_demo_user",
+            "create_project"
+          ],
+          "required_file_suffixes": [
+            "/models.py",
+            "/seed.py",
+            "/workspace.py"
+          ]
+        },
+        "project_board": {
+          "summary": "Kanban board and task list surfaces for small-team task coordination.",
+          "required_views": [
+            "kanban_board",
+            "task_list"
+          ],
+          "required_interactions": [
+            "move_task_status",
+            "filter_tasks"
+          ],
+          "required_file_suffixes": [
+            "/board.py",
+            "/filters.py"
+          ]
+        },
+        "task_crud_detail": {
+          "summary": "Task create/edit/detail flow with assignee, priority, status, labels, and due date fields.",
+          "required_views": [
+            "task_detail_drawer"
+          ],
+          "required_interactions": [
+            "create_task",
+            "edit_task_fields"
+          ],
+          "required_file_suffixes": [
+            "/tasks.py",
+            "/service.py"
+          ]
+        },
+        "filters_activity": {
+          "summary": "Task filters plus comment and activity history.",
+          "required_views": [
+            "activity_feed"
+          ],
+          "required_interactions": [
+            "comment_on_task",
+            "filter_tasks"
+          ],
+          "required_file_suffixes": [
+            "/activity.py",
+            "/filters.py"
+          ]
+        },
+        "preview_export": {
+          "summary": "Web preview and demo workspace export for acceptance review.",
+          "required_views": [
+            "kanban_board",
+            "task_list",
+            "task_detail_drawer"
+          ],
+          "required_interactions": [
+            "export_demo_workspace"
+          ],
+          "required_file_suffixes": [
+            "/app.py",
+            "/exporter.py"
+          ]
+        },
+        "delivery_ready": {
+          "summary": "README, verify entry, manifest metadata, and package handoff.",
+          "required_views": [],
+          "required_interactions": [],
+          "required_file_suffixes": [
+            "/README.md",
+            "/scripts/verify_repo.ps1",
+            "/meta/manifest.json"
+          ]
+        }
+      },
+      "sample_generation_steps": [
+        "demo_users",
+        "workspace_seed",
+        "project_seed",
+        "task_seed",
+        "comment_activity_seed"
+      ]
+    },
+    "indie_studio_hub_web": {
+      "required_bundles": [
+        "workspace_milestones",
+        "task_management",
+        "asset_management",
+        "bug_tracking",
+        "build_release",
+        "docs_delivery"
+      ],
+      "bundles": {
+        "workspace_milestones": {
+          "summary": "Workspace, project overview, dashboard, and milestone planning for local studio production tracking.",
+          "required_views": [
+            "dashboard",
+            "project_list",
+            "project_overview",
+            "milestone_backlog"
+          ],
+          "required_interactions": [
+            "create_project",
+            "view_milestones"
+          ],
+          "required_file_suffixes": [
+            "/models.py",
+            "/seed.py",
+            "/workspace.py",
+            "/dashboard.py"
+          ]
+        },
+        "task_management": {
+          "summary": "Task board/list/detail with comments, activity, filters, search, and sorting.",
+          "required_views": [
+            "kanban_board",
+            "task_list",
+            "task_detail"
+          ],
+          "required_interactions": [
+            "create_task",
+            "edit_task_fields",
+            "move_task_status",
+            "comment_on_task"
+          ],
+          "required_file_suffixes": [
+            "/board.py",
+            "/tasks.py",
+            "/filters.py",
+            "/activity.py"
+          ]
+        },
+        "asset_management": {
+          "summary": "Asset library and asset detail with owner, state, metadata, and task linkage.",
+          "required_views": [
+            "asset_library",
+            "asset_detail"
+          ],
+          "required_interactions": [
+            "view_asset_library",
+            "link_asset_to_task"
+          ],
+          "required_file_suffixes": [
+            "/assets.py"
+          ]
+        },
+        "bug_tracking": {
+          "summary": "Bug tracker with severity, repro steps, linked version, and linked task or asset.",
+          "required_views": [
+            "bug_tracker"
+          ],
+          "required_interactions": [
+            "create_bug",
+            "update_bug_status"
+          ],
+          "required_file_suffixes": [
+            "/bugs.py"
+          ]
+        },
+        "build_release": {
+          "summary": "Build and release center with current version status, build records, and release summary export.",
+          "required_views": [
+            "build_release_center"
+          ],
+          "required_interactions": [
+            "view_build_records",
+            "generate_release_summary"
+          ],
+          "required_file_suffixes": [
+            "/releases.py"
+          ]
+        },
+        "docs_delivery": {
+          "summary": "Docs center, startup/replay guides, milestone plan, mid-stage review, and final delivery packaging.",
+          "required_views": [
+            "docs_center"
+          ],
+          "required_interactions": [
+            "view_docs_center",
+            "export_project_data"
+          ],
+          "required_file_suffixes": [
+            "/docs_center.py",
+            "/README.md",
+            "/scripts/verify_repo.ps1",
+            "/meta/manifest.json"
+          ]
+        }
+      },
+      "sample_generation_steps": [
+        "demo_users",
+        "workspace_seed",
+        "project_seed",
+        "task_seed",
+        "asset_seed",
+        "bug_seed",
+        "build_seed",
+        "doc_seed"
+      ]
+    },
+    "data_pipeline": {
+      "required_bundles": [
+        "pipeline_core",
+        "sample_transform_flow",
+        "delivery_ready"
+      ],
+      "bundles": {
+        "pipeline_core": {
+          "summary": "Transform and pipeline modules.",
+          "required_views": [],
+          "required_interactions": [],
+          "required_file_suffixes": [
+            "/transforms.py",
+            "/pipeline.py",
+            "/service.py"
+          ]
+        },
+        "sample_transform_flow": {
+          "summary": "Seed/spec and exporter path.",
+          "required_views": [],
+          "required_interactions": [],
+          "required_file_suffixes": [
+            "/seed.py",
+            "/spec_builder.py",
+            "/exporter.py"
+          ]
+        },
+        "delivery_ready": {
+          "summary": "README and verify artifacts.",
+          "required_views": [],
+          "required_interactions": [],
+          "required_file_suffixes": [
+            "/README.md",
+            "/scripts/verify_repo.ps1"
+          ]
+        }
+      },
+      "sample_generation_steps": []
+    },
+    "cli_toolkit": {
+      "required_bundles": [
+        "command_core",
+        "spec_seed",
+        "delivery_ready"
+      ],
+      "bundles": {
+        "command_core": {
+          "summary": "Command handlers and service layer.",
+          "required_views": [],
+          "required_interactions": [],
+          "required_file_suffixes": [
+            "/commands.py",
+            "/service.py"
+          ]
+        },
+        "spec_seed": {
+          "summary": "Seed/spec and exporter path.",
+          "required_views": [],
+          "required_interactions": [],
+          "required_file_suffixes": [
+            "/seed.py",
+            "/spec_builder.py",
+            "/exporter.py"
+          ]
+        },
+        "delivery_ready": {
+          "summary": "README and verify artifacts.",
+          "required_views": [],
+          "required_interactions": [],
+          "required_file_suffixes": [
+            "/README.md",
+            "/scripts/verify_repo.ps1"
+          ]
+        }
+      },
+      "sample_generation_steps": []
+    },
+    "generic_copilot": {
+      "required_bundles": [
+        "spec_seed",
+        "planner_core",
+        "delivery_ready"
+      ],
+      "bundles": {
+        "spec_seed": {
+          "summary": "Seed/spec baseline.",
+          "required_views": [],
+          "required_interactions": [],
+          "required_file_suffixes": [
+            "/seed.py",
+            "/spec_builder.py",
+            "/models.py"
+          ]
+        },
+        "planner_core": {
+          "summary": "Planner and export path.",
+          "required_views": [],
+          "required_interactions": [],
+          "required_file_suffixes": [
+            "/planner.py",
+            "/exporter.py",
+            "/service.py"
+          ]
+        },
+        "delivery_ready": {
+          "summary": "README and verify artifacts.",
+          "required_views": [],
+          "required_interactions": [],
+          "required_file_suffixes": [
+            "/README.md",
+            "/scripts/verify_repo.ps1"
+          ]
+        }
+      },
+      "sample_generation_steps": []
+    }
+  }
+}

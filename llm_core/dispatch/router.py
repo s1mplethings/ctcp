@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from llm_core.dispatch.result import apply_dispatch_evidence, normalize_dispatch_result
+from tools.formal_api_lock import formal_api_only_enabled, is_local_exception
 
 KNOWN_PROVIDERS = {"manual_outbox", "ollama_agent", "api_agent", "codex_agent", "mock_agent", "local_exec"}
 
@@ -25,6 +26,7 @@ def resolve_provider(
 ) -> tuple[str, str]:
     role_name = str(role or "").strip().lower()
     action_name = str(action or "").strip().lower()
+    formal_api_only = formal_api_only_enabled()
     forced = normalize_provider(force_provider) if str(force_provider or "").strip() else ""
     locked_roles = {str(k).strip().lower(): normalize_provider(str(v)) for k, v in dict(hard_role_providers or {}).items()}
     hard_provider = locked_roles.get(role_name, "")
@@ -37,6 +39,8 @@ def resolve_provider(
                     f"ignored CTCP_FORCE_PROVIDER={forced} for hard-local role={role_name}; using {hard_provider}",
                 )
             return hard_provider, f"forced provider matches hard-local role={role_name}"
+        if formal_api_only and not is_local_exception(role_name, action_name) and forced != "api_agent":
+            return forced, f"formal_api_only requires api_agent for role={role_name} action={action_name}; got forced provider={forced}"
         return forced, f"forced by CTCP_FORCE_PROVIDER={forced}"
 
     role_providers = config.get("role_providers", {})
@@ -53,6 +57,8 @@ def resolve_provider(
                 f"blocked configured provider={provider or 'unknown'} for hard-local-model role={role_name}; using {locked}",
             )
         return locked, ""
+    if formal_api_only and not is_local_exception(role_name, action_name) and provider != "api_agent":
+        return provider, f"formal_api_only requires api_agent for role={role_name} action={action_name}; got provider={provider}"
     if provider == "local_exec" and (role_name, action_name) != ("librarian", "context_pack"):
         return "api_agent", "local_exec restricted to librarian/context_pack; fallback to api_agent"
     if provider == "ollama_agent" and role_name != "librarian":

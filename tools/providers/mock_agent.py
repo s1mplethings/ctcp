@@ -7,6 +7,17 @@ import re
 from pathlib import Path
 from typing import Any
 
+from tools.providers.project_generation_artifacts import (
+    build_default_context_request,
+    is_project_generation_goal,
+    normalize_deliverable_index,
+    normalize_docs_generation,
+    normalize_output_contract_freeze,
+    normalize_project_manifest,
+    normalize_source_generation,
+    normalize_workflow_generation,
+)
+
 
 def _write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -69,6 +80,15 @@ def _render_snippets(text: str, ranges: list[tuple[int, int]]) -> str:
 
 
 def _mock_file_request(goal: str) -> dict[str, Any]:
+    if is_project_generation_goal(goal):
+        request = build_default_context_request(goal)
+        return {
+            "schema_version": "ctcp-file-request-v1",
+            "goal": goal or "mock-goal",
+            "needs": list(request.get("needs", [])),
+            "budget": dict(request.get("budget", {})),
+            "reason": str(request.get("reason", "")).strip() or "mock project-generation context request",
+        }
     return {
         "schema_version": "ctcp-file-request-v1",
         "goal": goal or "mock-goal",
@@ -194,6 +214,14 @@ def _mock_analysis(goal: str) -> str:
 
 
 def _mock_plan_draft(goal: str) -> str:
+    project_generation_lines: list[str] = []
+    if is_project_generation_goal(goal):
+        project_generation_lines = [
+            "Project-Generation: true",
+            "Deliverables: runnable_app,README,startup_steps,verify_report,final_screenshot,final_package",
+            "Verification: artifacts/verify_report.json must prove the generated project starts and passes acceptance checks",
+            "Delivery: README with startup steps, final screenshot, and final project package are required before completion",
+        ]
     return "\n".join(
         [
             "Status: DRAFT",
@@ -205,12 +233,21 @@ def _mock_plan_draft(goal: str) -> str:
             "Behaviors: B001,B002,B003,B004,B005,B006,B007,B008,B009,B010,B011,B012,B013,B014,B015,B016,B017,B018,B019,B020,B021,B022,B023,B024,B025,B026,B027,B028,B029,B030,B031,B032,B033,B034,B035",
             "Results: R001,R002,R003,R004,R005",
             f"Goal: {goal or 'mock-goal'}",
+            *project_generation_lines,
             "",
         ]
     )
 
 
 def _mock_plan_signed(goal: str) -> str:
+    project_generation_lines: list[str] = []
+    if is_project_generation_goal(goal):
+        project_generation_lines = [
+            "Project-Generation: true",
+            "Deliverables: runnable_app,README,startup_steps,verify_report,final_screenshot,final_package",
+            "Verification: artifacts/verify_report.json must prove the generated project starts and passes acceptance checks",
+            "Delivery: README with startup steps, final screenshot, and final project package are required before completion",
+        ]
     return "\n".join(
         [
             "Status: SIGNED",
@@ -222,6 +259,7 @@ def _mock_plan_signed(goal: str) -> str:
             "Behaviors: B001,B002,B003,B004,B005,B006,B007,B008,B009,B010,B011,B012,B013,B014,B015,B016,B017,B018,B019,B020,B021,B022,B023,B024,B025,B026,B027,B028,B029,B030,B031,B032,B033,B034,B035",
             "Results: R001,R002,R003,R004,R005",
             f"Goal: {goal or 'mock-goal'}",
+            *project_generation_lines,
             "",
         ]
     )
@@ -397,6 +435,24 @@ def execute(
                 payload = _mock_analysis(goal)
             else:
                 payload = _mock_plan_draft(goal)
+        elif role == "chair" and action == "output_contract_freeze":
+            payload_type = "json"
+            payload = normalize_output_contract_freeze({}, goal=goal, run_dir=run_dir)
+        elif role == "chair" and action == "source_generation":
+            payload_type = "json"
+            payload = normalize_source_generation({}, goal=goal, run_dir=run_dir)
+        elif role == "chair" and action == "docs_generation":
+            payload_type = "json"
+            payload = normalize_docs_generation({}, goal=goal, run_dir=run_dir)
+        elif role == "chair" and action == "workflow_generation":
+            payload_type = "json"
+            payload = normalize_workflow_generation({}, goal=goal, run_dir=run_dir)
+        elif role == "chair" and action == "artifact_manifest_build":
+            payload_type = "json"
+            payload = normalize_project_manifest({}, goal=goal, run_dir=run_dir)
+        elif role == "chair" and action == "deliver":
+            payload_type = "json"
+            payload = normalize_deliverable_index({}, goal=goal, run_dir=run_dir)
         elif role == "librarian" and action == "context_pack":
             payload_type = "json"
             doc, reason = _mock_context_pack(repo_root, run_dir)

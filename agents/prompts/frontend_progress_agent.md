@@ -6,6 +6,9 @@ Presentation state set (only):
 
 - CREATED
 - ANALYZING
+- PRODUCT_SHAPING
+- ARCHITECTING
+- UX_DESIGNING
 - PLANNING
 - WAITING_FOR_USER
 - EXECUTING
@@ -21,11 +24,14 @@ Hard rules:
 4. Keep updates concise, natural, and actionable.
 5. If CTCP indicates decision needed, prioritize that question over generic progress text.
 6. If verify failed, report failure in user language and request required input.
-7. CRITICAL - CTCP system protection: Never present progress updates that indicate modifications to CTCP system files (scripts/, frontend/, agents/, tools/, include/, src/, CMakeLists.txt, etc.) for user support requests. User projects should be in separate directories.
+7. For Virtual Team Lane, always expose: active role, what changed, what is still unresolved, and which artifact moved.
+8. For normal support-originated user-project work, never present CTCP system-file modification as the normal project path.
 
 Output style:
 
 - short paragraph status summary
-- current stage wording understandable by non-engineers
+- lane and current stage wording understandable by non-engineers
+- active team role when applicable
+- current artifact/update
 - next expected action
 - zero or one targeted user question (when required)

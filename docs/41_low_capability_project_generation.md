@@ -42,6 +42,11 @@ Minimum delivery layers:
 
 If any required layer is missing, task is not done.
 
+Project-queue extension:
+- When the incoming request is explicitly a queue of multiple rough-goal projects, generation MAY keep one top-level runnable portfolio root as the gate-visible project output.
+- That portfolio root MUST still contain per-project independent subdirectories with their own intake/freeze/design/build/verify/delivery artifacts, strongest-available bundles, and verdict fields.
+- A portfolio-root shortcut is valid only when it preserves independent project evidence; it must not collapse multiple queued projects into one generic bundle or one generic report.
+
 ### 1.1) Production Mode vs Benchmark / Regression Mode
 
 Project generation MUST separate real-user production work from fixed-sample benchmark work.
@@ -72,6 +77,7 @@ Real project generation MUST follow this decision order:
 
 Rules:
 - Real requests MUST NOT directly inherit a narrative benchmark sample just because that sample exists in regression.
+- Real requests MUST bind a compatible `project_domain -> scaffold_family` pair before generation; narrative / VN / GUI editor requests MUST NOT fall through to pointcloud / v2p / reconstruction families.
 - Agent MUST decide whether GUI, CLI, web flows, demo assets, screenshots, state persistence, or export support are required from project type and user goal.
 - GUI is not a default mandatory path.
 - CLI is not a default downgrade path.
@@ -82,15 +88,15 @@ Rules:
 Project generation MUST follow one fixed stage path:
 
 1. `intake`
-2. `scope_freeze`
-3. `output_contract_freeze`
-4. `structure_plan`
-5. `source_generation`
-6. `docs_generation`
-7. `workflow_generation`
-8. `artifact_manifest_build`
-9. `verify`
-10. `deliver`
+2. `product_brief`
+3. `interaction_design`
+4. `technical_plan`
+5. `output_contract_freeze`
+6. `implementation`
+7. `qa`
+8. `delivery`
+9. `support_output`
+10. `verify_close`
 
 Rules:
 - Each stage has one primary objective.
@@ -98,6 +104,58 @@ Rules:
 - No stage skipping.
 - No cross-stage jumping.
 - No code/file generation before `output_contract_freeze`.
+- `implementation` is blocked until `product_brief`, `interaction_design`, and `technical_plan` are all present and approved for the current goal.
+
+### 2.1) Fixed Virtual Team Roles
+
+Project generation MUST behave like a fixed internal team, even when one runtime path executes the work.
+
+Required role lanes:
+- Product Manager
+- UX / Interaction Designer
+- Tech Lead
+- Builder / Engineer
+- QA
+- Delivery / Support
+
+The runtime MAY consolidate execution, but it MUST NOT skip the role-owned stage outputs.
+
+### 2.2) Mandatory Stage Artifacts
+
+Before completion, the run MUST emit all of the following stage artifacts:
+
+1. Product stage
+   - `intent_brief.md`
+   - `product_direction.md`
+   - `decision_log.md`
+2. Design stage
+   - `ux_flow.md`
+3. Technical stage
+   - `architecture_decision.md`
+   - `implementation_plan.md`
+4. Build stage
+   - runnable project output
+   - core feature implementation
+   - minimum main user path
+5. QA stage
+   - `acceptance_matrix.md`
+   - `qa_report`
+   - `smoke_result`
+   - `first_failure_stage`
+6. Delivery stage
+   - high-value screenshot
+   - package artifact
+   - startup README
+   - `support_public_delivery.json`
+   - `replay_report.json`
+   - `replayed_screenshot.png`
+
+Rules:
+- The support/output stage may summarize results to the user, but it MUST NOT invent missing product/design/technical work.
+- Generic fallback material such as a generic workflow plan, generic acceptance report, or generic project bundle MUST NOT satisfy any of the required stage artifacts.
+- Narrative / VN / GUI editor completion MUST prove editor/authoring capability, narrative structure, asset/cast structure, sample project data, and preview/export evidence; export-only shells are insufficient.
+- Incompatible family contamination (for example pointcloud / v2p scripts or tests inside narrative/editor output) is a blocking failure, not a warning.
+- `docs/12_virtual_team_contract.md` is the authority for what those artifacts must contain.
 
 ## 3) Output Freeze Before Generation
 
@@ -156,10 +214,12 @@ Even under weak-model performance, the system MUST deliver a minimum closed-loop
 
 Advanced features may be deferred, but minimum closed-loop output cannot be skipped.
 The minimum closed-loop shape MUST still be derived from project type and user goal, not from any fixed narrative benchmark sample.
+The user-facing delivery package for this closed loop MUST be a clean final project bundle, not the internal process/run bundle.
 
 ## 7) Report-Only Completion Is Forbidden
 
 If output is only report/trace/plan without complete project files, completion is invalid.
+If output includes only generic fallback stage documents without goal-specific product/design/technical substance, completion is also invalid.
 
 ## 8) Assumptions Management
 
@@ -196,6 +256,7 @@ Project-generation gates MUST distinguish these layers:
 
 Rules:
 - Passing structural gates does not prove full project delivery.
+- Passing implementation, QA, delivery, or replay gates does not retroactively excuse missing product/design/technical stages.
 - Production-mode result gates and benchmark-mode result gates MUST NOT be mixed.
 - A fixed narrative benchmark may satisfy benchmark-result checks only; it does not define production completeness.
 
@@ -260,5 +321,7 @@ All conditions below MUST be true together:
 8. Report-only output is rejected.
 9. Partial code output cannot be declared as full completion.
 10. Minimum closed-loop project repository is delivered for low-capability path.
+11. Required product/design/technical/qa/delivery artifacts exist and are not generic-fallback placeholders.
+12. Support output only summarizes completed team stages; it does not mask missing stages.
 
 If any condition fails, status must remain non-done and `missing_files` must remain visible.

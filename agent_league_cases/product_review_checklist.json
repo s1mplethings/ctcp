@@ -1,0 +1,54 @@
+{
+  "schema_version": "ctcp-agent-league-case-v1",
+  "agent_id": "product_reviewer_agent",
+  "role": "Product Reviewer Agent",
+  "max_score": 25,
+  "inputs": [
+    "project_spec.json",
+    "output_contract_freeze.json",
+    "feature matrix",
+    "page map",
+    "data model summary",
+    "screenshots",
+    "README",
+    "final package tree"
+  ],
+  "checklist": [
+    {
+      "id": "domain_freeze",
+      "label": "Product domain is frozen as team task management, not generic scaffold",
+      "points": 5,
+      "evidence": ["project_spec.json", "output_contract_freeze.json"]
+    },
+    {
+      "id": "page_depth",
+      "label": "Page structure matches the requested benchmark tier",
+      "points": 6,
+      "evidence": ["page map", "screenshots", "project files"]
+    },
+    {
+      "id": "feature_depth",
+      "label": "Task, board/list, fields, comments/activity, search/filter/sort, and import/export are represented",
+      "points": 7,
+      "evidence": ["feature matrix", "source tree", "README"]
+    },
+    {
+      "id": "data_model",
+      "label": "Data model is explicit enough for review",
+      "points": 4,
+      "evidence": ["data_model_summary.md", "source models"]
+    },
+    {
+      "id": "non_generic_product",
+      "label": "The result is visibly Plane-lite / Focalboard-lite rather than a generic web service",
+      "points": 3,
+      "evidence": ["screenshots", "README", "package tree"]
+    }
+  ],
+  "blockers": [
+    "generic_software_project freeze",
+    "missing page map for high-quality profile",
+    "missing feature matrix for high-quality profile",
+    "missing task/project-management source files"
+  ]
+}

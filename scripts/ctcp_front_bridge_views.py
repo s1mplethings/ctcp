@@ -85,6 +85,45 @@ def _runtime_to_visible_state(runtime_state: dict[str, Any]) -> str:
     return "UNDERSTOOD"
 
 
+def _runtime_to_authoritative_stage(runtime_state: dict[str, Any]) -> str:
+    phase = str(runtime_state.get("phase", "")).strip().upper()
+    mapping = {
+        "NEW": "NEW",
+        "INTAKE": "INTAKE",
+        "CLARIFY": "PLANNING",
+        "PLAN": "PLANNING",
+        "EXECUTE": "EXECUTING",
+        "VERIFY": "VERIFYING",
+        "RETRYING": "BLOCKED",
+        "RECOVERY_NEEDED": "BLOCKED",
+        "BLOCKED_HARD": "BLOCKED",
+        "EXEC_FAILED": "FAILED",
+        "WAIT_USER_DECISION": "WAITING_DECISION",
+        "FINALIZE": "VERIFYING",
+        "DELIVER": "DONE",
+        "DELIVERED": "DONE",
+        "RECOVER": "BLOCKED",
+        "ERROR": "FAILED",
+    }
+    if phase in mapping:
+        return mapping[phase]
+
+    verify_result = str(runtime_state.get("verify_result", "")).strip().upper()
+    run_status = str(runtime_state.get("run_status", "")).strip().lower()
+    needs_user_decision = bool(runtime_state.get("needs_user_decision", False))
+    if verify_result == "PASS" and run_status in {"completed", "done", "passed", "pass"}:
+        return "DONE"
+    if needs_user_decision:
+        return "WAITING_DECISION"
+    if run_status in {"blocked"}:
+        return "BLOCKED"
+    if run_status in {"fail", "failed", "error"}:
+        return "FAILED"
+    if run_status in {"running", "in_progress", "working"}:
+        return "EXECUTING"
+    return "NEW"
+
+
 def _build_current_state_snapshot(*, run_id: str, goal: str, runtime_state: dict[str, Any]) -> dict[str, Any]:
     gate = runtime_state.get("gate", {})
     if not isinstance(gate, dict):
@@ -106,7 +145,7 @@ def _build_current_state_snapshot(*, run_id: str, goal: str, runtime_state: dict
     proof_refs = runtime_state.get("proof_refs", [])
     if not isinstance(proof_refs, list):
         proof_refs = []
-    authoritative_stage = str(runtime_state.get("phase", "")).strip().upper() or "EXECUTE"
+    authoritative_stage = _runtime_to_authoritative_stage(runtime_state)
     return {
         "task_id": run_id,
         "authoritative_stage": authoritative_stage,

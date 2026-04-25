@@ -1,0 +1,156 @@
+{
+  "schema_version": "ctcp-project-spec-v2",
+  "goal_summary": "我们这次不是要最小 MVP",
+  "target_user": "希望尽快验证想法的项目发起人",
+  "problem_to_solve": "把模糊目标收束成一个最小可运行项目，而不是只停留在流程和证明工件上",
+  "mvp_scope": [
+    "提供可运行入口和 README 启动说明",
+    "至少打通一条核心用户流程",
+    "支持世界线/时间线记录与整理"
+  ],
+  "required_inputs": [
+    "用户目标描述"
+  ],
+  "required_outputs": [
+    "可运行项目代码",
+    "README 启动说明",
+    "至少一条核心流程的验证结果"
+  ],
+  "hard_constraints": [
+    "runtime_target=realtime",
+    "respect explicit negative requirements from the user text"
+  ],
+  "assumptions": [
+    "默认先生成最小可运行版本，再逐步扩展非核心能力",
+    "默认交付形态采用最容易验证的闭环入口"
+  ],
+  "open_questions": [
+    "非阻塞待确认: 尚未明确交付形态，先按最小闭环入口假设"
+  ],
+  "acceptance_criteria": [
+    "README 能指导启动项目",
+    "项目存在真实可运行入口",
+    "至少一条核心用户流程通过 smoke run",
+    "世界线整理流程可执行"
+  ],
+  "constraint_snapshot": {
+    "runtime_target": "realtime",
+    "worldline_management": "required"
+  },
+  "project_domain": "team_task_management",
+  "scaffold_family": "team_task_pm",
+  "project_type": "team_task_pm",
+  "project_archetype": "team_task_pm_web",
+  "delivery_shape": "web_first",
+  "core_modules": [
+    "auth_seed",
+    "workspace_project_model",
+    "task_board",
+    "task_list",
+    "task_detail",
+    "comments_activity",
+    "filters",
+    "demo_data",
+    "dashboard",
+    "search",
+    "import_export",
+    "settings",
+    "extended_coverage"
+  ],
+  "required_pages_or_views": [
+    "login",
+    "workspace_project_switcher",
+    "dashboard",
+    "project_list",
+    "project_overview",
+    "kanban_board",
+    "task_list",
+    "task_detail_drawer",
+    "activity_feed",
+    "project_settings"
+  ],
+  "data_models": [
+    "user",
+    "workspace",
+    "project",
+    "task",
+    "task_status",
+    "task_label",
+    "comment",
+    "activity_event"
+  ],
+  "key_interactions": [
+    "login_with_demo_user",
+    "create_project",
+    "create_task",
+    "edit_task_fields",
+    "move_task_status",
+    "comment_on_task",
+    "filter_tasks",
+    "view_task_detail",
+    "view_activity_feed",
+    "export_demo_workspace",
+    "search_tasks",
+    "sort_tasks",
+    "import_workspace_json",
+    "view_dashboard_stats"
+  ],
+  "build_profile": "high_quality_extended",
+  "product_depth": "extended",
+  "required_pages": 8,
+  "required_screenshots": 8,
+  "require_feature_matrix": true,
+  "require_page_map": true,
+  "require_data_model_summary": true,
+  "require_search": true,
+  "require_import_or_export": "both",
+  "require_dashboard_or_project_overview": true,
+  "task_fields": [
+    "title",
+    "description",
+    "status",
+    "priority",
+    "assignee",
+    "due_date",
+    "labels"
+  ],
+  "export_targets": [
+    "demo_workspace.json",
+    "import_template.json",
+    "feature_matrix.md",
+    "page_map.md",
+    "data_model_summary.md",
+    "acceptance_bundle.zip"
+  ],
+  "sample_content_plan": {
+    "pipeline_id": "team_pm_demo_seed",
+    "minimum_depth": {
+      "workspaces": 1,
+      "projects": 2,
+      "tasks": 8,
+      "comments": 3
+    },
+    "steps": [
+      "demo_users",
+      "workspace_seed",
+      "project_seed",
+      "task_seed",
+      "comment_activity_seed"
+    ],
+    "api_merge_targets": []
+  },
+  "delivery_requirements": [
+    "final_project_bundle.zip",
+    "README",
+    "startup_steps",
+    "screenshots",
+    "verify_summary"
+  ],
+  "explicit_non_goals": [
+    "realtime websocket collaboration",
+    "RBAC",
+    "notifications",
+    "gantt or roadmap planning",
+    "OAuth"
+  ]
+}

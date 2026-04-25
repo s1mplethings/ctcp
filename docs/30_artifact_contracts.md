@@ -571,7 +571,14 @@ Project generation tasks MUST freeze and emit output contracts before generation
     - `project_id`
     - `frozen` (must be `true` before generation)
     - `stages[]` (fixed 10-stage sequence)
+    - `team_roles[]`
     - `required_interfaces[]`
+    - `required_stage_artifacts.product[]`
+    - `required_stage_artifacts.design[]`
+    - `required_stage_artifacts.technical[]`
+    - `required_stage_artifacts.qa[]`
+    - `required_stage_artifacts.delivery[]`
+    - `required_stage_artifacts.support_output[]`
     - `layers.source_files[]`
     - `layers.doc_files[]`
     - `layers.workflow_files[]`
@@ -584,6 +591,28 @@ Rules:
 - `source_generation`, `docs_generation`, and `workflow_generation` are forbidden before `frozen=true`.
 - Generation must preserve explicit target-layer file lists.
 - Report-only completion is invalid when this contract exists.
+
+Q.1) Team-stage run artifacts (project-generation tasks)
+
+The run MUST keep explicit stage artifacts outside the repo under the external run directory.
+
+Minimum artifact set:
+- `artifacts/intent_brief.md`
+- `artifacts/product_direction.md`
+- `artifacts/architecture_decision.md`
+- `artifacts/ux_flow.md`
+- `artifacts/implementation_plan.md`
+- `artifacts/acceptance_matrix.md`
+- `artifacts/decision_log.md`
+- `artifacts/qa_report.md`
+- `artifacts/smoke_result.json`
+- `artifacts/first_failure_stage.json` or `artifacts/first_failure_stage.md`
+- delivery artifacts required by the routed contract, including screenshot/package/replay/support outputs
+
+Rules:
+- `implementation` may not start unless the product, design, and technical artifact trio exists.
+- Team-stage artifacts must be goal-specific and auditable; generic fallback placeholders do not satisfy this contract.
+- Content expectations for those artifacts are defined in `docs/12_virtual_team_contract.md`.
 
 R) Project manifest contract (project-generation tasks)
 
@@ -626,5 +655,9 @@ T) Completion and ResultEvent binding (project-generation tasks)
 When publishing final result for project generation:
 - Result payload MUST include explicit artifact list, not only summary text.
 - Artifact list MUST include references covering source/doc/workflow layers.
+- Result payload MUST surface the product/design/technical/qa/delivery stage artifact refs or a blocking missing-stage declaration.
 - If reference mode is enabled, result payload MUST include mode and applied style list.
 - Verify pass without artifact completeness proof is insufficient for DONE.
+- Support-facing output MUST summarize completed work only; it MUST NOT claim a product/design/technical stage passed when the required artifact is missing.
+- User-facing package default MUST be `final_project_bundle.zip` and it MUST contain the clean project directory plus README, screenshots, sample data, and verify summary when available.
+- Internal process artifacts MUST stay separated as `process_bundle.zip` (or equivalent internal-only refs) and MUST NOT replace the final project bundle in support-facing delivery manifests.

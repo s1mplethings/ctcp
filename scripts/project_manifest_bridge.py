@@ -46,19 +46,32 @@ def _infer_project_manifest(run_id: str, run_dir: Path, artifacts: list[dict[str
         "project_id": run_id,
         "project_intent": dict(frontend_request.get("project_intent", {}) if isinstance(frontend_request.get("project_intent", {}), dict) else {}),
         "project_spec": dict(frontend_request.get("project_spec", {}) if isinstance(frontend_request.get("project_spec", {}), dict) else {}),
+        "capability_plan": {},
+        "sample_generation_plan": {},
+        "generation_quality": {},
+        "capability_validation": {},
         "pipeline_contract": {
             "schema_version": "ctcp-project-generation-pipeline-v1",
             "stages": [
                 {"name": "project_intent", "artifact": "project_intent", "status": "ready"},
-                {"name": "spec", "artifact": "project_spec", "status": "ready"},
+                {"name": "spec", "artifact": "artifacts/project_spec.json", "status": "ready"},
+                {"name": "capability_plan", "artifact": "artifacts/capability_plan.json", "status": "ready"},
+                {"name": "sample_generation_plan", "artifact": "artifacts/sample_generation", "status": "ready"},
                 {"name": "scaffold", "artifact": "project_root", "status": "unknown"},
                 {"name": "core_feature_implementation", "artifact": "core_feature_files", "status": "unknown"},
+                {"name": "refinement", "artifact": "artifacts/generation_quality_report.json", "status": "unknown"},
                 {"name": "smoke_run", "artifact": "startup_entrypoint", "status": "unknown"},
                 {"name": "demo_evidence", "artifact": "demo_evidence", "status": "unknown"},
                 {"name": "delivery_package", "artifact": "acceptance_files", "status": "unknown"},
             ],
         },
+        "project_spec_path": "",
+        "capability_plan_path": "",
+        "sample_generation_artifacts": [],
+        "generation_quality_report_path": "",
         "project_root": "",
+        "project_domain": "",
+        "scaffold_family": "",
         "project_type": "",
         "project_archetype": "",
         "project_profile": "",
@@ -66,6 +79,8 @@ def _infer_project_manifest(run_id: str, run_dir: Path, artifacts: list[dict[str
         "execution_mode": "production",
         "benchmark_case": "",
         "delivery_shape": "cli_first",
+        "project_domain_decision_source": "",
+        "scaffold_family_decision_source": "",
         "project_type_decision_source": "",
         "project_archetype_decision_source": "",
         "shape_decision_source": "",
@@ -106,6 +121,9 @@ def _infer_project_manifest(run_id: str, run_dir: Path, artifacts: list[dict[str
             "smoke_run": {"passed": False},
         },
         "domain_validation": {"kind": "generic", "passed": False, "checks": []},
+        "domain_compatibility": {},
+        "readme_quality": {},
+        "ux_validation": {},
         "product_validation": {
             "profile": "standard",
             "required": False,
@@ -131,12 +149,14 @@ def resolve_project_manifest(
     inferred = _infer_project_manifest(run_id, run_dir, artifacts)
     if isinstance(declared, dict):
         out = dict(inferred)
-        for field in ("project_intent", "project_spec", "pipeline_contract", "generic_validation", "domain_validation", "product_validation"):
+        for field in ("project_intent", "project_spec", "capability_plan", "sample_generation_plan", "generation_quality", "capability_validation", "pipeline_contract", "generic_validation", "domain_validation", "domain_compatibility", "readme_quality", "ux_validation", "product_validation"):
             value = declared.get(field)
             if isinstance(value, dict):
                 out[field] = value
         out["project_id"] = str(declared.get("project_id", "")).strip() or str(out.get("project_id", ""))
         out["project_root"] = str(declared.get("project_root", "")).strip() or str(out.get("project_root", ""))
+        out["project_domain"] = str(declared.get("project_domain", "")).strip() or str(out.get("project_domain", ""))
+        out["scaffold_family"] = str(declared.get("scaffold_family", "")).strip() or str(out.get("scaffold_family", ""))
         out["project_type"] = str(declared.get("project_type", "")).strip() or str(out.get("project_type", ""))
         out["project_archetype"] = str(declared.get("project_archetype", "")).strip() or str(out.get("project_archetype", ""))
         out["project_profile"] = str(declared.get("project_profile", "")).strip() or str(out.get("project_profile", ""))
@@ -144,9 +164,14 @@ def resolve_project_manifest(
         out["execution_mode"] = str(declared.get("execution_mode", "")).strip() or str(out.get("execution_mode", ""))
         out["benchmark_case"] = str(declared.get("benchmark_case", "")).strip() or str(out.get("benchmark_case", ""))
         out["delivery_shape"] = str(declared.get("delivery_shape", "")).strip() or str(out.get("delivery_shape", ""))
+        out["project_domain_decision_source"] = str(declared.get("project_domain_decision_source", "")).strip() or str(out.get("project_domain_decision_source", ""))
+        out["scaffold_family_decision_source"] = str(declared.get("scaffold_family_decision_source", "")).strip() or str(out.get("scaffold_family_decision_source", ""))
         out["project_type_decision_source"] = str(declared.get("project_type_decision_source", "")).strip() or str(out.get("project_type_decision_source", ""))
         out["project_archetype_decision_source"] = str(declared.get("project_archetype_decision_source", "")).strip() or str(out.get("project_archetype_decision_source", ""))
         out["shape_decision_source"] = str(declared.get("shape_decision_source", "")).strip() or str(out.get("shape_decision_source", ""))
+        out["project_spec_path"] = str(declared.get("project_spec_path", "")).strip() or str(out.get("project_spec_path", ""))
+        out["capability_plan_path"] = str(declared.get("capability_plan_path", "")).strip() or str(out.get("capability_plan_path", ""))
+        out["generation_quality_report_path"] = str(declared.get("generation_quality_report_path", "")).strip() or str(out.get("generation_quality_report_path", ""))
         out["startup_entrypoint"] = str(declared.get("startup_entrypoint", "")).strip() or str(out.get("startup_entrypoint", ""))
         out["startup_readme"] = str(declared.get("startup_readme", "")).strip() or str(out.get("startup_readme", ""))
         out["scaffold_run_dir"] = str(declared.get("scaffold_run_dir", "")).strip() or str(out.get("scaffold_run_dir", ""))
@@ -165,6 +190,7 @@ def resolve_project_manifest(
             "context_influence_summary",
             "decision_nodes",
             "flow_nodes",
+            "sample_generation_artifacts",
         ):
             value = declared.get(field)
             if isinstance(value, list):

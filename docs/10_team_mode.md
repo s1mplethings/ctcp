@@ -1,19 +1,35 @@
-# Team Mode (Autonomous Coding Team)
+# Team Mode Runtime Wiring
 
 Scope boundary:
-- This is a team-mode lane document, not the repository purpose definition.
+- This file is the runtime-wiring and support-orchestration contract for team-mode behavior.
+- It is not the authoritative definition of Virtual Team Lane design behavior.
 - Repo purpose source: `docs/01_north_star.md`.
 - Canonical repository execution flow source: `docs/04_execution_flow.md`.
+- Virtual Team Lane authority source: `docs/12_virtual_team_contract.md`.
 
-目标：让你只输入一次 Goal，系统像项目团队一样持续推进，并给你演示。
+目标：让 runtime / support / frontdesk 能把 CTCP 的正式工作车道接到用户可见层，而不是在这里重新定义产品设计流程。
 任务推进型对话权威合同：`docs/11_task_progress_dialogue.md`。
 人格测试与风格回归权威合同：`docs/14_persona_test_lab.md`。
+
+## 车道职责边界
+
+- `Delivery Lane`
+  - 用于边界明确、局部实现、直接交付类任务
+  - 本文只负责 support/frontdesk 如何接线、展示、回放和桥接真实状态
+- `Virtual Team Lane`
+  - 用于新项目、模糊目标、需要系统自行做产品/架构/UX 决策的任务
+  - 正式设计行为、角色职责、必须产物、进入实现的闸门都由 `docs/12_virtual_team_contract.md` 定义
+
+硬规则：
+- 本文不得再充当“虚拟项目团队设计合同”的唯一来源
+- support/runtime 可以路由到 Virtual Team Lane，但不得在没有设计产物时伪造“团队已经设计完成”
+- 若本文与 `docs/12_virtual_team_contract.md` 冲突，以后者为准
 
 ## 核心目录
 - `meta/tasks/CURRENT.md`：任务单（验收/计划/是否允许改代码）
 - `${CTCP_RUNS_ROOT:-~/.ctcp/runs}/ctcp/<run_id>/`：一次“团队运行包”（真实路径）
-  - `PROMPT.md`：给 coding agent 的输入（唯一入口）
-  - `QUESTIONS.md`：阻塞问题（唯一允许提问渠道）
+  - `PROMPT.md`：给 coding agent 的 compiled prompt 输入；它由 `AGENTS.md` + routed lane contract + `meta/tasks/CURRENT.md` 派生，不是独立权威
+  - `QUESTIONS.md`：run 级阻塞问题产物；不得反向覆盖 root/task/routed contracts
   - `TRACE.md`：全过程日志（演示）
 - `meta/run_pointers/LAST_RUN.txt`：仓库内指针（记录最新 run 包绝对路径）
 - `meta/reports/LAST.md`：面向你的演示报告（可回放）
@@ -81,7 +97,7 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
   - 处理顺序必须是：先判断 frontdesk state，再决定回复策略，再生成回复内容；`visible_state` 只是用户可见执行态折叠，不能替代 frontdesk state。
   - `PROJECT_INTAKE / PROJECT_DETAIL / STATUS_QUERY` 等项目型 turn 只能通过 `scripts/ctcp_front_bridge.py` 创建/绑定/查询/推进 CTCP run。
   - 当 bound run 的 `status.gate.state=blocked` 时，runtime 只允许输出 grounded 状态与下一步，不允许注入“已完成生成/已可交付包”的快通道语义。
-  - 绑定 run 后，support bot 通过 bridge 读取真实 `RUN.json` / `verify_report.json` 摘要与 `artifacts/support_whiteboard.json` 快照，不直接在客服层发明工程状态。
+  - 绑定 run 后，support bot 只能消费 bridge/back-end 提供的 `get_support_context` / `get_current_state_snapshot` / `get_render_state_snapshot` / artifact interfaces；兼容性文件读取只允许留在 bridge/backend 内部，不得在客服层直接扫描 `RUN.json` / `verify_report.json` / `TRACE.md` 伪造工程真值。
   - 在发出 `support_reply.json.reply_text` 前，reply builder 必须绑定 `task_goal / current_phase / last_confirmed_items / current_blocker / message_purpose / question_needed / next_action`。
   - `style_change` 必须只更新持久 `user_style_profile`，不得覆盖当前任务主线；`clarify / redirect / override / sidequest / status_query / result_query` 等中断分类必须显式写入 frontdesk state，并保留 `resumable_state`。
   - 对 `STATUS_QUERY` 以及“继续按这个做 / 现在做到什么程度了”这类 status-like progress follow-up，runtime 必须消费 bound run 的 gate/status 与 whiteboard tail，自动总结已完成事项、当前阶段、当前阻塞或 clear path、以及下一步；不得退回 `EXECUTING` 固定壳文案。
@@ -100,6 +116,7 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
   - greeting / capability / smalltalk 这类 non-project turn 在 active bound run 上不得重置 `notification_state` 里的真实 progress baseline；若 run digest 本身没有变化，后续 idle cycle 不应把同一状态再主动推一次。
   - fallback / capability 兜底也必须保持任务推进型口吻，不得退回“项目经理方式推进”“API 和本地模型都不可用”这类机械系统句。
   - Telegram 当前对话支持直接发送文件时，客服不得再问邮箱；`send_project_package` 只允许在绑定 run 满足“`verify_result=PASS` 且 `run_status` 已到最终态（`pass/done/completed/success`）且无待用户决策”时触发；另外必须通过 package 质量门禁（至少满足最小质量分和核心展示证据），否则即使有 artifact 也禁止发包。截图交付仍按实际截图 artifact 可用性决定。
+  - project-generation 交付默认对外 document 必须是 `final_project_bundle.zip`；`process_bundle.zip` 只作为内部调试/复盘产物记录在 manifest，不得默认作为用户主交付。
   - 若绑定项目目录只是 `main.py + README.md` 这类薄壳占位实现，support package runtime 必须先在 support session 外部 materialize 一份 CTCP-style scaffold，再打包发送；客服回复也必须按 scaffold 如实描述，不得把它说成完整功能已经做完的项目。
   - 若 turn 涉及测试、演示、截图、回放或交付说明，reply 必须优先引用 `artifacts/test_plan.json`、`artifacts/test_cases.json`、`artifacts/test_summary.md`、`artifacts/demo_trace.md`、`artifacts/screenshots/` 等真实展示产物；没有截图时必须如实说明没有。
 - 安全建议：

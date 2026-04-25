@@ -85,8 +85,8 @@ def align_reply_with_delivery_actions(reply_text: str, *, actions: list[dict[str
 
     base_delivery_text = (
         "项目已经整理好了，你可以直接开始查看。\n\n"
-        "你先看我发的成品截图确认界面和结果，再打开 zip 包看完整代码。\n\n"
-        "zip 里包含 README、启动入口和主要代码；运行方式先按 README 里的说明执行。"
+        "你先看我发的成品截图确认界面和结果，再打开 final project bundle zip 看完整代码。\n\n"
+        "这个 zip 里包含 README、启动入口和主要代码；运行方式先按 README 里的说明执行。"
     )
     if _looks_internal(text):
         text = base_delivery_text
@@ -172,6 +172,15 @@ def _existing_sent_paths(plan: dict[str, Any] | None, *, delivery_type: str, req
     return out
 
 
+def _document_priority(path: str) -> tuple[int, str]:
+    name = Path(str(path or "")).name.lower()
+    if name == "final_project_bundle.zip":
+        return (0, name)
+    if name == "process_bundle.zip":
+        return (2, name)
+    return (1, name)
+
+
 def evaluate_delivery_completion(
     actions: list[dict[str, Any]] | None,
     plan: dict[str, Any] | None,
@@ -198,9 +207,12 @@ def evaluate_delivery_completion(
         if sent_type not in sent_types:
             reasons.append(f"missing sent type: {sent_type}")
     document_paths = _existing_sent_paths(plan, delivery_type="document", require_existing_files=require_existing_files)
+    document_paths = sorted(document_paths, key=_document_priority)
     photo_paths = _existing_sent_paths(plan, delivery_type="photo", require_existing_files=require_existing_files)
     if "document" in required_sent_types and not document_paths:
         reasons.append("document artifact missing")
+    if document_paths and Path(document_paths[0]).name.lower() == "process_bundle.zip":
+        reasons.append("selected document is process bundle instead of final project bundle")
     first_photo = photo_paths[0] if photo_paths else ""
     if "photo" in required_sent_types and not photo_paths:
         reasons.append("photo artifact missing")
@@ -259,6 +271,48 @@ def evaluate_product_completion(project_manifest: dict[str, Any] | None) -> dict
         "missing": [],
         "reasons": reasons,
         "fallback_detected": False,
+    }
+
+
+def evaluate_user_acceptance(project_manifest: dict[str, Any] | None) -> dict[str, Any]:
+    manifest = dict(project_manifest) if isinstance(project_manifest, dict) else {}
+    project_domain = str(manifest.get("project_domain", "")).strip()
+    project_type = str(manifest.get("project_type", "")).strip()
+    project_archetype = str(manifest.get("project_archetype", "")).strip()
+    extended = dict(manifest.get("extended_coverage", {})) if isinstance(manifest.get("extended_coverage", {}), dict) else {}
+    coverage = dict(extended.get("coverage", {})) if isinstance(extended.get("coverage", {}), dict) else {}
+    if project_domain != "indie_studio_production_hub" and project_type != "indie_studio_hub" and project_archetype != "indie_studio_hub_web":
+        passed = bool(evaluate_product_completion(manifest).get("passed", False))
+        return {
+            "required": False,
+            "status": "PASS" if passed else "NEEDS_REWORK",
+            "passed": passed,
+            "checks": [],
+            "missing": [],
+            "reasons": [],
+        }
+    required_keys = {
+        "asset_library": "Asset Library missing",
+        "asset_detail": "Asset Detail missing",
+        "bug_tracker": "Bug Tracker missing",
+        "build_release_center": "Build / Release Center missing",
+        "docs_center": "Docs Center missing",
+        "milestone_plan": "milestone_plan.md missing",
+        "startup_guide": "startup_guide.md missing",
+        "replay_guide": "replay_guide.md missing",
+        "mid_stage_review": "mid_stage_review.md missing",
+    }
+    missing = [reason for key, reason in required_keys.items() if not bool(dict(coverage.get(key, {})).get("passed", False))]
+    screenshots_row = dict(coverage.get("screenshots", {})) if isinstance(coverage.get("screenshots", {}), dict) else {}
+    if int(screenshots_row.get("actual", 0) or 0) < 10:
+        missing.append("10+ screenshots missing")
+    return {
+        "required": True,
+        "status": "PASS" if not missing else "NEEDS_REWORK",
+        "passed": not missing,
+        "checks": [f"user acceptance coverage passed: {key}" for key in required_keys if bool(dict(coverage.get(key, {})).get("passed", False))],
+        "missing": missing,
+        "reasons": [],
     }
 
 

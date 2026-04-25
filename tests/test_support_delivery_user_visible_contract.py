@@ -6,6 +6,7 @@ from pathlib import Path
 from frontend.delivery_reply_actions import delivery_plan_failed
 from frontend.support_reply_policy import render_fallback_reply
 from scripts import ctcp_support_bot as support_bot
+from scripts.support_public_delivery import finalize_public_delivery_manifest
 
 
 class SupportDeliveryUserVisibleContractTests(unittest.TestCase):
@@ -128,9 +129,64 @@ class SupportDeliveryUserVisibleContractTests(unittest.TestCase):
             self.assertEqual(len(fake.documents), 1)
             self.assertEqual(len(fake.photos), 1)
             self.assertEqual(fake.photos[0].name, "final-ui.png")
+            self.assertEqual(fake.documents[0].name, "final_project_bundle.zip")
             self.assertTrue(fake.documents[0].exists())
             manifest = json.loads((run_dir / support_bot.SUPPORT_PUBLIC_DELIVERY_REL_PATH).read_text(encoding="utf-8"))
             self.assertEqual({item.get("type") for item in manifest.get("sent", [])}, {"document", "photo"})
+            self.assertEqual(Path(str(dict(manifest.get("completion_gate", {})).get("selected_document", ""))).name, "final_project_bundle.zip")
+
+    def test_finalize_public_delivery_manifest_exposes_internal_and_user_acceptance_status(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_delivery_statuses_") as td:
+            run_dir = Path(td)
+            artifacts = run_dir / "artifacts"
+            project_root = run_dir / "project_output" / "indie-studio-production-hub"
+            screenshots_dir = project_root / "artifacts" / "screenshots"
+            docs_dir = project_root / "docs"
+            screenshots_dir.mkdir(parents=True, exist_ok=True)
+            docs_dir.mkdir(parents=True, exist_ok=True)
+            self._png(screenshots_dir / "final-ui.png")
+            for index in range(2, 11):
+                self._png(screenshots_dir / f"{index:02d}-shot.png")
+            for name in ("feature_matrix.md", "page_map.md", "data_model_summary.md", "milestone_plan.md", "startup_guide.md", "replay_guide.md", "mid_stage_review.md"):
+                (docs_dir / name).write_text(f"# {name}\n", encoding="utf-8")
+            bundle = artifacts / "final_project_bundle.zip"
+            bundle.parent.mkdir(parents=True, exist_ok=True)
+            bundle.write_bytes(b"PK\x03\x04")
+            (artifacts / "project_manifest.json").write_text(
+                json.dumps(
+                    {
+                        "project_domain": "indie_studio_production_hub",
+                        "project_type": "indie_studio_hub",
+                        "project_archetype": "indie_studio_hub_web",
+                        "extended_coverage": {
+                            "coverage": {
+                                "screenshots": {"actual": 10, "passed": True},
+                                "asset_library": {"passed": True},
+                                "asset_detail": {"passed": True},
+                                "bug_tracker": {"passed": True},
+                                "build_release_center": {"passed": True},
+                                "docs_center": {"passed": True},
+                                "milestone_plan": {"passed": True},
+                                "startup_guide": {"passed": True},
+                                "replay_guide": {"passed": True},
+                                "mid_stage_review": {"passed": True},
+                            }
+                        },
+                        "product_validation": {"profile": "indie_studio_hub", "required": True, "passed": True, "checks": [], "missing": [], "reasons": []},
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            plan = finalize_public_delivery_manifest(
+                run_dir=run_dir,
+                actions=[{"type": "send_project_package"}, {"type": "send_project_screenshot", "count": 1}],
+                plan={"sent": [{"type": "document", "path": str(bundle)}, {"type": "photo", "path": str(screenshots_dir / "final-ui.png")}], "deliveries": []},
+                replay_runner=lambda **_: {"overall_pass": True},
+            )
+            self.assertEqual(plan.get("internal_runtime_status"), "PASS")
+            self.assertEqual(plan.get("user_acceptance_status"), "PASS")
 
 
 if __name__ == "__main__":

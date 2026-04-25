@@ -1,0 +1,594 @@
+{
+  "schema_version": "ctcp-project-output-contract-v1",
+  "stage": "output_contract_freeze",
+  "goal": "给我们做一个轻量任务协作平台，能管版本任务、bug 和素材协作，别太复杂，但也别只是待办清单。",
+  "project_intent": {
+    "goal_summary": "给我们做一个轻量任务协作平台，能管版本任务、bug 和素材协作，别太复杂，但也别只是待办清单",
+    "target_user": "希望尽快验证想法的项目发起人",
+    "problem_to_solve": "把模糊目标收束成一个最小可运行项目，而不是只停留在流程和证明工件上",
+    "mvp_scope": [
+      "提供可运行入口和 README 启动说明",
+      "至少打通一条核心用户流程"
+    ],
+    "required_inputs": [
+      "用户目标描述"
+    ],
+    "required_outputs": [
+      "可运行项目代码",
+      "README 启动说明",
+      "至少一条核心流程的验证结果"
+    ],
+    "hard_constraints": [],
+    "assumptions": [
+      "默认先生成最小可运行版本，再逐步扩展非核心能力",
+      "默认交付形态采用最容易验证的闭环入口",
+      "未指定部署环境时默认按本地可运行优先"
+    ],
+    "open_questions": [
+      "需要确认你想交付的是项目、工具还是服务",
+      "非阻塞待确认: 尚未明确交付形态，先按最小闭环入口假设",
+      "非阻塞待确认: 尚未明确运行环境，先按本地 smoke run 假设"
+    ],
+    "acceptance_criteria": [
+      "README 能指导启动项目",
+      "项目存在真实可运行入口",
+      "至少一条核心用户流程通过 smoke run"
+    ]
+  },
+  "project_spec": {
+    "schema_version": "ctcp-project-spec-v2",
+    "goal_summary": "给我们做一个轻量任务协作平台，能管版本任务、bug 和素材协作，别太复杂，但也别只是待办清单",
+    "target_user": "希望尽快验证想法的项目发起人",
+    "problem_to_solve": "把模糊目标收束成一个最小可运行项目，而不是只停留在流程和证明工件上",
+    "mvp_scope": [
+      "提供可运行入口和 README 启动说明",
+      "至少打通一条核心用户流程"
+    ],
+    "required_inputs": [
+      "用户目标描述"
+    ],
+    "required_outputs": [
+      "可运行项目代码",
+      "README 启动说明",
+      "至少一条核心流程的验证结果"
+    ],
+    "hard_constraints": [],
+    "assumptions": [
+      "默认先生成最小可运行版本，再逐步扩展非核心能力",
+      "默认交付形态采用最容易验证的闭环入口",
+      "未指定部署环境时默认按本地可运行优先"
+    ],
+    "open_questions": [
+      "需要确认你想交付的是项目、工具还是服务",
+      "非阻塞待确认: 尚未明确交付形态，先按最小闭环入口假设",
+      "非阻塞待确认: 尚未明确运行环境，先按本地 smoke run 假设"
+    ],
+    "acceptance_criteria": [
+      "README 能指导启动项目",
+      "项目存在真实可运行入口",
+      "至少一条核心用户流程通过 smoke run"
+    ],
+    "constraint_snapshot": {},
+    "project_domain": "team_task_management",
+    "scaffold_family": "team_task_pm",
+    "project_type": "team_task_pm",
+    "project_archetype": "team_task_pm_web",
+    "delivery_shape": "web_first",
+    "core_modules": [
+      "auth_seed",
+      "workspace_project_model",
+      "task_board",
+      "task_list",
+      "task_detail",
+      "comments_activity",
+      "filters",
+      "demo_data"
+    ],
+    "required_pages_or_views": [
+      "login",
+      "workspace_project_switcher",
+      "kanban_board",
+      "task_list",
+      "task_detail_drawer",
+      "activity_feed"
+    ],
+    "data_models": [
+      "user",
+      "workspace",
+      "project",
+      "task",
+      "task_status",
+      "task_label",
+      "comment",
+      "activity_event"
+    ],
+    "key_interactions": [
+      "login_with_demo_user",
+      "create_project",
+      "create_task",
+      "edit_task_fields",
+      "move_task_status",
+      "comment_on_task",
+      "filter_tasks",
+      "view_task_detail",
+      "view_activity_feed",
+      "export_demo_workspace"
+    ],
+    "task_fields": [
+      "title",
+      "description",
+      "status",
+      "priority",
+      "assignee",
+      "due_date",
+      "labels"
+    ],
+    "export_targets": [
+      "demo_workspace.json",
+      "acceptance_bundle.zip"
+    ],
+    "sample_content_plan": {
+      "pipeline_id": "team_pm_demo_seed",
+      "minimum_depth": {
+        "workspaces": 1,
+        "projects": 2,
+        "tasks": 8,
+        "comments": 3
+      },
+      "steps": [
+        "demo_users",
+        "workspace_seed",
+        "project_seed",
+        "task_seed",
+        "comment_activity_seed"
+      ],
+      "api_merge_targets": []
+    },
+    "delivery_requirements": [
+      "final_project_bundle.zip",
+      "README",
+      "startup_steps",
+      "screenshots",
+      "verify_summary"
+    ],
+    "explicit_non_goals": [
+      "realtime websocket collaboration",
+      "RBAC",
+      "notifications",
+      "gantt or roadmap planning",
+      "OAuth"
+    ]
+  },
+  "project_spec_path": "artifacts/project_spec.json",
+  "capability_plan": {
+    "schema_version": "ctcp-capability-plan-v1",
+    "project_domain": "team_task_management",
+    "scaffold_family": "team_task_pm",
+    "family_key": "team_task_pm_web",
+    "required_bundles": [
+      "auth_workspace",
+      "project_board",
+      "task_crud_detail",
+      "filters_activity",
+      "preview_export",
+      "delivery_ready"
+    ],
+    "materialize_bundles": [
+      "auth_workspace",
+      "project_board",
+      "task_crud_detail",
+      "filters_activity",
+      "preview_export",
+      "delivery_ready"
+    ],
+    "sample_generation_steps": [
+      "demo_users",
+      "workspace_seed",
+      "project_seed",
+      "task_seed",
+      "comment_activity_seed"
+    ],
+    "coverage_target": {
+      "required_bundle_ratio": 1.0,
+      "required_views": [
+        "activity_feed",
+        "kanban_board",
+        "login",
+        "task_detail_drawer",
+        "task_list",
+        "workspace_project_switcher"
+      ],
+      "required_interactions": [
+        "comment_on_task",
+        "create_project",
+        "create_task",
+        "edit_task_fields",
+        "export_demo_workspace",
+        "filter_tasks",
+        "login_with_demo_user",
+        "move_task_status"
+      ]
+    },
+    "bundles": [
+      {
+        "bundle_id": "auth_workspace",
+        "required": true,
+        "enabled_for_materialization": true,
+        "summary": "Demo user login plus workspace and project model.",
+        "required_views": [
+          "login",
+          "workspace_project_switcher"
+        ],
+        "required_interactions": [
+          "login_with_demo_user",
+          "create_project"
+        ],
+        "required_file_suffixes": [
+          "/models.py",
+          "/seed.py",
+          "/workspace.py"
+        ]
+      },
+      {
+        "bundle_id": "project_board",
+        "required": true,
+        "enabled_for_materialization": true,
+        "summary": "Kanban board and task list surfaces for small-team task coordination.",
+        "required_views": [
+          "kanban_board",
+          "task_list"
+        ],
+        "required_interactions": [
+          "move_task_status",
+          "filter_tasks"
+        ],
+        "required_file_suffixes": [
+          "/board.py",
+          "/filters.py"
+        ]
+      },
+      {
+        "bundle_id": "task_crud_detail",
+        "required": true,
+        "enabled_for_materialization": true,
+        "summary": "Task create/edit/detail flow with assignee, priority, status, labels, and due date fields.",
+        "required_views": [
+          "task_detail_drawer"
+        ],
+        "required_interactions": [
+          "create_task",
+          "edit_task_fields"
+        ],
+        "required_file_suffixes": [
+          "/tasks.py",
+          "/service.py"
+        ]
+      },
+      {
+        "bundle_id": "filters_activity",
+        "required": true,
+        "enabled_for_materialization": true,
+        "summary": "Task filters plus comment and activity history.",
+        "required_views": [
+          "activity_feed"
+        ],
+        "required_interactions": [
+          "comment_on_task",
+          "filter_tasks"
+        ],
+        "required_file_suffixes": [
+          "/activity.py",
+          "/filters.py"
+        ]
+      },
+      {
+        "bundle_id": "preview_export",
+        "required": true,
+        "enabled_for_materialization": true,
+        "summary": "Web preview and demo workspace export for acceptance review.",
+        "required_views": [
+          "kanban_board",
+          "task_list",
+          "task_detail_drawer"
+        ],
+        "required_interactions": [
+          "export_demo_workspace"
+        ],
+        "required_file_suffixes": [
+          "/app.py",
+          "/exporter.py"
+        ]
+      },
+      {
+        "bundle_id": "delivery_ready",
+        "required": true,
+        "enabled_for_materialization": true,
+        "summary": "README, verify entry, manifest metadata, and package handoff.",
+        "required_views": [],
+        "required_interactions": [],
+        "required_file_suffixes": [
+          "/README.md",
+          "/scripts/verify_repo.ps1",
+          "/meta/manifest.json"
+        ]
+      }
+    ],
+    "project_spec_views": [
+      "login",
+      "workspace_project_switcher",
+      "kanban_board",
+      "task_list",
+      "task_detail_drawer",
+      "activity_feed"
+    ],
+    "project_spec_interactions": [
+      "login_with_demo_user",
+      "create_project",
+      "create_task",
+      "edit_task_fields",
+      "move_task_status",
+      "comment_on_task",
+      "filter_tasks",
+      "view_task_detail",
+      "view_activity_feed",
+      "export_demo_workspace"
+    ],
+    "contract_source": "D:/.c_projects/adc/ctcp/contracts/project_capability_bundles.json"
+  },
+  "capability_plan_path": "artifacts/capability_plan.json",
+  "sample_generation_plan": {
+    "pipeline_id": "team_pm_demo_seed",
+    "minimum_depth": {
+      "workspaces": 1,
+      "projects": 2,
+      "tasks": 8,
+      "comments": 3
+    },
+    "steps": [
+      "demo_users",
+      "workspace_seed",
+      "project_seed",
+      "task_seed",
+      "comment_activity_seed"
+    ],
+    "api_merge_targets": []
+  },
+  "sample_generation_artifacts": [
+    "artifacts/sample_generation/demo_users.json",
+    "artifacts/sample_generation/workspace_seed.json",
+    "artifacts/sample_generation/project_seed.json",
+    "artifacts/sample_generation/task_seed.json",
+    "artifacts/sample_generation/comment_activity_seed.json"
+  ],
+  "generation_quality_report_path": "artifacts/generation_quality_report.json",
+  "pipeline_contract": {
+    "schema_version": "ctcp-project-generation-pipeline-v1",
+    "stages": [
+      {
+        "name": "project_intent",
+        "artifact": "project_intent",
+        "status": "ready"
+      },
+      {
+        "name": "spec",
+        "artifact": "artifacts/project_spec.json",
+        "status": "ready"
+      },
+      {
+        "name": "capability_plan",
+        "artifact": "artifacts/capability_plan.json",
+        "status": "ready"
+      },
+      {
+        "name": "sample_generation_plan",
+        "artifact": "artifacts/sample_generation",
+        "status": "ready"
+      },
+      {
+        "name": "scaffold",
+        "artifact": "project_root",
+        "status": "planned",
+        "project_root": "project_output/bug"
+      },
+      {
+        "name": "core_feature_implementation",
+        "artifact": "core_feature_files",
+        "status": "planned",
+        "core_feature_files": [
+          "project_output/bug/scripts/run_project_web.py",
+          "project_output/bug/src/bug/activity.py",
+          "project_output/bug/src/bug/app.py",
+          "project_output/bug/src/bug/board.py",
+          "project_output/bug/src/bug/exporter.py",
+          "project_output/bug/src/bug/filters.py",
+          "project_output/bug/src/bug/models.py",
+          "project_output/bug/src/bug/seed.py",
+          "project_output/bug/src/bug/service.py",
+          "project_output/bug/src/bug/tasks.py",
+          "project_output/bug/src/bug/workspace.py",
+          "project_output/bug/tests/test_bug_service.py"
+        ]
+      },
+      {
+        "name": "refinement",
+        "artifact": "artifacts/generation_quality_report.json",
+        "status": "planned"
+      },
+      {
+        "name": "smoke_run",
+        "artifact": "startup_entrypoint",
+        "status": "planned",
+        "startup_entrypoint": "project_output/bug/scripts/run_project_web.py"
+      },
+      {
+        "name": "demo_evidence",
+        "artifact": "demo_evidence",
+        "status": "planned"
+      },
+      {
+        "name": "delivery_package",
+        "artifact": "acceptance_files",
+        "status": "planned",
+        "acceptance_files": [
+          "project_output/bug/README.md",
+          "project_output/bug/scripts/run_project_web.py",
+          "project_output/bug/tests/test_bug_service.py"
+        ],
+        "startup_readme": "project_output/bug/README.md"
+      }
+    ]
+  },
+  "project_id": "bug",
+  "project_root": "project_output/bug",
+  "project_domain": "team_task_management",
+  "scaffold_family": "team_task_pm",
+  "project_type": "team_task_pm",
+  "project_archetype": "team_task_pm_web",
+  "package_name": "bug",
+  "project_profile": "team_task_pm",
+  "generation_mode": "production_team_task_pm_deliverable_first",
+  "execution_mode": "production",
+  "benchmark_case": "",
+  "delivery_shape": "web_first",
+  "project_domain_decision_source": "signal_keywords",
+  "scaffold_family_decision_source": "project_domain:team_task_management",
+  "project_type_decision_source": "goal_or_context",
+  "project_archetype_decision_source": "project_domain:team_task_management",
+  "shape_decision_source": "project_domain:team_task_management",
+  "target_files": [
+    "project_output/bug/README.md",
+    "project_output/bug/docs/00_CORE.md",
+    "project_output/bug/docs/web_workflow.md",
+    "project_output/bug/meta/manifest.json",
+    "project_output/bug/meta/reports/LAST.md",
+    "project_output/bug/meta/tasks/CURRENT.md",
+    "project_output/bug/pyproject.toml",
+    "project_output/bug/scripts/run_project_web.py",
+    "project_output/bug/scripts/verify_repo.ps1",
+    "project_output/bug/src/bug/__init__.py",
+    "project_output/bug/src/bug/activity.py",
+    "project_output/bug/src/bug/app.py",
+    "project_output/bug/src/bug/board.py",
+    "project_output/bug/src/bug/exporter.py",
+    "project_output/bug/src/bug/filters.py",
+    "project_output/bug/src/bug/models.py",
+    "project_output/bug/src/bug/seed.py",
+    "project_output/bug/src/bug/service.py",
+    "project_output/bug/src/bug/tasks.py",
+    "project_output/bug/src/bug/workspace.py",
+    "project_output/bug/tests/test_bug_service.py"
+  ],
+  "source_files": [
+    "project_output/bug/pyproject.toml",
+    "project_output/bug/scripts/run_project_web.py",
+    "project_output/bug/src/bug/__init__.py",
+    "project_output/bug/src/bug/models.py",
+    "project_output/bug/src/bug/seed.py",
+    "project_output/bug/src/bug/workspace.py",
+    "project_output/bug/src/bug/tasks.py",
+    "project_output/bug/src/bug/board.py",
+    "project_output/bug/src/bug/filters.py",
+    "project_output/bug/src/bug/activity.py",
+    "project_output/bug/src/bug/app.py",
+    "project_output/bug/src/bug/exporter.py",
+    "project_output/bug/src/bug/service.py",
+    "project_output/bug/tests/test_bug_service.py"
+  ],
+  "doc_files": [
+    "project_output/bug/README.md",
+    "project_output/bug/docs/00_CORE.md",
+    "project_output/bug/docs/web_workflow.md"
+  ],
+  "workflow_files": [
+    "project_output/bug/meta/tasks/CURRENT.md",
+    "project_output/bug/meta/reports/LAST.md",
+    "project_output/bug/meta/manifest.json",
+    "project_output/bug/scripts/verify_repo.ps1"
+  ],
+  "business_files": [
+    "project_output/bug/scripts/run_project_web.py",
+    "project_output/bug/src/bug/models.py",
+    "project_output/bug/src/bug/seed.py",
+    "project_output/bug/src/bug/workspace.py",
+    "project_output/bug/src/bug/tasks.py",
+    "project_output/bug/src/bug/board.py",
+    "project_output/bug/src/bug/filters.py",
+    "project_output/bug/src/bug/activity.py",
+    "project_output/bug/src/bug/app.py",
+    "project_output/bug/src/bug/exporter.py",
+    "project_output/bug/src/bug/service.py",
+    "project_output/bug/tests/test_bug_service.py"
+  ],
+  "business_capabilities": [
+    "auth_workspace",
+    "project_board",
+    "task_crud_detail",
+    "filters_activity",
+    "preview_export",
+    "delivery_ready"
+  ],
+  "materialize_capabilities": [
+    "auth_workspace",
+    "project_board",
+    "task_crud_detail",
+    "filters_activity",
+    "preview_export",
+    "delivery_ready"
+  ],
+  "generated_files": [],
+  "missing_files": [
+    "project_output/bug/README.md",
+    "project_output/bug/docs/00_CORE.md",
+    "project_output/bug/docs/web_workflow.md",
+    "project_output/bug/meta/manifest.json",
+    "project_output/bug/meta/reports/LAST.md",
+    "project_output/bug/meta/tasks/CURRENT.md",
+    "project_output/bug/pyproject.toml",
+    "project_output/bug/scripts/run_project_web.py",
+    "project_output/bug/scripts/verify_repo.ps1",
+    "project_output/bug/src/bug/__init__.py",
+    "project_output/bug/src/bug/activity.py",
+    "project_output/bug/src/bug/app.py",
+    "project_output/bug/src/bug/board.py",
+    "project_output/bug/src/bug/exporter.py",
+    "project_output/bug/src/bug/filters.py",
+    "project_output/bug/src/bug/models.py",
+    "project_output/bug/src/bug/seed.py",
+    "project_output/bug/src/bug/service.py",
+    "project_output/bug/src/bug/tasks.py",
+    "project_output/bug/src/bug/workspace.py",
+    "project_output/bug/tests/test_bug_service.py"
+  ],
+  "acceptance_files": [
+    "project_output/bug/README.md",
+    "project_output/bug/scripts/run_project_web.py",
+    "project_output/bug/tests/test_bug_service.py"
+  ],
+  "startup_entrypoint": "project_output/bug/scripts/run_project_web.py",
+  "startup_readme": "project_output/bug/README.md",
+  "reference_project_mode": {
+    "enabled": true,
+    "mode": "structure_workflow_docs"
+  },
+  "reference_style_applied": [
+    "repo_script_layout",
+    "workflow_manifest_stage_chain",
+    "bridge_readable_manifest"
+  ],
+  "demo_required": true,
+  "visual_evidence_required": true,
+  "screenshot_required": true,
+  "visual_evidence_status": "placeholder_only",
+  "benchmark_sample_applied": false,
+  "decision_nodes": [
+    "chair.output_contract_freeze",
+    "chair.source_generation"
+  ],
+  "flow_nodes": [
+    "librarian.context_pack",
+    "chair.docs_generation",
+    "chair.workflow_generation",
+    "chair.artifact_manifest_build",
+    "chair.deliver"
+  ]
+}

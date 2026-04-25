@@ -1,0 +1,50 @@
+{
+  "schema_version": "ctcp-agent-league-case-v1",
+  "agent_id": "customer_agent",
+  "role": "Customer Agent",
+  "max_score": 25,
+  "inputs": [
+    "benchmark_case.json",
+    "persona and scripted turns",
+    "support transcript",
+    "final screenshots",
+    "final bundle summary"
+  ],
+  "checklist": [
+    {
+      "id": "goal_fit",
+      "label": "Goal understanding matches Plane-lite team task management",
+      "points": 6,
+      "evidence": ["benchmark goal", "project_spec.json", "output_contract_freeze.json"]
+    },
+    {
+      "id": "persona_fit",
+      "label": "Small local team preferences are respected",
+      "points": 5,
+      "evidence": ["customer persona", "README", "startup steps"]
+    },
+    {
+      "id": "visible_progress",
+      "label": "Visible progress is available during or after the run",
+      "points": 5,
+      "evidence": ["transcript", "TRACE.md", "events.jsonl", "screenshots"]
+    },
+    {
+      "id": "confidence_delivery",
+      "label": "Final delivery gives the customer confidence",
+      "points": 6,
+      "evidence": ["final_project_bundle.zip", "support_public_delivery.json", "final screenshots"]
+    },
+    {
+      "id": "plain_language",
+      "label": "Customer-facing materials are understandable",
+      "points": 3,
+      "evidence": ["README", "support transcript", "delivery summary"]
+    }
+  ],
+  "blockers": [
+    "missing final package",
+    "missing transcript or equivalent customer conversation record",
+    "no screenshot or visual review artifact"
+  ]
+}

@@ -3,6 +3,7 @@
 Scope boundary:
 - This file is the authoritative contract for isolated style regression of the production assistant.
 - It does not redefine task-progress dialogue rules; those remain in `docs/11_task_progress_dialogue.md`.
+- It does not redefine CTCP's Virtual Team Lane role model; that remains in `docs/12_virtual_team_contract.md`.
 - It does not replace real task execution, production support runs, or canonical verify truth.
 
 ## 1) Why This Exists
@@ -25,7 +26,7 @@ Target statement:
 Non-goals:
 - not a fun roleplay system
 - not a replacement for real task execution
-- not a parallel role hierarchy that changes CTCP mainline flow
+- not the runtime role hierarchy itself; CTCP may legitimately use a Virtual Team Lane role model in production
 - not an excuse to optimize for “chatty” behavior over task progression
 
 ## 3) Three-Layer Separation
@@ -36,6 +37,7 @@ Non-goals:
 - Authority:
   - `docs/11_task_progress_dialogue.md`
   - `docs/10_team_mode.md`
+  - `docs/12_virtual_team_contract.md`
 - Must:
   - answer as a task-progress assistant
   - stay fixed during one persona-lab run
@@ -283,6 +285,15 @@ Persona Test Lab:
 - must not pollute production conversation state
 - must not substitute for real task execution
 - exists to prove whether style defects were actually repaired
+
+### 12.1) Relationship to Virtual Team Lane
+
+Persona Test Lab must not suppress, flatten, or deny CTCP's production role model.
+
+Rules:
+- if production is in Virtual Team Lane, persona-lab cases may observe role-grounded replies from Product / PM / Architect / UX / Implementation / QA / Delivery stages
+- persona-lab scores the quality and grounding of those replies; it does not decide lane selection
+- persona-lab may test whether team-stage replies stay clear and non-mechanical, but it must not rewrite the lane contract
 
 ## 13) Integration Rule for Future Runtime Work
 

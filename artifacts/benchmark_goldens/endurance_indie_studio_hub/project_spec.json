@@ -1,0 +1,207 @@
+{
+  "schema_version": "ctcp-project-spec-v2",
+  "goal_summary": "做一个给独立游戏团队用的本地生产协作平台",
+  "target_user": "希望尽快验证想法的项目发起人",
+  "problem_to_solve": "把模糊目标收束成一个最小可运行项目，而不是只停留在流程和证明工件上",
+  "mvp_scope": [
+    "提供可运行入口和 README 启动说明",
+    "至少打通一条核心用户流程"
+  ],
+  "required_inputs": [
+    "用户目标描述"
+  ],
+  "required_outputs": [
+    "可运行项目代码",
+    "README 启动说明",
+    "至少一条核心流程的验证结果"
+  ],
+  "hard_constraints": [
+    "respect explicit negative requirements from the user text"
+  ],
+  "assumptions": [
+    "默认先生成最小可运行版本，再逐步扩展非核心能力",
+    "默认交付形态采用最容易验证的闭环入口",
+    "未指定部署环境时默认按本地可运行优先"
+  ],
+  "open_questions": [
+    "非阻塞待确认: 尚未明确交付形态，先按最小闭环入口假设",
+    "非阻塞待确认: 尚未明确运行环境，先按本地 smoke run 假设"
+  ],
+  "acceptance_criteria": [
+    "README 能指导启动项目",
+    "项目存在真实可运行入口",
+    "至少一条核心用户流程通过 smoke run"
+  ],
+  "constraint_snapshot": {
+    "系统规模": "适合5-20人小团队，轻量化设计，反对复杂企业级冗余功能",
+    "本地部署": "保证数据安全和自主可控",
+    "长期可用": "稳定性和易维护性"
+  },
+  "project_domain": "indie_studio_production_hub",
+  "scaffold_family": "indie_studio_hub",
+  "project_type": "indie_studio_hub",
+  "project_archetype": "indie_studio_hub_web",
+  "delivery_shape": "web_first",
+  "build_profile": "high_quality_extended",
+  "product_depth": "extended",
+  "required_pages": 13,
+  "required_screenshots": 10,
+  "require_feature_matrix": true,
+  "require_page_map": true,
+  "require_data_model_summary": true,
+  "require_search": true,
+  "require_import_or_export": "both",
+  "require_dashboard_or_project_overview": true,
+  "core_modules": [
+    "workspace_project_model",
+    "milestone_backlog",
+    "task_board",
+    "task_list",
+    "task_detail",
+    "comments_activity",
+    "asset_library",
+    "asset_detail",
+    "bug_tracker",
+    "build_release_center",
+    "docs_center",
+    "dashboard",
+    "search",
+    "import_export",
+    "settings",
+    "extended_coverage"
+  ],
+  "required_pages_or_views": [
+    "dashboard",
+    "project_list",
+    "project_overview",
+    "milestone_backlog",
+    "kanban_board",
+    "task_list",
+    "task_detail",
+    "asset_library",
+    "asset_detail",
+    "bug_tracker",
+    "build_release_center",
+    "activity_feed",
+    "docs_center",
+    "project_settings"
+  ],
+  "data_models": [
+    "user",
+    "workspace",
+    "project",
+    "milestone",
+    "task",
+    "asset",
+    "asset_link",
+    "bug",
+    "build_record",
+    "release_summary",
+    "doc_entry",
+    "activity_event"
+  ],
+  "key_interactions": [
+    "create_project",
+    "view_milestones",
+    "create_task",
+    "edit_task_fields",
+    "move_task_status",
+    "comment_on_task",
+    "search_tasks",
+    "filter_tasks",
+    "sort_tasks",
+    "view_asset_library",
+    "view_asset_detail",
+    "link_asset_to_task",
+    "create_bug",
+    "update_bug_status",
+    "view_build_records",
+    "generate_release_summary",
+    "view_docs_center",
+    "export_project_data",
+    "view_activity_feed"
+  ],
+  "task_fields": [
+    "title",
+    "description",
+    "status",
+    "priority",
+    "assignee",
+    "due_date",
+    "labels",
+    "linked_assets",
+    "linked_bugs",
+    "milestone"
+  ],
+  "export_targets": [
+    "demo_workspace.json",
+    "asset_library.json",
+    "bug_tracker.json",
+    "release_summary.json",
+    "feature_matrix.md",
+    "page_map.md",
+    "data_model_summary.md",
+    "milestone_plan.md",
+    "startup_guide.md",
+    "replay_guide.md",
+    "mid_stage_review.md",
+    "acceptance_bundle.zip"
+  ],
+  "sample_content_plan": {
+    "pipeline_id": "indie_studio_hub_demo_seed",
+    "minimum_depth": {
+      "projects": 2,
+      "tasks": 10,
+      "assets": 6,
+      "bugs": 4,
+      "builds": 3,
+      "docs": 4
+    },
+    "steps": [
+      "demo_users",
+      "workspace_seed",
+      "project_seed",
+      "task_seed",
+      "asset_seed",
+      "bug_seed",
+      "build_seed",
+      "doc_seed"
+    ],
+    "api_merge_targets": []
+  },
+  "delivery_requirements": [
+    "final_project_bundle.zip",
+    "README",
+    "milestone_plan.md",
+    "startup_guide.md",
+    "replay_guide.md",
+    "mid_stage_review.md",
+    "screenshots",
+    "verify_summary"
+  ],
+  "required_doc_files": [
+    "docs/feature_matrix.md",
+    "docs/page_map.md",
+    "docs/data_model_summary.md",
+    "docs/milestone_plan.md",
+    "docs/startup_guide.md",
+    "docs/replay_guide.md",
+    "docs/mid_stage_review.md"
+  ],
+  "user_acceptance_required_views": [
+    "asset_library",
+    "asset_detail",
+    "bug_tracker",
+    "build_release_center",
+    "docs_center"
+  ],
+  "explicit_non_goals": [
+    "realtime websocket collaboration",
+    "OAuth",
+    "multi-tenant SaaS",
+    "complex RBAC",
+    "cloud sync",
+    "AI automatic scheduling",
+    "payment flows"
+  ]
+}

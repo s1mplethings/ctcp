@@ -15,7 +15,10 @@ outputs:
   required:
     - artifacts/find_result.json
     - artifacts/output_contract_freeze.json
+    - artifacts/project_spec.json
+    - artifacts/capability_plan.json
     - artifacts/source_generation_report.json
+    - artifacts/generation_quality_report.json
     - artifacts/docs_generation_report.json
     - artifacts/workflow_generation_report.json
     - artifacts/project_manifest.json

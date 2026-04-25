@@ -155,6 +155,74 @@ _PROJECT_DOMAIN_TOKENS = (
     "narrative design",
     "storyline",
     "character",
+    "asset",
+    "bug",
+    "build",
+    "release",
+    "doc",
+    "delivery",
+    "素材",
+    "资产",
+    "bug",
+    "构建",
+    "发布",
+    "文档",
+    "交付",
+)
+_TASK_BINDING_TOKENS = (
+    "绑定任务",
+    "绑定一个新任务",
+    "绑定新任务",
+    "新任务",
+    "启动这一任务",
+    "启动这个任务",
+    "我会绑定此任务",
+    "bind a new task",
+    "bind this task",
+    "start this task",
+)
+_DOMAIN_LIFT_TOKENS = (
+    "domain lift",
+    "域提升",
+    "产品域提升",
+    "完整产品域",
+    "product-generation repair",
+    "domain-lift",
+    "不要再只做",
+    "不要只做",
+    "coverage gate",
+    "user_acceptance_status",
+    "internal_runtime_status",
+)
+_GENERATION_RERUN_TOKENS = (
+    "重跑生成测试",
+    "重跑测试",
+    "重新生成",
+    "rerun generation test",
+    "rerun the generation test",
+    "rerun",
+    "regeneration",
+)
+_ROUGH_GOAL_PRODUCT_TOKENS = (
+    "粗目标",
+    "不要细规格",
+    "自己做产品定义并生成",
+    "rough goal",
+    "product definition",
+    "project generation",
+    "本地优先",
+    "local-first",
+    "生成测试",
+)
+_EXECUTION_REQUEST_TOKENS = (
+    "真正去执行这个任务",
+    "开始执行",
+    "开始处理",
+    "启动这一任务",
+    "真正去做",
+    "execute this task",
+    "start executing",
+    "actually execute",
 )
 _CONSTRAINT_TOKENS = (
     "优先速度",
@@ -313,6 +381,41 @@ def _contains_domain_signal(text: str) -> bool:
 
 def _contains_constraint_signal(text: str) -> bool:
     return _contains_any_token(text, _CONSTRAINT_TOKENS)
+
+
+def _contains_task_binding_signal(text: str) -> bool:
+    return _contains_any_token(text, _TASK_BINDING_TOKENS)
+
+
+def _contains_domain_lift_signal(text: str) -> bool:
+    return _contains_any_token(text, _DOMAIN_LIFT_TOKENS)
+
+
+def _contains_generation_rerun_signal(text: str) -> bool:
+    return _contains_any_token(text, _GENERATION_RERUN_TOKENS)
+
+
+def _contains_rough_goal_product_signal(text: str) -> bool:
+    return _contains_any_token(text, _ROUGH_GOAL_PRODUCT_TOKENS)
+
+
+def _contains_execution_request_signal(text: str) -> bool:
+    return _contains_any_token(text, _EXECUTION_REQUEST_TOKENS)
+
+
+def _is_executable_project_binding_request(text: str) -> bool:
+    raw = _norm(text)
+    if not raw:
+        return False
+    binding = _contains_task_binding_signal(raw)
+    product = _looks_project_intent(raw) or _contains_domain_signal(raw) or _contains_rough_goal_product_signal(raw)
+    repair = _contains_domain_lift_signal(raw) or _contains_generation_rerun_signal(raw) or _contains_constraint_signal(raw)
+    execution = _contains_execution_request_signal(raw)
+    if binding and product and repair:
+        return True
+    if execution and product and repair:
+        return True
+    return False
 
 
 def _is_decision_reply(text: str) -> bool:
@@ -475,6 +578,9 @@ def route_conversation_mode(
     has_active_binding = has_active_project_binding(active_task_state)
     has_project_context = has_active_task or has_active_binding
     explicit_project_intent = _looks_project_intent(latest)
+    executable_binding_request = _is_executable_project_binding_request(latest)
+    if executable_binding_request:
+        return "PROJECT_DETAIL"
     if _is_status_query(latest) and not (explicit_project_intent and not has_project_context):
         return "STATUS_QUERY"
     if _is_decision_reply(latest) and has_project_context:

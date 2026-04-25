@@ -16,9 +16,11 @@ ROOT = Path(__file__).resolve().parents[2]
 
 try:
     from tools import contract_guard, contrast_rules, local_librarian, run_state
+    from tools.run_manifest import update_adlc_state
 except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
     from tools import contract_guard, contrast_rules, local_librarian, run_state
+    from tools.run_manifest import update_adlc_state
 
 PATCH_START_RE = re.compile(r"^diff --git .*$", re.M)
 NESTED_DIFF_ADDED_LINE_RE = re.compile(r"^\+diff --git .*$", re.M)
@@ -381,7 +383,20 @@ def _save_state(state_path_root: Path, state: dict[str, Any], **updates: Any) ->
             state["last_verify"] = value
         elif value is not None:
             state[key] = value
-    return run_state.save_state(state_path_root, state)
+    saved = run_state.save_state(state_path_root, state)
+    phase = str(saved.get("phase", "")).strip()
+    if phase:
+        final_status = "pass" if phase == "done" else ("fail" if phase == "stop" else "")
+        update_adlc_state(
+            state_path_root,
+            phase=phase,
+            gate_status=phase,
+            final_status=final_status,
+            first_failure_gate="adlc_self_improve_core" if phase == "stop" else "",
+            first_failure_reason=str(saved.get("last_error", "")).strip() if phase == "stop" else "",
+            gates_passed=["adlc_self_improve_core"] if phase == "done" else [],
+        )
+    return saved
 
 
 def _fail(

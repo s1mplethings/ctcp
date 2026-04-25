@@ -114,6 +114,19 @@ class ProviderSelectionTests(unittest.TestCase):
             self.assertEqual(provider, "api_agent")
             self.assertIn("local_exec restricted to librarian/context_pack", note)
 
+    def test_formal_api_only_non_librarian_local_exec_fails_fast(self) -> None:
+        cfg = {
+            "schema_version": "ctcp-dispatch-config-v1",
+            "mode": "manual_outbox",
+            "role_providers": {
+                "contract_guardian": "local_exec",
+            },
+        }
+        with mock.patch.dict(os.environ, {"CTCP_FORMAL_API_ONLY": "1"}, clear=False):
+            provider, note = ctcp_dispatch._resolve_provider(cfg, "contract_guardian", "review_contract")
+        self.assertEqual(provider, "local_exec")
+        self.assertIn("formal_api_only requires api_agent", note)
+
     def test_librarian_manual_outbox_override_is_ignored(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             run_dir = Path(td)
@@ -303,6 +316,36 @@ class ProviderSelectionTests(unittest.TestCase):
             self.assertIn("local model unavailable", str(result.get("reason", "")))
             ollama_execute.assert_called_once()
             api_execute.assert_not_called()
+
+    def test_formal_api_only_dispatch_writes_provider_mismatch_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            run_dir = Path(td)
+            artifacts = run_dir / "artifacts"
+            artifacts.mkdir(parents=True, exist_ok=True)
+            _cfg = {
+                "schema_version": "ctcp-dispatch-config-v1",
+                "mode": "manual_outbox",
+                "role_providers": {
+                    "contract_guardian": "manual_outbox",
+                },
+            }
+            (artifacts / "dispatch_config.json").write_text(json.dumps(_cfg, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            gate = {
+                "state": "blocked",
+                "owner": "Contract Guardian",
+                "path": "reviews/review_contract.md",
+                "reason": "waiting for review_contract.md",
+            }
+            with mock.patch.dict(os.environ, {"CTCP_FORMAL_API_ONLY": "1"}, clear=False):
+                result = ctcp_dispatch.dispatch_once(run_dir, {"goal": "formal provider lock"}, gate, ROOT)
+
+            self.assertEqual(result.get("status"), "provider_mismatch", msg=str(result))
+            ledger_path = run_dir / "artifacts" / "provider_ledger.jsonl"
+            self.assertTrue(ledger_path.exists())
+            rows = [json.loads(line) for line in ledger_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+            self.assertTrue(rows)
+            self.assertEqual(rows[-1]["verdict"], "blocked_non_api_provider")
+            self.assertEqual(rows[-1]["provider_used"], "manual_outbox")
 
     def test_dispatch_once_writes_step_meta(self) -> None:
         with tempfile.TemporaryDirectory() as td:

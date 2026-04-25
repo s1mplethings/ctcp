@@ -13,7 +13,6 @@ import shutil
 import subprocess
 import sys
 import time
-import zipfile
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -24,6 +23,8 @@ if str(ROOT) not in sys.path: sys.path.insert(0, str(ROOT))
 from frontend.delivery_reply_actions import align_reply_with_delivery_actions, delivery_plan_failed, evaluate_delivery_completion, inject_ready_delivery_actions, prioritize_screenshot_files
 from frontend.progress_reply import humanize_progress_runtime_text, summarize_progress_evidence_refs
 from frontend.telegram_http_client import telegram_post_form, telegram_post_multipart
+from scripts.support_delivery_bundle_helpers import choose_public_package, package_bundle_role, parse_scaffold_run_dir, zip_directory
+from tools.formal_api_lock import append_provider_ledger, formal_api_only_enabled
 PROMPT_TEMPLATE_PATH = ROOT / "agents" / "prompts" / "support_lead_reply.md"
 SUPPORT_INBOX_REL_PATH = Path("artifacts") / "support_inbox.jsonl"
 SUPPORT_PROMPT_REL_PATH = Path("artifacts") / "support_prompt_input.md"
@@ -223,6 +224,74 @@ PROJECT_CREATE_INTENT_HINTS_EN = (
     "start the project",
     "make a tool",
     "build a tool",
+)
+TASK_BINDING_HINTS_ZH = (
+    "绑定任务",
+    "绑定一个新任务",
+    "绑定新任务",
+    "新任务",
+    "启动这一任务",
+    "启动这个任务",
+)
+TASK_BINDING_HINTS_EN = (
+    "bind a new task",
+    "bind this task",
+    "start this task",
+    "task binding",
+)
+DOMAIN_LIFT_HINTS_ZH = (
+    "域提升",
+    "完整产品域",
+    "不要再只做",
+    "不要只做",
+    "覆盖门槛",
+    "coverage gate",
+    "user_acceptance_status",
+    "internal_runtime_status",
+)
+DOMAIN_LIFT_HINTS_EN = (
+    "domain lift",
+    "domain-lift",
+    "product-generation repair",
+    "coverage gate",
+    "user_acceptance_status",
+    "internal_runtime_status",
+)
+GENERATION_RERUN_HINTS_ZH = (
+    "重跑生成测试",
+    "重跑测试",
+    "重新生成",
+    "粗目标",
+    "不要细规格",
+    "自己做产品定义并生成",
+)
+GENERATION_RERUN_HINTS_EN = (
+    "rerun generation test",
+    "rerun the generation test",
+    "rerun",
+    "rough goal",
+    "product definition",
+    "project generation",
+)
+EXECUTION_CLAIM_HINTS_ZH = (
+    "我将处理此任务",
+    "我将开始执行",
+    "我会重跑相关测试",
+    "我会先生成上下文包再继续",
+    "我会启动这一任务",
+    "我会绑定此任务",
+    "开始处理此任务",
+    "开始执行此任务",
+    "我将开始处理",
+)
+EXECUTION_CLAIM_HINTS_EN = (
+    "i will handle this task",
+    "i will start executing",
+    "i will rerun the test",
+    "i will generate the context pack first",
+    "i will start this task",
+    "i will bind this task",
+    "i'm starting this task",
 )
 NON_PROJECT_SUPPORT_REPLY_MODES = {"GREETING", "SMALLTALK", "CAPABILITY_QUERY", "PROJECT_INTAKE"}
 SUPPORTED_CONVERSATION_MODES = {
@@ -702,6 +771,8 @@ def resolve_local_support_fallback(config: dict[str, Any]) -> str:
     return LOCAL_SUPPORT_REPLY_PROVIDERS[0]
 
 def support_provider_candidates(config: dict[str, Any], override: str = "") -> list[str]:
+    if formal_api_only_enabled():
+        return [PRIMARY_SUPPORT_PROVIDER]
     preferred = resolve_support_provider(config, override=override)
     local_fallback = resolve_local_support_fallback(config)
     ordered: list[str] = []
@@ -2298,6 +2369,51 @@ def should_force_project_detail(user_text: str, session_state: dict[str, Any]) -
         return False
     return is_project_execution_followup(raw)
 
+
+def is_domain_lift_binding_request(text: str) -> bool:
+    raw = sanitize_inline_text(text, max_chars=280)
+    if not raw:
+        return False
+    low = raw.lower()
+    binding = any(token in raw for token in TASK_BINDING_HINTS_ZH) or any(token in low for token in TASK_BINDING_HINTS_EN)
+    repair = any(token in raw for token in DOMAIN_LIFT_HINTS_ZH + GENERATION_RERUN_HINTS_ZH) or any(
+        token in low for token in DOMAIN_LIFT_HINTS_EN + GENERATION_RERUN_HINTS_EN
+    )
+    product = has_project_goal_markers(raw) or ("产品" in raw) or ("生成" in raw) or ("project" in low) or ("generation" in low)
+    execution = is_project_execution_followup(raw) or ("执行" in raw) or ("start" in low) or ("execute" in low)
+    return bool((binding and product and repair) or (execution and product and repair))
+
+
+def has_real_task_binding(session_state: Mapping[str, Any] | None, project_context: Mapping[str, Any] | None = None) -> bool:
+    session_state = session_state if isinstance(session_state, Mapping) else {}
+    project_context = project_context if isinstance(project_context, Mapping) else {}
+    active_goal = sanitize_inline_text(
+        str(
+            session_state.get("active_goal", "")
+            or session_state.get("task_summary", "")
+            or dict(session_state.get("project_memory", {})).get("project_brief", "")
+            or project_context.get("goal", "")
+        ),
+        max_chars=280,
+    )
+    bound_run_id = sanitize_inline_text(
+        str(session_state.get("bound_run_id", "") or session_state.get("active_run_id", "") or project_context.get("run_id", "")),
+        max_chars=80,
+    )
+    bound_run_dir = sanitize_inline_text(
+        str(session_state.get("bound_run_dir", "") or project_context.get("run_dir", "")),
+        max_chars=220,
+    )
+    return bool(active_goal and bound_run_id and bound_run_dir)
+
+
+def reply_claims_task_execution(reply_text: str) -> bool:
+    text = sanitize_inline_text(reply_text, max_chars=320)
+    if not text:
+        return False
+    low = text.lower()
+    return any(token in text for token in EXECUTION_CLAIM_HINTS_ZH) or any(token in low for token in EXECUTION_CLAIM_HINTS_EN)
+
 def recover_invalid_bound_run(
     *,
     run_dir: Path,
@@ -2656,6 +2772,8 @@ def detect_conversation_mode(run_dir: Path, user_text: str, session_state: dict[
     if frontend_route_conversation_mode is not None:
         try:
             mode = str(frontend_route_conversation_mode([user_text], user_text, active_state)).strip().upper() or "SMALLTALK"
+            if mode == "STATUS_QUERY" and (not has_bound_run) and is_domain_lift_binding_request(user_text):
+                return "PROJECT_DETAIL"
             if has_bound_run and mode in {"PROJECT_INTAKE", "PROJECT_DETAIL"} and is_previous_project_status_followup(user_text):
                 return "STATUS_QUERY"
             if mode == "PROJECT_INTAKE" and current_project_brief(session_state) and not should_refresh_project_brief(user_text, mode):
@@ -2677,6 +2795,8 @@ def detect_conversation_mode(run_dir: Path, user_text: str, session_state: dict[
         return "SMALLTALK"
     if has_bound_run and is_previous_project_status_followup(user_text):
         return "STATUS_QUERY"
+    if is_domain_lift_binding_request(user_text):
+        return "PROJECT_DETAIL"
     if should_force_project_detail(user_text, session_state):
         return "PROJECT_DETAIL"
     if active_state.get("task_summary"):
@@ -3317,6 +3437,9 @@ def sync_project_context(
             bound_run_id = str(created.get("run_id", "")).strip()
             session_state["bound_run_id"] = bound_run_id
             session_state["bound_run_dir"] = str(created.get("run_dir", "")).strip()
+            session_state["active_goal"] = sanitize_inline_text(create_goal, max_chars=280)
+            session_state["active_task_id"] = sanitize_inline_text(bound_run_id, max_chars=80)
+            session_state["active_run_id"] = sanitize_inline_text(bound_run_id, max_chars=80)
             if should_refresh_project_brief(user_text, mode):
                 set_current_project_brief(session_state, user_text)
             elif not current_project_brief(session_state):
@@ -3732,6 +3855,8 @@ def collect_public_delivery_state(
         "ctcp_package_source_dirs": [],
         "placeholder_package_source_dirs": [],
         "existing_package_files": [],
+        "final_project_bundle_files": [],
+        "process_bundle_files": [],
         "screenshot_files": [],
         "project_name_hint": "project",
         "package_delivery_mode": "",
@@ -3820,6 +3945,8 @@ def collect_public_delivery_state(
     state["ctcp_package_source_dirs"] = [str(path) for path in ctcp_package_source_dirs]
     state["placeholder_package_source_dirs"] = [str(path) for path in placeholder_package_source_dirs]
     state["existing_package_files"] = [str(path) for path in existing_package_files]
+    state["final_project_bundle_files"] = [str(path) for path in existing_package_files if package_bundle_role(path) == "final_project_bundle"]
+    state["process_bundle_files"] = [str(path) for path in existing_package_files if package_bundle_role(path) == "process_bundle"]
     state["screenshot_files"] = [str(path) for path in prioritize_screenshot_files(screenshot_files)]
     state["project_name_hint"] = _delivery_project_name_hint(
         session_state=session_state,
@@ -3868,7 +3995,7 @@ def public_delivery_prompt_context(delivery_state: dict[str, Any] | None) -> dic
     if not isinstance(delivery_state, dict):
         return {}
     package_source_dirs = [Path(str(x)).name for x in delivery_state.get("package_source_dirs", []) if str(x).strip()]
-    existing_packages = [Path(str(x)).name for x in delivery_state.get("existing_package_files", []) if str(x).strip()]
+    existing_packages = [Path(str(x)).name for x in (delivery_state.get("final_project_bundle_files") or delivery_state.get("existing_package_files", [])) if str(x).strip()]
     screenshot_count = len([x for x in delivery_state.get("screenshot_files", []) if str(x).strip()])
     return {
         "channel": str(delivery_state.get("channel", "")).strip(),
@@ -4559,6 +4686,29 @@ def enforce_task_progress_runtime_guard(
         },
     )
 
+
+def enforce_task_binding_truth_guard(
+    *,
+    reply_text: str,
+    next_question: str,
+    conversation_mode: str,
+    project_context: dict[str, Any] | None,
+    session_state: dict[str, Any] | None,
+) -> tuple[str, str, dict[str, Any]]:
+    mode = str(conversation_mode or "").strip().upper()
+    if mode not in {"PROJECT_INTAKE", "PROJECT_DETAIL", "PROJECT_DECISION_REPLY", "STATUS_QUERY"}:
+        return reply_text, next_question, {"applied": False, "reasons": []}
+    if not reply_claims_task_execution(reply_text):
+        return reply_text, next_question, {"applied": False, "reasons": []}
+    if has_real_task_binding(session_state, project_context):
+        return reply_text, next_question, {"applied": False, "reasons": []}
+    return (
+        "当前还没有绑定真实 run，状态：NEEDS_BINDING。还不能宣称已开始处理、已启动任务或已重跑测试。下一步：先完成任务绑定并写入 active_goal、bound_run_id、bound_run_dir。",
+        "",
+        {"applied": True, "reasons": ["execution_claim_without_binding"]},
+    )
+
+
 def is_smalltalk_only_message(text: str) -> bool:
     raw = str(text or "").strip()
     if not raw:
@@ -5119,6 +5269,24 @@ def build_final_reply_doc(
         except Exception as exc:
             reply_policy = {"fallback_used": False, "reasons": [f"policy_error:{sanitize_inline_text(str(exc), max_chars=80)}"]}
 
+    binding_guard = {"applied": False, "reasons": []}
+    if not str(provider_result.get("degraded_from", "")).strip():
+        reply_text, next_question, binding_guard = enforce_task_binding_truth_guard(
+            reply_text=reply_text,
+            next_question=next_question,
+            conversation_mode=conversation_mode,
+            project_context=project_context,
+            session_state=session_state,
+        )
+        if bool(binding_guard.get("applied", False)):
+            runtime_guard = dict(runtime_guard) if isinstance(runtime_guard, dict) else {"applied": False, "status_hash": "", "reasons": []}
+            runtime_guard["applied"] = True
+            reasons = list(runtime_guard.get("reasons", []))
+            for item in list(binding_guard.get("reasons", [])):
+                if str(item).strip() and item not in reasons:
+                    reasons.append(item)
+            runtime_guard["reasons"] = reasons
+
     debug_notes = sanitize_inline_text(str(raw_doc.get("debug_notes", "")), max_chars=400)
     provider_status = str(provider_result.get("status", "")).strip()
     provider_reason = sanitize_inline_text(str(provider_result.get("reason", "")), max_chars=220)
@@ -5343,6 +5511,16 @@ def process_message(
                 "local_provider": provider,
             }
         current = execute_provider(provider=provider, run_dir=run_dir, request=current_request, config=config)
+        ledger_result = dict(current)
+        if api_failover and provider in LOCAL_SUPPORT_REPLY_PROVIDERS:
+            ledger_result["fallback_used"] = True
+        append_provider_ledger(
+            run_dir,
+            role="support_lead",
+            action="support_reply",
+            provider_used=provider,
+            result=ledger_result,
+        )
         result = current
         log_provider_result(run_dir, provider, current, f"attempt_{idx}")
         record_provider_runtime(
@@ -5495,6 +5673,18 @@ def process_message(
         allow_dedupe_suppress=False,
         dedupe_source_kind="provider",
     )
+    if formal_api_only_enabled():
+        formal_failed = (
+            provider != PRIMARY_SUPPORT_PROVIDER
+            or str(result.get("status", "")).strip() != "executed"
+            or bool(result.get("fallback_used", False))
+        )
+        if formal_failed:
+            final_doc["formal_api_only_failed"] = True
+            final_doc["formal_api_only_failure_reason"] = (
+                str(result.get("reason", "")).strip()
+                or f"formal_api_only requires {PRIMARY_SUPPORT_PROVIDER} executed without fallback for support_reply"
+            )
     if (
         isinstance(t2p_report, dict)
         and str(t2p_report.get("pass_fail", "")).strip().upper() == "PASS"
@@ -5599,24 +5789,6 @@ def parse_allowlist(raw: str) -> set[int] | None:
             continue
     return out or None
 
-def _zip_directory(source_dir: Path, archive_path: Path) -> Path:
-    archive_path.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for item in sorted(source_dir.rglob("*")):
-            if not item.is_file():
-                continue
-            arcname = (Path(source_dir.name) / item.relative_to(source_dir)).as_posix()
-            zf.write(item, arcname)
-    return archive_path
-
-def _parse_scaffold_run_dir(text: str) -> str:
-    for raw in str(text or "").splitlines():
-        line = raw.strip()
-        if "run_dir=" not in line:
-            continue
-        return line.split("run_dir=", 1)[1].strip()
-    return ""
-
 def _materialize_support_scaffold_project(
     *,
     run_dir: Path,
@@ -5681,7 +5853,7 @@ def _materialize_support_scaffold_project(
     )
     write_text(run_dir / SUPPORT_SCAFFOLD_STDOUT_REL_PATH, proc.stdout)
     write_text(run_dir / SUPPORT_SCAFFOLD_STDERR_REL_PATH, proc.stderr)
-    scaffold_run_dir = _parse_scaffold_run_dir(proc.stdout)
+    scaffold_run_dir = parse_scaffold_run_dir(proc.stdout)
     error_text = ""
     if proc.returncode != 0:
         error_text = sanitize_inline_text(proc.stderr or proc.stdout, max_chars=260) or "scaffold command failed"
@@ -5733,6 +5905,7 @@ def resolve_public_delivery_plan(
         "ts": now_iso(),
         "requested_actions": [dict(item) for item in actions or [] if isinstance(item, dict)],
         "deliveries": [],
+        "internal_artifacts": [],
         "errors": [],
     }
     if not isinstance(delivery_state, dict):
@@ -5746,6 +5919,8 @@ def resolve_public_delivery_plan(
         Path(str(x)).resolve() for x in delivery_state.get("placeholder_package_source_dirs", []) if str(x).strip()
     ]
     existing_packages = [Path(str(x)).resolve() for x in delivery_state.get("existing_package_files", []) if str(x).strip()]
+    final_packages = [Path(str(x)).resolve() for x in delivery_state.get("final_project_bundle_files", []) if str(x).strip()]
+    process_packages = [Path(str(x)).resolve() for x in delivery_state.get("process_bundle_files", []) if str(x).strip()]
     screenshot_files = [Path(str(x)).resolve() for x in prioritize_screenshot_files(delivery_state.get("screenshot_files", []))]
     export_dir = run_dir / SUPPORT_EXPORTS_REL_DIR
 
@@ -5762,29 +5937,37 @@ def resolve_public_delivery_plan(
                     plan["errors"].append("package requested but package delivery gate is blocked")
                 continue
             chosen: Path | None = None
-            if existing_packages:
-                chosen = sorted(existing_packages, key=lambda item: item.stat().st_mtime, reverse=True)[0]
+            process_bundle: Path | None = choose_public_package(process_packages)
+            if final_packages:
+                chosen = choose_public_package(final_packages)
             elif ctcp_package_source_dirs:
                 source_dir = ctcp_package_source_dirs[0]
-                chosen = _zip_directory(source_dir, export_dir / f"{source_dir.name}.zip")
+                chosen = zip_directory(source_dir, export_dir / "final_project_bundle.zip", excluded_root=SUPPORT_EXPORTS_REL_DIR)
+                process_bundle = zip_directory(run_dir, export_dir / "process_bundle.zip", excluded_root=SUPPORT_EXPORTS_REL_DIR)
             elif placeholder_package_source_dirs:
                 scaffold_dir = _materialize_support_scaffold_project(run_dir=run_dir, delivery_state=delivery_state)
                 if scaffold_dir is not None and scaffold_dir.exists():
-                    chosen = _zip_directory(scaffold_dir, export_dir / f"{scaffold_dir.name}.zip")
+                    chosen = zip_directory(scaffold_dir, export_dir / "final_project_bundle.zip", excluded_root=SUPPORT_EXPORTS_REL_DIR)
+                    process_bundle = zip_directory(run_dir, export_dir / "process_bundle.zip", excluded_root=SUPPORT_EXPORTS_REL_DIR)
                 else:
                     plan["errors"].append("package requested but scaffold materialization did not succeed")
                     continue
             elif package_source_dirs:
                 source_dir = package_source_dirs[0]
-                chosen = _zip_directory(source_dir, export_dir / f"{source_dir.name}.zip")
+                chosen = zip_directory(source_dir, export_dir / "final_project_bundle.zip", excluded_root=SUPPORT_EXPORTS_REL_DIR)
+                process_bundle = zip_directory(run_dir, export_dir / "process_bundle.zip", excluded_root=SUPPORT_EXPORTS_REL_DIR)
+            elif existing_packages:
+                chosen = choose_public_package(existing_packages)
             if chosen is None or (not chosen.exists()):
                 plan["errors"].append("package requested but no package source is available")
                 continue
+            if process_bundle is not None and process_bundle.exists():
+                plan["internal_artifacts"].append({"type": "process_bundle", "path": str(process_bundle), "visibility": "internal"})
             plan["deliveries"].append(
                 {
                     "type": "document",
                     "path": str(chosen),
-                    "caption": "按你刚才确认的格式，这里是当前项目 zip 包。",
+                    "caption": "这里是当前可直接交付的 final project bundle zip。",
                 }
             )
             continue
@@ -6278,6 +6461,8 @@ def run_stdin_mode(chat_id: str, provider_override: str = "") -> int:
         return 1
     doc, _ = process_message(chat_id=chat_id, user_text=user_text, source="stdin", provider_override=provider_override)
     print(str(doc.get("reply_text", "")).strip())
+    if formal_api_only_enabled() and bool(doc.get("formal_api_only_failed", False)):
+        return 2
     return 0
 
 def _is_telegram_read_timeout(exc: Exception, error_text: str) -> bool:

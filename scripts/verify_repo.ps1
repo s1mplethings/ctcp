@@ -23,6 +23,11 @@ $ModeName = "LITE"
 if ($RunFull) { $ModeName = "FULL" }
 $ExecutedGates = @()
 $AdvisoryFailures = @()
+$Ownership = "task-owned"
+$RequiresLaneRegression = $false
+$RequiresFrozenRegression = $false
+$LaneRegressionTests = @()
+$FrozenKernelRegressionTests = @()
 
 # --- Verification Profile ---
 # Profiles: doc-only | contract | code
@@ -40,6 +45,17 @@ if ($Profile -notin @("doc-only", "contract", "code")) {
   exit 1
 }
 
+try {
+  $Protection = (python scripts\module_protection_check.py --json 2>$null | ConvertFrom-Json)
+  if ($Protection) {
+    $Ownership = [string]$Protection.ownership
+    $RequiresLaneRegression = [bool]$Protection.requires_lane_regression
+    $RequiresFrozenRegression = [bool]$Protection.requires_frozen_regression
+    $LaneRegressionTests = @($Protection.lane_regression_tests)
+    $FrozenKernelRegressionTests = @($Protection.frozen_kernel_regression_tests)
+  }
+} catch {}
+
 # Gate selection per profile
 $ProfileSkipBuild = ($Profile -eq "doc-only") -or ($Profile -eq "contract")
 $ProfileSkipBehaviorCatalog = ($Profile -eq "doc-only")
@@ -52,6 +68,7 @@ $ProfileAdvisoryContractChecks = ($Profile -eq "doc-only")
 Write-Host "[verify_repo] repo root: $Root"
 Write-Host "[verify_repo] build root: $BuildRoot"
 Write-Host "[verify_repo] profile: $Profile"
+Write-Host "[verify_repo] ownership: $Ownership"
 Write-Host "[verify_repo] mode: $ModeName"
 Write-Host "[verify_repo] write_fixtures: $WriteFixtures"
 $BuildArtifactsCommittedMessage = -join ([char[]](
@@ -118,6 +135,11 @@ function Invoke-ExternalChecked {
       Write-Host "  - Check for BEHAVIOR_ID comments in modified files"
       Write-Host "  - Verify behavior_catalog.json is up to date"
       Write-Host "  - Run: python scripts\behavior_catalog_check.py --verbose"
+    }
+    elseif ($Label -like "*prompt contract check*") {
+      Write-Host "[verify_repo] Hints for prompt contract check failure:"
+      Write-Host "  - Verify AGENTS.md, docs/12_virtual_team_contract.md, docs/04_execution_flow.md, docs/11_task_progress_dialogue.md, docs/14_persona_test_lab.md, and agents/prompts/chair_plan_draft.md still expose the required Virtual Team Lane markers"
+      Write-Host "  - Run: python scripts\prompt_contract_check.py"
     }
     elseif ($Label -like "*contract check*") {
       Write-Host "[verify_repo] Hints for contract checks failure:"
@@ -341,19 +363,30 @@ Invoke-Step -Name "workflow gate (workflow checks)" -Block {
 }
 Add-ExecutedGate "workflow_gate"
 
+Invoke-Step -Name "module protection check" -Block {
+  Invoke-ExternalChecked -Label "module protection check" -Command { python scripts\module_protection_check.py }
+}
+Add-ExecutedGate "module_protection_check"
+
 # BEHAVIOR_ID: B003
+Invoke-Step -Name "prompt contract check" -Block {
+  Invoke-ExternalChecked -Label "prompt contract check" -Command { python scripts\prompt_contract_check.py }
+}
+Add-ExecutedGate "prompt_contract_check"
+
+# BEHAVIOR_ID: B004
 Invoke-Step -Name "plan check" -Block {
   Invoke-ExternalChecked -Label "plan check" -Command { python scripts\plan_check.py }
 }
 Add-ExecutedGate "plan_check"
 
-# BEHAVIOR_ID: B004
+# BEHAVIOR_ID: B005
 Invoke-Step -Name "patch check (scope from PLAN)" -Block {
   Invoke-ExternalChecked -Label "patch check (scope from PLAN)" -Command { python scripts\patch_check.py }
 }
 Add-ExecutedGate "patch_check"
 
-# BEHAVIOR_ID: B005
+# BEHAVIOR_ID: B006
 if ($ProfileSkipBehaviorCatalog) {
   Write-Host "[verify_repo] behavior catalog check skipped (profile: $Profile)"
   Add-ExecutedGate "behavior_catalog_check"
@@ -364,7 +397,7 @@ if ($ProfileSkipBehaviorCatalog) {
   Add-ExecutedGate "behavior_catalog_check"
 }
 
-# BEHAVIOR_ID: B006
+# BEHAVIOR_ID: B007
 if ($ProfileAdvisoryContractChecks) {
   Invoke-Step -Name "contract checks (advisory for $Profile)" -Block {
     python scripts\contract_checks.py
@@ -381,7 +414,7 @@ if ($ProfileAdvisoryContractChecks) {
   Add-ExecutedGate "contract_checks"
 }
 
-# BEHAVIOR_ID: B007
+# BEHAVIOR_ID: B008
 Invoke-Step -Name "doc index check (sync doc links --check)" -Block {
   Invoke-ExternalChecked -Label "doc index check (sync doc links --check)" -Command {
     python scripts\sync_doc_links.py --check
@@ -417,6 +450,28 @@ if ($ProfileSkipTripletGuard) {
     }
   }
   Add-ExecutedGate "triplet_guard"
+}
+
+if ($RequiresLaneRegression) {
+  Invoke-Step -Name "lane regression" -Block {
+    foreach ($cmd in $LaneRegressionTests) {
+      Invoke-ExternalChecked -Label "lane regression" -Command {
+        python -c "import subprocess, sys; sys.exit(subprocess.call(sys.argv[1], shell=True))" $cmd
+      }
+    }
+  }
+  Add-ExecutedGate "lane_regression"
+}
+
+if ($RequiresFrozenRegression) {
+  Invoke-Step -Name "frozen-kernel regression" -Block {
+    foreach ($cmd in $FrozenKernelRegressionTests) {
+      Invoke-ExternalChecked -Label "frozen-kernel regression" -Command {
+        python -c "import subprocess, sys; sys.exit(subprocess.call(sys.argv[1], shell=True))" $cmd
+      }
+    }
+  }
+  Add-ExecutedGate "frozen_kernel_regression"
 }
 
 if ($ProfileSkipLiteReplay) {

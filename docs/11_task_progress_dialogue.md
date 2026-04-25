@@ -45,8 +45,12 @@ Hard rules:
 Before any user-visible task reply is emitted, the replying agent MUST bind these fields from current task / run truth:
 
 - `current_task_goal`
+- `current_lane`
 - `current_phase`
+- `active_role`
 - `last_confirmed_items`
+- `updated_artifacts`
+- `pending_decisions`
 - `current_blocker` (`none` if clear)
 - `message_purpose` (`explain|progress|decision|failure|delivery`)
 - `question_needed` (`yes|no`)
@@ -75,6 +79,17 @@ If these fields are not bound, the reply is ungrounded even if it sounds natural
 - Lead with what changed since the last turn.
 - Then state current phase, blocker (or `none`), and next action.
 - If a claim depends on runtime truth, reference the artifact or phase that supports it.
+
+### 4.3A Virtual Team Lane Progress
+
+When `current_lane=virtual_team`, progress replies MUST also expose:
+
+- which role is currently active (`product|pm|architect|ux|implementation|qa|delivery`)
+- what was decided in this step
+- what is still unresolved
+- which artifact was created or updated
+
+Virtual Team Lane progress must feel like team advancement, not one agent thinking out loud.
 
 ### 4.4 Decision Point
 
@@ -144,6 +159,7 @@ Every task-progress message MUST contain:
 - zero or one blocker question
 - enough context to connect the message to current phase
 - evidence reference when claiming tests, screenshots, packages, or delivery-ready output
+- when `current_lane=virtual_team`, one explicit role anchor and one explicit artifact update or unresolved-design note
 
 ## 7) Pre-Send Self-Check
 
@@ -177,6 +193,8 @@ A reply passes task-progress lint only when all checks below pass:
 - `response_lint-12`: completion/delivery claims are bound to run truth evidence (not assistant inference).
 - `response_lint-13`: each task turn includes both status anchor and next action.
 - `response_lint-14`: when a phase transition is reported, the reply includes state, trigger reason, and next owner/action.
+- `response_lint-15`: when `current_lane=virtual_team`, the reply names the active role and the artifact created or updated.
+- `response_lint-16`: when `current_lane=virtual_team`, the reply states what was decided and what remains unresolved unless there is truly no open decision.
 
 This contract is the testable replacement for vague requirements such as `不要机械式回答` or `更像真人客服`. Those older phrases are retained only as historical design intent.
 

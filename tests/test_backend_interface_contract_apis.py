@@ -302,6 +302,54 @@ class BackendInterfaceContractApiTests(unittest.TestCase):
             self.assertFalse(bool(status.get("needs_user_decision", False)))
             self.assertEqual(int(status.get("decisions_needed_count", 0) or 0), 0)
 
+    def test_support_context_prefers_runtime_snapshot_over_conflicting_run_dir_files(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_iface_snapshot_truth_") as td:
+            run_dir = Path(td)
+            _state, fake = _make_fake_runtime(run_dir)
+            _write_json(run_dir / "RUN.json", {"status": "completed", "goal": "legacy done"})
+            _write_json(run_dir / "artifacts" / "verify_report.json", {"result": "PASS", "gate": "workflow"})
+            _write_json(
+                run_dir / "artifacts" / "support_runtime_state.json",
+                {
+                    "schema_version": "ctcp-support-runtime-state-v1",
+                    "run_id": "run-x",
+                    "run_dir": str(run_dir),
+                    "phase": "EXECUTE",
+                    "run_status": "running",
+                    "blocking_reason": "waiting for planner",
+                    "needs_user_decision": False,
+                    "pending_decisions": [],
+                    "decisions": [],
+                    "latest_result": {"verify_result": "", "verify_gate": "", "iterations": {}, "gate": {}, "status_raw": {}},
+                    "error": {"has_error": False},
+                    "recovery": {"needed": False, "hint": "", "status": "none"},
+                    "gate": {"state": "open", "owner": "chair", "path": "artifacts/PLAN.md", "reason": "waiting for planner"},
+                    "iterations": {"current": 0, "max": 0, "source": ""},
+                    "verify_result": "",
+                    "verify_gate": "",
+                    "decisions_needed_count": 0,
+                    "open_decisions_count": 0,
+                    "submitted_decisions_count": 0,
+                    "core_hash": "seed",
+                    "updated_at": "2026-04-17T00:00:00Z",
+                    "snapshot_source": "test",
+                },
+            )
+
+            with mock.patch.object(ctcp_front_bridge, "_resolve_run_dir", return_value=run_dir), mock.patch.object(
+                ctcp_front_bridge, "_run_cmd", side_effect=fake
+            ):
+                context = ctcp_front_bridge.get_support_context("run-x")
+
+            status = dict(context.get("status", {}))
+            runtime_state = dict(context.get("runtime_state", {}))
+            current = dict(context.get("current_snapshot", {}))
+            render = dict(context.get("render_snapshot", {}))
+            self.assertEqual(str(status.get("run_status", "")), "running")
+            self.assertEqual(str(runtime_state.get("phase", "")), "EXECUTE")
+            self.assertEqual(str(current.get("authoritative_stage", "")), "EXECUTING")
+            self.assertNotEqual(str(render.get("visible_state", "")), "DONE")
+
 
 if __name__ == "__main__":
     unittest.main()

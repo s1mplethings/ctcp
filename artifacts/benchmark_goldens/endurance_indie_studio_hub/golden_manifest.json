@@ -1,0 +1,77 @@
+{
+  "schema_version": "ctcp-benchmark-golden-v2",
+  "profile": "endurance",
+  "benchmark_entry": "formal_endurance_benchmark",
+  "source_run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate",
+  "created_at": "2026-04-25T02:46:27",
+  "files": {
+    "formal_transcript.md": {
+      "present": true,
+      "source": "reconstructed"
+    },
+    "api_calls.jsonl": {
+      "present": true,
+      "source": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\api_calls.jsonl"
+    },
+    "project_spec.json": {
+      "present": true,
+      "source": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\project_spec.json"
+    },
+    "output_contract_freeze.json": {
+      "present": true,
+      "source": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\output_contract_freeze.json"
+    },
+    "source_generation_report.json": {
+      "present": true,
+      "source": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\source_generation_report.json"
+    },
+    "project_manifest.json": {
+      "present": true,
+      "source": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\project_manifest.json"
+    },
+    "deliverable_index.json": {
+      "present": true,
+      "source": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\deliverable_index.json"
+    },
+    "support_public_delivery.json": {
+      "present": true,
+      "source": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\support_public_delivery.json"
+    },
+    "verify_report.json": {
+      "present": true,
+      "source": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\verify_report.json"
+    },
+    "final_project_bundle.zip": {
+      "present": true,
+      "source": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\final_project_bundle.zip"
+    },
+    "intermediate_evidence_bundle.zip": {
+      "present": true,
+      "source": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\artifacts\\intermediate_evidence_bundle.zip"
+    },
+    "screenshots": {
+      "present": true,
+      "source": "run screenshots",
+      "copied": [
+        "D:\\.c_projects\\adc\\ctcp\\artifacts\\benchmark_goldens\\endurance_indie_studio_hub\\screenshots\\02-project_list.png",
+        "D:\\.c_projects\\adc\\ctcp\\artifacts\\benchmark_goldens\\endurance_indie_studio_hub\\screenshots\\03-project_overview.png",
+        "D:\\.c_projects\\adc\\ctcp\\artifacts\\benchmark_goldens\\endurance_indie_studio_hub\\screenshots\\04-milestone_backlog.png",
+        "D:\\.c_projects\\adc\\ctcp\\artifacts\\benchmark_goldens\\endurance_indie_studio_hub\\screenshots\\05-task_board.png",
+        "D:\\.c_projects\\adc\\ctcp\\artifacts\\benchmark_goldens\\endurance_indie_studio_hub\\screenshots\\06-task_list.png",
+        "D:\\.c_projects\\adc\\ctcp\\artifacts\\benchmark_goldens\\endurance_indie_studio_hub\\screenshots\\07-task_detail.png",
+        "D:\\.c_projects\\adc\\ctcp\\artifacts\\benchmark_goldens\\endurance_indie_studio_hub\\screenshots\\08-asset_library.png",
+        "D:\\.c_projects\\adc\\ctcp\\artifacts\\benchmark_goldens\\endurance_indie_studio_hub\\screenshots\\09-asset_detail.png",
+        "D:\\.c_projects\\adc\\ctcp\\artifacts\\benchmark_goldens\\endurance_indie_studio_hub\\screenshots\\10-bug_tracker.png",
+        "D:\\.c_projects\\adc\\ctcp\\artifacts\\benchmark_goldens\\endurance_indie_studio_hub\\screenshots\\final-ui.png"
+      ]
+    },
+    "benchmark_endurance_summary.json": {
+      "present": true,
+      "source": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\benchmark_endurance_summary.json"
+    },
+    "benchmark_endurance_summary.md": {
+      "present": true,
+      "source": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\20260424-200630-107859-orchestrate\\benchmark_endurance_summary.md"
+    }
+  }
+}

@@ -118,6 +118,8 @@ def build_success_extra(
     *,
     lists: dict[str, Any],
     project_id: str,
+    project_domain: str,
+    scaffold_family: str,
     project_type: str,
     package_name: str,
     entry_script: str,
@@ -135,6 +137,8 @@ def build_success_extra(
 ) -> dict[str, Any]:
     return {
         "project_id": project_id,
+        "project_domain": project_domain,
+        "scaffold_family": scaffold_family,
         "project_type": project_type,
         "project_archetype": str(lists.get("project_archetype", "")),
         "package_name": package_name,

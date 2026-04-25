@@ -34,9 +34,13 @@ MANAGED_DIRTY_POINTERS = {
 
 try:
     from tools.run_paths import get_repo_slug, get_runs_root, make_run_dir
+    from tools.run_manifest import update_adlc_state, update_run_manifest
+    from tools.formal_api_lock import formal_api_only_enabled
 except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
     from tools.run_paths import get_repo_slug, get_runs_root, make_run_dir
+    from tools.run_manifest import update_adlc_state, update_run_manifest
+    from tools.formal_api_lock import formal_api_only_enabled
 
 try:
     import ctcp_dispatch
@@ -100,14 +104,18 @@ except ModuleNotFoundError:
 try:
     from project_generation_gate import (
         evaluate_project_generation_gate,
+        is_explicit_project_generation_goal,
         is_project_generation_workflow,
+        plan_has_project_generation_delivery_requirements,
         selected_workflow_id_from_find_result,
     )
 except ModuleNotFoundError:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from project_generation_gate import (
         evaluate_project_generation_gate,
+        is_explicit_project_generation_goal,
         is_project_generation_workflow,
+        plan_has_project_generation_delivery_requirements,
         selected_workflow_id_from_find_result,
     )
 def now_iso() -> str:
@@ -295,6 +303,12 @@ def default_scaffold_pointcloud_run_id(project_name: str) -> str:
 
 def append_trace(run_dir: Path, text: str) -> None:
     with (run_dir / "TRACE.md").open("a", encoding="utf-8") as fh: fh.write(f"- {now_iso()} | {text}\n")
+
+
+def append_log(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(text)
 
 
 def append_event(run_dir: Path, role: str, event: str, path: str = "", **extra: Any) -> None:
@@ -544,16 +558,134 @@ def append_command_trace(
         fh.write("\n".join(lines) + "\n")
 
 
+def _refresh_project_generation_evidence_bundle(run_dir: Path) -> str:
+    try:
+        from tools.providers.project_generation_artifacts import build_intermediate_evidence_bundle
+    except ModuleNotFoundError:
+        sys.path.insert(0, str(ROOT))
+        from tools.providers.project_generation_artifacts import build_intermediate_evidence_bundle
+    try:
+        return str(build_intermediate_evidence_bundle(run_dir))
+    except Exception as exc:
+        append_log(run_dir / "logs" / "orchestrate.debug.log", f"[{now_iso()}] evidence bundle build failed: {exc}\n")
+        return ""
+
+
+def _delivery_completion_blockers(run_dir: Path) -> list[str]:
+    if not (run_dir / "artifacts" / "project_manifest.json").exists() and not (run_dir / "artifacts" / "output_contract_freeze.json").exists():
+        return []
+    manifest_path = run_dir / "artifacts" / "support_public_delivery.json"
+    if not manifest_path.exists():
+        return ["support_public_delivery manifest missing"]
+    try:
+        manifest = read_json(manifest_path)
+    except Exception as exc:
+        return [f"support_public_delivery manifest unreadable: {exc}"]
+    completion_gate = dict(manifest.get("completion_gate", {})) if isinstance(manifest.get("completion_gate", {}), dict) else {}
+    replay_report = dict(manifest.get("replay_report", {})) if isinstance(manifest.get("replay_report", {}), dict) else {}
+    overall_completion = dict(manifest.get("overall_completion", {})) if isinstance(manifest.get("overall_completion", {}), dict) else {}
+    blockers: list[str] = []
+    if not bool(completion_gate.get("passed", False)):
+        blockers.append("support_public_delivery completion_gate.passed=false")
+    if not bool(completion_gate.get("cold_replay_passed", False)):
+        blockers.append("support_public_delivery cold replay failed")
+    if str(replay_report.get("first_failure_stage", "")).strip() == "entrypoint_missing":
+        blockers.append("delivery cold replay entrypoint_missing")
+    if overall_completion and not bool(overall_completion.get("passed", False)):
+        blockers.append("overall_completion.passed=false")
+    blockers.extend(_extended_quality_completion_blockers(run_dir))
+    return blockers
+
+
+def _extended_quality_completion_blockers(run_dir: Path) -> list[str]:
+    contract_path = run_dir / "artifacts" / "output_contract_freeze.json"
+    if not contract_path.exists():
+        return []
+    try:
+        contract = read_json(contract_path)
+    except Exception as exc:
+        return [f"extended quality contract unreadable: {exc}"]
+    if str(contract.get("build_profile", "")).strip() != "high_quality_extended":
+        return []
+    ledger_path = run_dir / "artifacts" / "extended_coverage_ledger.json"
+    if not ledger_path.exists():
+        return ["extended coverage ledger missing"]
+    try:
+        ledger = read_json(ledger_path)
+    except Exception as exc:
+        return [f"extended coverage ledger unreadable: {exc}"]
+    blockers: list[str] = []
+    coverage = dict(ledger.get("coverage", {})) if isinstance(ledger.get("coverage", {}), dict) else {}
+    checks = {
+        "pages": "extended page depth missing",
+        "screenshots": "extended screenshot coverage missing",
+        "feature_matrix": "feature matrix missing",
+        "page_map": "page map missing",
+        "data_model_summary": "data model summary missing",
+        "search": "search coverage missing",
+        "import_export": "import/export coverage missing",
+        "dashboard_or_project_overview": "dashboard/project overview coverage missing",
+    }
+    for key, reason in checks.items():
+        row = dict(coverage.get(key, {})) if isinstance(coverage.get(key, {}), dict) else {}
+        if not bool(row.get("passed", False)):
+            blockers.append(reason)
+    if not bool(ledger.get("passed", False)):
+        blockers.append("extended coverage ledger.passed=false")
+    return sorted(set(blockers))
+
+
 def finish_verify_pass(run_dir: Path, run_doc: dict[str, Any], *, rc: int, iteration: int) -> int:
+    append_event(run_dir, "Local Verifier", "VERIFY_PASSED", "artifacts/verify_report.json", rc=rc, iteration=iteration)
+    try:
+        from support_public_delivery import auto_close_public_delivery_after_verify_pass
+        auto_close_public_delivery_after_verify_pass(run_dir)  # type: ignore
+    except Exception as exc:
+        append_log(run_dir / "logs" / "orchestrate.debug.log", f"[{now_iso()}] public delivery auto-close failed: {exc}\n")
+    _refresh_project_generation_evidence_bundle(run_dir)
+    delivery_blockers = _delivery_completion_blockers(run_dir)
+    if delivery_blockers:
+        report_path = run_dir / "artifacts" / "delivery_gate_report.json"
+        write_json(
+            report_path,
+            {
+                "schema_version": "ctcp-delivery-completion-gate-v1",
+                "passed": False,
+                "reasons": delivery_blockers,
+                "support_public_delivery_path": "artifacts/support_public_delivery.json",
+                "evidence_bundle_path": "artifacts/intermediate_evidence_bundle.zip",
+            },
+        )
+        append_event(
+            run_dir,
+            "Delivery Gate",
+            "DELIVERY_COMPLETION_BLOCKED",
+            "artifacts/delivery_gate_report.json",
+            reasons=delivery_blockers,
+        )
+        run_doc["status"] = "fail"
+        run_doc["blocked_reason"] = "delivery_completion_failed"
+        save_run_doc(run_dir, run_doc)
+        update_adlc_state(
+            run_dir,
+            phase="delivery_completion_failed",
+            gate_status="blocked",
+            final_status="fail",
+            gates_passed=["verify_report"],
+        )
+        print(f"[ctcp_orchestrate] FAIL: delivery completion gate blocked ({'; '.join(delivery_blockers)})")
+        return 1
     run_doc["status"] = "pass"
     run_doc.pop("blocked_reason", None)
     save_run_doc(run_dir, run_doc)
-    append_event(run_dir, "Local Verifier", "VERIFY_PASSED", "artifacts/verify_report.json", rc=rc, iteration=iteration)
+    update_adlc_state(
+        run_dir,
+        phase="verify_passed",
+        gate_status="pass",
+        final_status="pass",
+        gates_passed=["verify_report", "delivery_completion"],
+    )
     append_event(run_dir, "Local Verifier", "run_pass", "artifacts/verify_report.json")
-    try:
-        from support_public_delivery import auto_close_public_delivery_after_verify_pass; auto_close_public_delivery_after_verify_pass(run_dir)  # type: ignore
-    except Exception as exc:
-        append_log(run_dir / "logs" / "orchestrate.debug.log", f"[{now_iso()}] public delivery auto-close failed: {exc}\n")
     print("[ctcp_orchestrate] PASS: verify succeeded")
     return 0
 
@@ -805,6 +937,15 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
     if not find_result.exists():
         return {"state": "resolve_find_local", "owner": "Local Orchestrator", "path": "artifacts/find_result.json", "reason": "run local resolver"}
 
+    explicit_project_generation_goal = is_explicit_project_generation_goal(goal, find_result)
+    if explicit_project_generation_goal and not project_generation_mode:
+        return {
+            "state": "blocked",
+            "owner": "Contract Guardian",
+            "path": "reviews/review_contract.md",
+            "reason": "project-generation route mismatch: goal requires project-generation lane",
+        }
+
     if policy["find_mode"] == "resolver_plus_web":
         ok_web, msg_web = validate_find_web(find_web)
         ok_ext, ext_path, _ = validate_externals_pack(goal)
@@ -835,6 +976,14 @@ def current_gate(run_dir: Path, run_doc: dict[str, Any]) -> dict[str, str]:
             "owner": "Chair/Planner",
             "path": "artifacts/PLAN_draft.md",
             "reason": blocked_reason_or(artifact_missing_reason(run_dir, target_path="artifacts/PLAN_draft.md", fallback="waiting for PLAN_draft.md")),
+        }
+
+    if project_generation_mode and not plan_has_project_generation_delivery_requirements(plan_draft.read_text(encoding="utf-8", errors="replace")):
+        return {
+            "state": "blocked",
+            "owner": "Contract Guardian",
+            "path": "artifacts/PLAN_draft.md",
+            "reason": "project-generation PLAN missing deliverables, runnable app, verify, screenshot, README, or final package requirements",
         }
 
     if not review_contract.exists():
@@ -2529,6 +2678,14 @@ def cmd_new_run(goal: str, run_id: str) -> int:
     }
     write_json(run_dir / "RUN.json", run_doc)
     write_json(run_dir / "repo_ref.json", repo_ref)
+    update_run_manifest(
+        run_dir,
+        workflow_name="ctcp_default_mainline",
+        execution_lane="default",
+        adlc_phase="created",
+        adlc_gate_status="created",
+        final_status="running",
+    )
     write_text(
         run_dir / "TRACE.md",
         "\n".join(
@@ -2579,12 +2736,42 @@ def load_run_doc(run_dir: Path) -> dict[str, Any]:
 def save_run_doc(run_dir: Path, run_doc: dict[str, Any]) -> None:
     run_doc["updated_at"] = now_iso()
     write_json(run_dir / "RUN.json", run_doc)
+    status = str(run_doc.get("status", "")).strip().lower()
+    if status:
+        update_adlc_state(
+            run_dir,
+            final_status=status,
+            first_failure_gate="adlc" if status in {"fail", "failed", "error"} else "",
+            first_failure_reason=str(run_doc.get("blocked_reason", "")).strip()
+            if status in {"fail", "failed", "error"}
+            else "",
+        )
+
+
+def update_manifest_from_gate(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, Any]) -> None:
+    status = str(run_doc.get("status", "")).strip().lower() or "running"
+    state = str(gate.get("state", "")).strip().lower()
+    reason = str(gate.get("reason", "")).strip() or str(run_doc.get("blocked_reason", "")).strip()
+    first_failure_gate = ""
+    first_failure_reason = ""
+    if status in {"fail", "failed", "error"}:
+        first_failure_gate = state or "adlc"
+        first_failure_reason = reason or str(run_doc.get("blocked_reason", "")).strip() or "run failed"
+    update_adlc_state(
+        run_dir,
+        phase=state or "status",
+        gate_status=state or status,
+        final_status=status,
+        first_failure_gate=first_failure_gate,
+        first_failure_reason=first_failure_reason,
+    )
 
 
 def cmd_status(run_dir: Path) -> int:
     sync_outbox_fulfilled_events(run_dir)
     run_doc = load_run_doc(run_dir)
     gate = current_gate(run_dir, run_doc)
+    update_manifest_from_gate(run_dir, run_doc, gate)
     max_iterations, max_iterations_source = resolve_max_iterations(run_dir)
     verify_iterations = int(run_doc.get("verify_iterations", 0) or 0)
     preview = ctcp_dispatch.dispatch_preview(run_dir, run_doc, gate)
@@ -2628,6 +2815,7 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
         owner = gate["owner"]
         path = gate["path"]
         reason = gate["reason"]
+        update_manifest_from_gate(run_dir, run_doc, gate)
 
         if state == "resolve_find_local":
             cmd = [sys.executable, str(ROOT / "scripts" / "resolve_workflow.py"), "--goal", goal, "--out", str(run_dir / "artifacts" / "find_result.json")]
@@ -2930,21 +3118,22 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
                         reason=str(dispatch.get("reason", "")),
                         provider=str(dispatch.get("provider", "")),
                     )
-                fallback_path, created_fallback = ensure_fixer_outbox_prompt(
-                    run_dir,
-                    goal=goal,
-                    reason=str(run_doc.get("blocked_reason", "patch_first_rejected")),
-                )
-                if created_fallback:
-                    append_event(
+                if not formal_api_only_enabled():
+                    fallback_path, created_fallback = ensure_fixer_outbox_prompt(
                         run_dir,
-                        "fixer",
-                        "OUTBOX_PROMPT_CREATED",
-                        fallback_path,
-                        target_path="artifacts/diff.patch",
-                        action="fix_patch",
-                        provider="manual_outbox_fallback",
+                        goal=goal,
+                        reason=str(run_doc.get("blocked_reason", "patch_first_rejected")),
                     )
+                    if created_fallback:
+                        append_event(
+                            run_dir,
+                            "fixer",
+                            "OUTBOX_PROMPT_CREATED",
+                            fallback_path,
+                            target_path="artifacts/diff.patch",
+                            action="fix_patch",
+                            provider="manual_outbox_fallback",
+                        )
                 bundle, mode_after_dispatch = ensure_failure_bundle(run_dir, require_outbox_prompt=True)
                 final_mode = (
                     mode_after_dispatch
@@ -3111,21 +3300,22 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
                         reason=str(dispatch.get("reason", "")),
                         provider=str(dispatch.get("provider", "")),
                     )
-                fallback_path, created_fallback = ensure_fixer_outbox_prompt(
-                    run_dir,
-                    goal=goal,
-                    reason=str(run_doc.get("blocked_reason", "verify_failed")),
-                )
-                if created_fallback:
-                    append_event(
+                if not formal_api_only_enabled():
+                    fallback_path, created_fallback = ensure_fixer_outbox_prompt(
                         run_dir,
-                        "fixer",
-                        "OUTBOX_PROMPT_CREATED",
-                        fallback_path,
-                        target_path="artifacts/diff.patch",
-                        action="fix_patch",
-                        provider="manual_outbox_fallback",
+                        goal=goal,
+                        reason=str(run_doc.get("blocked_reason", "verify_failed")),
                     )
+                    if created_fallback:
+                        append_event(
+                            run_dir,
+                            "fixer",
+                            "OUTBOX_PROMPT_CREATED",
+                            fallback_path,
+                            target_path="artifacts/diff.patch",
+                            action="fix_patch",
+                            provider="manual_outbox_fallback",
+                        )
                 bundle, mode_after_dispatch = ensure_failure_bundle(run_dir, require_outbox_prompt=True)
                 final_mode = (
                     mode_after_dispatch

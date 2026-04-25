@@ -1,0 +1,34 @@
+{
+  "result": "PASS",
+  "gate": "lite",
+  "iteration": 1,
+  "max_iterations": 3,
+  "patch_sha256": "",
+  "commands": [
+    {
+      "cmd": "powershell -ExecutionPolicy Bypass -File C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\project_output\\mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das\\scripts\\verify_repo.ps1",
+      "exit_code": 0,
+      "cwd": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_hq_repair_full_20260422-192808\\runs\\ctcp\\20260422-192810-441222-orchestrate\\project_output\\mvp-plane-lite-focalboard-lite-rbac-oauth-ai-das",
+      "verify_entry": "scripts/verify_repo.ps1",
+      "stdout_log": "logs/verify.stdout.log",
+      "stderr_log": "logs/verify.stderr.log"
+    }
+  ],
+  "failures": [],
+  "paths": {
+    "trace": "TRACE.md",
+    "verify_report": "artifacts/verify_report.json",
+    "bundle": "",
+    "stdout_log": "logs/verify.stdout.log",
+    "stderr_log": "logs/verify.stderr.log",
+    "plan": "artifacts/PLAN.md"
+  },
+  "artifacts": {
+    "trace": "TRACE.md",
+    "verify_report": "artifacts/verify_report.json",
+    "bundle": "",
+    "stdout_log": "logs/verify.stdout.log",
+    "stderr_log": "logs/verify.stderr.log",
+    "plan": "artifacts/PLAN.md"
+  }
+}

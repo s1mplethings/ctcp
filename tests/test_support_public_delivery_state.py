@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 from unittest import mock
 
@@ -247,6 +248,7 @@ class SupportPublicDeliveryStateTests(unittest.TestCase):
             self.assertTrue(bool(completion_gate.get("passed", False)), msg=json.dumps(result, ensure_ascii=False))
             self.assertEqual(Path(str(completion_gate.get("selected_photo", ""))).name, "final-ui.png")
             self.assertTrue(Path(str(completion_gate.get("selected_document", ""))).exists())
+            self.assertEqual(Path(str(completion_gate.get("selected_document", ""))).name, "final_project_bundle.zip")
             self.assertTrue(bool(completion_gate.get("cold_replay_passed", False)), msg=json.dumps(result, ensure_ascii=False))
             self.assertTrue(Path(str(completion_gate.get("replay_screenshot_path", ""))).exists())
             self.assertTrue(bool(dict(result.get("delivery_completion", {})).get("passed", False)))
@@ -255,6 +257,103 @@ class SupportPublicDeliveryStateTests(unittest.TestCase):
             manifest = json.loads((bound_run / support_bot.SUPPORT_PUBLIC_DELIVERY_REL_PATH).read_text(encoding="utf-8"))
             self.assertEqual({item.get("type") for item in manifest.get("sent", [])}, {"document", "photo"})
             self.assertEqual(str(manifest.get("delivery_mode", "")), "e2e_virtual_delivery")
+            self.assertEqual(Path(str(dict(manifest.get("delivery_completion", {})).get("selected_document", ""))).name, "final_project_bundle.zip")
+            internal = list(manifest.get("internal_artifacts", []))
+            self.assertTrue(any(Path(str(dict(item).get("path", ""))).name == "process_bundle.zip" for item in internal))
+
+    def test_final_project_bundle_excludes_pycache_pyc_and_process_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_bundle_hygiene_") as td:
+            repo_root = Path(td)
+            bound_run = repo_root / "runs" / "bound-story"
+            generated_project = bound_run / "project_output" / "story_organizer"
+            (generated_project / "docs").mkdir(parents=True, exist_ok=True)
+            (generated_project / "meta" / "tasks").mkdir(parents=True, exist_ok=True)
+            (generated_project / "scripts").mkdir(parents=True, exist_ok=True)
+            (generated_project / "tests").mkdir(parents=True, exist_ok=True)
+            (generated_project / "artifacts" / "screenshots").mkdir(parents=True, exist_ok=True)
+            (generated_project / "artifacts" / "reviews").mkdir(parents=True, exist_ok=True)
+            (generated_project / "__pycache__").mkdir(parents=True, exist_ok=True)
+            (bound_run / "artifacts").mkdir(parents=True, exist_ok=True)
+            (generated_project / "README.md").write_text("# story_organizer\n", encoding="utf-8")
+            (generated_project / "app.py").write_text("print('story')\n", encoding="utf-8")
+            (generated_project / "app.pyc").write_bytes(b"pyc")
+            (generated_project / "__pycache__" / "app.cpython-311.pyc").write_bytes(b"pyc")
+            (generated_project / "meta" / "manifest.json").write_text("{}", encoding="utf-8")
+            (generated_project / "docs" / "00_CORE.md").write_text("# core\n", encoding="utf-8")
+            (generated_project / "meta" / "tasks" / "CURRENT.md").write_text("# current\n", encoding="utf-8")
+            (generated_project / "scripts" / "verify_repo.ps1").write_text("Write-Host ok\n", encoding="utf-8")
+            (generated_project / "tests" / "test_smoke.py").write_text("def test_smoke():\n    assert True\n", encoding="utf-8")
+            (generated_project / "artifacts" / "test_plan.json").write_text("{}", encoding="utf-8")
+            (generated_project / "artifacts" / "verify_report.json").write_text("{}", encoding="utf-8")
+            (generated_project / "artifacts" / "reviews" / "review.md").write_text("# review\n", encoding="utf-8")
+            (generated_project / "artifacts" / "screenshots" / "overview.png").write_bytes(b"\x89PNG\r\n")
+            (generated_project / "artifacts" / "screenshots" / "final-ui.png").write_bytes(b"\x89PNG\r\n")
+            (bound_run / "artifacts" / "project_manifest.json").write_text(
+                json.dumps(
+                    {
+                        "project_root": "project_output/story_organizer",
+                        "product_validation": {
+                            "profile": "standard",
+                            "required": False,
+                            "passed": True,
+                            "checks": ["product capability gate not required for this task profile"],
+                            "missing": [],
+                            "reasons": [],
+                            "fallback_detected": False,
+                            "detected_groups": [],
+                            "evidence": {},
+                        },
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(support_bot, "ROOT", repo_root):
+                result = auto_emit_virtual_delivery_for_ready_run(
+                    run_dir=bound_run,
+                    project_context={
+                        "run_id": "r-story",
+                        "run_dir": str(bound_run),
+                        "project_manifest": {
+                            "project_root": "project_output/story_organizer",
+                            "product_validation": {
+                                "profile": "standard",
+                                "required": False,
+                                "passed": True,
+                                "checks": ["product capability gate not required for this task profile"],
+                                "missing": [],
+                                "reasons": [],
+                                "fallback_detected": False,
+                                "detected_groups": [],
+                                "evidence": {},
+                            },
+                        },
+                        "status": {
+                            "run_status": "pass",
+                            "verify_result": "PASS",
+                            "needs_user_decision": False,
+                            "decisions_needed_count": 0,
+                            "gate": {"state": "pass", "owner": "", "reason": ""},
+                        },
+                    },
+                )
+
+            self.assertEqual(str(result.get("status", "")), "emitted", msg=json.dumps(result, ensure_ascii=False))
+            final_bundle = Path(str(dict(result.get("completion_gate", {})).get("selected_document", "")))
+            self.assertEqual(final_bundle.name, "final_project_bundle.zip")
+            with zipfile.ZipFile(final_bundle, "r") as zf:
+                members = set(zf.namelist())
+            self.assertIn("story_organizer/README.md", members)
+            self.assertIn("story_organizer/app.py", members)
+            self.assertIn("story_organizer/artifacts/screenshots/final-ui.png", members)
+            self.assertFalse(any("__pycache__/" in member for member in members))
+            self.assertFalse(any(member.endswith(".pyc") for member in members))
+            self.assertFalse(any("artifacts/test_plan.json" in member for member in members))
+            self.assertFalse(any("artifacts/verify_report.json" in member for member in members))
+            self.assertFalse(any("artifacts/reviews/" in member for member in members))
+            manifest = json.loads((bound_run / support_bot.SUPPORT_PUBLIC_DELIVERY_REL_PATH).read_text(encoding="utf-8"))
             self.assertTrue(bool(dict(manifest.get("delivery_completion", {})).get("passed", False)))
             self.assertTrue(bool(dict(manifest.get("product_completion", {})).get("passed", False)))
             self.assertTrue(bool(dict(manifest.get("overall_completion", {})).get("passed", False)))

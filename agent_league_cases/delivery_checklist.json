@@ -1,0 +1,53 @@
+{
+  "schema_version": "ctcp-agent-league-case-v1",
+  "agent_id": "delivery_critic_agent",
+  "role": "Delivery Critic Agent",
+  "max_score": 25,
+  "inputs": [
+    "final_project_bundle.zip tree",
+    "intermediate_evidence_bundle.zip tree",
+    "README",
+    "startup steps",
+    "screenshots",
+    "delivery manifests"
+  ],
+  "checklist": [
+    {
+      "id": "package_portability",
+      "label": "Final package contains runnable source and entrypoint",
+      "points": 6,
+      "evidence": ["final_project_bundle.zip"]
+    },
+    {
+      "id": "startup_clarity",
+      "label": "README/startup steps are clear enough for a reviewer",
+      "points": 5,
+      "evidence": ["README", "scripts/run_project_web.py", "support_public_delivery.json"]
+    },
+    {
+      "id": "visual_review",
+      "label": "Screenshots are sufficient for visual review",
+      "points": 5,
+      "evidence": ["project screenshots", "sent screenshots"]
+    },
+    {
+      "id": "evidence_bundle",
+      "label": "Intermediate evidence bundle contains audit chain, reviews, and run evidence",
+      "points": 5,
+      "evidence": ["intermediate_evidence_bundle.zip"]
+    },
+    {
+      "id": "human_handoff",
+      "label": "Delivery manifest makes the handoff understandable",
+      "points": 4,
+      "evidence": ["support_public_delivery.json", "deliverable_index.json"]
+    }
+  ],
+  "blockers": [
+    "missing final_project_bundle.zip",
+    "missing runnable entrypoint",
+    "missing README or startup steps",
+    "missing intermediate evidence bundle",
+    "delivery critic cannot identify what to run"
+  ]
+}

@@ -5,19 +5,21 @@ This file is the only authoritative source for repository purpose.
 ## Repo Purpose
 
 CTCP is a structured goal-to-delivery generation system.
+It should behave like a structured virtual project team, not a single brute-force coding agent.
 
-It turns vague user requests into structured intent, customized runnable MVPs, visible progress evidence, and verifiable delivery packages.
+It turns vague user requests into product shaping, interaction design, technical planning, customized runnable MVPs, visible progress evidence, and verifiable delivery packages.
 
 Its core value is not raw code volume, giant-context brute force, or generic one-shot generation.  
 Its core value is a trustworthy mainline that makes projects more structured, more customizable, more visible during execution, and more reliable to deliver.
 
 The core mainline is:
 
-`goal understanding -> structured intent -> scoped spec -> scaffold -> core implementation -> smoke validation -> demo evidence -> delivery package`
+`goal intake -> product shaping -> interaction design -> technical planning -> MVP implementation -> QA -> delivery -> support output`
 
 ## What This Repository Is
 
 - A repository-level system for converting vague user goals into structured execution stages instead of freeform generation.
+- A virtual project-team system with fixed internal responsibility lanes for product, design, technical planning, engineering, QA, and delivery/support.
 - A runtime that prioritizes customized MVP construction over generic demo output.
 - A system that keeps user-visible feedback in the loop through intermediate tests, screenshots, previews, reports, or other runnable evidence whenever the routed contract requires it.
 - A contract-governed environment where verify, audit, and evidence support generation truth instead of replacing it.
@@ -27,6 +29,7 @@ The core mainline is:
 ## What This Repository Is Not
 
 - Not a brute-force coding agent.
+- Not a code-first pipeline where design is an optional afterthought.
 - Not a generic bigger-context-is-better shell.
 - Not a chat-memory-driven engineering tracker.
 - Not a frontend-only prototype generator.
@@ -40,11 +43,16 @@ The core mainline is:
 Task advancement follows explicit stages and contracts.  
 The system should reduce drift, avoid goal loss, and keep one visible mainline.
 
-### 2. Customized Output
+### 2. Team-Stage Completeness
+
+Product, design, and technical planning are first-class stages, not optional notes.
+Implementation readiness requires explicit stage artifacts rather than generic placeholders.
+
+### 3. Customized Output
 
 The target is not merely “a runnable project,” but a runnable project shaped to the user’s real goal, constraints, style, and delivery needs.
 
-### 3. Visible Intermediate Feedback
+### 4. Visible Intermediate Feedback
 
 Whenever possible and routed by contract, the system should emit intermediate evidence such as:
 
@@ -57,7 +65,7 @@ Whenever possible and routed by contract, the system should emit intermediate ev
 
 Users should not need to trust a hidden black box when a visible checkpoint can be produced.
 
-### 4. Token-Efficient Reliability
+### 5. Token-Efficient Reliability
 
 The system should prefer:
 
@@ -68,7 +76,7 @@ The system should prefer:
 
 over repeated whole-repo re-generation or oversized context loading.
 
-### 5. Verifiable Delivery
+### 6. Verifiable Delivery
 
 Completion means more than “files were generated.”  
 The final state should be suitable for user-facing delivery with runnable evidence, packaging clarity, and traceable acceptance.
@@ -76,9 +84,11 @@ The final state should be suitable for user-facing delivery with runnable eviden
 ## Delivery Qualities
 
 - Task advancement stays bound to one current goal instead of restarting from conversational drift.
+- Product/design/technical stage outputs must exist before build claims can stand.
 - Intermediate outputs should help the user inspect direction before final delivery.
 - Verify should gate claims of completion, but should not replace generation itself.
 - Evidence should strengthen trust, not impersonate the product.
+- Generic fallback plans, generic acceptance reports, or generic bundles must not impersonate stage completion.
 - Delivery should converge toward something the user can run, inspect, demo, and hand off.
 
 ## Repository Boundary Reminder

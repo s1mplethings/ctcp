@@ -1,0 +1,61 @@
+{
+  "schema_version": "ctcp-module-freeze-v1",
+  "root_authority": [
+    "AGENTS.md"
+  ],
+  "prompt_hierarchy": [
+    "AGENTS.md",
+    "docs/50_prompt_hierarchy_contract.md",
+    "meta/tasks/CURRENT.md"
+  ],
+  "frozen_kernels": [
+    "AGENTS.md",
+    "docs/04_execution_flow.md",
+    "docs/42_frontend_backend_separation_contract.md",
+    "scripts/classify_change_profile.py",
+    "scripts/ctcp_front_bridge.py",
+    "scripts/ctcp_orchestrate.py",
+    "scripts/verify_repo.ps1",
+    "scripts/verify_repo.sh"
+  ],
+  "lane_owned": [
+    "docs/03_quality_gates.md",
+    "docs/10_team_mode.md",
+    "docs/50_prompt_hierarchy_contract.md",
+    "frontend/",
+    "scripts/module_protection_check.py",
+    "scripts/prompt_contract_check.py",
+    "scripts/workflow_checks.py",
+    "scripts/ctcp_support_bot.py",
+    "scripts/ctcp_front_bridge_views.py",
+    "scripts/ctcp_front_bridge_watchdog.py",
+    "tests/test_backend_interface_contract_apis.py",
+    "tests/test_project_turn_mainline_contract.py",
+    "tests/test_prompt_contract_check.py",
+    "tests/test_support_to_production_path.py",
+    "tests/test_runtime_wiring_contract.py"
+  ],
+  "task_writable_defaults": [
+    "contracts/",
+    "docs/",
+    "meta/backlog/execution_queue.json",
+    "meta/reports/",
+    "meta/tasks/",
+    "tests/",
+    "tools/"
+  ],
+  "forbidden_bypass": [
+    "support runtime must not satisfy project turns through run_t2p_state_machine() or fallback_generation fast paths",
+    "frontend/support customer-facing truth must come from bridge/backend snapshots and artifact interfaces, not direct RUN.json/verify_report.json/TRACE.md/outbox scanning",
+    "compiled PROMPT.md is derived output only and must not override AGENTS.md, routed lane contracts, or the active task card"
+  ],
+  "lane_regression_tests": [
+    "python -m unittest discover -s tests -p \"test_project_turn_mainline_contract.py\" -v",
+    "python -m unittest discover -s tests -p \"test_support_to_production_path.py\" -v",
+    "python -m unittest discover -s tests -p \"test_backend_interface_contract_apis.py\" -v"
+  ],
+  "frozen_kernel_regression_tests": [
+    "python -m unittest discover -s tests -p \"test_prompt_contract_check.py\" -v",
+    "python -m unittest discover -s tests -p \"test_module_protection_contract.py\" -v"
+  ]
+}

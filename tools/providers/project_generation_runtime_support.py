@@ -11,6 +11,7 @@ from tools.providers.project_generation_decisions import (
     GUI_KEYWORDS,
     NARRATIVE_KEYWORDS,
     PRODUCTION_MODE,
+    TEAM_PM_KEYWORDS,
     TOOL_KEYWORDS,
     WEB_KEYWORDS,
     contains_any as _contains_any,
@@ -172,7 +173,10 @@ def _context_consumption(goal: str, context_files: list[dict[str, Any]], *, deci
         elif path == "scripts/project_manifest_bridge.py":
             used_paths.append(path)
             influence_summary.append("project_manifest_bridge shaped bridge-readable manifest fields")
-        elif path.startswith("artifacts/frontend_uploads/") and _contains_any(content, GUI_KEYWORDS + WEB_KEYWORDS + TOOL_KEYWORDS + NARRATIVE_KEYWORDS):
+        elif (
+            (path.startswith("artifacts/frontend_uploads/") or path.startswith(("requirements/", "specs/", "input/", "inputs/")))
+            and _contains_any(content, GUI_KEYWORDS + WEB_KEYWORDS + TOOL_KEYWORDS + NARRATIVE_KEYWORDS + TEAM_PM_KEYWORDS)
+        ):
             used_paths.append(path)
             influence_summary.append(f"{path} contributed user-context signals to type/shape resolution")
     if "context:" in str(decision.get("shape_decision_source", "")):

@@ -381,6 +381,41 @@ class SupportBotHumanizationTests(unittest.TestCase):
             self.assertTrue(bool(guard.get("applied", False)))
             self.assertIn("ungrounded_completion_claim", list(guard.get("reasons", [])))
 
+    def test_build_final_reply_doc_blocks_execution_claim_without_binding(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_binding_guard_") as td:
+            run_dir = Path(td)
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "绑定一个新任务：Indie Studio Hub Domain Lift",
+                },
+            )
+            session_state = support_bot.default_support_session_state("binding-guard-demo")
+            doc = support_bot.build_final_reply_doc(
+                run_dir=run_dir,
+                provider="api_agent",
+                provider_result={"status": "executed", "reason": "ok"},
+                provider_doc={
+                    "reply_text": "我将开始处理此任务，并重跑相关测试。",
+                    "next_question": "",
+                    "actions": [],
+                    "debug_notes": "",
+                },
+                conversation_mode="PROJECT_DETAIL",
+                task_summary_hint="Indie Studio Hub Domain Lift",
+                session_state=session_state,
+            )
+
+            reply = str(doc.get("reply_text", ""))
+            self.assertIn("NEEDS_BINDING", reply)
+            self.assertIn("bound_run_id", reply)
+            self.assertNotIn("我将开始处理此任务", reply)
+            guard = dict(doc.get("runtime_progress_guard", {}))
+            self.assertTrue(bool(guard.get("applied", False)))
+            self.assertIn("execution_claim_without_binding", list(guard.get("reasons", [])))
+
     def test_build_final_reply_doc_runtime_guard_normalizes_same_state_repeat(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_runtime_guard_repeat_") as td:
             run_dir = Path(td)
@@ -2441,7 +2476,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             sent_chat, sent_path, caption = fake.sent_documents[0]
             self.assertEqual(sent_chat, 123)
             self.assertTrue(sent_path.exists(), msg=str(sent_path))
-            self.assertEqual(sent_path.name, "story_organizer_ctcp_project.zip")
+            self.assertEqual(sent_path.name, "final_project_bundle.zip")
             self.assertIn("zip", caption.lower())
             scaffold_spy.assert_called_once()
             with zipfile.ZipFile(sent_path, "r") as zf:

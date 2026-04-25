@@ -11,6 +11,18 @@ Expanded repository flow:
 
 `bind -> read -> analyze/find -> integration check -> plan -> spec -> implement -> check/fix loop -> verify -> finalize`
 
+Formal work-lane split:
+
+- `Delivery Lane`
+  - use for bounded implementation, repair, or direct delivery work
+- `Virtual Team Lane`
+  - use for new-project, open-ended, self-design, or design-heavy work
+  - authority: `docs/12_virtual_team_contract.md`
+
+Rules:
+- lane selection must be recorded before implementation work starts
+- if `Virtual Team Lane` is selected, required design artifacts must exist before implementation
+
 Expanded mapping from the root flow:
 
 - `Bind` -> Step 1
@@ -30,7 +42,7 @@ Supporting chains (mandatory when relevant):
 
 - Input: incoming request and queue context.
 - Output: bound queue item in `meta/backlog/execution_queue.json` and active task card in `meta/tasks/CURRENT.md`.
-- Stop condition: one explicit queue item is bound; `Queue Item: N/A` is absent.
+- Stop condition: one explicit queue item is bound; `Queue Item: N/A` is absent; allowed write paths / protected paths / frozen-kernel elevation fields are filled.
 
 ## Step 2: Read
 
@@ -56,31 +68,36 @@ Supporting chains (mandatory when relevant):
 - Output: explicit implementation plan with checks, expected fix loop, and any required response-lint / persona-lab / showcase / metadata-consistency checks.
 - Stop condition: plan is recorded before implementation edits.
 
-### Project Generation Fixed Subflow (Low-Capability Path)
+### Project Generation Fixed Subflow (Virtual Team Path)
 
 When the task goal is project generation, Step 5 MUST freeze and enforce the following subflow:
 
 1. `intake`
-2. `scope_freeze`
-3. `output_contract_freeze`
-4. `structure_plan`
-5. `source_generation`
-6. `docs_generation`
-7. `workflow_generation`
-8. `artifact_manifest_build`
-9. `verify`
-10. `deliver`
+2. `product_brief`
+3. `interaction_design`
+4. `technical_plan`
+5. `output_contract_freeze`
+6. `implementation`
+7. `qa`
+8. `delivery`
+9. `support_output`
+10. `verify_close`
 
 Hard rules for this subflow:
 - Stage order is fixed; no jump/skip.
 - Each stage must record explicit input/output and self-check result.
+- `product_brief`, `interaction_design`, and `technical_plan` must all complete before `implementation`.
 - `output_contract_freeze` must complete before any generated source/docs/workflow file writes.
-- Completion is blocked unless manifest build confirms source/doc/workflow layer coverage and missing-file visibility.
+- `output_contract_freeze` must lock `project_domain`, `scaffold_family`, and delivery shape before implementation; incompatible family fallback is a hard block, not a silent downgrade.
+- Generic fallback material must not be accepted as stage completion for product/design/technical/qa/delivery.
+- QA/delivery must validate domain capability, contamination, README quality, and user-facing bundle split, not only runnable entrypoints.
+- Completion is blocked unless the stage artifacts, manifest build, and missing-file visibility all agree.
+- the concrete design-artifact contract is owned by `docs/12_virtual_team_contract.md`
 
 ## Step 6: Spec
 
 - Input: approved plan.
-- Output: docs/spec/meta updates that define intended behavior, user-visible guardrails, required artifacts, and provenance rules.
+- Output: docs/spec/meta updates that define intended behavior, user-visible guardrails, required stage artifacts, and provenance rules.
 - Stop condition: spec/docs state reflects intended change.
 
 ## Step 7: Implement
@@ -119,6 +136,11 @@ Profiles:
 - `contract`: for authoritative governance/workflow/runtime contract sources. Stricter than `doc-only`; includes behavior catalog checks. Still skips code-only gates.
 - `code`: for any code/integration/script/runtime/test/build change. Full current behavior; no gates skipped.
 
+Ownership overlay:
+- `scripts/classify_change_profile.py` also classifies ownership as `task-owned`, `lane-owned`, or `frozen-kernel` using `contracts/module_freeze.json` plus `meta/tasks/CURRENT.md`.
+- `lane-owned` changes add lane regression even when the type profile is `doc-only` or `contract`.
+- `frozen-kernel` changes require explicit elevation in `meta/tasks/CURRENT.md`; without that signal, verify fails before claiming completion.
+
 The expanded 10-step sequence remains the detailed workflow reference regardless of profile.
 Agents should still enter through the root 5-step flow in `AGENTS.md`.
 `meta/tasks/CURRENT.md` and `meta/reports/LAST.md` remain required across all profiles.
@@ -126,5 +148,5 @@ Agents should still enter through the root 5-step flow in `AGENTS.md`.
 ## Step 10: Finalize
 
 - Input: verify outcome and artifacts.
-- Output: updated `meta/reports/LAST.md`, task closure state, issue-memory decision, skill decision, and any final persona-lab / showcase / provenance closure.
+- Output: updated `meta/reports/LAST.md`, task closure state, issue-memory decision, skill decision, any final persona-lab / showcase / provenance closure, and a support-facing summary that reports team results instead of inventing missing stage work.
 - Stop condition: completion evidence is explicit for connected + accumulated + consumed.

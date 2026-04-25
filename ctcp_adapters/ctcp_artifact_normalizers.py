@@ -11,6 +11,7 @@ from llm_core.providers.api_provider import _read_text, _slug, _write_text
 from tools import contrast_rules, contract_guard, local_librarian
 from tools.providers.project_generation_artifacts import (
     build_default_context_request,
+    is_project_generation_goal,
     normalize_deliverable_index,
     normalize_docs_generation,
     normalize_output_contract_freeze,
@@ -19,6 +20,7 @@ from tools.providers.project_generation_artifacts import (
     normalize_source_generation,
     normalize_workflow_generation,
 )
+from tools.formal_api_lock import formal_api_only_enabled, requires_formal_api
 
 _DEFAULT_PLAN_SCOPE_ALLOW = (
     "scripts/",
@@ -462,6 +464,14 @@ def _normalize_plan_md(raw_text: str, *, signed: bool, goal: str) -> str:
     for candidate in [*_DEFAULT_PLAN_SCOPE_ALLOW, *_parse_plan_scope_allow(raw_text), *_goal_scope_allow_hints(goal)]:
         if candidate and candidate not in scope_allow:
             scope_allow.append(candidate)
+    project_generation_lines: list[str] = []
+    if is_project_generation_goal(goal):
+        project_generation_lines = [
+            "Project-Generation: true",
+            "Deliverables: runnable_app,README,startup_steps,verify_report,final_screenshot,final_package",
+            "Verification: artifacts/verify_report.json must prove the generated project starts and passes acceptance checks",
+            "Delivery: README with startup steps, final screenshot, and final project package are required before completion",
+        ]
     return "\n".join(
         [
             f"Status: {status}",
@@ -473,6 +483,7 @@ def _normalize_plan_md(raw_text: str, *, signed: bool, goal: str) -> str:
             "Behaviors: B001,B002,B003,B004,B005,B006,B007,B008,B009,B010,B011,B012,B013,B014,B015,B016,B017,B018,B019,B020,B021,B022,B023,B024,B025,B026,B027,B028,B029,B030,B031,B032,B033,B034,B035",
             "Results: R001,R002,R003,R004,R005",
             f"Goal: {goal or 'dispatch-goal'}",
+            *project_generation_lines,
             "",
         ]
     )
@@ -483,6 +494,18 @@ def _normalize_json_artifact(*, repo_root: Path, run_dir: Path, request: dict[st
     action = str(request.get("action", "")).strip().lower()
     goal = str(request.get("goal", "")).strip()
     doc = _extract_json_dict(raw_text)
+
+    if formal_api_only_enabled() and requires_formal_api(role, action) and action in {
+        "output_contract_freeze",
+        "source_generation",
+        "docs_generation",
+        "workflow_generation",
+        "artifact_manifest_build",
+        "deliver",
+    }:
+        if doc is None:
+            return "", f"formal_api_only forbids local normalizer synthesis for role={role} action={action}: agent output is not valid JSON object"
+        return _to_json_text(doc), ""
 
     if role == "chair" and action == "file_request":
         return _to_json_text(_normalize_file_request(doc, goal=goal)), ""

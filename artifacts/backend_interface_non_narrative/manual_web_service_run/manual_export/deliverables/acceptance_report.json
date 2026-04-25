@@ -1,8 +1,0 @@
-{
-  "status": "pass",
-  "checks": [
-    "health 路径可用",
-    "generate 路径返回结构化 JSON",
-    "README 可指导启动"
-  ]
-}

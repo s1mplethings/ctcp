@@ -15,6 +15,11 @@ COMPILER_LAUNCHER="${CTCP_COMPILER_LAUNCHER:-}"
 EXECUTED_GATES=()
 ADVISORY_FAILURES=()
 PROFILE=""
+OWNERSHIP="task-owned"
+REQUIRES_LANE_REGRESSION=false
+REQUIRES_FROZEN_REGRESSION=false
+LANE_REGRESSION_TESTS=()
+FROZEN_KERNEL_REGRESSION_TESTS=()
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -45,6 +50,23 @@ case "${PROFILE}" in
   doc-only|contract|code) ;;
   *) echo "[verify_repo] invalid profile: ${PROFILE} (expected: doc-only, contract, code)"; exit 1 ;;
 esac
+
+MODULE_PROTECTION_JSON="$(python3 "${ROOT}/scripts/module_protection_check.py" --json 2>/dev/null || true)"
+if [[ -n "${MODULE_PROTECTION_JSON}" ]]; then
+  OWNERSHIP="$(python3 -c 'import json,sys; doc=json.loads(sys.stdin.read() or "{}"); print(doc.get("ownership", "task-owned"))' <<<"${MODULE_PROTECTION_JSON}")"
+  if [[ "$(python3 -c 'import json,sys; doc=json.loads(sys.stdin.read() or "{}"); print("1" if doc.get("requires_lane_regression") else "0")' <<<"${MODULE_PROTECTION_JSON}")" == "1" ]]; then
+    REQUIRES_LANE_REGRESSION=true
+  fi
+  if [[ "$(python3 -c 'import json,sys; doc=json.loads(sys.stdin.read() or "{}"); print("1" if doc.get("requires_frozen_regression") else "0")' <<<"${MODULE_PROTECTION_JSON}")" == "1" ]]; then
+    REQUIRES_FROZEN_REGRESSION=true
+  fi
+  while IFS= read -r row; do
+    [[ -n "${row}" ]] && LANE_REGRESSION_TESTS+=("${row}")
+  done < <(python3 -c 'import json,sys; doc=json.loads(sys.stdin.read() or "{}"); [print(x) for x in doc.get("lane_regression_tests", [])]' <<<"${MODULE_PROTECTION_JSON}")
+  while IFS= read -r row; do
+    [[ -n "${row}" ]] && FROZEN_KERNEL_REGRESSION_TESTS+=("${row}")
+  done < <(python3 -c 'import json,sys; doc=json.loads(sys.stdin.read() or "{}"); [print(x) for x in doc.get("frozen_kernel_regression_tests", [])]' <<<"${MODULE_PROTECTION_JSON}")
+fi
 
 # Gate selection per profile
 PROFILE_SKIP_BUILD=false
@@ -77,6 +99,7 @@ esac
 echo "[verify_repo] repo root: ${ROOT}"
 echo "[verify_repo] build root: ${BUILD_ROOT}"
 echo "[verify_repo] profile: ${PROFILE}"
+echo "[verify_repo] ownership: ${OWNERSHIP}"
 if [[ "${MODE}" == "1" ]]; then
   echo "[verify_repo] mode: FULL"
 else
@@ -266,17 +289,26 @@ echo "[verify_repo] workflow gate (workflow checks)"
 python3 "${ROOT}/scripts/workflow_checks.py"
 add_executed_gate "workflow_gate"
 
+echo "[verify_repo] module protection check"
+python3 "${ROOT}/scripts/module_protection_check.py"
+add_executed_gate "module_protection_check"
+
 # BEHAVIOR_ID: B003
+echo "[verify_repo] prompt contract check"
+python3 "${ROOT}/scripts/prompt_contract_check.py"
+add_executed_gate "prompt_contract_check"
+
+# BEHAVIOR_ID: B004
 echo "[verify_repo] plan check"
 python3 "${ROOT}/scripts/plan_check.py"
 add_executed_gate "plan_check"
 
-# BEHAVIOR_ID: B004
+# BEHAVIOR_ID: B005
 echo "[verify_repo] patch check (scope from PLAN)"
 python3 "${ROOT}/scripts/patch_check.py"
 add_executed_gate "patch_check"
 
-# BEHAVIOR_ID: B005
+# BEHAVIOR_ID: B006
 if [[ "${PROFILE_SKIP_BEHAVIOR_CATALOG}" == "true" ]]; then
   echo "[verify_repo] behavior catalog check skipped (profile: ${PROFILE})"
   add_executed_gate "behavior_catalog_check"
@@ -286,7 +318,7 @@ else
   add_executed_gate "behavior_catalog_check"
 fi
 
-# BEHAVIOR_ID: B006
+# BEHAVIOR_ID: B007
 if [[ "${PROFILE_ADVISORY_CONTRACT_CHECKS}" == "true" ]]; then
   echo "[verify_repo] contract checks (advisory for ${PROFILE})"
   if ! python3 "${ROOT}/scripts/contract_checks.py"; then
@@ -300,7 +332,7 @@ else
   add_executed_gate "contract_checks"
 fi
 
-# BEHAVIOR_ID: B007
+# BEHAVIOR_ID: B008
 echo "[verify_repo] doc index check (sync doc links --check)"
 python3 "${ROOT}/scripts/sync_doc_links.py" --check
 add_executed_gate "doc_index_check"
@@ -323,6 +355,22 @@ else
   python3 -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v
   python3 -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v
   add_executed_gate "triplet_guard"
+fi
+
+if [[ "${REQUIRES_LANE_REGRESSION}" == "true" ]]; then
+  echo "[verify_repo] lane regression"
+  for cmd in "${LANE_REGRESSION_TESTS[@]}"; do
+    python3 -c 'import subprocess, sys; sys.exit(subprocess.call(sys.argv[1], shell=True))' "${cmd}"
+  done
+  add_executed_gate "lane_regression"
+fi
+
+if [[ "${REQUIRES_FROZEN_REGRESSION}" == "true" ]]; then
+  echo "[verify_repo] frozen-kernel regression"
+  for cmd in "${FROZEN_KERNEL_REGRESSION_TESTS[@]}"; do
+    python3 -c 'import subprocess, sys; sys.exit(subprocess.call(sys.argv[1], shell=True))' "${cmd}"
+  done
+  add_executed_gate "frozen_kernel_regression"
 fi
 
 if [[ "${PROFILE_SKIP_LITE_REPLAY}" == "true" ]]; then

@@ -12,6 +12,43 @@ Scope boundary:
 
 Execution starts only after signed `artifacts/PLAN.md`, required adversarial reviews are `APPROVE`, and `artifacts/context_pack.json` exists.
 
+## Unique Default Runtime Mainline
+
+The default CTCP runtime mainline is singular. Specialized lanes may keep their own artifacts, but they must report into this mainline:
+
+`goal/task input -> librarian/context_pack -> ADLC phase judgment + plan/gate -> execution lane -> whiteboard progress emission -> frontend/backend bridge consumption -> delivery/gate result -> run_manifest finalization`
+
+Default responsibilities:
+
+- Librarian is the context-entry layer. It turns scoped `file_request.json` input into `context_pack.json` and blocks downstream planning when context is missing or invalid.
+- ADLC is the unified orchestration layer. It owns phase judgment, gate status, result summary, and first failure reporting for every lane, including project-generation lanes with specialized artifact pipelines.
+- Whiteboard is the runtime-visible progress layer. It records support turns, librarian lookups, dispatch lookups, and dispatch results as an append-only run artifact.
+- Bridge is the external consumption layer. Frontend/support clients consume run state, decisions, support context, whiteboard snapshots, and output artifact metadata only through bridge interfaces.
+- `artifacts/run_manifest.json` is the run-level truth source. It summarizes whether Librarian, ADLC, Whiteboard, and Bridge participated in the same run and records final status or first failure.
+
+### Responsibility Split Table
+
+| Flow | Input | Output | Required Artifact / Fields | Failure Condition |
+|---|---|---|---|---|
+| Librarian | `artifacts/file_request.json` and repo files | scoped context pack | `artifacts/context_pack.json`; `run_manifest.context_pack_present=true` | missing/invalid request, denied path, budget breach, invalid context-pack contract |
+| ADLC | goal, context pack, lane artifacts, gate results | phase, gate status, result summary, first failure | `run_manifest.adlc_phase`, `run_manifest.adlc_gate_status`, `run_manifest.gates_passed`, `run_manifest.first_failure_*` | required context/plan/gate missing, verify failure, max iterations, invalid lane result |
+| Whiteboard | support turns, librarian lookup query, dispatch request/result | append-only progress state | `artifacts/support_whiteboard.json`; `run_manifest.whiteboard_present=true` | missing whiteboard write after support/dispatch activity, malformed entries, unbounded growth |
+| Bridge | frontend/support operation and run id | client-visible payload derived from run artifacts | bridge output refs in `run_manifest.bridge_output_refs`; `bridge_present` / `bridge_output_present` | direct run mutation outside bridge, invented state, missing formal artifact/status payload |
+
+### ADLC as Unified Orchestration Layer
+
+ADLC is not limited to `workflow_registry/adlc_self_improve_core/recipe.yaml`.
+That recipe remains one implementation lane. The ADLC contract is the orchestration layer above all lanes.
+
+Every lane MUST report these fields into `artifacts/run_manifest.json`:
+
+- current phase
+- gate status
+- result summary through `final_status`
+- first failure gate and reason when failed
+
+Project-generation may keep its project-spec, capability, sample-generation, and refinement artifacts, but it is still required to surface the current phase, gate result, and final status through the ADLC/run-manifest layer.
+
 ## Canonical Entrypoint
 
 - Only `scripts/ctcp_orchestrate.py` is supported for execution.
@@ -43,6 +80,7 @@ Execution starts only after signed `artifacts/PLAN.md`, required adversarial rev
 
 - External run root (must be outside repo): `${CTCP_RUNS_ROOT}/<repo_slug>/<run_id>/`
 - Run artifacts: `${run_dir}/artifacts/*`
+- Run manifest truth source: `${run_dir}/artifacts/run_manifest.json`
 - Reviews: `${run_dir}/reviews/*`
 - Trace: `${run_dir}/TRACE.md`
 - Failure bundle: `${run_dir}/failure_bundle.zip` (only on failure)

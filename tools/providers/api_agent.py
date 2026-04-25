@@ -9,6 +9,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_LOCAL_NOTES_PATH = ROOT / ".agent_private" / "NOTES.md"
+EMBEDDED_BASE_URL = "https://api.gptsapi.net/v1"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -92,7 +93,7 @@ def _resolved_external_api_credentials() -> tuple[str, str]:
         return key, env_base_url or ctcp_base_url
     if not key:
         key = ctcp_key or notes_key
-    base_url = env_base_url or ctcp_base_url or notes_base_url
+    base_url = env_base_url or ctcp_base_url or notes_base_url or EMBEDDED_BASE_URL
     return key, base_url
 
 

@@ -1,0 +1,124 @@
+{
+  "schema_version": "ctcp-project-spec-v2",
+  "goal_summary": "给我们做一个轻量任务协作平台，能管版本任务、bug 和素材协作，别太复杂，但也别只是待办清单",
+  "target_user": "希望尽快验证想法的项目发起人",
+  "problem_to_solve": "把模糊目标收束成一个最小可运行项目，而不是只停留在流程和证明工件上",
+  "mvp_scope": [
+    "提供可运行入口和 README 启动说明",
+    "至少打通一条核心用户流程"
+  ],
+  "required_inputs": [
+    "用户目标描述"
+  ],
+  "required_outputs": [
+    "可运行项目代码",
+    "README 启动说明",
+    "至少一条核心流程的验证结果"
+  ],
+  "hard_constraints": [],
+  "assumptions": [
+    "默认先生成最小可运行版本，再逐步扩展非核心能力",
+    "默认交付形态采用最容易验证的闭环入口",
+    "未指定部署环境时默认按本地可运行优先"
+  ],
+  "open_questions": [
+    "需要确认你想交付的是项目、工具还是服务",
+    "非阻塞待确认: 尚未明确交付形态，先按最小闭环入口假设",
+    "非阻塞待确认: 尚未明确运行环境，先按本地 smoke run 假设"
+  ],
+  "acceptance_criteria": [
+    "README 能指导启动项目",
+    "项目存在真实可运行入口",
+    "至少一条核心用户流程通过 smoke run"
+  ],
+  "constraint_snapshot": {},
+  "project_domain": "team_task_management",
+  "scaffold_family": "team_task_pm",
+  "project_type": "team_task_pm",
+  "project_archetype": "team_task_pm_web",
+  "delivery_shape": "web_first",
+  "core_modules": [
+    "auth_seed",
+    "workspace_project_model",
+    "task_board",
+    "task_list",
+    "task_detail",
+    "comments_activity",
+    "filters",
+    "demo_data"
+  ],
+  "required_pages_or_views": [
+    "login",
+    "workspace_project_switcher",
+    "kanban_board",
+    "task_list",
+    "task_detail_drawer",
+    "activity_feed"
+  ],
+  "data_models": [
+    "user",
+    "workspace",
+    "project",
+    "task",
+    "task_status",
+    "task_label",
+    "comment",
+    "activity_event"
+  ],
+  "key_interactions": [
+    "login_with_demo_user",
+    "create_project",
+    "create_task",
+    "edit_task_fields",
+    "move_task_status",
+    "comment_on_task",
+    "filter_tasks",
+    "view_task_detail",
+    "view_activity_feed",
+    "export_demo_workspace"
+  ],
+  "task_fields": [
+    "title",
+    "description",
+    "status",
+    "priority",
+    "assignee",
+    "due_date",
+    "labels"
+  ],
+  "export_targets": [
+    "demo_workspace.json",
+    "acceptance_bundle.zip"
+  ],
+  "sample_content_plan": {
+    "pipeline_id": "team_pm_demo_seed",
+    "minimum_depth": {
+      "workspaces": 1,
+      "projects": 2,
+      "tasks": 8,
+      "comments": 3
+    },
+    "steps": [
+      "demo_users",
+      "workspace_seed",
+      "project_seed",
+      "task_seed",
+      "comment_activity_seed"
+    ],
+    "api_merge_targets": []
+  },
+  "delivery_requirements": [
+    "final_project_bundle.zip",
+    "README",
+    "startup_steps",
+    "screenshots",
+    "verify_summary"
+  ],
+  "explicit_non_goals": [
+    "realtime websocket collaboration",
+    "RBAC",
+    "notifications",
+    "gantt or roadmap planning",
+    "OAuth"
+  ]
+}

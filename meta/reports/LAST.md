@@ -2,82 +2,117 @@
 
 ## Latest Report
 
-- File: [`meta/reports/archive/20260414-annotation-review-workbench.md`](archive/20260414-annotation-review-workbench.md)
-- Date: `2026-04-14`
-- Topic: `Generate and deliver a real Annotation Review Workbench`
+- File: `meta/reports/LAST.md`
+- Date: `2026-04-25`
+- Topic: `Formal API-Only Execution Lock`
+- Mode: `formal mainline provider lock + audit ledger hardening`
 
 ### Readlist
 - `AGENTS.md`
+- `.agents/skills/ctcp-gate-precheck/SKILL.md`
 - `ai_context/00_AI_CONTRACT.md`
 - `docs/00_CORE.md`
 - `docs/03_quality_gates.md`
-- `PATCH_README.md`
-- `TREE.md`
-- `.agents/skills/ctcp-workflow/SKILL.md`
-- `meta/backlog/execution_queue.json`
+- `docs/25_project_plan.md`
+- `docs/45_formal_benchmarks.md`
+- `docs/46_benchmark_pass_contracts.md`
 - `meta/tasks/CURRENT.md`
-- `scripts/support_public_delivery.py`
-- `scripts/delivery_replay_validator.py`
-- `tests/support_virtual_delivery_e2e_runner.py`
-- user-provided Annotation Review Workbench brief
+- `meta/backlog/execution_queue.json`
+- `llm_core/dispatch/router.py`
+- `ctcp_adapters/ctcp_artifact_normalizers.py`
+- `scripts/ctcp_dispatch.py`
+- `scripts/ctcp_orchestrate.py`
+- `scripts/ctcp_support_bot.py`
+- `scripts/formal_benchmark_runner.py`
+- `tools/providers/project_generation_source_stage.py`
 
 ### Plan
-1. Use CTCP's own project-generation normalizers on a fresh D-drive run instead of hand-coding the project output.
-2. Fix only the first generator bug that blocks generic GUI project source_generation.
-3. Regenerate the Annotation Review Workbench run, export smoke outputs, and drive virtual public delivery plus cold replay.
-4. Rerun workflow and repo-level gates, then report the earliest remaining gap against the user's product brief.
+1. Archive the previous active task/report and bind the formal API-only execution-lock task.
+2. Add a formal-mode switch and fail-fast provider enforcement in router/dispatch/orchestrate/support.
+3. Block formal success paths that still rely on local fallback or local artifact normalizer synthesis.
+4. Emit a provider ledger and expose API coverage in formal benchmark and portfolio summaries.
+5. Add focused regressions, run targeted checks, then run canonical verify and record the first failure if any.
 
 ### Changes
-- `meta/backlog/execution_queue.json`
-- `meta/tasks/CURRENT.md`
-- `meta/reports/LAST.md`
-- `tools/providers/project_generation_generic_archetypes.py`
-- `tests/test_project_generation_artifacts.py`
+- Archived the previous active task/report to:
+  - `meta/tasks/archive/20260425-five-project-portfolio-execution.md`
+  - `meta/reports/archive/20260425-five-project-portfolio-execution.md`
+- Bound the new queue item:
+  - `ADHOC-20260425-formal-api-only-execution-lock`
+- Updated:
+  - `meta/backlog/execution_queue.json`
+  - `meta/tasks/ARCHIVE_INDEX.md`
+  - `meta/tasks/CURRENT.md`
+  - `meta/reports/LAST.md`
+- Added `tools/formal_api_lock.py`:
+  - `CTCP_FORMAL_API_ONLY=1` switch
+  - local exception locked to `librarian/context_pack`
+  - run-level provider ledger append + summary generation
+- Hardened formal mainline execution:
+  - `llm_core/dispatch/router.py` blocks non-librarian non-`api_agent` provider selection in formal mode instead of silently remapping it to success
+  - `scripts/ctcp_dispatch.py` fail-fast returns `provider_mismatch`, disables formal patchmaker local fallback, and writes provider-ledger rows for dispatch attempts
+  - `llm_core/providers/api_provider.py` blocks local fallback/local plan fallback for formal API-required roles and records local function usage when fallback happens outside formal mode
+  - `ctcp_adapters/ctcp_artifact_normalizers.py` forbids local JSON synthesis for formal project-generation artifacts such as freeze/source_generation/docs_generation/workflow_generation/manifest/deliver
+  - `scripts/ctcp_orchestrate.py` skips manual fixer outbox creation in formal mode
+  - `scripts/ctcp_support_bot.py` restricts formal support generation to `api_agent`, writes provider-ledger rows for `support_lead/support_reply`, and fails stdin-mode formal replies when provider execution or fallback rules are violated
+- Exposed API coverage in formal reporting:
+  - `scripts/formal_benchmark_runner.py` enables `CTCP_FORMAL_API_ONLY=1`, evaluates PASS against provider-ledger API coverage, emits coverage in JSON/Markdown summaries, and archives ledger artifacts into goldens
+  - `tools/providers/project_generation_source_stage.py` surfaces per-project `api_coverage` in portfolio rows and Markdown summaries
+  - `tools/providers/project_generation_artifacts.py` includes provider-ledger artifacts in evidence bundles
+- Added focused regressions covering:
+  - librarian local exception
+  - non-librarian formal provider mismatch failure
+  - no formal PASS through local patchmaker fallback
+  - provider-ledger generation and summary gating
+  - blocked local normalizer synthesis during formal project generation
+- Updated docs:
+  - `docs/45_formal_benchmarks.md`
+  - `docs/46_benchmark_pass_contracts.md`
+  - both now state that formal benchmark/portfolio/endurance default to `CTCP_FORMAL_API_ONLY=1`, only librarian/context_pack is exempt, and PASS requires provider-ledger API coverage
 
 ### Verify
-- `python -m unittest discover -s tests -p "test_project_generation_artifacts.py" -v` -> `0`
-- `python scripts/workflow_checks.py` -> `pending rerun after report finalization`
-- first failure point: `the generated generic GUI launcher rejected its own export probe because run_project_gui.py did not accept --headless`
-- root cause class: `repo generator template bug in generic GUI launcher, followed by a product-capability gap because the generated project remained a generic pipeline fallback instead of a real annotation workbench`
-- minimal fix strategy: `patch only the generic launcher template to accept --headless, regenerate the run, then measure the generated product against the original annotation requirements without hand-editing project code`
-- triplet runtime wiring command evidence:
-  - `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` -> `0`
-- triplet issue memory command evidence:
-  - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` -> `0`
-- triplet skill consumption command evidence:
-  - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` -> `0`
-- `python tests/support_virtual_delivery_e2e_runner.py --json-out artifacts/_virtual_delivery_e2e_check.json` -> `0`
-- `python D:\ctcp_runs\ctcp\20260414-annotation-review-workbench-generated\project_output\build-a-local-interactive-annotation-review-work\scripts\run_project_gui.py --goal "annotation smoke" --project-name "Annotation Review Workbench" --out D:\ctcp_runs\ctcp\20260414-annotation-review-workbench-generated\artifacts\smoke_export --headless` -> `0`
-- `python simlab/run.py --suite lite` -> `pending rerun after report finalization`
-- `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` -> `1` (`workflow_checks` blocked first because LAST.md was missing triplet evidence; rerun pending after this report update)
+- Passed:
+  - `python -m unittest discover -s tests -p "test_provider_selection.py" -v`
+  - `python -m unittest discover -s tests -p "test_plane_lite_benchmark_regression.py" -v`
+  - `python -m unittest discover -s tests -p "test_formal_benchmark_runner.py" -v`
+  - `python -m unittest discover -s tests -p "test_project_generation_artifacts.py" -v`
+  - `python -m unittest discover -s tests -p "test_support_bot_humanization.py" -v`
+  - `$env:CTCP_RUNS_ROOT = Join-Path $env:TEMP 'ctcp_runs'; python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`
+  - `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`
+  - `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`
+  - `python scripts/module_protection_check.py`
+- `python scripts/workflow_checks.py`
+- First failure point observed before final verify:
+  - `test_runtime_wiring_contract.py` initially failed under the inherited default runs root with `[WinError 5]` on `D:\ctcp_runs`
+- Minimal fix strategy:
+  - set `CTCP_RUNS_ROOT` to a writable temp directory before runtime-wiring and canonical verify runs, because the failure was environmental rather than caused by the formal API-only patch
+- Canonical verify:
+  - `$env:CTCP_RUNS_ROOT = Join-Path $env:TEMP 'ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`
+  - result: `FAIL`
+  - first failure point: `code health growth-guard`
+  - failure detail:
+    - growth-guard rejected oversized or still-growing entrypoint/test files including `scripts/ctcp_dispatch.py`, `scripts/ctcp_orchestrate.py`, `scripts/ctcp_support_bot.py`, `tests/test_formal_benchmark_runner.py`, `tests/test_project_generation_artifacts.py`, and `tools/providers/project_generation_source_stage.py`
+  - minimal fix strategy:
+    - split or shrink the oversized entrypoint/test surfaces so the repo's file-size and longest-function thresholds are met, or move newly added enforcement/reporting helpers out of the guarded hot files into smaller modules
 
 ### Questions
 - None.
 
 ### Demo
-- generated run root: `D:\ctcp_runs\ctcp\20260414-annotation-review-workbench-generated`
-- generated project root: `D:\ctcp_runs\ctcp\20260414-annotation-review-workbench-generated\project_output\build-a-local-interactive-annotation-review-work`
-- generated project package: `D:\ctcp_runs\ctcp\20260414-annotation-review-workbench-generated\artifacts\support_exports\build-a-local-interactive-annotation-review-work.zip`
-- final screenshot: `D:\ctcp_runs\ctcp\20260414-annotation-review-workbench-generated\project_output\build-a-local-interactive-annotation-review-work\artifacts\screenshots\final-ui.png`
-- smoke export: `D:\ctcp_runs\ctcp\20260414-annotation-review-workbench-generated\artifacts\smoke_export\deliverables`
-- delivery manifest: `D:\ctcp_runs\ctcp\20260414-annotation-review-workbench-generated\artifacts\support_public_delivery.json`
-- replay report: `D:\ctcp_runs\ctcp\20260414-annotation-review-workbench-generated\artifacts\delivery_replay\replay_artifacts\replay_report.json`
-- replay screenshot: `D:\ctcp_runs\ctcp\20260414-annotation-review-workbench-generated\artifacts\delivery_replay\replay_artifacts\replayed_screenshot.png`
-- product-gap note: `the generated project exports project_bundle/workflow_plan/acceptance_report only; it does not implement image loading, bbox editing, save/restore, or YOLO export`
-
-### Integration Proof
-- upstream: `user brief -> external run_dir project`
-- current_module: `CTCP project-generation templates + generated run + support delivery + replay report`
-- downstream: `final answer with artifact paths and the first unmet product requirement`
-- source_of_truth: `generated source files, source_generation/project_manifest artifacts, smoke export deliverables, and support_public_delivery/replay outputs`
-- fallback: `if CTCP generation cannot reach the requested domain, stop at the earliest unmet requirement and still preserve package/delivery/replay evidence`
-- acceptance_test:
-  - `generated project smoke export`
-  - `python tests/support_virtual_delivery_e2e_runner.py --json-out artifacts/_virtual_delivery_e2e_check.json`
-  - `python simlab/run.py --suite lite`
-  - `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code`
-- forbidden_bypass:
-  - `do not hand-code the generated project`
-  - `do not fake annotation behavior that CTCP itself did not generate`
-  - `do not skip package/delivery/replay evidence even if the product brief is only partially met`
-- user_visible_effect: `the user can inspect the exact project CTCP generated, plus its package, screenshot, delivery manifest, and replay report, and can see the first unmet annotation-workbench requirement without black-box guessing`
+- Goal:
+  - formal project-generation mainline is API-only except librarian/context_pack
+  - non-API formal steps fail fast
+  - provider ledger makes each critical step auditable
+- Provider ledger fields now emitted per run:
+  - `role`
+  - `action`
+  - `provider_used`
+  - `external_api_used`
+  - `request_id`
+  - `fallback_used`
+  - `local_function_used`
+  - `verdict`
+- API coverage consumption:
+  - benchmark summaries now require `provider_ledger_summary.all_critical_steps_api=true`
+  - portfolio summaries now show each sub-run's `critical_api_step_count / critical_step_count`
+  - evidence bundles and golden archives preserve both provider-ledger artifacts for later audit

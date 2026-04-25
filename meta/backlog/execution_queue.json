@@ -4254,6 +4254,1413 @@
       },
       "status": "doing",
       "notes": "Active on 2026-04-14: build one harder, reviewer-visible annotation workbench with real interaction, persistence, export, package delivery, and cold replay evidence."
+    },
+    {
+      "id": "ADHOC-20260415-virtual-project-team-mainline",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "Reframe CTCP as a virtual project team with mandatory product/design/technical/QA/delivery stages",
+      "owner_role": "Chair/Planner",
+      "deps": [],
+      "dod": [
+        "Repo purpose and the root agent contract state CTCP behaves like a structured virtual project team rather than a single brute-force coding agent",
+        "Expanded execution flow and low-capability project-generation contracts require explicit product, interaction design, technical planning, implementation, QA, delivery, and support-output stages with mandatory stage artifacts before build claims can stand",
+        "Quality-gate and artifact contracts treat missing team-stage artifacts or generic fallback pseudo-completion as blocking failures for project-generation tasks"
+      ],
+      "artifacts": {
+        "produces": [
+          "AGENTS.md",
+          "docs/01_north_star.md",
+          "docs/04_execution_flow.md",
+          "docs/03_quality_gates.md",
+          "docs/30_artifact_contracts.md",
+          "docs/41_low_capability_project_generation.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260415-virtual-project-team-mainline.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260415-virtual-project-team-mainline.md"
+        ],
+        "tests": [
+          "python scripts/workflow_checks.py",
+          "python scripts/sync_doc_links.py --check",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile contract"
+        ]
+      },
+      "status": "blocked",
+      "notes": "Contract patch completed on 2026-04-15, but canonical verify is currently blocked at plan_check because the dirty worktree is missing root artifacts/PLAN.md (and related plan artifacts) outside this task's scoped doc changes."
+    },
+    {
+      "id": "ADHOC-20260415-virtual-team-lane-governance-upgrade",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "Upgrade CTCP governance and prompt routing from single patch-first agent default to formal Delivery Lane plus Virtual Team Lane",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260415-virtual-project-team-mainline"
+      ],
+      "dod": [
+        "AGENTS.md formally defines Delivery Lane and Virtual Team Lane, including trigger conditions and the gate that blocks implementation for self-design work until required design artifacts exist",
+        "A dedicated virtual-team contract exists, docs/10/11/14 no longer conflict with it, and progress dialogue becomes lane-aware with active role plus artifact reporting",
+        "Chair/planning and related routing prompts no longer default to patch-first for new-project or self-design tasks and can emit structured product, architecture, and UX design artifacts before implementation"
+      ],
+      "artifacts": {
+        "produces": [
+          "AGENTS.md",
+          "docs/03_quality_gates.md",
+          "docs/04_execution_flow.md",
+          "docs/10_team_mode.md",
+          "docs/11_task_progress_dialogue.md",
+          "docs/12_virtual_team_contract.md",
+          "docs/14_persona_test_lab.md",
+          "docs/30_artifact_contracts.md",
+          "docs/41_low_capability_project_generation.md",
+          "agents/prompts/chair_plan_draft.md",
+          "agents/prompts/chair_file_request.md",
+          "agents/prompts/contract_guardian_review.md",
+          "agents/prompts/cost_controller_review.md",
+          "agents/prompts/fixer_patch.md",
+          "agents/prompts/frontend_customer_agent.md",
+          "agents/prompts/frontend_progress_agent.md",
+          "agents/prompts/product_direction_draft.md",
+          "agents/prompts/solution_architect_draft.md",
+          "agents/prompts/ux_flow_draft.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260415-virtual-team-lane-governance-upgrade.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260415-virtual-team-lane-governance-upgrade.md"
+        ],
+        "tests": [
+          "python scripts/workflow_checks.py",
+          "python scripts/sync_doc_links.py --check",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile contract"
+        ]
+      },
+      "status": "blocked",
+      "notes": "Governance and prompt-routing upgrade completed on 2026-04-15, including lane, prompt, progress-dialogue, persona, and quality-gate alignment, but canonical contract-profile verify is still blocked at plan_check because the dirty worktree is missing root artifacts/PLAN.md (and related plan artifacts) outside this task's scoped doc/prompt changes."
+    },
+    {
+      "id": "ADHOC-20260415-prompt-contract-checker",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "Add a runnable prompt/contract checker for Virtual Team Lane governance landing",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260415-virtual-team-lane-governance-upgrade"
+      ],
+      "dod": [
+        "A repo-local checker script validates the Virtual Team Lane governance requirements across the key markdown and prompt files and prints pass/fail per rule with a clear summary",
+        "A unit test file covers both a passing repository case and at least one explicit failing contract condition with actionable failure output",
+        "The checker script and its tests are executed for real, and meta/tasks/CURRENT.md plus meta/reports/LAST.md record the commands, return codes, first failure point if any, and minimal follow-up"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/prompt_contract_check.py",
+          "tests/test_prompt_contract_check.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260415-prompt-contract-checker.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260415-prompt-contract-checker.md"
+        ],
+        "tests": [
+          "python scripts/prompt_contract_check.py",
+          "python -m unittest discover -s tests -p \"test_prompt_contract_check.py\" -v",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "blocked",
+      "notes": "Checker script and unit tests landed and passed on 2026-04-15; canonical verify was still blocked first at plan_check because the dirty worktree is missing root artifacts/PLAN.md outside this task's scoped checker/test changes."
+    },
+    {
+      "id": "ADHOC-20260415-prompt-contract-gate-integration",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "Integrate the Virtual Team prompt-contract checker into verify_repo and contract gate docs",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260415-prompt-contract-checker"
+      ],
+      "dod": [
+        "scripts/verify_repo.ps1 and scripts/verify_repo.sh execute the Virtual Team prompt-contract checker as a real gate before plan_check",
+        "docs/03_quality_gates.md documents the new prompt-contract gate and its contract authority surface",
+        "The checker still passes when invoked directly, workflow checks pass, and canonical verify output shows the new gate before the first remaining unrelated failure"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/verify_repo.ps1",
+          "scripts/verify_repo.sh",
+          "docs/03_quality_gates.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260415-prompt-contract-gate-integration.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260415-prompt-contract-gate-integration.md"
+        ],
+        "tests": [
+          "python scripts/prompt_contract_check.py",
+          "python -m unittest discover -s tests -p \"test_prompt_contract_check.py\" -v",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "blocked",
+      "notes": "PowerShell verify integration landed on 2026-04-15 and real verify output now shows prompt contract check before plan_check. The remaining blockers are the preexisting missing root artifacts/PLAN.md in canonical verify plus a local WSL/bash environment failure that prevented runtime execution of scripts/verify_repo.sh."
+    },
+    {
+      "id": "ADHOC-20260415-root-plan-artifacts-unblock",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "Restore root plan artifacts so canonical verify can advance past plan_check",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260415-prompt-contract-gate-integration"
+      ],
+      "dod": [
+        "artifacts/PLAN.md, artifacts/REASONS.md, and artifacts/EXPECTED_RESULTS.md exist and satisfy the machine-readable plan contract for the current CTCP governance + prompt-contract checker worktree state",
+        "python scripts/plan_check.py passes against the restored root artifacts and the declared plan scope is broad enough for the current dirty worktree to advance past patch_check if no other non-plan gate blocks first",
+        "canonical verify no longer stops first at missing root plan artifacts, and the report records the next real first failure point after plan_check if one remains"
+      ],
+      "artifacts": {
+        "produces": [
+          "artifacts/PLAN.md",
+          "artifacts/REASONS.md",
+          "artifacts/EXPECTED_RESULTS.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260415-root-plan-artifacts-unblock.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260415-root-plan-artifacts-unblock.md"
+        ],
+        "tests": [
+          "python scripts/plan_check.py --verbose",
+          "python scripts/plan_check.py",
+          "python scripts/prompt_contract_check.py",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-15: restored root PLAN/REASONS/EXPECTED_RESULTS artifacts with current governance-checker worktree truth, `python scripts/plan_check.py --verbose` passed, and canonical verify advanced beyond the old missing-PLAN blocker through prompt contract check, plan_check, patch_check, behavior catalog, contract/doc-index/code-health gates, triplet guard, and lite scenario replay before entering python unit tests."
+    },
+    {
+      "id": "ADHOC-20260416-canonical-verify-stable-result",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "Run canonical verify to a stable final result and repair only the first post-plan failure if needed",
+      "owner_role": "Local Verifier",
+      "deps": [
+        "ADHOC-20260415-root-plan-artifacts-unblock"
+      ],
+      "dod": [
+        "canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` is executed to a stable final result with real stdout/stderr evidence and final exit code",
+        "if verify fails after `plan_check`, only the new first failing gate or test is minimally repaired and canonical verify is rerun",
+        "CURRENT/LAST/archive records capture the executed command, first post-plan failure if any, minimal repair scope, rerun evidence, and final pass/fail conclusion"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260416-canonical-verify-stable-result.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260416-canonical-verify-stable-result.md"
+        ],
+        "tests": [
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-16: first canonical verify failed at workflow gate because LAST.md lacked required workflow evidence after rebinding to the verify-only topic; after a metadata-only LAST.md/report fix, the second canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` returned 0 and passed all gates, lite replay, python unit tests, and final plan gate evidence replay."
+    },
+    {
+      "id": "ADHOC-20260416-client-project-studio-desktop-delivery",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Build and deliver a multi-stage desktop GUI project workspace with customer and internal team views",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260416-canonical-verify-stable-result"
+      ],
+      "dod": [
+        "A local runnable desktop GUI exists under `generated_projects/client_project_studio/` with customer and internal-team views, project list, project detail workspace, stage timeline, feedback/approval controls, and final delivery area",
+        "The project produces real stage screenshots for intake, product direction, UX, build, QA, and delivery, plus a packaged deliverable zip and runnable README/entrypoint",
+        "Repo task/report artifacts record the long-flow delivery work, project-local tests pass, and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` returns 0 after the new project paths are brought under explicit PLAN scope"
+      ],
+      "artifacts": {
+        "produces": [
+          "generated_projects/client_project_studio/",
+          "generated_projects/client_project_studio_delivery_bundle.zip",
+          "artifacts/PLAN.md",
+          "artifacts/REASONS.md",
+          "artifacts/EXPECTED_RESULTS.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260416-client-project-studio-desktop-delivery.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260416-client-project-studio-desktop-delivery.md"
+        ],
+        "tests": [
+          "python generated_projects/client_project_studio/run_demo.py --headless-evidence",
+          "python -m unittest discover -s generated_projects/client_project_studio/tests -p \"test_*.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-16: delivered `generated_projects/client_project_studio/` with customer/team dual views, six exported stage screenshots, packaged zip handoff, project-local tests, and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` returning 0 after PLAN scope was extended to `generated_projects/`."
+    },
+    {
+      "id": "ADHOC-20260416-interactive-client-delivery-suite-desktop",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Build a heavier desktop GUI delivery system with customer, PM, and execution-team perspectives",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260416-client-project-studio-desktop-delivery"
+      ],
+      "dod": [
+        "A runnable desktop GUI exists under `generated_projects/interactive_client_delivery_suite/` with project list, detail workspace, archive area, three perspectives, comments, attachments, approvals, rejection rollback, and final delivery page",
+        "The project exports real screenshots for project list/intake, discovery or product direction, UX/prototype, rejection feedback loop, build, QA, and delivery, plus a packaged delivery bundle and runnable README/entrypoint",
+        "Task/report artifacts record the heavier delivery run, project-local tests pass, and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` returns 0 for the current worktree"
+      ],
+      "artifacts": {
+        "produces": [
+          "generated_projects/interactive_client_delivery_suite/",
+          "generated_projects/interactive_client_delivery_suite_delivery_bundle.zip",
+          "generated_projects/interactive_client_delivery_suite_full_delivery_bundle.zip",
+          "artifacts/PLAN.md",
+          "artifacts/REASONS.md",
+          "artifacts/EXPECTED_RESULTS.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260416-interactive-client-delivery-suite-desktop.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260416-interactive-client-delivery-suite-desktop.md"
+        ],
+        "tests": [
+          "python generated_projects/interactive_client_delivery_suite/run_demo.py --headless-evidence --reset-data",
+          "python -m unittest discover -s generated_projects/interactive_client_delivery_suite/tests -p \"test_*.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-16: delivered `generated_projects/interactive_client_delivery_suite/` with customer/PM/team perspectives, seven exported stage screenshots, attachment records, rejection rollback flow, archived project area, packaged handoff, project-local tests, and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` returning 0."
+    },
+    {
+      "id": "ADHOC-20260416-clean-generated-delivery-outputs",
+      "layer": "L1",
+      "priority": "P1",
+      "title": "Delete generated delivery outputs from the two recent desktop-project runs",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260416-interactive-client-delivery-suite-desktop"
+      ],
+      "dod": [
+        "The generated project directories for Client Project Studio and Interactive Client Delivery Suite are removed from generated_projects/",
+        "The related delivery zip bundles and verify logs for those two runs are removed without touching unrelated repo files",
+        "CURRENT/LAST/archive records capture the cleanup scope and deleted absolute paths"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260416-clean-generated-delivery-outputs.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260416-clean-generated-delivery-outputs.md"
+        ],
+        "tests": [
+          "powershell path-targeted Remove-Item cleanup of generated outputs",
+          "python scripts/workflow_checks.py"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-16: removed the two recent generated desktop-project directories, their four delivery bundles, and their eight direct verify logs without touching unrelated repo files; cleanup task metadata updated accordingly."
+    },
+    {
+      "id": "ADHOC-20260417-customer-experience-demo-center-desktop",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Build Customer Experience Demo Center as a customer-facing desktop GUI delivery walkthrough",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260416-clean-generated-delivery-outputs"
+      ],
+      "dod": [
+        "A runnable desktop GUI exists under `generated_projects/customer_experience_demo_center/` with dashboard, intake, discovery, direction, prototype, feedback/revision, build, QA, and delivery modules centered on customer-visible progress",
+        "The project exports real screenshot evidence `01-dashboard.png` through `08-delivery.png`, supports stage advance/back, customer rejection, revision resubmission, multiple comments, and clear customer approval checkpoints",
+        "A delivery bundle zip, README, entrypoint notes, customer-facing delivery summary, project-local tests, and canonical verify execution evidence are all recorded for the new project topic"
+      ],
+      "artifacts": {
+        "produces": [
+          "generated_projects/customer_experience_demo_center/",
+          "generated_projects/customer_experience_demo_center_delivery_bundle.zip",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260417-customer-experience-demo-center-desktop.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260417-customer-experience-demo-center-desktop.md"
+        ],
+        "tests": [
+          "python generated_projects/customer_experience_demo_center/run_demo.py --headless-evidence --reset-data",
+          "python -m unittest discover -s generated_projects/customer_experience_demo_center/tests -p \"test_*.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-17: delivered `generated_projects/customer_experience_demo_center/` with customer-first dashboard/intake/discovery/direction/prototype/feedback/build/QA/delivery modules, eight exported screenshots, a delivery bundle zip, project-local tests passing, `python scripts/workflow_checks.py` passing, and canonical `scripts/verify_repo.ps1` advancing to a pre-existing lite scenario replay failure at `S16_lite_fixer_loop_pass`."
+    },
+    {
+      "id": "ADHOC-20260417-mainline-freeze-ownership-hardening",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "Harden single-authority prompt hierarchy, frozen kernels, and forced CTCP mainline ownership gates",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260417-customer-experience-demo-center-desktop"
+      ],
+      "dod": [
+        "AGENTS.md remains the root contract, PROMPT.md is downgraded to a compiled artifact in routed docs/checks, and no runtime/team-mode contract still describes PROMPT.md as an independent authority or unique entry",
+        "A machine-readable freeze/write-scope contract plus task-card fields exist, classify/verify recognize task-owned vs lane-owned vs frozen-kernel changes, and frozen-kernel edits require explicit elevation before verify can pass",
+        "Regression tests prove project turns stay on the front-bridge/orchestrate mainline, frontend/support do not invent execution truth from direct run-dir peeking, and the new ownership gate is enforced by scripts and tests"
+      ],
+      "artifacts": {
+        "produces": [
+          "AGENTS.md",
+          "artifacts/EXPECTED_RESULTS.md",
+          "artifacts/PLAN.md",
+          "artifacts/REASONS.md",
+          "contracts/module_freeze.json",
+          "docs/03_quality_gates.md",
+          "docs/04_execution_flow.md",
+          "docs/10_team_mode.md",
+          "docs/42_frontend_backend_separation_contract.md",
+          "docs/50_prompt_hierarchy_contract.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/TEMPLATE.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260417-mainline-freeze-ownership-hardening.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260417-mainline-freeze-ownership-hardening.md",
+          "scripts/classify_change_profile.py",
+          "scripts/module_protection_check.py",
+          "scripts/prompt_contract_check.py",
+          "scripts/verify_repo.ps1",
+          "scripts/verify_repo.sh",
+          "scripts/workflow_checks.py",
+          "tests/test_backend_interface_contract_apis.py",
+          "tests/test_module_protection_contract.py",
+          "tests/test_project_turn_mainline_contract.py",
+          "tests/test_prompt_contract_check.py",
+          "tests/test_support_to_production_path.py",
+          "tests/test_workflow_checks.py",
+          "tools/module_protection.py"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_prompt_contract_check.py\" -v",
+          "python -m unittest discover -s tests -p \"test_module_protection_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_project_turn_mainline_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_to_production_path.py\" -v",
+          "python -m unittest discover -s tests -p \"test_backend_interface_contract_apis.py\" -v",
+          "python -m unittest discover -s tests -p \"test_workflow_checks.py\" -v",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-17: AGENTS/root authority, compiled prompt hierarchy, machine-readable freeze/write-scope gates, ownership-aware verify, and mainline/backend-truth regressions are in place. The final closeout removed the embedded API-key fallback from the provider/OpenAI-compatible path so `test_missing_api_key_fails_fast` and `test_api_agent_preview_disabled_without_env_or_cmd` now pass, and canonical `powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code` returned 0."
+    },
+    {
+      "id": "ADHOC-20260419-project-generation-lane-hardening",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Harden CTCP project-generation lane with domain-family routing, domain-aware verify, clean delivery split, and README quality gates",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260417-mainline-freeze-ownership-hardening"
+      ],
+      "dod": [
+        "Project-generation decisions classify explicit project domains into scaffold families, consume a machine-readable compatibility matrix, and fail fast when narrative/VN/gui/editor goals would drift into pointcloud/v2p/reconstruction scaffolds or other incompatible families",
+        "Project-generation verify/gates become domain-aware: narrative/VN/gui/editor outputs must prove editor/authoring capability, narrative structure, asset/sample data, non-placeholder README/meta quality, UX evidence, and must block pointcloud/v2p contamination or shallow export-only shells",
+        "Delivery output defaults separate user-facing final project bundles from internal process bundles, support/delivery manifests prioritize the final project bundle, and focused regression tests cover routing, mismatch failure, contamination blocking, README quality, and bundle-role separation"
+      ],
+      "artifacts": {
+        "produces": [
+          "contracts/project_domain_matrix.json",
+          "docs/03_quality_gates.md",
+          "docs/04_execution_flow.md",
+          "docs/10_team_mode.md",
+          "docs/30_artifact_contracts.md",
+          "docs/41_low_capability_project_generation.md",
+          "meta/backlog/execution_queue.json",
+          "meta/reports/LAST.md",
+          "meta/tasks/CURRENT.md",
+          "scripts/project_delivery_evidence_bridge.py",
+          "scripts/project_generation_gate.py",
+          "scripts/project_manifest_bridge.py",
+          "scripts/support_public_delivery.py",
+          "scripts/verify_repo.ps1",
+          "scripts/verify_repo.sh",
+          "tests/test_project_generation_artifacts.py",
+          "tests/test_delivery_evidence_bridge.py",
+          "tests/test_support_public_delivery_state.py",
+          "tests/test_support_delivery_user_visible_contract.py",
+          "tests/test_delivery_replay_validator.py",
+          "tools/providers/project_generation_artifacts.py",
+          "tools/providers/project_generation_business_templates.py",
+          "tools/providers/project_generation_decisions.py",
+          "tools/providers/project_generation_runtime_support.py",
+          "tools/providers/project_generation_validation.py"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_project_generation_artifacts.py\" -v",
+          "python -m unittest discover -s tests -p \"test_delivery_evidence_bridge.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_public_delivery_state.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_delivery_user_visible_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_delivery_replay_validator.py\" -v",
+          "python -m unittest discover -s tests -p \"test_backend_interface_contract_apis.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-20: project-generation routing now locks explicit domains to scaffold families through a machine-readable compatibility matrix, narrative/editor outputs fail fast on mismatch or pointcloud/v2p contamination, domain-aware verify blocks export-only shells, README/meta quality is checked, and public delivery defaults to final_project_bundle.zip with process_bundle.zip kept internal."
+    },
+    {
+      "id": "ADHOC-20260420-generated-project-cleanup-d-drive-root",
+      "layer": "L1",
+      "priority": "P1",
+      "title": "Delete repo-local generated project outputs and route future generated runs to D drive",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260419-project-generation-lane-hardening"
+      ],
+      "dod": [
+        "Existing repo-local generated project directories and delivery bundles under generated_projects/ are removed without touching unrelated repo files",
+        "The user-level CTCP_RUNS_ROOT environment variable is set to D:\\ctcp_runs so future generated project code lands on D drive by default",
+        "CURRENT/LAST records capture the cleanup scope, deleted paths, and the verified effective runs root"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260420-project-generation-lane-hardening.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260420-project-generation-lane-hardening.md"
+        ],
+        "tests": [
+          "powershell path-targeted Remove-Item cleanup of generated_projects outputs",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-20: repo-local generated outputs were removed, historical runtime-generated project outputs were cleared from validated CTCP run roots while support/session state was preserved, CTCP_RUNS_ROOT was persisted to D:\\ctcp_runs, and isolated acceptance verify passed in D:\\.c_projects\\adc\\ctcp_cleanup_acceptance_20260420."
+    },
+    {
+      "id": "ADHOC-20260420-narrative-forge-lite-stress-run",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Run a real Narrative Forge Lite project-generation stress pass and validate domain/family, contamination, UX, delivery, and README quality from run artifacts",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260419-project-generation-lane-hardening",
+        "ADHOC-20260420-generated-project-cleanup-d-drive-root"
+      ],
+      "dod": [
+        "A real CTCP project-generation run for a narrative/VN/editor goal produces run artifacts that explicitly show project_domain=scaffold-compatible narrative_vn_editor routing, allowed/incompatible families, and domain_compatibility excluding pointcloud_reconstruction",
+        "The generated project proves the narrative editor minimum skeleton through real artifacts (editor/workspace, scene or branch graph, cast/asset structures, sample data, preview/export), and contamination_hits plus focused scan results show no pointcloud/v2p/reconstruction drift",
+        "The delivery artifacts prove final_project_bundle.zip exists and is the user-facing default, process_bundle.zip is internal-only, and README/meta quality is grounded rather than goal-dump placeholder text"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260420-generated-project-cleanup-d-drive-root.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260420-generated-project-cleanup-d-drive-root.md"
+        ],
+        "tests": [
+          "python scripts/ctcp_orchestrate.py new-run --goal \"Narrative Forge Lite ...\"",
+          "python scripts/ctcp_orchestrate.py advance --max-steps 16",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-20: real run `D:\\ctcp_runs\\ctcp\\narrative-forge-lite-stress-20260420` routed to `narrative_vn_editor -> narrative_gui_editor`, passed domain compatibility and contamination checks, defaulted delivery to `final_project_bundle.zip`, and exposed remaining product-depth gaps in sample richness and editor UX through artifact-backed validation. Repo-level task verify passed in isolated workspace `D:\\ctcp_nsacc`."
+    },
+    {
+      "id": "ADHOC-20260420-narrative-editor-depth-hardening",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Deepen the narrative_gui_editor family with richer sample content, provenance, stronger editor UX evidence, and cleaner final bundles",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260419-project-generation-lane-hardening",
+        "ADHOC-20260420-narrative-forge-lite-stress-run"
+      ],
+      "dod": [
+        "Production narrative_gui_editor sample content reaches the minimum depth contract with 3+ major characters, 4 chapters, 8+ scene nodes, 2+ explicit branch points, per-scene background placeholders, and partial sprite/sfx/cg references",
+        "Narrative sample content ships with machine-readable provenance or source-map evidence using LOCAL:/ or API:/ style references, and domain validation enforces that provenance is present for the generated sample",
+        "Editor UX evidence proves distinct project/sample load, story/scene/branch editing, character or asset management, and preview/export areas rather than a summary-only export page, and focused tests plus final bundle packaging exclude pycache/pyc/process or verify internals from final_project_bundle.zip"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260420-narrative-forge-lite-stress-run.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260420-narrative-forge-lite-stress-run.md",
+          "scripts/support_delivery_bundle_helpers.py",
+          "tests/test_project_generation_artifacts.py",
+          "tests/test_support_public_delivery_state.py",
+          "tools/providers/project_generation_business_templates.py",
+          "tools/providers/project_generation_validation.py"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_project_generation_artifacts.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_public_delivery_state.py\" -v",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-20: the production narrative_gui_editor family now ships a deeper seeded sample project with 3 characters, 4 chapters, 10 scenes, explicit branch points, and background/sprite/sfx/cg references; source_map.json preserves LOCAL provenance for sample content; UX validation rejects export-summary-only pages while the generated preview shows project load, scene/branch editing, cast/asset management, and preview/export zones; final_project_bundle.zip now excludes __pycache__/.pyc and internal artifacts. Focused regressions passed, and canonical verify passed in isolated workspace D:\\ctcp_nsacc after the main workspace remained noisy from unrelated frozen-kernel dirty files."
+    },
+    {
+      "id": "ADHOC-20260420-narrative-editor-stage3-interaction-api-ux",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Upgrade narrative_gui_editor with real edit interactions, API-backed sample content, and stronger interactive UX acceptance",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260419-project-generation-lane-hardening",
+        "ADHOC-20260420-narrative-editor-depth-hardening"
+      ],
+      "dod": [
+        "Production narrative_gui_editor projects support real stateful edits for scenes/branches, character or asset bindings, sample reload/reset, and export those edits into changed project/export outputs with machine-verifiable state-diff evidence",
+        "Narrative sample content can consume API-generated fields for at least two content classes while preserving mixed LOCAL/API provenance in source_map.json or an equivalent artifact, with explicit merge rules and fallback behavior enforced by validation",
+        "Narrative UX acceptance distinguishes interactive editors from static summary pages by requiring controls plus interaction evidence, rejects fake editor pages or decoupled exports through focused negative tests, and keeps final bundle hygiene unchanged"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260420-narrative-editor-depth-hardening.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260420-narrative-editor-depth-hardening.md",
+          "tools/providers/project_generation_artifacts.py",
+          "tools/providers/project_generation_business_templates.py",
+          "tools/providers/project_generation_validation.py",
+          "tests/test_project_generation_artifacts.py"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_project_generation_artifacts.py\" -v",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-20: the production narrative_gui_editor family now exposes real scene/branch, character, sample reload/reset, and background-binding edits with machine-readable interaction/state-diff exports; sample content can consume explicit API payload fields with mixed LOCAL/API provenance; UX validation rejects editor-looking static pages and decoupled exports; focused regressions passed in the main workspace, and canonical verify passed in isolated acceptance workspace D:\\.c_projects\\adc\\ctcp_stage3_acceptance_20260420 after the main workspace remained noisy from unrelated frozen-kernel dirty files."
+    },
+    {
+      "id": "ADHOC-20260420-project-generation-quality-upgrade",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Upgrade CTCP project generation with pre-materialization spec planning, capability bundles, staged sample generation, and generator-side refinement",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260419-project-generation-lane-hardening",
+        "ADHOC-20260420-narrative-editor-stage3-interaction-api-ux"
+      ],
+      "dod": [
+        "Project generation emits and consumes a structured project_spec artifact before scaffold/materialize, and downstream source-generation, manifest, and validation stages read that spec rather than treating it as an inert field",
+        "Capability bundle planning is explicit for project generation, enters the output contract/manifest, affects generated files for narrative_gui_editor, and validation distinguishes full capability coverage from merely correct family routing",
+        "Narrative sample content is produced through staged generation artifacts with LOCAL/API provenance and generator-side refinement can patch targeted capability/spec/sample/export gaps before final pass without handing implementation over to the agent"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260420-narrative-editor-stage3-interaction-api-ux.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260420-narrative-editor-stage3-interaction-api-ux.md",
+          "workflow_registry/wf_project_generation_manifest/recipe.yaml",
+          "scripts/project_manifest_bridge.py",
+          "scripts/project_generation_gate.py",
+          "contracts/project_capability_bundles.json",
+          "tools/providers/project_generation_artifacts.py",
+          "tools/providers/project_generation_business_templates.py",
+          "tools/providers/project_generation_decisions.py",
+          "tools/providers/project_generation_source_helpers.py",
+          "tools/providers/project_generation_source_stage.py",
+          "tools/providers/project_generation_validation.py",
+          "tests/test_project_generation_artifacts.py"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_project_generation_artifacts.py\" -v",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-21: CTCP project generation now emits and consumes first-class project_spec/capability_plan artifacts before materialization, narrative sample content is generated through staged artifacts with LOCAL/API provenance, source generation performs lightweight refinement to repair missing capability/spec coverage before final pass, focused project-generation regressions passed in the main workspace, and canonical verify passed in isolated acceptance workspace D:\\.c_projects\\cqa after the shared main workspace remained noisy from unrelated dirty-worktree module-protection failures."
+    },
+    {
+      "id": "ADHOC-20260421-unified-mainline-run-manifest",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Unify librarian, ADLC, whiteboard, and frontend bridge into the default run mainline with run_manifest truth source",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260420-project-generation-quality-upgrade"
+      ],
+      "dod": [
+        "docs/02_workflow.md names one default mainline and defines Librarian, ADLC, Whiteboard, Bridge, and run_manifest responsibilities",
+        "Runtime writes <run_dir>/artifacts/run_manifest.json from librarian/context_pack, ADLC/orchestrator gate status, whiteboard writes, bridge consumption, and final status updates",
+        "A minimal integration test proves one run contains context_pack, ADLC phase/gate data, whiteboard state, bridge evidence, final_status, and first_failure data when applicable"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260421-project-generation-quality-upgrade.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260421-project-generation-quality-upgrade.md",
+          "docs/02_workflow.md",
+          "docs/architecture/contracts/run_manifest_contract.md",
+          "docs/architecture/contracts/support_whiteboard_contract.md",
+          "docs/architecture/contracts/frontend_bridge_contract.md",
+          "tools/run_manifest.py",
+          "tools/adlc_gate.py",
+          "scripts/workflows/adlc_self_improve_core.py",
+          "scripts/ctcp_orchestrate.py",
+          "scripts/ctcp_librarian.py",
+          "scripts/ctcp_front_bridge.py",
+          "scripts/ctcp_dispatch.py",
+          "tests/integration/test_mainline_run_contract.py"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests/integration -p \"test_mainline_run_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-21: docs/02_workflow.md now defines one default mainline across librarian, ADLC, whiteboard, bridge, and run_manifest; runtime paths write <run_dir>/artifacts/run_manifest.json from context_pack creation, ADLC/orchestrator status, whiteboard updates, bridge consumption, and final status; focused E2E passed and canonical default verify passed in isolated acceptance workspace D:\\.c_projects\\cqa after the shared main workspace remained noisy from unrelated dirty-worktree module-protection failures."
+    },
+    {
+      "id": "ADHOC-20260421-default-mainline-freeze",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Verify and freeze the default mainline run_manifest surface",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260421-unified-mainline-run-manifest"
+      ],
+      "dod": [
+        "Read-only validation proves docs, runtime wiring, run_manifest contract, and same-run integration test satisfy the default mainline requirements before any freeze files are added",
+        "A default mainline freeze contract documents the frozen mainline, protected file surface, explicit unfreeze requirement, and future-change explanation rule",
+        "A hash-based freeze manifest plus integration test protect the default mainline files and fail with the changed file path when any protected file drifts"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260421-unified-mainline-run-manifest.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260421-unified-mainline-run-manifest.md",
+          "docs/architecture/contracts/default_mainline_freeze_contract.md",
+          "artifacts/mainline_freeze_manifest.json",
+          "tests/integration/test_mainline_freeze_manifest.py"
+        ],
+        "tests": [
+          "read-only grep/contract checks for default mainline fields",
+          "python -m unittest discover -s tests/integration -p \"test_mainline_run_contract.py\" -v",
+          "python -m unittest discover -s tests/integration -p \"test_mainline_freeze_manifest.py\" -v",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-21: read-only checks confirmed the default mainline docs, ADLC orchestration rule, run_manifest contract, runtime write points, and same-run E2E test. Added the default mainline freeze contract, sha256 freeze manifest, and freeze manifest regression test. Focused tests passed in the main workspace, and canonical verify passed in isolated acceptance workspace D:\\.c_projects\\cqa at commit 50b1dca after the shared main workspace remained blocked by unrelated dirty-worktree module-protection noise."
+    },
+    {
+      "id": "ADHOC-20260421-plane-lite-team-pm-benchmark",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Run Plane-lite team project-management benchmark through CTCP and review acceptance evidence",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260421-default-mainline-freeze"
+      ],
+      "dod": [
+        "Benchmark zip is unpacked outside the repo, all benchmark markdown files plus benchmark_case.json are read, and the project target/must-have/forbidden/persona/scripted-turn summary is recorded",
+        "Scripted turns are executed through CTCP as realistically as possible, with turn input/output and intermediate progress/step acceptance/gate evidence collected",
+        "Final generated artifacts are inspected for runnable Plane-lite/Focalboard-lite fit, verify evidence, screenshot/README/startup/package, final bundle, first failure point, and PASS/PARTIAL/FAIL conclusion"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260421-default-mainline-freeze.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260421-default-mainline-freeze.md",
+          "external benchmark input/run/evidence directories under D:\\ctcp_runs\\benchmarks\\plane-lite-team-pm-20260421\\"
+        ],
+        "tests": [
+          "benchmark scripted-turn execution through CTCP",
+          "artifact and bundle inspection against benchmark source of truth",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-21 as benchmark execution with FAIL verdict: requested root entrypoints failed from missing ctcp_adapters; clean-workspace continuation ran all scripted turns but routed the new project to wf_orchestrator_only/project_generation_goal=false, blocked at missing diff.patch after API 403, and produced no runnable Plane-lite project, verify evidence, screenshot, README/startup steps, or final project package."
+    },
+    {
+      "id": "ADHOC-20260421-plane-lite-team-pm-benchmark-repair",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Repair Plane-lite benchmark mainline routing, gates, provider fallback, and delivery completeness",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260421-plane-lite-team-pm-benchmark"
+      ],
+      "dod": [
+        "ctcp_adapters import failure is repaired and canonical entrypoint help commands pass",
+        "Chinese scripted Plane-lite turn and benchmark JSON goal both classify as project-generation and route to wf_project_generation_manifest",
+        "Route/gate review blocks project-generation goals with non-project-generation route, false project_generation flag, or missing runnable/verify/delivery requirements",
+        "PatchMaker provider fallback is covered by a focused test and no longer leaves diff.patch absent on default provider unavailability",
+        "Project-generation delivery gate rejects missing verify report, README/startup, final screenshot, or final package"
+      ],
+      "artifacts": {
+        "produces": [
+          "ctcp_adapters/",
+          "scripts/ctcp_dispatch.py",
+          "scripts/ctcp_orchestrate.py",
+          "scripts/ctcp_support_bot.py",
+          "scripts/project_generation_gate.py",
+          "tools/providers/api_agent.py",
+          "tools/providers/mock_agent.py",
+          "tools/providers/project_generation_artifacts.py",
+          "tools/providers/project_generation_decisions.py",
+          "tools/providers/project_generation_validation.py",
+          "tools/providers/project_generation_source_stage.py",
+          "tools/providers/project_generation_source_helpers.py",
+          "workflow_registry/wf_project_generation_manifest/recipe.yaml",
+          "tests/test_plane_lite_benchmark_regression.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260421-plane-lite-team-pm-benchmark.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260421-plane-lite-team-pm-benchmark.md"
+        ],
+        "tests": [
+          "python scripts/ctcp_orchestrate.py --help",
+          "python scripts/ctcp_front_bridge.py --help",
+          "python scripts/ctcp_support_bot.py --help",
+          "python -m unittest discover -s tests -p \"test_plane_lite_benchmark_regression.py\" -v",
+          "minimal Plane-lite run routing check",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-21: entrypoints restored, Plane-lite routing/gating/fallback/delivery checks repaired, focused tests passed, and mock/local minimal smoke reached verify PASS plus final package/screenshot delivery evidence."
+    },
+    {
+      "id": "ADHOC-20260423-indie-studio-hub-generation-test",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Run rough-goal project generation test for Indie Studio Production Hub",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260421-plane-lite-team-pm-benchmark-repair",
+        "ADHOC-20260420-project-generation-quality-upgrade"
+      ],
+      "dod": [
+        "The test uses only the rough user goal plus one bounded clarification/default-assumption pass and does not require user-authored feature matrix, page map, or data model",
+        "The CTCP run emits product/spec freeze artifacts before implementation, including project_spec, output_contract_freeze, feature matrix, page map, data model summary, milestone plan, and acceptance criteria",
+        "The generated Indie Studio Production Hub is not a generic scaffold and contains runnable local-first project collaboration flows for projects, tasks, assets, bugs, builds/releases, activity, settings/docs, and delivery evidence",
+        "The run produces final bundle, evidence bundle, startup guide, replay guide, cold replay evidence, and at least ten screenshots covering key views, or records the first blocking failure with minimal repair direction"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260423-agent-league-benchmark-review.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260423-agent-league-benchmark-review.md",
+          "external CTCP run under %TEMP%\\ctcp_runs\\ctcp\\"
+        ],
+        "tests": [
+          "python scripts/ctcp_orchestrate.py new-run --goal <rough Indie Studio Production Hub goal>",
+          "python scripts/ctcp_orchestrate.py advance --max-steps <n>",
+          "artifact inspection against product-definition and delivery requirements",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed as a generation test on 2026-04-23 with product-level NEEDS_REWORK verdict: CTCP created an external run and internally passed verify/delivery/cold replay after a minimal routing fix, but artifact review showed the delivered project is still team_task_pm/Plane-lite-style coverage rather than full Indie Studio Production Hub with assets, bugs, build/release, required docs, and 10+ screenshots."
+    },
+    {
+      "id": "ADHOC-20260423-indie-studio-hub-domain-lift-dialogue-test",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Drive Indie Studio Hub Domain Lift through CTCP dialogue and review the resulting output",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260423-indie-studio-hub-generation-test"
+      ],
+      "dod": [
+        "A support-bot dialogue run submits the Indie Studio Hub Domain Lift request in natural-language turns rather than direct local file edits",
+        "The dialogue result is inspected for whether CTCP distinguishes internal runtime pass from user-level acceptance and whether it addresses the missing domain coverage contract",
+        "Repo CURRENT/LAST capture the conversation turns, run/session evidence paths, first failure point if any, and the final PASS/PARTIAL/NEEDS_REWORK conclusion"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260423-indie-studio-hub-generation-test.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260423-indie-studio-hub-generation-test.md",
+          "external support session and bound run under %TEMP%\\ctcp_runs\\ctcp\\support_sessions\\ and %TEMP%\\ctcp_runs\\ctcp\\"
+        ],
+        "tests": [
+          "python scripts/ctcp_support_bot.py --stdin --chat-id <fixed_id>",
+          "artifact inspection of support session state, support_reply.json, and any bound run",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-23 with NEEDS_REWORK verdict: session 1 misrouted the Domain Lift request to wf_orchestrator_only and blocked on context_pack.json; session 2 classified a stronger clean request as STATUS_QUERY, so no real task binding happened despite task-like reply text."
+    },
+    {
+      "id": "ADHOC-20260423-dialogue-entry-routing-and-binding-fix",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Repair support dialogue entry routing and real task binding for rough-goal domain-lift requests",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260423-indie-studio-hub-domain-lift-dialogue-test"
+      ],
+      "dod": [
+        "Support dialogue classifies rough-goal plus task-binding plus domain-lift/rerun requests as executable project turns rather than STATUS_QUERY",
+        "When support reply claims task execution or rerun start, session state must contain non-empty active_goal, bound_run_id, and bound_run_dir or the reply must degrade to an explicit unbound/blocking result",
+        "Workflow resolution and real dialogue validation prove the repaired request no longer falls to wf_orchestrator_only and binds a real run with project-generation intent"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260423-indie-studio-hub-domain-lift-dialogue-test.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260423-indie-studio-hub-domain-lift-dialogue-test.md",
+          "frontend/conversation_mode_router.py",
+          "scripts/ctcp_support_bot.py",
+          "scripts/resolve_workflow.py",
+          "scripts/project_generation_gate.py",
+          "tools/providers/project_generation_artifacts.py",
+          "tests/test_runtime_wiring_contract.py",
+          "tests/test_support_bot_humanization.py",
+          "tests/test_workflow_dispatch.py",
+          "external support session and bound run under %TEMP%\\ctcp_runs\\ctcp\\support_sessions\\ and %TEMP%\\ctcp_runs\\ctcp\\"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_workflow_dispatch.py\" -v",
+          "python scripts/workflow_checks.py",
+          "python scripts/ctcp_support_bot.py --stdin --chat-id <fixed_id>",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-23 with PARTIAL verdict: support entry no longer misclassifies this request family as STATUS_QUERY, execution-claim replies require real binding fields, and a real stdin dialogue bound run 20260423-180633-719407-orchestrate into wf_project_generation_manifest; canonical doc-only verify in the shared workspace remained blocked by unrelated module-protection dirty-worktree noise."
+    },
+    {
+      "id": "ADHOC-20260423-indie-studio-hub-domain-lift-rerun-test",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Re-run Indie Studio Hub Domain Lift rough-goal generation test through the repaired support entry",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260423-dialogue-entry-routing-and-binding-fix",
+        "ADHOC-20260423-indie-studio-hub-generation-test"
+      ],
+      "dod": [
+        "A real support-bot dialogue binds a fresh run for the Indie Studio Hub Domain Lift rough-goal request and the selected workflow is wf_project_generation_manifest",
+        "Artifact review records whether the spec freeze still collapses to team_task_pm_web or expands to the expected asset, bug, build-release, and docs center domains",
+        "The final report records internal_runtime_status, user_acceptance_status, screenshot/doc coverage, first failure point, and PASS/PARTIAL/NEEDS_REWORK verdict from real run evidence"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260423-dialogue-entry-routing-and-binding-fix.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260423-dialogue-entry-routing-and-binding-fix.md",
+          "external support session and bound run under %TEMP%\\ctcp_runs\\ctcp\\support_sessions\\ and %TEMP%\\ctcp_runs\\ctcp\\"
+        ],
+        "tests": [
+          "python scripts/ctcp_support_bot.py --stdin --chat-id <fixed_id>",
+          "artifact inspection of support session state, support_reply.json, and the bound run",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-23 with NEEDS_REWORK verdict: the repaired support entry bound a fresh run into wf_project_generation_manifest and the run internally passed verify/delivery, but output_contract_freeze still collapsed the rough goal to team_task_pm_web, generated only task-PM coverage, omitted the required milestone/startup/replay/mid-stage docs, and delivered only eight screenshots; canonical repo doc-only verify in the shared workspace remained blocked by unrelated module-protection dirty-worktree noise."
+    },
+    {
+      "id": "ADHOC-20260423-indie-studio-hub-spec-freeze-domain-lift",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Lift Indie Studio Hub rough-goal freeze and user-acceptance coverage from team_task_pm_web to a composite production domain",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260423-indie-studio-hub-domain-lift-rerun-test"
+      ],
+      "dod": [
+        "Indie-studio rough goals freeze to an explicit composite domain/archetype instead of team_task_pm_web, and the frozen spec includes tasks, assets, bugs, build-release, and docs-delivery",
+        "User-acceptance coverage for that domain hard-requires Asset Library, Asset Detail, Bug Tracker, Build / Release Center, Docs Center, milestone/startup/replay/mid-stage docs, and 10+ screenshots",
+        "A fresh rough-goal rerun proves the new freeze path, reports internal_runtime_status plus user_acceptance_status, and no longer lands on team_task_pm_web"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260423-indie-studio-hub-domain-lift-rerun-test.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260423-indie-studio-hub-domain-lift-rerun-test.md",
+          "contracts/project_domain_matrix.json",
+          "contracts/project_capability_bundles.json",
+          "tools/providers/project_generation_domain_contract.py",
+          "tools/providers/project_generation_decisions.py",
+          "tools/providers/project_generation_artifacts.py",
+          "tools/providers/project_generation_generic_archetypes.py",
+          "tools/providers/project_generation_source_stage.py",
+          "tools/providers/project_generation_validation.py",
+          "frontend/delivery_reply_actions.py",
+          "scripts/support_public_delivery.py",
+          "tests/test_project_generation_artifacts.py",
+          "tests/test_plane_lite_benchmark_regression.py",
+          "tests/test_support_delivery_user_visible_contract.py",
+          "external support session and bound run under %TEMP%\\ctcp_runs\\ctcp\\support_sessions\\ and %TEMP%\\ctcp_runs\\ctcp\\"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_project_generation_artifacts.py\" -v",
+          "python -m unittest discover -s tests -p \"test_plane_lite_benchmark_regression.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_delivery_user_visible_contract.py\" -v",
+          "python scripts/ctcp_support_bot.py --stdin --chat-id <fixed_id>",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-23: Indie Studio Hub rough goals now freeze to indie_studio_production_hub / indie_studio_hub / indie_studio_hub_web, generated runs materialize task/asset/bug/build-release/docs surfaces, extended coverage requires the dedicated docs plus 10 screenshots, and the fresh support-bot rerun 20260423-195821-152521-orchestrate ended with internal_runtime_status=PASS and user_acceptance_status=PASS. Canonical doc-only verify in the shared workspace remains blocked only by unrelated pre-existing module-protection dirty-worktree noise."
+    },
+    {
+      "id": "ADHOC-20260424-repo-orphaned-artifact-cleanup",
+      "layer": "L0",
+      "priority": "P1",
+      "title": "Clean repo-local orphaned debug artifacts after Indie Studio Hub delivery",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260423-indie-studio-hub-spec-freeze-domain-lift"
+      ],
+      "dod": [
+        "The previous Indie Studio Hub task is archived before starting cleanup",
+        "Only repo-local orphaned debug or evidence files with no remaining repo references are removed",
+        "workflow_checks passes and canonical verify is either recorded as pass or reported with its first unrelated failure point"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260423-indie-studio-hub-spec-freeze-domain-lift.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260423-indie-studio-hub-spec-freeze-domain-lift.md",
+          "artifacts/customer_experience_demo_center_simlab.json (removed)",
+          "plane_lite_intermediate_output_debug_pack.zip (removed)"
+        ],
+        "tests": [
+          "rg -n \"plane_lite_intermediate_output_debug_pack\\\\.zip|customer_experience_demo_center_simlab\\\\.json\" -S",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-24 as a bounded repo cleanup: archived the previous task, removed the unreferenced debug zip and orphaned simlab evidence JSON, left referenced benchmark goldens and plan artifacts intact, workflow_checks passed, and canonical doc-only verify still failed first on unrelated shared-worktree module-protection noise."
+    },
+    {
+      "id": "ADHOC-20260424-shared-worktree-hygiene",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "Inventory and safely clean shared worktree residue without touching protected benchmark/domain-lift mainline files",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260424-repo-orphaned-artifact-cleanup"
+      ],
+      "dod": [
+        "Phase 1 records four auditable lists: safe_to_delete, safe_to_archive, should_revert, and protected_dirty_files, with path/reason/reference/risk for each item",
+        "Phase 2 deletes only unreferenced temp zip/debug/smoke/demo assets or archived meta noise outside protected/lane-owned files",
+        "Phase 3 records a separate protection-zone hygiene plan and canonical verify reports the exact first remaining failure point if the shared worktree is still dirty"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260424-repo-orphaned-artifact-cleanup.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260424-repo-orphaned-artifact-cleanup.md",
+          "meta/reports/archive/__LAST_BACKUP.md (removed)"
+        ],
+        "tests": [
+          "python scripts/module_protection_check.py",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-24 with PARTIAL verdict: phase-1 inventory classified safe-delete, safe-archive, should-revert, and protected dirty sets; phase-2 removed only the unreferenced archive backup `meta/reports/archive/__LAST_BACKUP.md`; phase-3 documented the remaining lane/frozen-kernel blockers. `workflow_checks` passed, and canonical doc-only verify still failed first at module protection check on already-dirty protected files outside this task scope."
+    },
+    {
+      "id": "ADHOC-20260424-protection-zone-hygiene",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "Classify and legally take over protected dirty files blocking module protection without changing benchmark or domain-lift mainlines",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260424-shared-worktree-hygiene"
+      ],
+      "dod": [
+        "Every current protected dirty file is classified into must_keep_and_submit, should_revert, needs_owner_handoff, or uncertain_needs_manual_decision with path/type/relevance/action/risk/reason",
+        "Only clearly safe protected-file handling is performed, limited to explicit task ownership/elevation and any truly unrelated revert candidate if one exists",
+        "module_protection_check is restored to pass if possible, and canonical doc-only verify records the exact first remaining failure point"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260424-shared-worktree-hygiene.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260424-shared-worktree-hygiene.md"
+        ],
+        "tests": [
+          "python scripts/module_protection_check.py",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-24 with PARTIAL verdict: all current protected dirty files were classified, the active task explicitly took ownership of the mainline-related frozen-kernel and lane-owned files with recorded elevation, `python scripts/module_protection_check.py` passed, `python scripts/workflow_checks.py` passed, and canonical doc-only verify moved past module protection and prompt-contract gates before failing at `patch check (scope from PLAN)` because the shared dirty worktree still exceeds PLAN max_files (480 > 400)."
+    },
+    {
+      "id": "ADHOC-20260424-plan-scope-budget-hygiene",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "Reconcile root PLAN scope and file-budget truth with the actual shared dirty worktree",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260424-protection-zone-hygiene"
+      ],
+      "dod": [
+        "The current changed files are classified into must_keep_for_mainline, safe_to_revert, safe_to_archive, and uncertain_manual_review with path/why/required/action/risk",
+        "A grounded recommendation chooses either shrinking the dirty set or expanding PLAN scope-budget and explains why",
+        "Only the smallest safe action is applied, and canonical verify records either PASS or the next exact blocker after patch_check"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260424-protection-zone-hygiene.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260424-protection-zone-hygiene.md",
+          "artifacts/PLAN.md",
+          "artifacts/plan_scope_budget_inventory.json"
+        ],
+        "tests": [
+          "python scripts/module_protection_check.py",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-24 with PASS verdict: a per-path dirty-set inventory was generated, recommendation B (truthful PLAN expansion) was selected over broad dirty-set shrink, artifacts/PLAN.md was updated to reflect the real dirty roots plus `max_files=550`, `python scripts/module_protection_check.py` passed, `python scripts/workflow_checks.py` passed, and canonical `doc-only` verify passed with `patch_check` reporting `changed_files=483 max_files=550`."
+    },
+    {
+      "id": "ADHOC-20260424-indie-studio-endurance-generation-test",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Execute a sustained rough-goal CTCP generation test for Indie Studio Production Hub Endurance",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260423-indie-studio-hub-spec-freeze-domain-lift",
+        "ADHOC-20260424-plan-scope-budget-hygiene"
+      ],
+      "dod": [
+        "A real support-bot session starts from the rough endurance goal using api_agent and binds a real project-generation run under the repaired routing/binding path",
+        "The bound run is advanced through a longer multi-stage generation cycle and the report records freeze, contracts, core app, secondary domains, expansion/rework, and delivery/replay evidence from real artifacts",
+        "The final report records provider summary, run/session paths, coverage/doc/screenshot counts, acceptance/evidence status, internal_runtime_status, user_acceptance_status, first failure point if any, and PASS/PARTIAL/NEEDS_REWORK from real artifacts only"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260424-plan-scope-budget-hygiene.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260424-plan-scope-budget-hygiene.md",
+          "external support session and bound run under CTCP_RUNS_ROOT"
+        ],
+        "tests": [
+          "python scripts/ctcp_support_bot.py --stdin --chat-id <fixed_id> --provider api_agent",
+          "python scripts/ctcp_orchestrate.py status --run-dir <run_dir>",
+          "python scripts/ctcp_orchestrate.py advance --run-dir <run_dir> --max-steps <n>",
+          "artifact inspection for freeze/domain/coverage/delivery/replay outputs",
+          "python scripts/module_protection_check.py",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-24 with NEEDS_REWORK verdict: real api_agent support entry bound run 20260424-134735-904312-orchestrate into wf_project_generation_manifest and freeze held at indie_studio_production_hub with 14 views plus the required docs, but the run stalled before delivery because source-generation emitted the illegal Python package name `5_20_bug`, causing startup/export probe SyntaxError failures, no verify/delivery/replay artifacts, no final/evidence bundles, and a derived internal_runtime_status=BLOCKED / user_acceptance_status=NEEDS_REWORK."
+    },
+    {
+      "id": "ADHOC-20260424-project-package-name-sanitization-repair",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Repair project id to Python package-name sanitization so endurance project-generation can complete verify, delivery, and replay",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260424-indie-studio-endurance-generation-test"
+      ],
+      "dod": [
+        "Generated package names always satisfy Python identifier rules, including numeric-leading titles, whitespace, and hyphenated rough-goal slugs",
+        "All derived package references stay aligned across launcher scripts, source modules, tests, manifests, and export metadata",
+        "A fresh endurance rerun closes verify, delivery, replay, and bundle generation with internal_runtime_status=PASS and user_acceptance_status=PASS or reports the next exact blocker"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260424-indie-studio-endurance-generation-test.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260424-indie-studio-endurance-generation-test.md",
+          "tools/providers/project_generation_decisions.py",
+          "tests/test_project_generation_artifacts.py",
+          "external support session and rerun under CTCP_RUNS_ROOT"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_project_generation_artifacts.py\" -v",
+          "python scripts/ctcp_support_bot.py --stdin --chat-id <fixed_id> --provider api_agent",
+          "python scripts/ctcp_orchestrate.py advance --run-dir <run_dir> --max-steps <n>",
+          "python scripts/module_protection_check.py",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-24 with PASS verdict: package-name sanitization now prefixes digit-leading identifiers and rejects unsafe module names, targeted regressions passed, and the fresh endurance rerun 20260424-200630-107859-orchestrate advanced from source generation through verify, delivery, final/evidence bundles, and cold replay with `package_name=project_5_20_bug`, `internal_runtime_status=PASS`, and `user_acceptance_status=PASS`."
+    },
+    {
+      "id": "ADHOC-20260425-endurance-benchmark-formalization",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Formalize the PASS Indie Studio Production Hub Endurance run into a stable benchmark entrypoint and golden archive",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260424-project-package-name-sanitization-repair"
+      ],
+      "dod": [
+        "A fixed formal endurance benchmark entrypoint exists and can launch or summarize/archive the endurance regression without hand-built command chains",
+        "The PASS endurance run is archived into a focused golden set with summary artifacts suitable for later diff/regression comparison",
+        "Minimal validation proves the new entrypoint emits summary output, key artifact paths, and a populated golden archive while canonical repo gates remain green"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260424-project-package-name-sanitization-repair.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260424-project-package-name-sanitization-repair.md",
+          "scripts/formal_benchmark_runner.py",
+          "scripts/run_formal_endurance_benchmark.ps1",
+          "docs/45_formal_benchmarks.md",
+          "docs/46_benchmark_pass_contracts.md",
+          "templates/benchmark_summary_template.json",
+          "tests/test_formal_benchmark_runner.py",
+          "artifacts/benchmark_goldens/endurance_indie_studio_hub/**"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_formal_benchmark_runner.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/run_formal_endurance_benchmark.ps1 -Mode summarize -RunDir <pass_run_dir>",
+          "powershell -ExecutionPolicy Bypass -File scripts/run_formal_endurance_benchmark.ps1 -Mode archive-golden -RunDir <pass_run_dir>",
+          "python scripts/module_protection_check.py",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-25 with PASS verdict: added `scripts/run_formal_endurance_benchmark.ps1`, extended `scripts/formal_benchmark_runner.py` with an endurance profile plus JSON/Markdown summary output, archived the PASS run 20260424-200630-107859-orchestrate into `artifacts/benchmark_goldens/endurance_indie_studio_hub`, validated summarize/archive-golden against the real run, and kept canonical doc-only verify green."
+    },
+    {
+      "id": "ADHOC-20260425-project-queue-portfolio-mainline",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Add multi-project queue portfolio generation so rough-goal project batches are processed serially with per-project artifacts and portfolio summary",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260425-endurance-benchmark-formalization"
+      ],
+      "dod": [
+        "Project generation can recognize a project queue request and freeze a portfolio-oriented root contract without regressing the existing single-project path",
+        "Source generation can process queued rough-goal projects serially into independent per-project directories with intake/freeze/design/build/verify/delivery artifacts, bundles, and status fields",
+        "A portfolio summary is emitted with project bundle paths, evidence bundle paths, internal_runtime_status, user_acceptance_status, first_failure_point, and final verdict for each queued project, and targeted regressions prove the path"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260425-endurance-benchmark-formalization.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260425-endurance-benchmark-formalization.md",
+          "docs/41_low_capability_project_generation.md",
+          "tools/providers/project_generation_artifacts.py",
+          "tools/providers/project_generation_source_stage.py",
+          "tests/test_project_generation_artifacts.py"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_project_generation_artifacts.py\" -v",
+          "python scripts/module_protection_check.py",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "blocked",
+      "notes": "Implementation is in place and targeted queue-generation regressions pass, but canonical verify currently stops at code-health growth guard because the shared-worktree task-owned files `tools/providers/project_generation_artifacts.py`, `tools/providers/project_generation_source_stage.py`, and `tests/test_project_generation_artifacts.py` still exceed the repo size/function thresholds and need extraction into smaller helper modules/files."
+    },
+    {
+      "id": "ADHOC-20260425-five-project-portfolio-execution",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Execute the five-project rough-goal portfolio queue through the current serial project-generation path and produce portfolio delivery artifacts",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260425-project-queue-portfolio-mainline"
+      ],
+      "dod": [
+        "A real external run_dir is created for the five-project queue and binds the exact user-supplied rough goals into one serial portfolio request",
+        "The current queue-generation path produces per-project artifact directories, strongest-available project bundles, evidence bundles, and dual-layer status fields for all five projects",
+        "The final report records the external run_dir, portfolio summary paths, each project's final bundle/evidence bundle path, internal_runtime_status, user_acceptance_status, first_failure_point, and final verdict"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260425-project-queue-portfolio-mainline.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260425-project-queue-portfolio-mainline.md",
+          "external run_dir under CTCP_RUNS_ROOT or TEMP"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_project_generation_artifacts.py\" -v",
+          "python scripts/module_protection_check.py",
+          "python scripts/workflow_checks.py",
+          "portfolio execution command via local Python entry using tools.providers.project_generation_artifacts",
+          "artifact inspection for portfolio summary and per-project bundles"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-25 as a real external execution run: the five user-supplied projects were processed serially into one portfolio root under C:/Users/sunom/AppData/Local/Temp/ctcp_runs/five_project_portfolio_20260425_144605 with independent stage artifacts, acceptance triplets, final/evidence bundles, and portfolio summary files; artifact runtime status was PASS for all five projects, but product-fit audit downgraded projects 2, 4, and 5 to strongest-current PARTIAL deliverables because they still freeze to web_service/cli_toolkit fallback families. Workflow/module-protection/prompt/plan/patch/behavior/contract/doc-index/code-health gates plus test_project_generation_artifacts and the three triplet guards passed after report refresh, while full verify_repo rerun remained long-run inconclusive from shared-workspace timeout after the initial workflow-gate report omission was fixed."
+    },
+    {
+      "id": "ADHOC-20260425-formal-api-only-execution-lock",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Formal API-only execution lock for project-generation mainline",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260425-endurance-benchmark-formalization",
+        "ADHOC-20260425-five-project-portfolio-execution"
+      ],
+      "dod": [
+        "Formal mode introduces `CTCP_FORMAL_API_ONLY=1` and hard-fails non-librarian project-generation mainline steps unless the resolved provider is `api_agent`, with no silent fallback to local_exec, ollama, mock, manual_outbox, or local artifact normalizer success paths",
+        "Every formal run emits an auditable provider ledger with role, action, provider_used, external_api_used, request_id when present, fallback_used, local_function_used when present, and verdict, and formal benchmark/endurance/portfolio summaries report API coverage from that ledger",
+        "Regression tests prove librarian/context_pack remains the only local exception, non-librarian formal steps fail fast when not `api_agent`, local fallback cannot count as formal PASS, provider ledger is written, and multi-project portfolio summaries expose per-project key-stage API coverage"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260425-five-project-portfolio-execution.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260425-five-project-portfolio-execution.md",
+          "llm_core/dispatch/router.py",
+          "ctcp_adapters/ctcp_artifact_normalizers.py",
+          "scripts/ctcp_dispatch.py",
+          "scripts/ctcp_orchestrate.py",
+          "scripts/ctcp_support_bot.py",
+          "scripts/formal_benchmark_runner.py",
+          "tools/providers/project_generation_source_stage.py",
+          "tools/run_manifest.py",
+          "docs/45_formal_benchmarks.md",
+          "docs/46_benchmark_pass_contracts.md",
+          "tests/test_provider_selection.py",
+          "tests/test_plane_lite_benchmark_regression.py",
+          "tests/test_formal_benchmark_runner.py",
+          "tests/test_project_generation_artifacts.py"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_provider_selection.py\" -v",
+          "python -m unittest discover -s tests -p \"test_plane_lite_benchmark_regression.py\" -v",
+          "python -m unittest discover -s tests -p \"test_formal_benchmark_runner.py\" -v",
+          "python -m unittest discover -s tests -p \"test_project_generation_artifacts.py\" -v",
+          "python scripts/module_protection_check.py",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "doing",
+      "notes": "User requested a hard formal-mode lock so every formal project-generation mainline step except librarian/context_pack must run through api_agent, with fail-fast enforcement, provider-ledger auditability, no silent local fallback, and benchmark/portfolio API coverage reporting."
     }
   ]
 }

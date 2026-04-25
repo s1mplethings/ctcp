@@ -4,6 +4,9 @@ import json
 from pathlib import Path
 from typing import Any
 
+from tools.providers.project_generation_artifacts import is_project_generation_goal
+from tools.providers.project_generation_domain_contract import compatibility_report
+
 DEFAULT_WORKFLOW_IDS = {"wf_project_generation_manifest"}
 VALID_EXECUTION_MODES = {"production", "benchmark_regression"}
 VALID_DELIVERY_SHAPES = {"cli_first", "gui_first", "web_first", "tool_library_first"}
@@ -28,6 +31,38 @@ def is_project_generation_workflow(selected_workflow_id: str, workflow_ids: set[
     if text in (workflow_ids or DEFAULT_WORKFLOW_IDS):
         return True
     return "project_generation" in text or "project-generation" in text
+
+
+def project_generation_goal_from_find_result(path: Path) -> bool:
+    if not path.exists():
+        return False
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    if not isinstance(doc, dict):
+        return False
+    decision = doc.get("decision")
+    if isinstance(decision, dict) and bool(decision.get("project_generation_goal", False)):
+        return True
+    return bool(doc.get("project_generation_goal", False))
+
+
+def is_explicit_project_generation_goal(goal: str, find_result_path: Path) -> bool:
+    return project_generation_goal_from_find_result(find_result_path) or is_project_generation_goal(goal)
+
+
+def plan_has_project_generation_delivery_requirements(plan_text: str) -> bool:
+    text = str(plan_text or "").lower()
+    required_groups = (
+        ("deliverable", "delivery", "交付"),
+        ("runnable", "startup", "启动", "运行", "可运行"),
+        ("readme",),
+        ("verify", "verification", "验收", "验证"),
+        ("screenshot", "visual evidence", "截图", "可视证据"),
+        ("package", "bundle", "zip", "final package", "整合包"),
+    )
+    return all(any(token in text for token in group) for group in required_groups)
 
 
 def _validate_json_list_field(doc: dict[str, Any], field: str) -> tuple[bool, str]:
@@ -80,13 +115,63 @@ def _validate_project_spec(doc: dict[str, Any]) -> tuple[bool, str]:
     if not ok:
         return False, msg
     spec = doc.get("project_spec")
-    for field in ("goal_summary", "problem_to_solve"):
+    for field in ("goal_summary", "problem_to_solve", "target_user", "project_domain", "scaffold_family"):
         if not str(spec.get(field, "")).strip():
             return False, f"project_spec.{field} must be non-empty string"
-    for field in ("mvp_scope", "required_outputs", "acceptance_criteria"):
+    for field in ("mvp_scope", "required_outputs", "acceptance_criteria", "core_modules", "required_pages_or_views", "data_models", "key_interactions", "export_targets", "delivery_requirements", "explicit_non_goals"):
         value = spec.get(field)
         if not isinstance(value, list) or not value:
             return False, f"project_spec.{field} must be non-empty array"
+    if not isinstance(spec.get("sample_content_plan"), dict):
+        return False, "project_spec.sample_content_plan must be object"
+    return True, "ok"
+
+
+def _validate_capability_plan(doc: dict[str, Any]) -> tuple[bool, str]:
+    ok, msg = _validate_json_object_field(doc, "capability_plan")
+    if not ok:
+        return False, msg
+    plan = doc.get("capability_plan")
+    for field in ("project_domain", "scaffold_family", "family_key", "contract_source"):
+        if not str(plan.get(field, "")).strip():
+            return False, f"capability_plan.{field} must be non-empty string"
+    for field in ("required_bundles", "materialize_bundles", "bundles"):
+        value = plan.get(field)
+        if not isinstance(value, list) or not value:
+            return False, f"capability_plan.{field} must be non-empty array"
+    if not isinstance(plan.get("sample_generation_steps"), list):
+        return False, "capability_plan.sample_generation_steps must be array"
+    if not isinstance(plan.get("coverage_target"), dict):
+        return False, "capability_plan.coverage_target must be object"
+    return True, "ok"
+
+
+def _validate_generation_quality(doc: dict[str, Any]) -> tuple[bool, str]:
+    ok, msg = _validate_json_object_field(doc, "generation_quality")
+    if not ok:
+        return False, msg
+    quality = doc.get("generation_quality")
+    if not bool(quality.get("passed", False)):
+        return False, "generation_quality.passed must be true"
+    checks = quality.get("targeted_checks")
+    if not isinstance(checks, list) or not checks:
+        return False, "generation_quality.targeted_checks must be non-empty array"
+    if "score" not in quality:
+        return False, "generation_quality.score is required"
+    return True, "ok"
+
+
+def _validate_capability_validation(doc: dict[str, Any]) -> tuple[bool, str]:
+    ok, msg = _validate_json_object_field(doc, "capability_validation")
+    if not ok:
+        return False, msg
+    validation = doc.get("capability_validation")
+    if not bool(validation.get("passed", False)):
+        return False, "capability_validation.passed must be true"
+    for field in ("required_bundles", "covered_bundles", "missing_bundles", "coverage_rows", "reasons"):
+        value = validation.get(field)
+        if not isinstance(value, list):
+            return False, f"capability_validation.{field} must be array"
     return True, "ok"
 
 
@@ -101,14 +186,17 @@ def _validate_pipeline_contract(doc: dict[str, Any]) -> tuple[bool, str]:
     expected = [
         "project_intent",
         "spec",
+        "capability_plan",
+        "sample_generation_plan",
         "scaffold",
         "core_feature_implementation",
+        "refinement",
         "smoke_run",
         "demo_evidence",
         "delivery_package",
     ]
     if names != expected:
-        return False, "pipeline_contract.stages must follow project_intent -> spec -> scaffold -> core_feature_implementation -> smoke_run -> demo_evidence -> delivery_package"
+        return False, "pipeline_contract.stages must follow project_intent -> spec -> capability_plan -> sample_generation_plan -> scaffold -> core_feature_implementation -> refinement -> smoke_run -> demo_evidence -> delivery_package"
     return True, "ok"
 
 
@@ -165,7 +253,59 @@ def _validate_product_validation(doc: dict[str, Any]) -> tuple[bool, str]:
     return True, "ok"
 
 
+def _validate_domain_compatibility(doc: dict[str, Any]) -> tuple[bool, str]:
+    ok, msg = _validate_json_object_field(doc, "domain_compatibility")
+    if not ok:
+        return False, msg
+    compatibility = doc.get("domain_compatibility")
+    if not bool(compatibility.get("passed", False)):
+        return False, "domain_compatibility.passed must be true"
+    reasons = compatibility.get("reasons", [])
+    if not isinstance(reasons, list):
+        return False, "domain_compatibility.reasons must be array"
+    return True, "ok"
+
+
+def _validate_readme_quality(doc: dict[str, Any]) -> tuple[bool, str]:
+    ok, msg = _validate_json_object_field(doc, "readme_quality")
+    if not ok:
+        return False, msg
+    quality = doc.get("readme_quality")
+    if not bool(quality.get("passed", False)):
+        return False, "readme_quality.passed must be true"
+    for field in ("required_sections", "present_sections", "missing_sections", "escaped_literal_hits", "placeholder_hits", "reasons"):
+        value = quality.get(field)
+        if not isinstance(value, list):
+            return False, f"readme_quality.{field} must be array"
+    if bool(quality.get("goal_dump_detected", False)):
+        return False, "readme_quality.goal_dump_detected must be false"
+    if list(quality.get("missing_sections", [])):
+        return False, "readme_quality.missing_sections must be empty"
+    if list(quality.get("escaped_literal_hits", [])):
+        return False, "readme_quality.escaped_literal_hits must be empty"
+    return True, "ok"
+
+
+def _validate_ux_validation(doc: dict[str, Any]) -> tuple[bool, str]:
+    ok, msg = _validate_json_object_field(doc, "ux_validation")
+    if not ok:
+        return False, msg
+    ux = doc.get("ux_validation")
+    if "required" not in ux or "passed" not in ux:
+        return False, "ux_validation requires required + passed"
+    for field in ("files", "matched_keywords", "reasons"):
+        value = ux.get(field)
+        if not isinstance(value, list):
+            return False, f"ux_validation.{field} must be array"
+    if bool(ux.get("required", False)) and not bool(ux.get("passed", False)):
+        return False, "ux_validation.passed must be true when required"
+    return True, "ok"
+
+
 def _is_narrative_project(doc: dict[str, Any]) -> bool:
+    project_domain = str(doc.get("project_domain", "")).strip().lower()
+    if project_domain == "narrative_vn_editor":
+        return True
     project_type = str(doc.get("project_type", "")).strip().lower()
     if project_type == "narrative_copilot":
         return True
@@ -209,14 +349,24 @@ def _normalized_path_rows(doc: dict[str, Any], *fields: str) -> list[str]:
 
 
 def _narrative_required_suffixes(execution_mode: str) -> list[str]:
-    planner = "chapter_planner.py" if str(execution_mode).strip() == "benchmark_regression" else "stage_planner.py"
+    if str(execution_mode).strip() == "benchmark_regression":
+        return [
+            "/story/outline.py",
+            "/story/chapter_planner.py",
+            "/cast/schema.py",
+            "/pipeline/prompt_pipeline.py",
+            "/exporters/deliver.py",
+            "/service.py",
+        ]
     return [
-        "/story/outline.py",
-        f"/story/{planner}",
+        "/editor/workspace.py",
+        "/story/scene_graph.py",
         "/cast/schema.py",
+        "/assets/catalog.py",
         "/pipeline/prompt_pipeline.py",
         "/exporters/deliver.py",
         "/service.py",
+        "/sample_data/example_project.json",
     ]
 
 
@@ -290,7 +440,7 @@ def _validate_output_contract_freeze(path: Path) -> tuple[bool, str]:
         return False, msg
     if str(doc.get("schema_version", "")).strip() != "ctcp-project-output-contract-v1":
         return False, "output_contract_freeze schema_version must be ctcp-project-output-contract-v1"
-    for validator in (_validate_project_intent, _validate_project_spec, _validate_pipeline_contract):
+    for validator in (_validate_project_intent, _validate_project_spec, _validate_capability_plan, _validate_pipeline_contract):
         ok, inner = validator(doc)
         if not ok:
             return False, f"structural gate: {inner}"
@@ -300,8 +450,18 @@ def _validate_output_contract_freeze(path: Path) -> tuple[bool, str]:
             return False, f"structural gate: {msg}"
     if not str(doc.get("project_type", "")).strip():
         return False, "structural gate: project_type must be non-empty"
+    if not str(doc.get("project_domain", "")).strip():
+        return False, "structural gate: project_domain must be non-empty"
+    if not str(doc.get("scaffold_family", "")).strip():
+        return False, "structural gate: scaffold_family must be non-empty"
     if not str(doc.get("project_archetype", "")).strip():
         return False, "structural gate: project_archetype must be non-empty"
+    compatibility = compatibility_report(
+        project_domain=str(doc.get("project_domain", "")).strip(),
+        scaffold_family=str(doc.get("scaffold_family", "")).strip(),
+    )
+    if not bool(compatibility.get("passed", False)):
+        return False, "structural gate: output contract domain/scaffold family mismatch"
     if not doc.get("business_files"):
         return False, "structural gate: business_files must not be empty"
     if str(doc.get("execution_mode", "")).strip() not in VALID_EXECUTION_MODES:
@@ -316,6 +476,12 @@ def _validate_output_contract_freeze(path: Path) -> tuple[bool, str]:
         ok, msg = _validate_json_list_field(doc, field)
         if not ok:
             return False, f"structural gate: {msg}"
+    for field in ("project_spec_path", "capability_plan_path", "generation_quality_report_path"):
+        if not str(doc.get(field, "")).strip():
+            return False, f"structural gate: {field} must be non-empty"
+    ok, msg = _validate_json_list_field(doc, "sample_generation_artifacts")
+    if not ok:
+        return False, f"structural gate: {msg}"
     return True, "ok"
 
 
@@ -333,6 +499,49 @@ def _validate_visual_evidence_files(doc: dict[str, Any], *, run_dir: Path, conte
     return True, "ok"
 
 
+def _path_exists_under_run(run_dir: Path, rel: str) -> bool:
+    text = str(rel or "").strip().replace("\\", "/")
+    if not text:
+        return False
+    target = (run_dir / text).resolve()
+    try:
+        target.relative_to(run_dir.resolve())
+    except ValueError:
+        return False
+    return target.exists()
+
+
+def _validate_delivery_completion_files(doc: dict[str, Any], *, run_dir: Path) -> tuple[bool, str]:
+    startup_entrypoint = str(doc.get("startup_entrypoint", "")).strip()
+    startup_readme = str(doc.get("startup_readme", "")).strip()
+    if not startup_entrypoint or not _path_exists_under_run(run_dir, startup_entrypoint):
+        return False, "delivery gate: startup_entrypoint must exist"
+    if not startup_readme or not _path_exists_under_run(run_dir, startup_readme):
+        return False, "delivery gate: README/startup_readme must exist"
+
+    readme_text = (run_dir / startup_readme).read_text(encoding="utf-8", errors="replace").lower()
+    startup_tokens = ("start", "run", "startup", "launch", "启动", "运行")
+    if not any(token in readme_text for token in startup_tokens):
+        return False, "delivery gate: README must include startup steps"
+
+    if bool(doc.get("screenshot_required", False)) or str(doc.get("delivery_shape", "")).strip() in {"gui_first", "web_first"}:
+        ok, msg = _validate_visual_evidence_files(doc, run_dir=run_dir, context="deliver")
+        if not ok:
+            return False, msg
+
+    final_package = str(doc.get("final_package_path", "")).strip()
+    deliverables = [str(item).strip() for item in doc.get("deliverables", []) if str(item).strip()] if isinstance(doc.get("deliverables"), list) else []
+    package_candidates = [final_package] if final_package else []
+    package_candidates.extend(
+        rel
+        for rel in deliverables
+        if rel.lower().endswith(".zip") and ("bundle" in rel.lower() or "package" in rel.lower())
+    )
+    if not any(_path_exists_under_run(run_dir, rel) for rel in package_candidates):
+        return False, "delivery gate: final package zip is required"
+    return True, "ok"
+
+
 def _validate_project_manifest(path: Path) -> tuple[bool, str]:
     doc, msg = _load_json(
         path,
@@ -345,9 +554,15 @@ def _validate_project_manifest(path: Path) -> tuple[bool, str]:
     for validator in (
         _validate_project_intent,
         _validate_project_spec,
+        _validate_capability_plan,
         _validate_pipeline_contract,
         _validate_generic_validation,
         _validate_domain_validation,
+        _validate_capability_validation,
+        _validate_generation_quality,
+        _validate_domain_compatibility,
+        _validate_readme_quality,
+        _validate_ux_validation,
         _validate_product_validation,
     ):
         ok, inner = validator(doc)
@@ -392,6 +607,10 @@ def _validate_project_manifest(path: Path) -> tuple[bool, str]:
         return False, "structural gate: project_manifest business_files_missing must be empty"
     if str(doc.get("execution_mode", "")).strip() not in VALID_EXECUTION_MODES:
         return False, "structural gate: project_manifest execution_mode must be valid"
+    if not str(doc.get("project_domain", "")).strip():
+        return False, "structural gate: project_manifest project_domain must be non-empty"
+    if not str(doc.get("scaffold_family", "")).strip():
+        return False, "structural gate: project_manifest scaffold_family must be non-empty"
     if not str(doc.get("project_archetype", "")).strip():
         return False, "structural gate: project_manifest project_archetype must be non-empty"
     if str(doc.get("delivery_shape", "")).strip() not in VALID_DELIVERY_SHAPES:
@@ -408,6 +627,21 @@ def _validate_project_manifest(path: Path) -> tuple[bool, str]:
         target = (run_dir / rel).resolve()
         if not target.exists():
             return False, f"structural gate: missing startup file: {rel}"
+    for field in ("project_spec_path", "capability_plan_path", "generation_quality_report_path"):
+        rel = str(doc.get(field, "")).strip()
+        if not rel:
+            return False, f"structural gate: manifest requires {field}"
+        if not (run_dir / rel).resolve().exists():
+            return False, f"structural gate: manifest artifact missing: {rel}"
+    sample_artifacts = doc.get("sample_generation_artifacts", [])
+    if not isinstance(sample_artifacts, list):
+        return False, "structural gate: sample_generation_artifacts must be array"
+    if list(dict(doc.get("capability_plan", {})).get("sample_generation_steps", [])):
+        if not sample_artifacts:
+            return False, "structural gate: manifest sample_generation_artifacts must not be empty"
+        for rel in sample_artifacts:
+            if not (run_dir / str(rel)).resolve().exists():
+                return False, f"structural gate: manifest sample artifact missing: {rel}"
     mode = doc.get("reference_project_mode")
     if not isinstance(mode, dict):
         return False, "structural gate: reference_project_mode must be object"
@@ -471,9 +705,15 @@ def _validate_stage_report(path: Path, *, stage: str) -> tuple[bool, str]:
         for validator in (
             _validate_project_intent,
             _validate_project_spec,
+            _validate_capability_plan,
             _validate_pipeline_contract,
             _validate_generic_validation,
             _validate_domain_validation,
+            _validate_capability_validation,
+            _validate_generation_quality,
+            _validate_domain_compatibility,
+            _validate_readme_quality,
+            _validate_ux_validation,
             _validate_product_validation,
         ):
             ok, inner = validator(doc)
@@ -501,6 +741,23 @@ def _validate_stage_report(path: Path, *, stage: str) -> tuple[bool, str]:
                 return False, f"structural gate: source_generation output missing: {rel}"
         if not str(doc.get("generation_mode", "")).strip():
             return False, "structural gate: source_generation requires generation_mode"
+        for field in ("project_spec_path", "capability_plan_path", "generation_quality_report_path"):
+            rel = str(doc.get(field, "")).strip()
+            if not rel:
+                return False, f"structural gate: source_generation requires {field}"
+            if not (run_dir / rel).resolve().exists():
+                return False, f"structural gate: source_generation artifact missing: {rel}"
+        ok, list_msg = _validate_json_list_field(doc, "sample_generation_artifacts")
+        if not ok:
+            return False, f"structural gate: {list_msg}"
+        sample_steps = list(dict(doc.get("capability_plan", {})).get("sample_generation_steps", []))
+        if sample_steps:
+            if not list(doc.get("sample_generation_artifacts", [])):
+                return False, "structural gate: source_generation sample_generation_artifacts must not be empty"
+            for rel in doc.get("sample_generation_artifacts", []):
+                target = (run_dir / str(rel)).resolve()
+                if not target.exists():
+                    return False, f"structural gate: source_generation sample artifact missing: {rel}"
         if not bool(doc.get("scaffold_bootstrap_used", False)):
             return False, "structural gate: source_generation scaffold_bootstrap_used must be true"
         if not bool(doc.get("business_codegen_used", False)):
@@ -509,6 +766,10 @@ def _validate_stage_report(path: Path, *, stage: str) -> tuple[bool, str]:
             return False, "result gate: source_generation consumed_context_pack must be true"
         if str(doc.get("execution_mode", "")).strip() not in VALID_EXECUTION_MODES:
             return False, "structural gate: source_generation execution_mode must be valid"
+        if not str(doc.get("project_domain", "")).strip():
+            return False, "structural gate: source_generation requires project_domain"
+        if not str(doc.get("scaffold_family", "")).strip():
+            return False, "structural gate: source_generation requires scaffold_family"
         if not str(doc.get("project_archetype", "")).strip():
             return False, "structural gate: source_generation requires project_archetype"
         if str(doc.get("delivery_shape", "")).strip() not in VALID_DELIVERY_SHAPES:
@@ -596,9 +857,15 @@ def _validate_deliverable_index(path: Path) -> tuple[bool, str]:
     for validator in (
         _validate_project_intent,
         _validate_project_spec,
+        _validate_capability_plan,
         _validate_pipeline_contract,
         _validate_generic_validation,
         _validate_domain_validation,
+        _validate_capability_validation,
+        _validate_generation_quality,
+        _validate_domain_compatibility,
+        _validate_readme_quality,
+        _validate_ux_validation,
         _validate_product_validation,
     ):
         ok, inner = validator(doc)
@@ -618,10 +885,18 @@ def _validate_deliverable_index(path: Path) -> tuple[bool, str]:
         return False, "business_deliverables must not be empty"
     if str(doc.get("execution_mode", "")).strip() not in VALID_EXECUTION_MODES:
         return False, "execution_mode must be valid"
+    if not str(doc.get("project_domain", "")).strip():
+        return False, "project_domain must be non-empty"
+    if not str(doc.get("scaffold_family", "")).strip():
+        return False, "scaffold_family must be non-empty"
     if not str(doc.get("project_archetype", "")).strip():
         return False, "project_archetype must be non-empty"
     if str(doc.get("delivery_shape", "")).strip() not in VALID_DELIVERY_SHAPES:
         return False, "delivery_shape must be valid"
+    run_dir = path.parent.parent
+    ok, msg = _validate_delivery_completion_files(doc, run_dir=run_dir)
+    if not ok:
+        return False, msg
     return True, "ok"
 
 

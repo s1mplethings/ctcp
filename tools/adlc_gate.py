@@ -3,7 +3,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+try:
+    from tools.run_manifest import infer_run_dir_from_path, update_adlc_state
+except ModuleNotFoundError:
+    sys.path.insert(0, str(ROOT))
+    from tools.run_manifest import infer_run_dir_from_path, update_adlc_state
 
 
 def main() -> int:
@@ -49,11 +58,29 @@ def main() -> int:
                 issues.append(f"missing log file for step {step_name}: {(proof_dir / log_name).as_posix()}")
 
     if issues:
+        run_dir = infer_run_dir_from_path(proof_json)
+        if run_dir is not None:
+            update_adlc_state(
+                run_dir,
+                phase="adlc_gate",
+                gate_status="fail",
+                final_status="fail",
+                first_failure_gate="adlc_gate",
+                first_failure_reason=issues[0],
+            )
         print("[adlc_gate] FAIL")
         for i in issues:
             print(f" - {i}")
         return 2
 
+    run_dir = infer_run_dir_from_path(proof_json)
+    if run_dir is not None:
+        update_adlc_state(
+            run_dir,
+            phase="adlc_gate",
+            gate_status="pass",
+            gates_passed=["adlc_gate"],
+        )
     print("[adlc_gate] PASS")
     print(f"[adlc_gate] proof={proof_json.as_posix()}")
     return 0
@@ -61,4 +88,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

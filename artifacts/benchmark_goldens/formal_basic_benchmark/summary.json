@@ -1,0 +1,88 @@
+{
+  "schema_version": "ctcp-formal-benchmark-summary-v1",
+  "benchmark_entry": "formal_basic_benchmark",
+  "generated_at": "2026-04-23T00:25:02",
+  "benchmark_zip": "D:\\.c_projects\\adc\\ctcp\\plane_lite_team_pm_test_pack.zip",
+  "provider_summary": {
+    "provider": "api_agent",
+    "model": "gpt-4.1-mini",
+    "base_url": "https://api.gptsapi.net/v1",
+    "key_mask": "",
+    "project": "",
+    "organization": "",
+    "confirmed_non_mock": "true"
+  },
+  "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_deliver_retry_final_20260422-152011\\runs\\ctcp\\20260422-152013-552970-orchestrate",
+  "workflow_id": "wf_project_generation_manifest",
+  "project_generation_goal": true,
+  "spec_freeze": {
+    "project_domain": "team_task_management",
+    "project_type": "team_task_pm",
+    "project_archetype": "team_task_pm_web",
+    "build_profile": null,
+    "product_depth": null,
+    "required_pages": null,
+    "required_screenshots": null
+  },
+  "api_usage_summary": {
+    "api_calls_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_deliver_retry_final_20260422-152011\\runs\\ctcp\\20260422-152013-552970-orchestrate\\api_calls.jsonl",
+    "total": 16,
+    "ok": 15,
+    "err": 1,
+    "request_ids": [
+      "chatcmpl-DXMAcA0deIbBjQCtln0ARpPML6NhP",
+      "chatcmpl-DXMAnr9K9CDYToCILoOfn03CZVgCA",
+      "chatcmpl-DXMBYmlaHkrAhBP9BvuaoihNKJlIh",
+      "chatcmpl-DXMDefc3LyKKIGVlPVihKnZbEDmKN",
+      "chatcmpl-DXMDpDEuvug3PJS06MFLulZA9ueC4",
+      "chatcmpl-DXMEGxz6owYydWaYR3CO6d3ZB9k0q",
+      "chatcmpl-DXMFHzBLgZ6Mo7ORtlaR55TUBXdIj",
+      "chatcmpl-DXMFeaOATAGHoQJkWsJXVulNgVd3l",
+      "chatcmpl-DXMFl7bY3SgUIhn2YtYJ8Mvm6eyJM",
+      "chatcmpl-DXMFxYdNRSAVntMxVAEyPSbIHgCzX",
+      "chatcmpl-DXMG7gkJU2YCQfFTSDx0bHYemusMm",
+      "chatcmpl-DXMGKTL1P4CdAfmDZmNq29FAcabcH",
+      "chatcmpl-DXMGaKtlJatGsN1uyJKaQxdeNoVew",
+      "chatcmpl-DXMGmJkaDcS9hySRAcBbl3Cw2A4C0",
+      "chatcmpl-DXMGvrhsNQFUUc0DEoly4DrIqEVQR"
+    ],
+    "true_remote_api_used": true
+  },
+  "acceptance_summary": {
+    "triplet_dir_count": 14,
+    "ledger_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_deliver_retry_final_20260422-152011\\runs\\ctcp\\20260422-152013-552970-orchestrate\\artifacts\\acceptance\\ledger.jsonl",
+    "ledger_lines": 14,
+    "missing_triplets": [],
+    "fallback_accepted_as_passed": [],
+    "complete": true
+  },
+  "verify_summary": {
+    "path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_deliver_retry_final_20260422-152011\\runs\\ctcp\\20260422-152013-552970-orchestrate\\artifacts\\verify_report.json",
+    "result": "PASS"
+  },
+  "delivery_summary": {
+    "support_public_delivery_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_deliver_retry_final_20260422-152011\\runs\\ctcp\\20260422-152013-552970-orchestrate\\artifacts\\support_public_delivery.json",
+    "completion_gate_passed": true,
+    "cold_replay_passed": true,
+    "overall_completion_passed": true
+  },
+  "bundle_summary": {
+    "final_project_bundle": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_deliver_retry_final_20260422-152011\\runs\\ctcp\\20260422-152013-552970-orchestrate\\artifacts\\final_project_bundle.zip",
+    "final_project_bundle_exists": true,
+    "intermediate_evidence_bundle": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_deliver_retry_final_20260422-152011\\runs\\ctcp\\20260422-152013-552970-orchestrate\\artifacts\\intermediate_evidence_bundle.zip",
+    "intermediate_evidence_bundle_exists": true
+  },
+  "extended_coverage_summary": {
+    "ledger_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_plane_lite_deliver_retry_final_20260422-152011\\runs\\ctcp\\20260422-152013-552970-orchestrate\\artifacts\\extended_coverage_ledger.json",
+    "ledger_exists": false,
+    "ledger_passed": false,
+    "implemented_pages": [],
+    "implemented_capabilities": [],
+    "screenshot_count": 0,
+    "coverage": {}
+  },
+  "run_status": "pass",
+  "repo_level_verify_note": "Benchmark PASS is reported separately from repo-level canonical verify; dirty worktree/module protection failures are separate repo gates.",
+  "verdict": "PASS",
+  "first_failure_point": ""
+}

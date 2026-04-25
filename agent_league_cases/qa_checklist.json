@@ -1,0 +1,55 @@
+{
+  "schema_version": "ctcp-agent-league-case-v1",
+  "agent_id": "qa_adversarial_agent",
+  "role": "QA / Adversarial Agent",
+  "max_score": 25,
+  "inputs": [
+    "acceptance ledger",
+    "acceptance triplets",
+    "step_meta.jsonl",
+    "events.jsonl",
+    "api_calls.jsonl",
+    "verify_report.json",
+    "support_public_delivery.json",
+    "replay result"
+  ],
+  "checklist": [
+    {
+      "id": "acceptance_triplets",
+      "label": "Request/result/acceptance triplets exist and ledger is populated",
+      "points": 6,
+      "evidence": ["artifacts/acceptance/**"]
+    },
+    {
+      "id": "fallback_integrity",
+      "label": "Fallback was not accepted as true API success",
+      "points": 6,
+      "evidence": ["acceptance result.json", "acceptance acceptance.json", "api_calls.jsonl"]
+    },
+    {
+      "id": "api_truth",
+      "label": "Remote API use is visible and errors are not hidden",
+      "points": 4,
+      "evidence": ["api_calls.jsonl"]
+    },
+    {
+      "id": "verify_truth",
+      "label": "Verify report is present and PASS",
+      "points": 4,
+      "evidence": ["artifacts/verify_report.json"]
+    },
+    {
+      "id": "delivery_truth",
+      "label": "Delivery gate and cold replay are present and PASS",
+      "points": 5,
+      "evidence": ["support_public_delivery.json", "replay_report.json"]
+    }
+  ],
+  "blockers": [
+    "fallback_used=true accepted as passed in true-API mode",
+    "missing verify_report.json",
+    "delivery completion failed",
+    "cold replay failed",
+    "run_status pass with failed hard gate"
+  ]
+}

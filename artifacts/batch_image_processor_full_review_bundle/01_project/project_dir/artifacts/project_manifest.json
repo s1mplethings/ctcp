@@ -1,9 +1,0 @@
-{
-  "project_name": "batch_image_processor",
-  "entrypoint": "python app.py --serve",
-  "delivery_shape": "python_app",
-  "screenshots": [
-    "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\generated_projects\\batch_image_processor\\artifacts\\screenshots\\final-ui.png",
-    "C:\\Users\\sunom\\.ctcp\\runs\\ctcp\\20260413-batch-image-processor-delivery\\generated_projects\\batch_image_processor\\artifacts\\screenshots\\overview.png"
-  ]
-}

@@ -41,6 +41,18 @@ class WorkflowDispatchTests(unittest.TestCase):
         self.assertEqual(result.get("selected_path"), "workflow_registry/wf_project_generation_manifest/recipe.yaml")
         self.assertTrue(bool(dict(result.get("decision", {})).get("project_generation_goal", False)))
 
+    def test_resolve_selects_project_generation_workflow_for_domain_lift_rerun_request(self) -> None:
+        result = resolve_workflow.resolve(
+            goal=(
+                "绑定一个新任务：Indie Studio Hub Domain Lift。不要再只做 team_task_pm_web。"
+                "用同类粗目标重跑生成测试，区分 internal_runtime_status 和 user_acceptance_status，"
+                "并强化 Asset/Bug/Build-Release/Docs/10+ screenshots 的 coverage gate。"
+            ),
+            repo=ROOT,
+        )
+        self.assertEqual(result.get("selected_workflow_id"), "wf_project_generation_manifest")
+        self.assertTrue(bool(dict(result.get("decision", {})).get("project_generation_goal", False)))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -25,6 +25,7 @@ def main() -> int:
     ap.add_argument("--repo", default=".", help="repo root")
     ap.add_argument("--executed-gates", default="", help="comma-separated executed gate names")
     ap.add_argument("--check-evidence", action="store_true", help="require EXPECTED_RESULTS evidence paths to exist")
+    ap.add_argument("--verbose", action="store_true", help="accepted for CLI parity; validation output remains line-oriented")
     args = ap.parse_args()
 
     repo = Path(args.repo).resolve()
@@ -102,4 +103,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

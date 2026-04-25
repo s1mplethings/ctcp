@@ -28,10 +28,12 @@ STATUS_LINE_RE = re.compile(r"^\[ctcp_orchestrate\]\s*([^=]+)=(.*)$")
 
 try:
     from tools.run_paths import get_repo_runs_root
+    from tools.run_manifest import update_bridge_state
 except ModuleNotFoundError:
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
     from tools.run_paths import get_repo_runs_root
+    from tools.run_manifest import update_bridge_state
 
 try:
     import ctcp_dispatch
@@ -632,6 +634,7 @@ def ctcp_new_run(
     }
     _write_json(run_dir / "artifacts" / "frontend_request.json", request_doc)
     _append_event(run_dir, "FRONTEND_REQUEST_WRITTEN", "artifacts/frontend_request.json")
+    update_bridge_state(run_dir, output_ref="artifacts/frontend_request.json", output_present=True)
 
     status = ctcp_get_status(run_id)
     return {
@@ -660,6 +663,7 @@ def ctcp_get_status(run_id: str = "") -> dict[str, Any]:
     if not isinstance(pending_decisions, list):
         pending_decisions = []
     pending_user_count = int(runtime_state.get("decisions_needed_count", 0) or 0)
+    update_bridge_state(run_dir, output_ref="status", output_present=True)
     return {
         "run_id": _run_id_from_dir(run_dir),
         "run_dir": str(run_dir),
@@ -718,6 +722,7 @@ def ctcp_get_support_context(run_id: str = "") -> dict[str, Any]:
     delivery_evidence = ctcp_get_delivery_evidence_manifest(rid)
     whiteboard = ctcp_dispatch.get_support_whiteboard_context(run_dir)
     frontend_request = _read_json(run_dir / "artifacts" / "frontend_request.json")
+    update_bridge_state(run_dir, output_ref="support_context", output_present=True)
     return {
         "run_id": rid,
         "run_dir": str(run_dir),
@@ -804,6 +809,7 @@ def ctcp_record_support_turn(
         conversation_mode=str(conversation_mode or "").strip(),
         chat_id=str(chat_id or "").strip(),
     )
+    update_bridge_state(run_dir, output_ref=SUPPORT_FRONTEND_TURNS_REL.as_posix(), output_present=True)
     return {
         "run_id": _run_id_from_dir(run_dir),
         "run_dir": str(run_dir),

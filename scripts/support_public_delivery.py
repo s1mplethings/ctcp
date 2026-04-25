@@ -70,7 +70,7 @@ def auto_emit_virtual_delivery_for_ready_run(
     project_context: dict[str, Any] | None,
     public_delivery_mode: str = VIRTUAL_PUBLIC_DELIVERY_MODE,
 ) -> dict[str, Any]:
-    from frontend.delivery_reply_actions import evaluate_delivery_completion, evaluate_overall_completion, evaluate_product_completion, inject_ready_delivery_actions
+    from frontend.delivery_reply_actions import evaluate_delivery_completion, evaluate_overall_completion, evaluate_product_completion, evaluate_user_acceptance, inject_ready_delivery_actions
     from scripts.delivery_replay_validator import run_delivery_replay_check
     from scripts import ctcp_support_bot as support_bot
 
@@ -90,6 +90,9 @@ def auto_emit_virtual_delivery_for_ready_run(
                     "completion_gate": completion_gate,
                     "delivery_completion": dict(existing.get("delivery_completion", {})) if isinstance(existing.get("delivery_completion", {}), dict) else completion_gate,
                     "product_completion": dict(existing.get("product_completion", {})) if isinstance(existing.get("product_completion", {}), dict) else evaluate_product_completion(existing.get("project_manifest")),
+                    "internal_runtime_status": str(existing.get("internal_runtime_status", "PASS")).strip() or "PASS",
+                    "user_acceptance_status": str(existing.get("user_acceptance_status", "PASS")).strip() or "PASS",
+                    "user_acceptance": dict(existing.get("user_acceptance", {})) if isinstance(existing.get("user_acceptance", {}), dict) else evaluate_user_acceptance(existing.get("project_manifest")),
                     "overall_completion": overall_completion,
                 }
 
@@ -138,6 +141,9 @@ def auto_emit_virtual_delivery_for_ready_run(
             "completion_gate": evaluate_delivery_completion([], {}, manifest_path=str(manifest_path), require_existing_files=True),
             "delivery_completion": evaluate_delivery_completion([], {}, manifest_path=str(manifest_path), require_existing_files=True),
             "product_completion": evaluate_product_completion(effective_context.get("project_manifest")),
+            "internal_runtime_status": "FAIL",
+            "user_acceptance_status": str(evaluate_user_acceptance(effective_context.get("project_manifest")).get("status", "NEEDS_REWORK")),
+            "user_acceptance": evaluate_user_acceptance(effective_context.get("project_manifest")),
             "overall_completion": evaluate_overall_completion(
                 delivery_completion=evaluate_delivery_completion([], {}, manifest_path=str(manifest_path), require_existing_files=True),
                 project_manifest=effective_context.get("project_manifest"),
@@ -172,6 +178,9 @@ def auto_emit_virtual_delivery_for_ready_run(
         "completion_gate": completion_gate,
         "delivery_completion": dict(plan.get("delivery_completion", {})) if isinstance(plan.get("delivery_completion", {}), dict) else completion_gate,
         "product_completion": dict(plan.get("product_completion", {})) if isinstance(plan.get("product_completion", {}), dict) else evaluate_product_completion(effective_context.get("project_manifest")),
+        "internal_runtime_status": str(plan.get("internal_runtime_status", "FAIL")).strip() or "FAIL",
+        "user_acceptance_status": str(plan.get("user_acceptance_status", "NEEDS_REWORK")).strip() or "NEEDS_REWORK",
+        "user_acceptance": dict(plan.get("user_acceptance", {})) if isinstance(plan.get("user_acceptance", {}), dict) else evaluate_user_acceptance(effective_context.get("project_manifest")),
         "overall_completion": dict(plan.get("overall_completion", {})) if isinstance(plan.get("overall_completion", {}), dict) else evaluate_overall_completion(delivery_completion=completion_gate, project_manifest=effective_context.get("project_manifest")),
     }
 
@@ -200,7 +209,7 @@ def finalize_public_delivery_manifest(
     plan: dict[str, Any] | None,
     replay_runner: Any | None = None,
 ) -> dict[str, Any]:
-    from frontend.delivery_reply_actions import evaluate_delivery_completion, evaluate_overall_completion, evaluate_product_completion
+    from frontend.delivery_reply_actions import evaluate_delivery_completion, evaluate_overall_completion, evaluate_product_completion, evaluate_user_acceptance
     from scripts import ctcp_support_bot as support_bot
     from scripts.delivery_replay_validator import run_delivery_replay_check
 
@@ -208,6 +217,7 @@ def finalize_public_delivery_manifest(
     updated = dict(plan) if isinstance(plan, dict) else {}
     if not isinstance(updated.get("manifest_path"), str) or not str(updated.get("manifest_path", "")).strip():
         updated["manifest_path"] = str(manifest_path)
+    support_bot.write_json(manifest_path, updated)
     document_path = str(dict(evaluate_delivery_completion(actions, updated, manifest_path=str(manifest_path), require_existing_files=True)).get("selected_document", "")).strip()
     replay_doc: dict[str, Any] = {}
     if document_path:
@@ -227,6 +237,9 @@ def finalize_public_delivery_manifest(
     updated["delivery_completion"] = delivery_completion
     project_manifest = support_bot.read_json_doc(Path(run_dir) / "artifacts" / "project_manifest.json")
     updated["product_completion"] = evaluate_product_completion(project_manifest)
+    updated["user_acceptance"] = evaluate_user_acceptance(project_manifest)
+    updated["internal_runtime_status"] = "PASS" if bool(delivery_completion.get("passed", False)) else "FAIL"
+    updated["user_acceptance_status"] = str(dict(updated["user_acceptance"]).get("status", "NEEDS_REWORK")).strip() or "NEEDS_REWORK"
     updated["overall_completion"] = evaluate_overall_completion(
         delivery_completion=delivery_completion,
         project_manifest=project_manifest,

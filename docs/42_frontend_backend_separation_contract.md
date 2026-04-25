@@ -24,6 +24,7 @@ BFF responsibilities:
 - call formal backend interfaces
 - map responses into stable frontend schemas
 - maintain session binding and light transformation
+- expose customer-facing truth through bridge snapshots/interfaces only (`get_support_context`, `get_current_state_snapshot`, `get_render_state_snapshot`, artifact interfaces)
 
 BFF forbidden actions:
 - file-peeking as primary truth (`RUN.json`, `outbox/*`, `verify_report.json`, `TRACE.md`)
@@ -75,6 +76,8 @@ Frontend/support must consume project outputs through formal interfaces:
 - `read_output_artifact`
 
 If completion display is needed, frontend/support must also consume:
+- `get_support_context`
+- `get_current_state_snapshot`
 - `get_render_state_snapshot`
 - backend result event payload
 - artifact manifest (when provided by backend/BFF)

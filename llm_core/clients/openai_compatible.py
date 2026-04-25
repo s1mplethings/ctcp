@@ -14,6 +14,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_LOCAL_NOTES_PATH = ROOT / ".agent_private" / "NOTES.md"
+EMBEDDED_BASE_URL = "https://api.gptsapi.net/v1"
 
 
 def _collect_text_from_output(doc: dict[str, Any]) -> str:
@@ -135,7 +136,7 @@ def _resolve_api_credentials(*, api_key: str | None = None, base_url: str | None
     notes_key = str(defaults.get("api_key", "")).strip()
     notes_base_url = str(defaults.get("base_url", "")).strip()
 
-    root = explicit_base_url or env_base_url or ctcp_base_url or notes_base_url or "https://api.openai.com/v1"
+    root = explicit_base_url or env_base_url or ctcp_base_url or notes_base_url or EMBEDDED_BASE_URL
     if explicit_key:
         return explicit_key, root
 
@@ -144,7 +145,7 @@ def _resolve_api_credentials(*, api_key: str | None = None, base_url: str | None
         replacement_key = ctcp_key or notes_key
         if replacement_key:
             return replacement_key, root
-        return key, explicit_base_url or env_base_url or ctcp_base_url or "https://api.openai.com/v1"
+        return key, explicit_base_url or env_base_url or ctcp_base_url or EMBEDDED_BASE_URL
     if not key:
         key = ctcp_key or notes_key
     return key, root
