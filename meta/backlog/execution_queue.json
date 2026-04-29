@@ -5659,8 +5659,329 @@
           "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1"
         ]
       },
-      "status": "doing",
-      "notes": "User requested a hard formal-mode lock so every formal project-generation mainline step except librarian/context_pack must run through api_agent, with fail-fast enforcement, provider-ledger auditability, no silent local fallback, and benchmark/portfolio API coverage reporting."
+      "status": "blocked",
+      "notes": "Archived on 2026-04-25 when the user redirected active work to direct mainline reduction closure. Formal API-only lock remains in code/docs and is now treated as preserved baseline."
+    },
+    {
+      "id": "ADHOC-20260425-mainline-reduction-closure",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "Mainline reduction closure without new governance layers",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260425-formal-api-only-execution-lock"
+      ],
+      "dod": [
+        "Mainline-required rules are merged into existing formal contracts and runtime surfaces without introducing new truth layers or new parallel manuals",
+        "Deprecated aliases, non-mainline flow exposure, and duplicate stage-truth/explanation surfaces are removed, merged, or downgraded from primary visibility",
+        "Single run responsibility ledger is emitted as artifacts/run_responsibility_manifest.json with goal/entry/workflow/provider/API/fallback/status/failure/verdict fields and formal API-only constraints remain librarian-only exception"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "artifacts/PLAN.md",
+          "artifacts/EXPECTED_RESULTS.md",
+          "artifacts/REASONS.md",
+          "README.md",
+          "docs/02_workflow.md",
+          "docs/03_quality_gates.md",
+          "docs/architecture/contracts/run_manifest_contract.md",
+          "tools/run_manifest.py",
+          "workflow_registry/index.json",
+          "workflow_registry/wf_project_generation_manifest/recipe.yaml",
+          "workflow_registry/wf_minimal_patch_verify/recipe.yaml",
+          "workflow_registry/adlc_self_improve_core/recipe.yaml",
+          "scripts/resolve_workflow.py",
+          "scripts/ctcp_dispatch.py",
+          "ctcp_adapters/dispatch_request_mapper.py",
+          "tools/providers/project_generation_validation.py",
+          "scripts/project_manifest_bridge.py",
+          "scripts/project_generation_gate.py",
+          "tests/test_workflow_dispatch.py",
+          "tests/test_project_generation_artifacts.py",
+          "tests/integration/test_mainline_run_contract.py"
+        ],
+        "tests": [
+          "python scripts/workflow_checks.py",
+          "python -m unittest discover -s tests -p \"test_workflow_dispatch.py\" -v",
+          "python -m unittest discover -s tests -p \"test_project_generation_artifacts.py\" -v",
+          "python -m unittest discover -s tests -p \"test_mainline_run_contract.py\" -v",
+          "python scripts/formal_benchmark_runner.py --profile basic --mode summarize --run-dir <formal_basic_run_dir>",
+          "python scripts/formal_benchmark_runner.py --profile hq --mode summarize --run-dir <formal_hq_run_dir>",
+          "powershell -ExecutionPolicy Bypass -File scripts/run_formal_endurance_benchmark.ps1 -Mode summarize -RunDir <endurance_run_dir>",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "blocked",
+      "notes": "Mainline reduction changes landed and doc-only verify/tests passed, but required benchmark summarize commands currently return FAIL with first_failure_point=`provider ledger critical steps are API`; follow-up benchmark contract/data alignment is needed for full PASS closure."
+    },
+    {
+      "id": "ADHOC-20260425-mainline-handler-and-queue-extraction",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Extract queue-generation pipeline module and orchestrate state handlers for replaceable mainline blocks",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260425-mainline-reduction-closure"
+      ],
+      "dod": [
+        "Queue-generation path is extracted from tools/providers/project_generation_source_stage.py into a dedicated module and source stage keeps only a thin adapter",
+        "scripts/ctcp_orchestrate.py cmd_advance routes resolve_find_local/ready_apply/ready_verify through dedicated state handler functions while preserving runtime behavior",
+        "Targeted regressions pass (workflow checks + project generation artifact tests + dispatch/workflow routing tests) and report captures first failure if any"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "tools/providers/project_generation_queue_stage.py",
+          "tools/providers/project_generation_source_stage.py",
+          "scripts/ctcp_orchestrate.py",
+          "tools/providers/project_generation_artifacts.py",
+          "tests/test_project_generation_artifacts.py",
+          "tests/test_workflow_dispatch.py"
+        ],
+        "tests": [
+          "python scripts/workflow_checks.py",
+          "python -m unittest discover -s tests -p \"test_project_generation_artifacts.py\" -v",
+          "python -m unittest discover -s tests -p \"test_workflow_dispatch.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-25: queue generation path extracted into tools/providers/project_generation_queue_stage.py; source stage reduced to single-project path + adapter import; cmd_advance now dispatches resolve_find_local/ready_apply/ready_verify via dedicated handlers and handler map; workflow checks, targeted unit tests, and verify_repo doc-only passed after minimal CURRENT.md elevation fixes."
+    },
+    {
+      "id": "ADHOC-20260425-single-mainline-no-patch-lane",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Enforce single project-generation mainline and remove patch-lane resolver or dispatch fallbacks",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260425-mainline-handler-and-queue-extraction"
+      ],
+      "dod": [
+        "workflow resolver and registry emit only wf_project_generation_manifest as active selected workflow id with no wf_minimal_patch_verify fallback or wf_orchestrator_only alias normalization",
+        "dispatch and run-manifest paths remove workflow-id alias rewrite and patchmaker local fallback branch so provider exec_failed is not hidden by local patch synthesis",
+        "orchestrate signed-plan post-gate follows project-generation gate only and no longer routes through ready_apply patch gate in active mainline path",
+        "targeted regressions pass (workflow checks + workflow dispatch tests + mainline run contract + doc-only verify) or first failure is recorded with minimal fix strategy"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "workflow_registry/index.json",
+          "scripts/resolve_workflow.py",
+          "scripts/ctcp_dispatch.py",
+          "ctcp_adapters/dispatch_request_mapper.py",
+          "tools/run_manifest.py",
+          "scripts/ctcp_orchestrate.py",
+          "tests/test_workflow_dispatch.py",
+          "tests/integration/test_mainline_run_contract.py"
+        ],
+        "tests": [
+          "python scripts/workflow_checks.py",
+          "python -m unittest discover -s tests -p \"test_workflow_dispatch.py\" -v",
+          "python -m unittest discover -s tests -p \"test_mainline_run_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-25: workflow registry and resolver now keep `wf_project_generation_manifest` as the only active workflow with project-generation fallback, dispatch/run-manifest/request-mapper alias rewrites were removed, patchmaker local fallback branch was removed from dispatch, orchestrate signed-plan path no longer routes active mainline to ready_apply, and targeted tests plus verify_repo doc-only passed after updating CURRENT allowed paths for an existing lane-owned dirty-worktree file."
+    },
+    {
+      "id": "ADHOC-20260425-mainline-legacy-purge",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Purge remaining legacy patch-lane artifacts from active mainline runtime and canonical docs",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260425-single-mainline-no-patch-lane"
+      ],
+      "dod": [
+        "Legacy patch-lane runtime remnants are removed from active orchestrate/watchdog/responsibility surfaces (`ready_apply` dead handler path, patch role stage-owner labeling, and diff.patch v2 promotion-only branch)",
+        "Legacy support workflow artifact file `workflow_registry/wf_minimal_patch_verify/recipe.yaml` is removed from active registry surfaces and canonical mainline docs stop advertising that workflow id/alias",
+        "Targeted regression checks pass (workflow_checks + workflow dispatch + mainline run contract + runtime wiring + doc-only verify) or first failure point is recorded with minimal fix"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "scripts/ctcp_orchestrate.py",
+          "scripts/ctcp_front_bridge_watchdog.py",
+          "tools/run_manifest.py",
+          "ctcp_adapters/dispatch_request_mapper.py",
+          "workflow_registry/wf_project_generation_manifest/recipe.yaml",
+          "workflow_registry/wf_minimal_patch_verify/recipe.yaml",
+          "README.md",
+          "docs/02_workflow.md",
+          "artifacts/PLAN.md",
+          "artifacts/EXPECTED_RESULTS.md",
+          "artifacts/REASONS.md"
+        ],
+        "tests": [
+          "python scripts/workflow_checks.py",
+          "python -m unittest discover -s tests -p \"test_workflow_dispatch.py\" -v",
+          "python -m unittest discover -s tests/integration -p \"test_mainline_run_contract.py\" -v",
+          "$env:CTCP_RUNS_ROOT = Join-Path $env:TEMP 'ctcp_runs'; python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-25: removed active patch-lane leftovers from orchestrate/watchdog/dispatch-mapper/run-manifest surfaces, deleted workflow_registry/wf_minimal_patch_verify/recipe.yaml, removed patchmaker/fixer role entries from the project-generation recipe, updated canonical docs/artifact contracts to mainline-only wording, and passed workflow checks + targeted tests + verify_repo doc-only."
+    },
+    {
+      "id": "ADHOC-20260426-support-mainline-replace-fixes",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Replace support/mainline failure loops with direct mainline fixes (no patch-lane fallback semantics)",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260425-mainline-legacy-purge"
+      ],
+      "dod": [
+        "project-generation high-quality signal no longer upgrades narrative goals to high_quality_extended from generic `扩展/extended` wording alone",
+        "orchestrate fail-state gate routes delivery_completion_failed into delivery-finalize retry path instead of verify-loop fallback",
+        "support runtime auto-resume status sync does not overwrite latest user raw-turn conversation_mode/message_intent",
+        "public screenshot delivery dedupes identical image content so duplicate copies are not emitted as repeated photos",
+        "task-progress dialogue contract explicitly requires clear structure (`结论 -> 依据 -> 下一步`) for user-facing replies",
+        "targeted regressions pass and first failure point is recorded if any test fails"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "tools/providers/project_generation_decisions.py",
+          "scripts/ctcp_orchestrate.py",
+          "scripts/ctcp_support_bot.py",
+          "docs/11_task_progress_dialogue.md",
+          "tests/test_support_chain_breakpoints.py",
+          "tests/test_screenshot_priority_selection.py"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_support_chain_breakpoints.py\" -v",
+          "python -m unittest discover -s tests -p \"test_screenshot_priority_selection.py\" -v",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-26: replaced mainline breakpoints directly (removed ambiguous high-quality trigger token, added delivery-finalize retry gate for delivery_completion_failed runs, stopped auto-resume status sync from rewriting latest user turn, deduped screenshot delivery by content hash), updated dialogue contract with explicit `结论 -> 依据 -> 下一步`, and passed targeted regressions + workflow_checks + verify_repo doc-only."
+    },
+    {
+      "id": "ADHOC-20260426-support-status-routing-and-nocode-guard",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Support bot status routing fix + unsolicited code-dump guard + model override knob",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260426-support-mainline-replace-fixes"
+      ],
+      "dod": [
+        "previous-project existence/status queries are routed to STATUS_QUERY and do not rewrite project brief as a new task",
+        "customer replies do not dump source code when user did not explicitly ask for code",
+        "support local fallback model can be switched through environment variable without code edits",
+        "targeted regressions pass for mode routing, reply guard, and dispatch config override"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "scripts/ctcp_support_bot.py",
+          "agents/prompts/support_lead_reply.md",
+          "docs/11_task_progress_dialogue.md",
+          "tests/test_support_chain_breakpoints.py",
+          "tests/test_support_bot_humanization.py"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_support_chain_breakpoints.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-26: added previous-project existence query routing to STATUS_QUERY, added unsolicited code-dump runtime guard, introduced env knobs CTCP_SUPPORT_OLLAMA_MODEL/CTCP_SUPPORT_LEAD_PROVIDER/CTCP_SUPPORT_LOCAL_FALLBACK_PROVIDER, and updated support prompt/dialogue contract with no-unrequested-code rule."
+    },
+    {
+      "id": "ADHOC-20260426-single-support-project-generation-interface",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Unify support project-generation entry to one bridge interface",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260426-support-status-routing-and-nocode-guard"
+      ],
+      "dod": [
+        "support runtime project turns are synchronized through one bridge interface (`ctcp_sync_support_project_turn`) instead of support-side direct new_run/record/advance branching",
+        "previous-project existence/status followups are routed to STATUS_QUERY even when no bound run exists, so status turns do not accidentally create new project runs",
+        "mainline wiring docs and backend interface contract are updated to state the single support project-generation entrypoint"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "scripts/ctcp_front_bridge.py",
+          "scripts/ctcp_support_bot.py",
+          "docs/10_team_mode.md",
+          "docs/backend_interface_contract.md",
+          "tests/test_support_chain_breakpoints.py",
+          "tests/test_project_turn_mainline_contract.py"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_support_chain_breakpoints.py\" -v",
+          "python -m unittest discover -s tests -p \"test_project_turn_mainline_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-26: added single support project-turn bridge entry `ctcp_sync_support_project_turn`, switched support runtime project sync/recovery paths to that interface, fixed unbound previous-project status routing while preserving explicit new-project requests on project lane, and synced docs/contracts with targeted regressions + verify_repo doc-only pass."
+    },
+    {
+      "id": "ADHOC-20260426-first-turn-quality-uplift",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Boost first-turn project generation quality on support mainline",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260426-single-support-project-generation-interface"
+      ],
+      "dod": [
+        "support first project turn can pass explicit quality constraints through `ctcp_sync_support_project_turn` into `frontend_request` instead of relying only on keyword inference",
+        "support first project turn uses deeper default advance steps so the first reply reflects more progressed project state",
+        "project generation decision logic recognizes explicit first-turn quality flags and lifts build profile to `high_quality_extended` deterministically when requested",
+        "runtime/docs/tests stay aligned for the single support project-generation interface contract"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "scripts/ctcp_front_bridge.py",
+          "scripts/ctcp_support_bot.py",
+          "tools/providers/project_generation_decisions.py",
+          "docs/backend_interface_contract.md",
+          "tests/test_support_chain_breakpoints.py",
+          "tests/test_project_turn_mainline_contract.py",
+          "tests/test_support_to_production_path.py",
+          "tests/test_runtime_wiring_contract.py"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_support_chain_breakpoints.py\" -v",
+          "python -m unittest discover -s tests -p \"test_project_turn_mainline_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_to_production_path.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-04-29: first-turn quality payload (`constraints/project_intent/project_spec`) is wired through `ctcp_sync_support_project_turn` into `frontend_request`, support first-turn advance depth and downstream quality-lift behaviors are covered by updated runtime/support regressions, API-only mainline assertions were aligned, full `python -m unittest discover -s tests -p \"test_*.py\" -v` passed (473 tests), and canonical verify passed with writable runs root (`$env:CTCP_RUNS_ROOT = Join-Path $env:TEMP 'ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`)."
     }
   ]
 }

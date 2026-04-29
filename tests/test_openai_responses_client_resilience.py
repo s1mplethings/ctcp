@@ -145,6 +145,7 @@ class OpenAiResponsesClientResilienceTests(unittest.TestCase):
                 "OPENAI_API_KEY": "",
                 "CTCP_OPENAI_API_KEY": "",
                 "OPENAI_BASE_URL": "",
+                "CTCP_OPENAI_BASE_URL": "",
                 "CTCP_LOCAL_NOTES_PATH": str(notes),
                 "SDDAI_OPENAI_ENDPOINT_MODE": "responses",
                 "SDDAI_OPENAI_MAX_ATTEMPTS": "1",

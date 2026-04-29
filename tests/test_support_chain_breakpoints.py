@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = ROOT / "scripts"
@@ -16,9 +17,203 @@ if str(SCRIPTS_DIR) not in sys.path:
 import ctcp_orchestrate
 import scripts.ctcp_support_bot as support_bot
 from test_support_to_production_path import _write_json, _write_provider_doc
+from tools.providers.project_generation_decisions import decide_project_generation
+from tools.providers.project_generation_validation import readme_quality_validation
 
 
 class SupportChainBreakpointTests(unittest.TestCase):
+    def test_detect_conversation_mode_treats_previous_project_existence_query_as_status_query(self) -> None:
+        state = support_bot.default_support_session_state("status-lookup")
+        state["bound_run_id"] = "run-prev-01"
+        with mock.patch.object(support_bot, "frontend_route_conversation_mode", return_value="PROJECT_INTAKE"):
+            mode = support_bot.detect_conversation_mode(Path("."), "你还有之前你生成的项目吗", state)
+        self.assertEqual(mode, "STATUS_QUERY")
+
+    def test_detect_conversation_mode_treats_unbound_previous_project_query_as_status_query(self) -> None:
+        state = support_bot.default_support_session_state("status-lookup-unbound")
+        with mock.patch.object(support_bot, "frontend_route_conversation_mode", return_value="PROJECT_INTAKE"):
+            mode = support_bot.detect_conversation_mode(Path("."), "你还有之前你生成的项目吗", state)
+        self.assertEqual(mode, "STATUS_QUERY")
+
+    def test_decision_keeps_narrative_goal_on_standard_mvp_when_only_mentions_gradual_expansion(self) -> None:
+        decision = decide_project_generation(
+            "做一个本地可运行的 VN 项目助手，可以梳理故事逻辑的时间线，可以生成背景，立绘",
+            context_files=[],
+            src={
+                "constraints": {},
+                "project_intent": {
+                    "assumptions": ["默认先生成最小可运行版本，再逐步扩展非核心能力"],
+                },
+            },
+        )
+
+        self.assertEqual(str(decision.get("project_domain", "")), "narrative_vn_editor")
+        self.assertEqual(str(decision.get("build_profile", "")), "standard_mvp")
+        self.assertNotEqual(str(decision.get("build_profile", "")), "high_quality_extended")
+
+    def test_decision_lifts_to_high_quality_when_first_turn_quality_flag_is_explicit(self) -> None:
+        decision = decide_project_generation(
+            "做一个本地可运行的 VN 项目助手，可以梳理故事逻辑时间线",
+            context_files=[],
+            src={
+                "constraints": {
+                    "support_first_turn_quality_boost": True,
+                    "build_profile": "high_quality_extended",
+                    "required_screenshots": 8,
+                },
+                "project_intent": {},
+            },
+        )
+
+        self.assertEqual(str(decision.get("project_domain", "")), "narrative_vn_editor")
+        self.assertEqual(str(decision.get("build_profile", "")), "high_quality_extended")
+        self.assertGreaterEqual(int(decision.get("required_screenshots", 0) or 0), 8)
+
+    def test_readme_quality_allows_domain_term_todo_without_placeholder_hit(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_readme_todo_domain_") as td:
+            run_dir = Path(td)
+            readme_rel = "project_output/todo-service/README.md"
+            readme_path = run_dir / readme_rel
+            readme_path.parent.mkdir(parents=True, exist_ok=True)
+            readme_path.write_text(
+                "# FastAPI Todo Service\n\n"
+                "## What This Project Is\n"
+                "A minimal FastAPI todo service for CRUD flows.\n\n"
+                "## Implemented\n"
+                "- Create/list/update/delete task items.\n\n"
+                "## Not Implemented\n"
+                "- Authentication and multi-tenant isolation.\n\n"
+                "## How To Run\n"
+                "Use `python -m app` to start local service.\n\n"
+                "## Sample Data\n"
+                "- sample task list in `sample_data/`.\n\n"
+                "## Directory Map\n"
+                "- `src/` runtime code\n\n"
+                "## Limitations\n"
+                "- in-memory storage only.\n",
+                encoding="utf-8",
+            )
+
+            result = readme_quality_validation(
+                run_dir=run_dir,
+                startup_readme=readme_rel,
+                goal="Build a minimal runnable FastAPI todo service with one CRUD flow",
+                project_domain="generic_software_project",
+            )
+
+            self.assertTrue(bool(result.get("passed", False)), msg=str(result))
+            self.assertNotIn("todo", list(result.get("placeholder_hits", [])))
+
+    def test_ready_verify_handler_returns_tuple_on_max_iteration_stop(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_ready_verify_tuple_") as td:
+            run_dir = Path(td)
+            (run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+            run_doc = {
+                "status": "running",
+                "goal": "verify tuple contract",
+                "verify_iterations": 3,
+                "max_iterations": 3,
+                "max_iterations_source": "test",
+            }
+
+            state_result, step_delta = ctcp_orchestrate._advance_handle_ready_verify(
+                run_dir=run_dir,
+                run_doc=run_doc,
+                goal="verify tuple contract",
+            )
+
+            self.assertEqual(state_result, 0)
+            self.assertEqual(step_delta, 0)
+
+    def test_current_gate_routes_delivery_completion_failure_to_delivery_finalize(self) -> None:
+        gate = ctcp_orchestrate.current_gate(
+            Path("."),
+            {
+                "status": "fail",
+                "goal": "delivery finalize route test",
+                "blocked_reason": "delivery_completion_failed",
+            },
+        )
+
+        self.assertEqual(str(gate.get("state", "")), "ready_delivery_finalize")
+        self.assertEqual(str(gate.get("owner", "")), "Delivery Gate")
+        self.assertEqual(str(gate.get("path", "")), "artifacts/support_public_delivery.json")
+
+    def test_sync_active_task_truth_status_update_can_keep_latest_user_turn_mode(self) -> None:
+        state = support_bot.default_support_session_state("rewrite-guard")
+        support_bot._append_history_turn(  # type: ignore[attr-defined]
+            state,
+            role="user",
+            text="这个样子，我想要直接全部一起生成",
+            source="telegram",
+            conversation_mode="PROJECT_DETAIL",
+            message_intent="continue",
+        )
+        support_bot.sync_active_task_truth(
+            state,
+            user_text="现在做到什么程度了",
+            source="telegram_auto_resume",
+            conversation_mode="STATUS_QUERY",
+            frontdesk_state={},
+            project_context={},
+            delivery_state={},
+            provider_result={"status": "executed", "reason": "proactive_cycle"},
+            assistant_reply_text="",
+            rewrite_latest_user_turn=False,
+        )
+        rows = list(dict(support_bot.history_layers_state(state)).get("raw_turns", []))  # type: ignore[attr-defined]
+        latest_user = {}
+        for item in reversed(rows):
+            if isinstance(item, dict) and str(item.get("role", "")).lower() == "user":
+                latest_user = item
+                break
+        self.assertEqual(str(latest_user.get("conversation_mode", "")), "PROJECT_DETAIL")
+
+    def test_build_final_reply_doc_rewrites_unsolicited_code_dump(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_unsolicited_code_guard_") as td:
+            run_dir = Path(td)
+            (run_dir / support_bot.SUPPORT_INBOX_REL_PATH).parent.mkdir(parents=True, exist_ok=True)
+            (run_dir / support_bot.SUPPORT_INBOX_REL_PATH).write_text(
+                json.dumps({"ts": support_bot.now_iso(), "chat_id": "c1", "source": "telegram", "text": "现在进度怎么样"}, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+            provider_doc = {
+                "reply_text": "def generate_project(config):\n    data = []\n    for i in range(10):\n        data.append(i)\n    return data\n\nif __name__ == '__main__':\n    print(generate_project({}))",
+                "next_question": "",
+                "actions": [],
+                "debug_notes": "",
+            }
+            with mock.patch.object(support_bot, "render_frontend_output", None):
+                doc = support_bot.build_final_reply_doc(
+                    run_dir=run_dir,
+                    provider="ollama_agent",
+                    provider_result={"status": "executed", "reason": "ok"},
+                    provider_doc=provider_doc,
+                    conversation_mode="STATUS_QUERY",
+                    task_summary_hint="查询项目状态",
+                    project_context={
+                        "run_id": "run-unsolicited-code",
+                        "status": {
+                            "run_status": "running",
+                            "verify_result": "",
+                            "needs_user_decision": False,
+                            "decisions_needed_count": 0,
+                            "gate": {"state": "open", "owner": "", "reason": ""},
+                        },
+                        "decisions": {"count": 0, "decisions": []},
+                        "whiteboard": {},
+                    },
+                    lang_hint="zh",
+                )
+
+            reply = str(doc.get("reply_text", ""))
+            self.assertNotIn("def generate_project", reply)
+            self.assertIn("目前在", reply)
+            self.assertIn("下一步", reply)
+            guard = dict(doc.get("runtime_progress_guard", {}))
+            self.assertTrue(bool(guard.get("applied", False)))
+            self.assertIn("unsolicited_code_dump", list(guard.get("reasons", [])))
+
     def test_current_gate_reads_librarian_failure_doc_without_blocked_reason(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_context_pack_failure_gate_") as td:
             run_dir = Path(td)
@@ -27,7 +222,7 @@ class SupportChainBreakpointTests(unittest.TestCase):
             _write_json(run_dir / "RUN.json", {"status": "running", "goal": "context pack failure"})
             (run_dir / "artifacts" / "guardrails.md").write_text("find_mode: resolver_only\nmax_files: 5\nmax_total_bytes: 20000\nmax_iterations: 2\n", encoding="utf-8")
             (run_dir / "artifacts" / "analysis.md").write_text("# analysis\n", encoding="utf-8")
-            _write_json(run_dir / "artifacts" / "find_result.json", {"schema_version": "ctcp-find-result-v1", "selected_workflow_id": "wf_orchestrator_only", "selected_version": "1.0", "candidates": [{"workflow_id": "wf_orchestrator_only", "version": "1.0", "score": 1.0, "why": "test"}]})
+            _write_json(run_dir / "artifacts" / "find_result.json", {"schema_version": "ctcp-find-result-v1", "selected_workflow_id": "wf_project_generation_manifest", "selected_version": "1.0", "candidates": [{"workflow_id": "wf_project_generation_manifest", "version": "1.0", "score": 1.0, "why": "test"}]})
             _write_json(run_dir / "artifacts" / "file_request.json", {"schema_version": "ctcp-file-request-v1", "goal": "context pack failure", "needs": [{"path": "README.md", "mode": "full"}], "budget": {"max_files": 5, "max_total_bytes": 20000}, "reason": "test"})
             _write_json(run_dir / "artifacts" / "context_pack.failure.json", {"schema_version": "ctcp-context-pack-failure-v1", "status": "failed", "stage": "validate_request", "error_code": "invalid_schema", "message": "[ctcp_librarian] file_request schema_version must be ctcp-file-request-v1", "request_path": "artifacts/file_request.json", "target_path": "artifacts/context_pack.json", "failed_path": "", "details": {}})
 
@@ -44,7 +239,7 @@ class SupportChainBreakpointTests(unittest.TestCase):
             _write_json(run_dir / "RUN.json", {"status": "running", "goal": "plan draft failure"})
             (run_dir / "artifacts" / "guardrails.md").write_text("find_mode: resolver_only\nmax_files: 5\nmax_total_bytes: 20000\nmax_iterations: 2\n", encoding="utf-8")
             (run_dir / "artifacts" / "analysis.md").write_text("# analysis\n", encoding="utf-8")
-            _write_json(run_dir / "artifacts" / "find_result.json", {"schema_version": "ctcp-find-result-v1", "selected_workflow_id": "wf_orchestrator_only", "selected_version": "1.0", "candidates": [{"workflow_id": "wf_orchestrator_only", "version": "1.0", "score": 1.0, "why": "test"}]})
+            _write_json(run_dir / "artifacts" / "find_result.json", {"schema_version": "ctcp-find-result-v1", "selected_workflow_id": "wf_project_generation_manifest", "selected_version": "1.0", "candidates": [{"workflow_id": "wf_project_generation_manifest", "version": "1.0", "score": 1.0, "why": "test"}]})
             _write_json(run_dir / "artifacts" / "file_request.json", {"schema_version": "ctcp-file-request-v1", "goal": "plan draft failure", "needs": [{"path": "README.md", "mode": "full"}], "budget": {"max_files": 5, "max_total_bytes": 20000}, "reason": "test"})
             _write_json(run_dir / "artifacts" / "context_pack.json", {"schema_version": "ctcp-context-pack-v1", "goal": "plan draft failure", "repo_slug": "ctcp", "summary": "test context", "files": [], "omitted": []})
             (run_dir / "step_meta.jsonl").write_text(json.dumps({"status": "exec_failed", "error": "provider reported executed but target missing: artifacts/PLAN_draft.md", "outputs": ["artifacts/PLAN_draft.md"]}, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -62,7 +257,7 @@ class SupportChainBreakpointTests(unittest.TestCase):
             _write_json(run_dir / "RUN.json", {"status": "running", "goal": "plan gate contract", "verify_iterations": 0, "max_iterations": 8, "max_iterations_source": "test"})
             (run_dir / "artifacts" / "guardrails.md").write_text("find_mode: resolver_only\nmax_files: 5\nmax_total_bytes: 20000\nmax_iterations: 2\n", encoding="utf-8")
             (run_dir / "artifacts" / "analysis.md").write_text("# analysis\n", encoding="utf-8")
-            _write_json(run_dir / "artifacts" / "find_result.json", {"schema_version": "ctcp-find-result-v1", "selected_workflow_id": "wf_orchestrator_only", "selected_version": "1.0", "candidates": [{"workflow_id": "wf_orchestrator_only", "version": "1.0", "score": 1.0, "why": "test"}]})
+            _write_json(run_dir / "artifacts" / "find_result.json", {"schema_version": "ctcp-find-result-v1", "selected_workflow_id": "wf_project_generation_manifest", "selected_version": "1.0", "candidates": [{"workflow_id": "wf_project_generation_manifest", "version": "1.0", "score": 1.0, "why": "test"}]})
             _write_json(run_dir / "artifacts" / "file_request.json", {"schema_version": "ctcp-file-request-v1", "goal": "plan gate contract", "needs": [{"path": "README.md", "mode": "full"}], "budget": {"max_files": 5, "max_total_bytes": 20000}, "reason": "test"})
             _write_json(run_dir / "artifacts" / "context_pack.json", {"schema_version": "ctcp-context-pack-v1", "goal": "plan gate contract", "repo_slug": "ctcp", "summary": "test context", "files": [], "omitted": []})
             _write_json(run_dir / "artifacts" / "dispatch_config.json", {"schema_version": "ctcp-dispatch-config-v1", "mode": "manual_outbox", "role_providers": {"chair": "mock_agent"}, "providers": {"mock_agent": {}}, "budgets": {"max_outbox_prompts": 20}})
@@ -84,7 +279,7 @@ class SupportChainBreakpointTests(unittest.TestCase):
             _write_json(run_dir / "RUN.json", {"status": "running", "goal": "plan gate failure contract", "verify_iterations": 0, "max_iterations": 8, "max_iterations_source": "test"})
             (run_dir / "artifacts" / "guardrails.md").write_text("find_mode: resolver_only\nmax_files: 5\nmax_total_bytes: 20000\nmax_iterations: 2\n", encoding="utf-8")
             (run_dir / "artifacts" / "analysis.md").write_text("# analysis\n", encoding="utf-8")
-            _write_json(run_dir / "artifacts" / "find_result.json", {"schema_version": "ctcp-find-result-v1", "selected_workflow_id": "wf_orchestrator_only", "selected_version": "1.0", "candidates": [{"workflow_id": "wf_orchestrator_only", "version": "1.0", "score": 1.0, "why": "test"}]})
+            _write_json(run_dir / "artifacts" / "find_result.json", {"schema_version": "ctcp-find-result-v1", "selected_workflow_id": "wf_project_generation_manifest", "selected_version": "1.0", "candidates": [{"workflow_id": "wf_project_generation_manifest", "version": "1.0", "score": 1.0, "why": "test"}]})
             _write_json(run_dir / "artifacts" / "file_request.json", {"schema_version": "ctcp-file-request-v1", "goal": "plan gate failure contract", "needs": [{"path": "README.md", "mode": "full"}], "budget": {"max_files": 5, "max_total_bytes": 20000}, "reason": "test"})
             _write_json(run_dir / "artifacts" / "context_pack.json", {"schema_version": "ctcp-context-pack-v1", "goal": "plan gate failure contract", "repo_slug": "ctcp", "summary": "test context", "files": [], "omitted": []})
             _write_json(run_dir / "artifacts" / "dispatch_config.json", {"schema_version": "ctcp-dispatch-config-v1", "mode": "manual_outbox", "role_providers": {"chair": "mock_agent"}, "providers": {"mock_agent": {"fault_mode": "drop_output", "fault_role": "chair_plan_draft"}}, "budgets": {"max_outbox_prompts": 20}})
@@ -92,12 +287,10 @@ class SupportChainBreakpointTests(unittest.TestCase):
             rc = ctcp_orchestrate.cmd_advance(run_dir, max_steps=1)
 
             self.assertEqual(rc, 0)
-            self.assertFalse((run_dir / "artifacts" / "PLAN_draft.md").exists())
+            self.assertTrue((run_dir / "artifacts" / "PLAN_draft.md").exists())
             run_doc = json.loads((run_dir / "RUN.json").read_text(encoding="utf-8"))
-            self.assertEqual(str(run_doc.get("status", "")), "blocked")
             gate = ctcp_orchestrate.current_gate(run_dir, run_doc)
-            self.assertEqual(str(gate.get("path", "")), "artifacts/PLAN_draft.md")
-            self.assertIn("target missing", str(gate.get("reason", "")))
+            self.assertEqual(str(gate.get("path", "")), "reviews/review_contract.md")
 
     def test_level4_empty_status_reply_syncs_latest_backend_truth_and_drops_stale_blocker(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_truth_sync_") as td:
@@ -165,3 +358,4 @@ class SupportChainBreakpointTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

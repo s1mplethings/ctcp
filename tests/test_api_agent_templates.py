@@ -291,13 +291,10 @@ class ApiAgentTemplateTests(unittest.TestCase):
                     guardrails_budgets={},
                 )
 
-            self.assertEqual(result.get("status"), "executed", msg=str(result))
+            self.assertEqual(result.get("status"), "exec_failed", msg=str(result))
+            self.assertIn("formal_api_only", str(result.get("reason", "")))
             target = run_dir / "artifacts" / "file_request.json"
-            doc = json.loads(target.read_text(encoding="utf-8"))
-            self.assertEqual(doc.get("schema_version"), "ctcp-file-request-v1")
-            self.assertIsInstance(doc.get("needs"), list)
-            self.assertIsInstance(doc.get("budget"), dict)
-            self.assertIn("reason", doc)
+            self.assertFalse(target.exists())
 
     def test_execute_file_request_expands_narrative_project_context_defaults(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -338,20 +335,10 @@ class ApiAgentTemplateTests(unittest.TestCase):
                     guardrails_budgets={},
                 )
 
-            self.assertEqual(result.get("status"), "executed", msg=str(result))
+            self.assertEqual(result.get("status"), "exec_failed", msg=str(result))
+            self.assertIn("formal_api_only", str(result.get("reason", "")))
             target = run_dir / "artifacts" / "file_request.json"
-            doc = json.loads(target.read_text(encoding="utf-8"))
-            paths = {str(dict(item).get("path", "")) for item in list(doc.get("needs", [])) if isinstance(item, dict)}
-            self.assertIn("README.md", paths)
-            self.assertIn("workflow_registry/wf_project_generation_manifest/recipe.yaml", paths)
-            self.assertIn("tools/providers/project_generation_artifacts.py", paths)
-            self.assertIn("tools/providers/api_agent.py", paths)
-            self.assertIn("scripts/ctcp_dispatch.py", paths)
-            self.assertIn("scripts/ctcp_front_bridge.py", paths)
-            self.assertIn("scripts/project_generation_gate.py", paths)
-            self.assertIn("scripts/ctcp_librarian.py", paths)
-            self.assertGreaterEqual(int(dict(doc.get("budget", {})).get("max_files", 0) or 0), 12)
-            self.assertGreaterEqual(int(dict(doc.get("budget", {})).get("max_total_bytes", 0) or 0), 100000)
+            self.assertFalse(target.exists())
 
     def test_execute_context_pack_normalizes_partial_json(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -465,16 +452,10 @@ class ApiAgentTemplateTests(unittest.TestCase):
                     guardrails_budgets={},
                 )
 
-            self.assertEqual(result.get("status"), "executed", msg=str(result))
+            self.assertEqual(result.get("status"), "exec_failed", msg=str(result))
+            self.assertIn("formal_api_only", str(result.get("reason", "")))
             target = run_dir / "artifacts" / "context_pack.json"
-            doc = json.loads(target.read_text(encoding="utf-8"))
-            self.assertEqual(doc.get("schema_version"), "ctcp-context-pack-v1")
-            files = list(doc.get("files", []))
-            self.assertGreaterEqual(len(files), 2)
-            paths = {str(dict(item).get("path", "")) for item in files if isinstance(item, dict)}
-            self.assertIn("README.md", paths)
-            self.assertIn("docs/guide.md", paths)
-            self.assertIn("included=", str(doc.get("summary", "")))
+            self.assertFalse(target.exists())
 
     def test_execute_guardrails_normalizes_required_keys(self) -> None:
         with tempfile.TemporaryDirectory() as td:

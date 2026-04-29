@@ -315,7 +315,7 @@ class SupportSessionRecoveryRegressionTests(unittest.TestCase):
 
             new_run_calls: list[str] = []
 
-            def _fake_new_run(*, goal: str) -> dict[str, object]:
+            def _fake_new_run(*, goal: str, **_kwargs: object) -> dict[str, object]:
                 new_run_calls.append(goal)
                 return {"run_id": "new-story-run", "run_dir": "D:/tmp/new-story-run"}
 

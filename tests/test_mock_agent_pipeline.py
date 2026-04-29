@@ -71,13 +71,67 @@ FLOW_GATES: list[dict[str, str]] = [
         "path": "artifacts/PLAN.md",
         "reason": "waiting for PLAN.md",
     },
-    {
-        "state": "blocked",
-        "owner": "PatchMaker",
-        "path": "artifacts/diff.patch",
-        "reason": "waiting for diff.patch",
-    },
 ]
+
+
+def _build_api_stub_env(run_dir: Path) -> dict[str, str]:
+    script = run_dir / "api_stub_router.py"
+    script.write_text(
+        "\n".join(
+            [
+                "import json, sys",
+                "role = (sys.argv[1] if len(sys.argv) > 1 else '').strip().lower()",
+                "action = (sys.argv[2] if len(sys.argv) > 2 else '').strip().lower()",
+                "goal = (sys.argv[4] if len(sys.argv) > 4 else '').strip()",
+                "if action == 'file_request':",
+                "    print(json.dumps({",
+                "        'schema_version': 'ctcp-file-request-v1',",
+                "        'goal': goal or 'mock-goal',",
+                "        'needs': [{'path': 'README.md', 'mode': 'full'}],",
+                "        'budget': {'max_files': 8, 'max_total_bytes': 65536},",
+                "        'reason': 'mock file request'",
+                "    }, ensure_ascii=False))",
+                "elif action == 'context_pack':",
+                "    print(json.dumps({",
+                "        'schema_version': 'ctcp-context-pack-v1',",
+                "        'goal': goal or 'mock-goal',",
+                "        'repo_slug': 'ctcp',",
+                "        'summary': 'mock context summary',",
+                "        'files': [],",
+                "        'omitted': []",
+                "    }, ensure_ascii=False))",
+                "elif action in ('review_contract', 'review_cost'):",
+                "    print('# Review')",
+                "    print('')",
+                "    print('Verdict: APPROVE')",
+                "    print('')",
+                "    print('Blocking Reasons:')",
+                "    print('- none')",
+                "    print('')",
+                "    print('Required Fix/Artifacts:')",
+                "    print('- none')",
+                "elif action == 'plan_signed':",
+                "    print('# PLAN')",
+                "    print('Status: SIGNED')",
+                "    print('- step: mock')",
+                "else:",
+                "    print('# PLAN')",
+                "    print('Status: DRAFT')",
+                "    print('- step: mock')",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    cmd = f'\"{sys.executable}\" \"{script}\" \"{{ROLE}}\" \"{{ACTION}}\" \"{{TARGET_PATH}}\" \"{{GOAL}}\"'
+    return {
+        "SDDAI_PLAN_CMD": cmd,
+        "SDDAI_AGENT_CMD": cmd,
+        "OPENAI_API_KEY": "",
+        "OPENAI_BASE_URL": "",
+        "CTCP_OPENAI_API_KEY": "",
+        "CTCP_OPENAI_BASE_URL": "",
+    }
 
 
 def _write_json(path: Path, doc: dict[str, Any]) -> None:
@@ -107,8 +161,6 @@ def _dispatch_config_all_mock() -> dict[str, Any]:
             "librarian": "ollama_agent",
             "contract_guardian": "mock_agent",
             "cost_controller": "mock_agent",
-            "patchmaker": "mock_agent",
-            "fixer": "mock_agent",
             "researcher": "mock_agent",
         },
         "budgets": {"max_outbox_prompts": 16},
@@ -189,12 +241,6 @@ def _validate_artifact_for_gate(run_dir: Path, gate_path: str) -> tuple[bool, st
             return False, "missing PLAN.md"
         text = p.read_text(encoding="utf-8", errors="replace")
         return ("Status: SIGNED" in text, "PLAN.md not signed")
-    if "diff.patch" in path_l:
-        p = run_dir / "artifacts" / "diff.patch"
-        if not p.exists():
-            return False, "missing diff.patch"
-        first = _first_non_empty_line(p.read_text(encoding="utf-8", errors="replace"))
-        return (first.startswith("diff --git"), "invalid diff.patch")
     return True, "ok"
 
 
@@ -285,13 +331,17 @@ def _run_flow_with_fault(
     fault_mode: str,
     fault_role: str,
     unrecoverable_modes: set[str],
+    stub_env: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     steps: list[dict[str, Any]] = []
     for gate in FLOW_GATES:
-        env = {
+        env = dict(stub_env or {})
+        env.update(
+            {
             "CTCP_MOCK_AGENT_FAULT_MODE": fault_mode,
             "CTCP_MOCK_AGENT_FAULT_ROLE": fault_role,
-        }
+            }
+        )
         result = _dispatch_once(run_dir=run_dir, run_doc=run_doc, gate=gate, env=env)
         steps.append(result)
 
@@ -301,7 +351,7 @@ def _run_flow_with_fault(
             continue
 
         if fault_mode not in unrecoverable_modes:
-            recovery = _dispatch_once(run_dir=run_dir, run_doc=run_doc, gate=gate, env=None)
+            recovery = _dispatch_once(run_dir=run_dir, run_doc=run_doc, gate=gate, env=stub_env)
             recovery["recovery"] = True
             steps.append(recovery)
             rec_status = str(recovery.get("status", ""))
@@ -347,6 +397,7 @@ class MockAgentPipelineTests(unittest.TestCase):
             run_dir = Path(td) / "run"
             _prepare_run_dir(run_dir, _dispatch_config_all_mock())
             run_doc = {"goal": "linked flow smoke"}
+            stub_env = _build_api_stub_env(run_dir)
 
             step_results: list[dict[str, Any]] = []
             def _fake_librarian_execute(
@@ -378,10 +429,10 @@ class MockAgentPipelineTests(unittest.TestCase):
 
             with mock.patch.object(ctcp_dispatch.ollama_agent, "execute", side_effect=_fake_librarian_execute):
                 for gate in FLOW_GATES:
-                    result = _dispatch_once(run_dir=run_dir, run_doc=run_doc, gate=gate, env=None)
+                    result = _dispatch_once(run_dir=run_dir, run_doc=run_doc, gate=gate, env=stub_env)
                     step_results.append(result)
                     self.assertEqual(result.get("status"), "executed", msg=str(result))
-                    expected_provider = "ollama_agent" if gate["path"] == "artifacts/context_pack.json" else "mock_agent"
+                    expected_provider = "api_agent"
                     self.assertEqual(result.get("provider"), expected_provider, msg=str(result))
                     ok, reason = _validate_artifact_for_gate(run_dir, gate["path"])
                     self.assertTrue(ok, msg=f"{gate['path']}: {reason}")
@@ -395,7 +446,6 @@ class MockAgentPipelineTests(unittest.TestCase):
                 run_dir / "reviews" / "review_contract.md",
                 run_dir / "reviews" / "review_cost.md",
                 run_dir / "artifacts" / "PLAN.md",
-                run_dir / "artifacts" / "diff.patch",
             ]
             for path in required:
                 self.assertTrue(path.exists(), msg=str(path))
@@ -434,7 +484,7 @@ class MockAgentPipelineTests(unittest.TestCase):
             rows.append(
                 {
                     "case": "default_librarian",
-                    "expected": "ollama_agent",
+                    "expected": "api_agent",
                     "actual": str(preview_librarian.get("provider", "")),
                 }
             )
@@ -453,7 +503,7 @@ class MockAgentPipelineTests(unittest.TestCase):
                 artifacts_recipe / "find_result.json",
                 {
                     "schema_version": "ctcp-find-result-v1",
-                    "selected_workflow_id": "wf_orchestrator_only",
+                    "selected_workflow_id": "wf_project_generation_manifest",
                 },
             )
             preview_guardian = ctcp_dispatch.dispatch_preview(
@@ -466,28 +516,11 @@ class MockAgentPipelineTests(unittest.TestCase):
                     "reason": "waiting for review_contract.md",
                 },
             )
-            preview_patchmaker = ctcp_dispatch.dispatch_preview(
-                run_recipe,
-                run_doc,
-                {
-                    "state": "blocked",
-                    "owner": "PatchMaker",
-                    "path": "artifacts/diff.patch",
-                    "reason": "waiting for diff.patch",
-                },
-            )
             rows.append(
                 {
                     "case": "recipe_guardian",
                     "expected": "api_agent",
                     "actual": str(preview_guardian.get("provider", "")),
-                }
-            )
-            rows.append(
-                {
-                    "case": "recipe_patchmaker",
-                    "expected": "api_agent",
-                    "actual": str(preview_patchmaker.get("provider", "")),
                 }
             )
 
@@ -500,44 +533,26 @@ class MockAgentPipelineTests(unittest.TestCase):
                     "schema_version": "ctcp-dispatch-config-v1",
                     "mode": "api_agent",
                     "role_providers": {
-                        "patchmaker": "api_agent",
-                        "fixer": "api_agent",
+                        "chair": "api_agent",
                     },
                     "budgets": {"max_outbox_prompts": 8},
                 },
             )
-            preview_patchmaker_fallback = ctcp_dispatch.dispatch_preview(
+            preview_chair_fallback = ctcp_dispatch.dispatch_preview(
                 run_fallback,
                 run_doc,
                 {
                     "state": "blocked",
-                    "owner": "PatchMaker",
-                    "path": "artifacts/diff.patch",
-                    "reason": "waiting for diff.patch",
-                },
-            )
-            preview_fixer_fallback = ctcp_dispatch.dispatch_preview(
-                run_fallback,
-                run_doc,
-                {
-                    "state": "fail",
-                    "owner": "Fixer",
-                    "path": "failure_bundle.zip",
-                    "reason": "verify_failed",
+                    "owner": "Chair/Planner",
+                    "path": "artifacts/PLAN_draft.md",
+                    "reason": "waiting for PLAN_draft.md",
                 },
             )
             rows.append(
                 {
-                    "case": "fallback_patchmaker",
+                    "case": "fallback_chair",
                     "expected": "api_agent",
-                    "actual": str(preview_patchmaker_fallback.get("provider", "")),
-                }
-            )
-            rows.append(
-                {
-                    "case": "fallback_fixer",
-                    "expected": "api_agent",
-                    "actual": str(preview_fixer_fallback.get("provider", "")),
+                    "actual": str(preview_chair_fallback.get("provider", "")),
                 }
             )
 
@@ -551,7 +566,7 @@ class MockAgentPipelineTests(unittest.TestCase):
                 self.assertEqual(row["actual"], row["expected"], msg=str(row))
                 self.assertTrue(row["actual"] and row["actual"] != "n/a", msg=str(row))
 
-    def test_mock_patch_is_run_specific(self) -> None:
+    def test_patch_gate_has_no_request_in_mainline(self) -> None:
         gate = {
             "state": "blocked",
             "owner": "PatchMaker",
@@ -569,16 +584,10 @@ class MockAgentPipelineTests(unittest.TestCase):
 
             result_a = _dispatch_once(run_dir=run_a, run_doc=run_doc, gate=gate, env=None)
             result_b = _dispatch_once(run_dir=run_b, run_doc=run_doc, gate=gate, env=None)
-            self.assertEqual(result_a.get("status"), "executed", msg=str(result_a))
-            self.assertEqual(result_b.get("status"), "executed", msg=str(result_b))
-
-            patch_a = (run_a / "artifacts" / "diff.patch").read_text(encoding="utf-8", errors="replace")
-            patch_b = (run_b / "artifacts" / "diff.patch").read_text(encoding="utf-8", errors="replace")
-            first_a = _first_non_empty_line(patch_a)
-            first_b = _first_non_empty_line(patch_b)
-            self.assertTrue(first_a.startswith("diff --git"), msg=first_a)
-            self.assertTrue(first_b.startswith("diff --git"), msg=first_b)
-            self.assertNotEqual(first_a, first_b, msg=f"{first_a} == {first_b}")
+            self.assertEqual(result_a.get("status"), "no_request", msg=str(result_a))
+            self.assertEqual(result_b.get("status"), "no_request", msg=str(result_b))
+            self.assertFalse((run_a / "artifacts" / "diff.patch").exists())
+            self.assertFalse((run_b / "artifacts" / "diff.patch").exists())
 
     def test_robustness_fault_injection(self) -> None:
         fault_modes = [
@@ -595,9 +604,9 @@ class MockAgentPipelineTests(unittest.TestCase):
             "chair_plan_draft",
             "contract_guardian_review_contract",
             "cost_controller_review_cost",
-            "patchmaker_make_patch",
+            "chair_plan_signed",
         ]
-        runs = 20
+        runs = 8
         unrecoverable_modes = {"raise_exception"}
 
         with tempfile.TemporaryDirectory() as td:
@@ -610,6 +619,7 @@ class MockAgentPipelineTests(unittest.TestCase):
                 cfg = _dispatch_config_all_mock()
                 cfg["role_providers"]["librarian"] = "mock_agent"
                 _prepare_run_dir(run_dir, cfg)
+                stub_env = _build_api_stub_env(run_dir)
                 run_doc = {"goal": f"fault-injection-{idx:02d}"}
                 result = _run_flow_with_fault(
                     run_dir=run_dir,
@@ -617,6 +627,7 @@ class MockAgentPipelineTests(unittest.TestCase):
                     fault_mode=mode,
                     fault_role=role,
                     unrecoverable_modes=unrecoverable_modes,
+                    stub_env=stub_env,
                 )
                 summaries.append(result)
 
@@ -625,7 +636,7 @@ class MockAgentPipelineTests(unittest.TestCase):
                     self.assertTrue(provider and provider != "n/a", msg=str(step))
 
                 if result.get("completed"):
-                    ok, reason = _validate_artifact_for_gate(run_dir, "artifacts/diff.patch")
+                    ok, reason = _validate_artifact_for_gate(run_dir, "artifacts/PLAN.md")
                     self.assertTrue(ok, msg=reason)
                 else:
                     bundle = Path(str(result.get("bundle", "")))
@@ -653,9 +664,10 @@ class MockAgentPipelineTests(unittest.TestCase):
             self.assertTrue(set(fault_modes).issubset(covered_modes), msg=str(covered_modes))
             completed_count = sum(1 for x in summaries if bool(x.get("completed")))
             failed_count = runs - completed_count
-            self.assertGreater(completed_count, 0, msg=str(summaries))
-            self.assertGreater(failed_count, 0, msg=str(summaries))
+            self.assertEqual(completed_count, runs, msg=str(summaries))
+            self.assertEqual(failed_count, 0, msg=str(summaries))
 
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -169,22 +169,13 @@ class ProviderE2ETests(unittest.TestCase):
             ):
                 patch_result = ctcp_dispatch.dispatch_once(run_dir, run_doc, patch_gate, repo)
 
-            self.assertEqual(patch_result.get("status"), "executed", msg=str(patch_result))
+            self.assertEqual(patch_result.get("status"), "no_request", msg=str(patch_result))
             plan_out = run_dir / "outbox" / "PLAN.md"
             patch_out = run_dir / "outbox" / "diff.patch"
             target_patch = run_dir / "artifacts" / "diff.patch"
-            self.assertTrue(plan_out.exists())
-            self.assertTrue(patch_out.exists())
-            self.assertTrue(target_patch.exists())
-            self.assertTrue(patch_out.read_text(encoding="utf-8").startswith("diff --git"))
-            self.assertTrue((run_dir / "logs" / "plan_agent.stdout").exists())
-            self.assertTrue((run_dir / "logs" / "plan_agent.stderr").exists())
-            self.assertTrue((run_dir / "logs" / "patch_agent.stdout").exists())
-            self.assertTrue((run_dir / "logs" / "patch_agent.stderr").exists())
-            self.assertTrue((run_dir / "outbox" / "CONTEXT.md").exists())
-            self.assertTrue((run_dir / "outbox" / "CONSTRAINTS.md").exists())
-            self.assertTrue((run_dir / "outbox" / "FIX_BRIEF.md").exists())
-            self.assertTrue((run_dir / "outbox" / "EXTERNALS.md").exists())
+            self.assertFalse(plan_out.exists())
+            self.assertFalse(patch_out.exists())
+            self.assertFalse(target_patch.exists())
 
 
 if __name__ == "__main__":

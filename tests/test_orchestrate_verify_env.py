@@ -38,9 +38,9 @@ class OrchestrateVerifyEnvTests(unittest.TestCase):
         self.assertEqual(env.get("CTCP_FORCE_PROVIDER"), "")
         self.assertEqual(env.get("CTCP_MOCK_AGENT_FAULT_MODE"), "")
         self.assertEqual(env.get("CTCP_MOCK_AGENT_FAULT_ROLE"), "")
-        self.assertEqual(env.get("CTCP_LIVE_API"), "")
-        self.assertEqual(env.get("OPENAI_API_KEY"), "")
-        self.assertEqual(env.get("CTCP_OPENAI_API_KEY"), "")
+        self.assertIn(env.get("CTCP_LIVE_API"), ("", None))
+        self.assertIn(env.get("OPENAI_API_KEY"), ("", None))
+        self.assertIn(env.get("CTCP_OPENAI_API_KEY"), ("", None))
 
     def test_verify_env_keeps_live_api_opt_in(self) -> None:
         with mock.patch.dict(

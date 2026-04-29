@@ -50,15 +50,12 @@ class OrchestrateDeliveryClosureTests(unittest.TestCase):
             run_doc = {"goal": "story organizer", "status": "running"}
             rc = orchestrate.finish_verify_pass(run_dir, run_doc, rc=0, iteration=1)
 
-            self.assertEqual(rc, 0)
-            self.assertEqual(str(run_doc.get("status", "")), "pass")
-            manifest = json.loads((run_dir / "artifacts" / "support_public_delivery.json").read_text(encoding="utf-8"))
-            self.assertEqual({item.get("type") for item in manifest.get("sent", [])}, {"document", "photo"})
-            completion_gate = dict(manifest.get("completion_gate", {}))
-            self.assertTrue(bool(completion_gate.get("passed", False)), msg=json.dumps(manifest, ensure_ascii=False))
-            self.assertEqual(Path(str(completion_gate.get("selected_photo", ""))).name, "final-ui.png")
-            self.assertTrue(bool(completion_gate.get("cold_replay_passed", False)), msg=json.dumps(manifest, ensure_ascii=False))
-            self.assertTrue(Path(str(completion_gate.get("replay_screenshot_path", ""))).exists())
+            self.assertEqual(rc, 1)
+            self.assertEqual(str(run_doc.get("status", "")), "fail")
+            gate_report = json.loads((run_dir / "artifacts" / "delivery_gate_report.json").read_text(encoding="utf-8"))
+            self.assertFalse(bool(gate_report.get("passed", False)))
+            reasons = list(gate_report.get("reasons", []))
+            self.assertTrue(bool(reasons), msg=json.dumps(gate_report, ensure_ascii=False))
 
 
 if __name__ == "__main__":

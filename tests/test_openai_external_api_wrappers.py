@@ -176,6 +176,9 @@ class OpenAiExternalApiWrappersTests(unittest.TestCase):
 
             env = dict(os.environ)
             env.pop("OPENAI_API_KEY", None)
+            env["CTCP_OPENAI_API_KEY"] = ""
+            env["OPENAI_BASE_URL"] = ""
+            env["CTCP_OPENAI_BASE_URL"] = ""
             env["CTCP_LOCAL_NOTES_PATH"] = str(tmp / "missing_notes.md")
             proc = self._run_script(
                 [

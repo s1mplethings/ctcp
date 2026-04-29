@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import tempfile
 import unittest
 import zipfile
@@ -241,6 +242,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
         self.assertIn('"current_goal": ""', prompt)
         self.assertIn('"history_layers": {', prompt)
         self.assertIn('"recent_raw_turns": [', prompt)
+        self.assertIn('"allow_code_output": false', prompt)
 
     def test_default_support_dispatch_config_prefers_api_with_local_fallback(self) -> None:
         cfg = support_bot.default_support_dispatch_config()
@@ -251,6 +253,70 @@ class SupportBotHumanizationTests(unittest.TestCase):
             support_bot.support_provider_candidates(cfg),
             ["api_agent", "ollama_agent"],
         )
+
+    def test_default_support_dispatch_config_accepts_env_model_override(self) -> None:
+        with mock.patch.dict(
+            "os.environ",
+            {
+                "CTCP_SUPPORT_OLLAMA_MODEL": "qwen2:7b",
+                "CTCP_SUPPORT_LEAD_PROVIDER": "api_agent",
+                "CTCP_SUPPORT_LOCAL_FALLBACK_PROVIDER": "ollama_agent",
+            },
+            clear=False,
+        ):
+            cfg = support_bot.default_support_dispatch_config()
+        providers = dict(cfg.get("providers", {}))
+        ollama_cfg = dict(providers.get("ollama_agent", {}))
+        self.assertEqual(str(ollama_cfg.get("model", "")), "qwen2:7b")
+        api_cfg = dict(providers.get("api_agent", {}))
+        self.assertEqual(str(api_cfg.get("support_model", "")), "gpt-4.1")
+
+    def test_default_support_dispatch_config_defaults_support_api_model_to_v4(self) -> None:
+        cfg = support_bot.default_support_dispatch_config()
+        providers = dict(cfg.get("providers", {}))
+        api_cfg = dict(providers.get("api_agent", {}))
+        self.assertEqual(str(api_cfg.get("support_model", "")), "gpt-4.1")
+
+    def test_default_support_dispatch_config_normalizes_mini_support_model_override(self) -> None:
+        with mock.patch.dict(
+            "os.environ",
+            {"CTCP_SUPPORT_OPENAI_MODEL": "gpt-4.1-mini"},
+            clear=False,
+        ):
+            cfg = support_bot.default_support_dispatch_config()
+        providers = dict(cfg.get("providers", {}))
+        api_cfg = dict(providers.get("api_agent", {}))
+        self.assertEqual(str(api_cfg.get("support_model", "")), "gpt-4.1")
+
+    def test_execute_provider_support_api_forces_non_mini_model_env(self) -> None:
+        captured: dict[str, str] = {}
+
+        def _fake_execute_provider(provider, *, repo_root, run_dir, request, config, guardrails_budgets):  # type: ignore[no-untyped-def]
+            del provider, repo_root, run_dir, request, config, guardrails_budgets
+            captured["agent_model"] = str(os.environ.get("SDDAI_OPENAI_AGENT_MODEL", ""))
+            captured["default_model"] = str(os.environ.get("SDDAI_OPENAI_MODEL", ""))
+            return {"status": "executed"}
+
+        with mock.patch.dict(
+            "os.environ",
+            {
+                "SDDAI_OPENAI_AGENT_MODEL": "gpt-4.1-mini",
+                "SDDAI_OPENAI_MODEL": "gpt-4.1-mini",
+            },
+            clear=False,
+        ):
+            with mock.patch.object(support_bot.provider_runtime, "execute_provider", side_effect=_fake_execute_provider):
+                result = support_bot.execute_provider(
+                    provider="api_agent",
+                    run_dir=Path("."),
+                    request={"role": "support_lead", "action": "reply"},
+                    config={"providers": {"api_agent": {"support_model": "gpt-4.1-mini"}}},
+                )
+            self.assertEqual(str(result.get("model_name", "")), "gpt-4.1")
+            self.assertEqual(captured.get("agent_model", ""), "gpt-4.1")
+            self.assertEqual(captured.get("default_model", ""), "gpt-4.1")
+            self.assertEqual(str(os.environ.get("SDDAI_OPENAI_AGENT_MODEL", "")), "gpt-4.1-mini")
+            self.assertEqual(str(os.environ.get("SDDAI_OPENAI_MODEL", "")), "gpt-4.1-mini")
 
     def test_build_final_reply_doc_uses_frontend_reply_for_project_turn(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_rendered_") as td:
@@ -872,9 +938,14 @@ class SupportBotHumanizationTests(unittest.TestCase):
             session_state = json.loads((run_dir / support_bot.SUPPORT_SESSION_STATE_REL_PATH).read_text(encoding="utf-8"))
             self.assertEqual(str(session_state.get("bound_run_id", "")), "r-demo")
             self.assertEqual(str(doc.get("provider_status", "")), "executed")
-            new_run_spy.assert_called_once_with(goal="我想做一个帮我整理剧情结构的项目。")
+            new_run_spy.assert_called_once()
+            new_run_kwargs = dict(new_run_spy.call_args.kwargs)
+            self.assertEqual(str(new_run_kwargs.get("goal", "")), "我想做一个帮我整理剧情结构的项目。")
+            self.assertTrue(bool(dict(new_run_kwargs.get("constraints", {})).get("support_first_turn_quality_boost", False)))
+            self.assertIsInstance(new_run_kwargs.get("project_intent", {}), dict)
+            self.assertIsInstance(new_run_kwargs.get("project_spec", {}), dict)
             record_spy.assert_called_once()
-            advance_spy.assert_called_once_with("r-demo", max_steps=2)
+            advance_spy.assert_called_once_with("r-demo", max_steps=4)
             self.assertEqual(context_spy.call_count, 2)
 
     def test_process_message_preserves_project_brief_across_low_signal_followup(self) -> None:
@@ -938,7 +1009,10 @@ class SupportBotHumanizationTests(unittest.TestCase):
             self.assertEqual(str(state.get("turn_memory", {}).get("latest_user_turn", "")), "没有，你先做着")
             self.assertEqual(str(state.get("latest_conversation_mode", "")), "PROJECT_DETAIL")
             self.assertEqual(str(doc2.get("provider_status", "")), "executed")
-            new_run_spy.assert_called_once_with(goal=project_request)
+            new_run_spy.assert_called_once()
+            new_run_kwargs = dict(new_run_spy.call_args.kwargs)
+            self.assertEqual(str(new_run_kwargs.get("goal", "")), project_request)
+            self.assertTrue(bool(dict(new_run_kwargs.get("constraints", {})).get("support_first_turn_quality_boost", False)))
 
     def test_process_message_separates_goal_constraints_and_execution_directive_memory(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_memory_zones_") as td:
@@ -1009,7 +1083,10 @@ class SupportBotHumanizationTests(unittest.TestCase):
             self.assertEqual(str(state.get("latest_conversation_mode", "")), "PROJECT_DETAIL")
             self.assertEqual(str(doc3.get("provider_status", "")), "executed")
             self.assertEqual(record_spy.call_count, 3)
-            new_run_spy.assert_called_once_with(goal=project_request)
+            new_run_spy.assert_called_once()
+            new_run_kwargs = dict(new_run_spy.call_args.kwargs)
+            self.assertEqual(str(new_run_kwargs.get("goal", "")), project_request)
+            self.assertTrue(bool(dict(new_run_kwargs.get("constraints", {})).get("support_first_turn_quality_boost", False)))
 
     def test_process_message_api_override_degrades_to_local_on_unusable_api_reply(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_api_strict_") as td:
@@ -1544,7 +1621,7 @@ class SupportBotHumanizationTests(unittest.TestCase):
             current_state = support_bot.default_support_session_state("6092527664")
             new_run_calls: list[str] = []
 
-            def _fake_new_run(goal: str) -> dict[str, str]:
+            def _fake_new_run(*, goal: str, **_kwargs: object) -> dict[str, str]:
                 new_run_calls.append(goal)
                 return {"run_id": "new-story-run", "run_dir": "D:/tmp/new-story-run"}
 
@@ -2103,7 +2180,11 @@ class SupportBotHumanizationTests(unittest.TestCase):
             self.assertEqual(support_bot.resolve_telegram_token(""), "fallback-token")
 
     def test_main_telegram_mode_requires_token_or_env(self) -> None:
-        with mock.patch("sys.argv", ["ctcp_support_bot.py", "telegram"]), mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
+        with mock.patch.dict(
+            os.environ,
+            {"CTCP_TG_TOKEN": "", "TELEGRAM_BOT_TOKEN": ""},
+            clear=False,
+        ), mock.patch("sys.argv", ["ctcp_support_bot.py", "telegram"]), mock.patch("sys.stderr", new_callable=io.StringIO) as stderr:
             rc = support_bot.main()
 
         self.assertEqual(rc, 1)
@@ -2269,6 +2350,46 @@ class SupportBotHumanizationTests(unittest.TestCase):
             self.assertNotIn("send_project_screenshot", action_types)
             self.assertNotIn("确认“可以发包”", str(doc.get("reply_text", "")))
 
+    def test_build_final_reply_doc_video_request_adds_video_action(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_video_action_") as td:
+            run_dir = Path(td)
+            _append_jsonl(
+                run_dir / support_bot.SUPPORT_INBOX_REL_PATH,
+                {
+                    "ts": support_bot.now_iso(),
+                    "source": "telegram",
+                    "text": "把测试视频发我",
+                },
+            )
+            doc = support_bot.build_final_reply_doc(
+                run_dir=run_dir,
+                provider="api_agent",
+                provider_result={"status": "executed", "reason": "ok"},
+                provider_doc={
+                    "reply_text": "我先同步当前进度。",
+                    "next_question": "",
+                    "actions": [],
+                    "debug_notes": "",
+                },
+                source_hint="telegram",
+                conversation_mode="PROJECT_DETAIL",
+                delivery_state={
+                    "channel_can_send_files": True,
+                    "package_ready": False,
+                    "package_delivery_allowed": False,
+                    "package_blocked_reason": "verify_result is not PASS",
+                    "screenshot_ready": False,
+                    "video_ready": True,
+                    "package_source_dirs": ["D:/tmp/story_organizer"],
+                    "existing_package_files": [],
+                    "screenshot_files": [],
+                    "video_files": ["D:/tmp/story_organizer/artifacts/demo.mp4"],
+                },
+            )
+
+            action_types = {str(item.get("type", "")).strip().lower() for item in list(doc.get("actions", []))}
+            self.assertIn("send_project_video", action_types)
+
     def test_build_final_reply_doc_zip_confirmation_after_preview_sends_package(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_confirm_") as td:
             run_dir = Path(td)
@@ -2351,6 +2472,49 @@ class SupportBotHumanizationTests(unittest.TestCase):
             reply = str(doc.get("reply_text", "")); low = reply.lower()
             self.assertTrue("zip" in low and all(token in reply for token in ("成品截图", "README", "启动入口", "运行方式")))
             self.assertFalse(any(token in low for token in ("stage", "gate", "artifact", ".json", "hash", "source_generation_report", "本轮已产出文件")))
+
+    def test_collect_public_delivery_state_detects_video_files(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_video_state_") as td:
+            repo_root = Path(td)
+            generated_project = repo_root / "generated_projects" / "story_organizer"
+            generated_project.mkdir(parents=True, exist_ok=True)
+            (generated_project / "main.py").write_text("print('story')\n", encoding="utf-8")
+            (generated_project / "artifacts").mkdir(parents=True, exist_ok=True)
+            (generated_project / "artifacts" / "demo.mp4").write_bytes(b"\x00\x00\x00\x18ftypmp42")
+
+            bound_run = repo_root / "runs" / "bound-story"
+            (bound_run / "artifacts").mkdir(parents=True, exist_ok=True)
+            (bound_run / "artifacts" / "patch_apply.json").write_text(
+                json.dumps({"touched_files": ["generated_projects/story_organizer/main.py"]}, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            (bound_run / "artifacts" / "PLAN.md").write_text(
+                "Status: SIGNED\nScope-Allow: generated_projects/story_organizer/\n",
+                encoding="utf-8",
+            )
+
+            state = support_bot.default_support_session_state("delivery-video-demo")
+            state["bound_run_id"] = "r-story"
+            state["bound_run_dir"] = str(bound_run)
+            with mock.patch.object(support_bot, "ROOT", repo_root):
+                delivery = support_bot.collect_public_delivery_state(
+                    session_state=state,
+                    project_context={
+                        "run_id": "r-story",
+                        "run_dir": str(bound_run),
+                        "status": {
+                            "run_status": "running",
+                            "verify_result": "",
+                            "needs_user_decision": False,
+                            "decisions_needed_count": 0,
+                            "gate": {"state": "open", "owner": "", "reason": ""},
+                        },
+                    },
+                    source="telegram",
+                )
+
+            self.assertTrue(bool(delivery.get("video_ready", False)))
+            self.assertTrue(len(list(delivery.get("video_files", []))) >= 1)
 
     def test_public_delivery_prompt_context_exposes_ctcp_scaffold_shape(self) -> None:
         ctx = support_bot.public_delivery_prompt_context(
@@ -2488,6 +2652,58 @@ class SupportBotHumanizationTests(unittest.TestCase):
             self.assertEqual(len(list(manifest.get("deliveries", []))), 2)
             self.assertEqual(len(list(manifest.get("sent", []))), 2)
             self.assertEqual(len(list(plan.get("sent", []))), 2)
+
+    def test_emit_public_delivery_sends_video(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_emit_video_") as td:
+            root = Path(td)
+            support_run_dir = root / "support-session"
+            project_dir = root / "generated_projects" / "story_organizer"
+            project_dir.mkdir(parents=True, exist_ok=True)
+            (project_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+            video_path = project_dir / "artifacts" / "demo.mp4"
+            video_path.write_bytes(b"\x00\x00\x00\x18ftypmp42")
+
+            class _FakeTelegram:
+                def __init__(self) -> None:
+                    self.sent_videos: list[tuple[int, Path, str]] = []
+
+                def send_document(self, chat_id: int, file_path: Path, caption: str = "") -> None:
+                    _ = (chat_id, file_path, caption)
+
+                def send_photo(self, chat_id: int, file_path: Path, caption: str = "") -> None:
+                    _ = (chat_id, file_path, caption)
+
+                def send_video(self, chat_id: int, file_path: Path, caption: str = "") -> None:
+                    self.sent_videos.append((chat_id, file_path, caption))
+
+            fake = _FakeTelegram()
+            plan = support_bot.emit_public_delivery(
+                fake,  # type: ignore[arg-type]
+                chat_id=456,
+                run_dir=support_run_dir,
+                actions=[{"type": "send_project_video", "count": 1}],
+                delivery_state={
+                    "channel_can_send_files": True,
+                    "package_ready": False,
+                    "package_delivery_allowed": False,
+                    "package_blocked_reason": "verify_result is not PASS",
+                    "screenshot_ready": False,
+                    "video_ready": True,
+                    "package_source_dirs": [str(project_dir)],
+                    "ctcp_package_source_dirs": [],
+                    "placeholder_package_source_dirs": [],
+                    "existing_package_files": [],
+                    "screenshot_files": [],
+                    "video_files": [str(video_path)],
+                },
+            )
+
+            self.assertEqual(len(fake.sent_videos), 1)
+            sent_chat, sent_path, _caption = fake.sent_videos[0]
+            self.assertEqual(sent_chat, 456)
+            self.assertEqual(sent_path.resolve(), video_path.resolve())
+            sent_types = {str(item.get("type", "")).strip().lower() for item in list(plan.get("sent", []))}
+            self.assertIn("video", sent_types)
 
     def test_t2p_fast_path_trigger_is_disabled_for_project_create_turn(self) -> None:
         session_state = support_bot.default_support_session_state("single-mainline")
