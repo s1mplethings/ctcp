@@ -181,9 +181,22 @@ def _context_consumption(goal: str, context_files: list[dict[str, Any]], *, deci
             influence_summary.append(f"{path} contributed user-context signals to type/shape resolution")
     if "context:" in str(decision.get("shape_decision_source", "")):
         influence_summary.append(f"context influenced delivery_shape via {decision.get('shape_decision_source', '')}")
+    normalized_used = _normalize_rel_list(used_paths)
+    if influence_summary and not normalized_used:
+        fallback_paths: list[str] = []
+        for item in context_files:
+            path = str(item.get("path", "")).strip().replace("\\", "/")
+            if not path:
+                continue
+            fallback_paths.append(path)
+            if len(fallback_paths) >= 2:
+                break
+        normalized_used = _normalize_rel_list(fallback_paths)
+        if normalized_used:
+            influence_summary.append("context provenance fallback recorded from context_pack file paths")
     return {
         "consumed_context_pack": bool(influence_summary),
-        "consumed_context_files": _normalize_rel_list(used_paths),
+        "consumed_context_files": normalized_used,
         "context_influence_summary": influence_summary,
         "reference_style_applied": ["repo_script_layout", "workflow_manifest_stage_chain", "bridge_readable_manifest"] if influence_summary else [],
     }

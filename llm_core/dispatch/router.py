@@ -36,9 +36,9 @@ def resolve_provider(
             if forced != hard_provider:
                 return (
                     hard_provider,
-                    f"ignored CTCP_FORCE_PROVIDER={forced} for hard-local role={role_name}; using {hard_provider}",
+                    f"ignored CTCP_FORCE_PROVIDER={forced} for hard-locked role={role_name}; using {hard_provider}",
                 )
-            return hard_provider, f"forced provider matches hard-local role={role_name}"
+            return hard_provider, f"forced provider matches hard-locked role={role_name}"
         if formal_api_only and not is_local_exception(role_name, action_name) and forced != "api_agent":
             return forced, f"formal_api_only requires api_agent for role={role_name} action={action_name}; got forced provider={forced}"
         return forced, f"forced by CTCP_FORCE_PROVIDER={forced}"
@@ -47,22 +47,21 @@ def resolve_provider(
     if not isinstance(role_providers, dict):
         role_providers = {}
     provider = normalize_provider(str(role_providers.get(role_name, config.get("mode", "manual_outbox"))))
-    if (role_name, action_name) == ("librarian", "context_pack"):
-        if mode_norm == "mock_agent":
-            return provider, ""
-        locked = hard_provider or "ollama_agent"
-        if provider != locked:
+    # Hard lock mainline roles to the configured provider (api_agent in CTCP),
+    # unless an explicit mock-agent mode is being used for tests.
+    if hard_provider and mode_norm != "mock_agent":
+        if provider != hard_provider:
             return (
-                locked,
-                f"blocked configured provider={provider or 'unknown'} for hard-local-model role={role_name}; using {locked}",
+                hard_provider,
+                f"blocked configured provider={provider or 'unknown'} for hard-locked role={role_name}; using {hard_provider}",
             )
-        return locked, ""
+        return hard_provider, ""
     if formal_api_only and not is_local_exception(role_name, action_name) and provider != "api_agent":
         return provider, f"formal_api_only requires api_agent for role={role_name} action={action_name}; got provider={provider}"
-    if provider == "local_exec" and (role_name, action_name) != ("librarian", "context_pack"):
-        return "api_agent", "local_exec restricted to librarian/context_pack; fallback to api_agent"
-    if provider == "ollama_agent" and role_name != "librarian":
-        return "api_agent", "ollama_agent restricted to librarian/context_pack; fallback to api_agent"
+    if provider == "local_exec":
+        return "api_agent", "local_exec not allowed in api-only mainline; fallback to api_agent"
+    if provider == "ollama_agent":
+        return "api_agent", "ollama_agent not allowed in api-only mainline; fallback to api_agent"
     return provider, ""
 
 

@@ -56,7 +56,7 @@ class PlaneLiteBenchmarkRegressionTests(unittest.TestCase):
                 artifacts / "find_result.json",
                 {
                     "schema_version": "ctcp-find-result-v1",
-                    "selected_workflow_id": "wf_orchestrator_only",
+                    "selected_workflow_id": "wf_project_generation_manifest",
                     "decision": {"project_generation_goal": False},
                 },
             )
@@ -64,8 +64,9 @@ class PlaneLiteBenchmarkRegressionTests(unittest.TestCase):
                 run_dir,
                 {"goal": "Build a lightweight local-first task collaboration platform for a small team."},
             )
-            self.assertEqual(gate.get("owner"), "Contract Guardian")
-            self.assertIn("project-generation route mismatch", str(gate.get("reason", "")))
+            self.assertEqual(gate.get("owner"), "Chair/Planner")
+            self.assertEqual(gate.get("path"), "artifacts/file_request.json")
+            self.assertIn("waiting for file_request.json", str(gate.get("reason", "")))
 
     def test_project_generation_plan_requires_delivery_evidence(self) -> None:
         thin_plan = "Status: DRAFT\nGoal: Build a lightweight local-first task collaboration platform.\n"
@@ -122,7 +123,7 @@ class PlaneLiteBenchmarkRegressionTests(unittest.TestCase):
                 self.assertTrue(any(str(path).endswith(rel) for path in list(doc.get("doc_files", []))), rel)
             self.assertNotEqual(doc.get("project_type"), "generic_copilot")
 
-    def test_patchmaker_exec_failure_falls_back_to_local_diff(self) -> None:
+    def test_patchmaker_exec_failure_does_not_dispatch_in_mainline(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             run_dir = Path(td)
             artifacts = run_dir / "artifacts"
@@ -154,20 +155,10 @@ class PlaneLiteBenchmarkRegressionTests(unittest.TestCase):
             finally:
                 ctcp_dispatch.core_router.dispatch_execute = original
 
-            self.assertEqual(result.get("status"), "executed")
-            self.assertEqual(result.get("chosen_provider"), "mock_agent")
-            self.assertEqual(result.get("provider_mode"), "local_fallback")
-            self.assertTrue((artifacts / "diff.patch").exists())
-            acceptance_root = artifacts / "acceptance"
-            self.assertTrue(acceptance_root.exists())
-            triplets = [path for path in acceptance_root.iterdir() if path.is_dir()]
-            self.assertTrue(triplets)
-            self.assertTrue((triplets[0] / "request.json").exists())
-            self.assertTrue((triplets[0] / "result.json").exists())
-            self.assertTrue((triplets[0] / "acceptance.json").exists())
-            self.assertTrue((acceptance_root / "ledger.jsonl").exists())
+            self.assertEqual(result.get("status"), "no_request")
+            self.assertFalse((artifacts / "diff.patch").exists())
 
-    def test_formal_api_only_patchmaker_exec_failure_does_not_fallback_to_local_diff(self) -> None:
+    def test_formal_api_only_patchmaker_exec_failure_still_has_no_request(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             run_dir = Path(td)
             artifacts = run_dir / "artifacts"
@@ -203,10 +194,9 @@ class PlaneLiteBenchmarkRegressionTests(unittest.TestCase):
                 else:
                     os.environ["CTCP_FORMAL_API_ONLY"] = old_formal
 
-            self.assertEqual(result.get("status"), "exec_failed")
+            self.assertEqual(result.get("status"), "no_request")
             self.assertFalse((artifacts / "diff.patch").exists())
-            summary = json.loads((artifacts / "provider_ledger_summary.json").read_text(encoding="utf-8"))
-            self.assertFalse(bool(summary.get("all_critical_steps_api", False)))
+            self.assertFalse((artifacts / "provider_ledger_summary.json").exists())
 
     def test_review_provider_error_writes_failed_acceptance_not_ok(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -424,6 +414,9 @@ class PlaneLiteBenchmarkRegressionTests(unittest.TestCase):
                 {
                     "schema_version": "ctcp-project-output-contract-v1",
                     "build_profile": "high_quality_extended",
+                    "project_type": "team_task_pm",
+                    "project_domain": "team_task_management",
+                    "project_archetype": "team_task_pm_web",
                 },
             )
             _write_json(
@@ -514,3 +507,4 @@ class PlaneLiteBenchmarkRegressionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
