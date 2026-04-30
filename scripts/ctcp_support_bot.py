@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import sys
 import time
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -20,7 +21,15 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = Path(__file__).resolve().parent
 
 if str(ROOT) not in sys.path: sys.path.insert(0, str(ROOT))
-from frontend.delivery_reply_actions import align_reply_with_delivery_actions, delivery_plan_failed, evaluate_delivery_completion, inject_ready_delivery_actions, prioritize_screenshot_files
+from frontend.delivery_reply_actions import (
+    align_reply_with_delivery_actions,
+    delivery_plan_failed,
+    evaluate_delivery_completion,
+    inject_ready_delivery_actions,
+    prioritize_screenshot_files,
+    prioritize_test_screenshot_files,
+    prioritize_video_files,
+)
 from frontend.progress_reply import humanize_progress_runtime_text, summarize_progress_evidence_refs
 from frontend.telegram_http_client import telegram_post_form, telegram_post_multipart
 from scripts.support_delivery_bundle_helpers import choose_public_package, package_bundle_role, parse_scaffold_run_dir, zip_directory
@@ -54,6 +63,7 @@ KNOWN_PROVIDERS = {"manual_outbox", "ollama_agent", "api_agent", "codex_agent", 
 PRIMARY_SUPPORT_PROVIDER = "api_agent"
 LOCAL_SUPPORT_REPLY_PROVIDERS = ("ollama_agent",)
 SUPPORT_REPLY_PROVIDERS = (PRIMARY_SUPPORT_PROVIDER,) + LOCAL_SUPPORT_REPLY_PROVIDERS
+DEFAULT_SUPPORT_OPENAI_MODEL = "gpt-4.1"
 FORBIDDEN_REPLY_PATTERNS = (
     "trace.md",
     "trace:",
@@ -107,6 +117,19 @@ _PROACTIVE_INTERNAL_GATE_LEAK_TOKENS = (
     "review_cost",
     "verdict=",
     "gate owner",
+)
+_TEST_SCREENSHOT_NAME_HINTS = ("test", "qa", "smoke", "acceptance", "validation", "replay")
+_BACKEND_PLACEHOLDER_REPLY_MARKERS_ZH = (
+    "没有可直接发送的正式回复",
+    "正式回复链暂时不可用",
+    "后端回复链暂时不可用",
+    "低置信度兜底说明",
+)
+_BACKEND_PLACEHOLDER_REPLY_MARKERS_EN = (
+    "no customer-ready reply",
+    "formal reply path",
+    "backend reply path is unavailable",
+    "low-confidence fallback",
 )
 
 SMALLTALK_PATTERNS_ZH = (
@@ -394,6 +417,13 @@ PROJECT_CONTEXT_LEAK_TOKENS_EN = (
 SUPPORT_AUTO_ADVANCE_INTERVAL_SEC = 20
 SUPPORT_PROGRESS_PUSH_IDLE_INTERVAL_SEC = 6
 SUPPORT_NOTIFICATION_COOLDOWN_SEC = 45
+SUPPORT_OUTBOUND_REQUEUE_MAX_RETRIES = {
+    "error": 3,
+    "result": 2,
+    "progress": 2,
+    "decision": 3,
+}
+SUPPORT_OUTBOUND_DROP_COOLDOWN_SEC = 600
 # 0 means "disable periodic no-change proactive progress push".
 SUPPORT_EXECUTION_KEEPALIVE_INTERVAL_SEC = 0
 PREVIOUS_OUTLINE_REQUEST_PATTERNS_ZH = (
@@ -412,6 +442,8 @@ PREVIOUS_OUTLINE_REQUEST_PATTERNS_EN = (
 PREVIOUS_PROJECT_STATUS_PATTERNS_ZH = (
     re.compile(r"(之前|原来).*(项目|方案|大纲).*(进度|状态|做到什么程度|做到哪|做到哪一步|做成什么样|做得怎么样|现在怎么样|现在什么情况)"),
     re.compile(r"(之前那个项目|之前的项目|原来的项目).*(做成什么样|做得怎么样|现在怎么样|进度|状态|做到哪|做到什么程度)"),
+    re.compile(r"(还有|有没有|还在|还留着|能不能找到|找得到).*(之前|原来|上次).*(生成|做的)?.*(项目|方案|大纲)"),
+    re.compile(r"(之前|原来|上次).*(生成|做的)?.*(项目|方案|大纲).*(还有|有没有|还在|还留着|能不能找到|找得到|在哪)"),
 )
 PREVIOUS_PROJECT_STATUS_PATTERNS_EN = (
     re.compile(
@@ -419,8 +451,31 @@ PREVIOUS_PROJECT_STATUS_PATTERNS_EN = (
         re.IGNORECASE,
     ),
 )
+CODE_REQUEST_HINTS_ZH = ("代码", "源码", "源代码", "完整代码", "示例代码", "代码片段", "贴代码", "写代码", "实现代码", "给我代码")
+CODE_REQUEST_HINTS_EN = (
+    "code",
+    "source code",
+    "show code",
+    "write code",
+    "code snippet",
+    "implementation code",
+    "full code",
+)
 SCREENSHOT_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
+VIDEO_SUFFIXES = {".mp4", ".mov", ".webm", ".mkv", ".avi"}
 SUPPORT_PACKAGE_MIN_QUALITY_SCORE = 70
+_PUBLIC_SCREENSHOT_BLOCKED_PATH_MARKERS = (
+    "/artifacts/delivery_replay/",
+    "/delivery_replay/",
+    "/replay_artifacts/",
+)
+_PUBLIC_SCREENSHOT_BLOCKED_NAME_MARKERS = (
+    "replayed_screenshot",
+    "evidence-card",
+    "ctcp_replay_pass",
+    "ctcp-replay-pass",
+    "run_project_gui",
+)
 _WHITEBOARD_DISPATCH_RESULT_RE = re.compile(
     r"^(?P<role>[^/\s]+)/(?P<action>[^\s]+)\s+via\s+(?P<provider>[^\s]+)\s+=>\s+(?P<status>[^\s]+)\s+\((?P<target>[^)]+)\)(?:;\s*(?P<reason>.*))?$"
 )
@@ -708,21 +763,58 @@ def ensure_layout(run_dir: Path) -> None:
     (run_dir / "logs").mkdir(parents=True, exist_ok=True)
     (run_dir / "outbox").mkdir(parents=True, exist_ok=True)
 
+def _default_support_lead_provider() -> str:
+    candidate = str(os.environ.get("CTCP_SUPPORT_LEAD_PROVIDER", "")).strip().lower()
+    if candidate in SUPPORT_REPLY_PROVIDERS:
+        return candidate
+    return PRIMARY_SUPPORT_PROVIDER
+
+def _default_support_local_fallback_provider() -> str:
+    candidate = str(os.environ.get("CTCP_SUPPORT_LOCAL_FALLBACK_PROVIDER", "")).strip().lower()
+    if candidate == "local_exec":
+        candidate = LOCAL_SUPPORT_REPLY_PROVIDERS[0]
+    if candidate in LOCAL_SUPPORT_REPLY_PROVIDERS:
+        return candidate
+    return LOCAL_SUPPORT_REPLY_PROVIDERS[0]
+
+def _default_support_ollama_model() -> str:
+    return str(os.environ.get("CTCP_SUPPORT_OLLAMA_MODEL", "")).strip() or "qwen2.5:7b-instruct"
+
+def _support_model_looks_mini(model_name: str) -> bool:
+    return "mini" in str(model_name or "").strip().lower()
+
+def _normalize_support_openai_model(model_name: str) -> str:
+    raw = sanitize_inline_text(str(model_name or ""), max_chars=80)
+    if (not raw) or _support_model_looks_mini(raw):
+        return DEFAULT_SUPPORT_OPENAI_MODEL
+    return raw
+
+def _default_support_openai_model() -> str:
+    candidate = (
+        str(os.environ.get("CTCP_SUPPORT_OPENAI_MODEL", "")).strip()
+        or str(os.environ.get("CTCP_SUPPORT_LEAD_MODEL", "")).strip()
+        or DEFAULT_SUPPORT_OPENAI_MODEL
+    )
+    return _normalize_support_openai_model(candidate)
+
 def default_support_dispatch_config() -> dict[str, Any]:
+    support_lead_provider = _default_support_lead_provider()
+    local_fallback_provider = _default_support_local_fallback_provider()
     return {
         "schema_version": "ctcp-dispatch-config-v1",
         "mode": "manual_outbox",
         "public_delivery": {"mode": "telegram_live"},
         "role_providers": {
-            "support_lead": PRIMARY_SUPPORT_PROVIDER,
-            "support_local_fallback": LOCAL_SUPPORT_REPLY_PROVIDERS[0],
+            "support_lead": support_lead_provider,
+            "support_local_fallback": local_fallback_provider,
             "patchmaker": "codex_agent",
             "fixer": "codex_agent",
         },
         "budgets": {"max_outbox_prompts": 20},
         "providers": {
+            "api_agent": {"support_model": _default_support_openai_model()},
             "codex_agent": {"enabled": False, "dry_run": True, "cmd": "codex", "model": "", "timeout_sec": 900, "fallback_to_manual_outbox": True},
-            "ollama_agent": {"base_url": "http://127.0.0.1:11434/v1", "api_key": "ollama", "model": "qwen2.5:7b-instruct", "auto_start": True, "start_timeout_sec": 20, "start_cmd": "ollama serve"},
+            "ollama_agent": {"base_url": "http://127.0.0.1:11434/v1", "api_key": "ollama", "model": _default_support_ollama_model(), "auto_start": True, "start_timeout_sec": 20, "start_cmd": "ollama serve"},
         },
         "support_mode_router": {"enabled": True, "min_confidence": 0.62, "max_history": 8},
     }
@@ -1360,7 +1452,11 @@ def _derive_active_stage(
         runtime_error = {}
     run_error = bool(runtime_error.get("has_error", False)) or run_status in {"fail", "failed", "error", "aborted"} or gate_state in {"error", "failed"}
     final_ready = verify_result == "PASS" and run_status in _FINAL_READY_RUN_STATUSES and (not needs_decision)
-    delivery_ready = bool((delivery_state or {}).get("package_ready", False) or (delivery_state or {}).get("screenshot_ready", False))
+    delivery_ready = bool(
+        (delivery_state or {}).get("package_ready", False)
+        or (delivery_state or {}).get("screenshot_ready", False)
+        or (delivery_state or {}).get("video_ready", False)
+    )
     runtime_stage = _runtime_phase_to_support_stage(runtime_phase)
     if runtime_stage in {"RETRYING", "RECOVERY_NEEDED", "EXEC_FAILED", "BLOCKED_HARD"}:
         return runtime_stage, f"canonical_phase:{runtime_phase.lower()}"
@@ -2318,12 +2414,6 @@ def is_previous_project_status_followup(text: str) -> bool:
     raw = sanitize_inline_text(text, max_chars=280)
     if not raw:
         return False
-    if frontend_is_status_query is not None:
-        try:
-            if frontend_is_status_query(raw):
-                return True
-        except Exception:
-            pass
     low = raw.lower()
     return any(pattern.search(raw) for pattern in PREVIOUS_PROJECT_STATUS_PATTERNS_ZH) or any(
         pattern.search(low) for pattern in PREVIOUS_PROJECT_STATUS_PATTERNS_EN
@@ -2527,7 +2617,53 @@ def should_trigger_t2p_state_machine(
 
 
 def interactive_reply_advance_steps(*, created: bool) -> int:
-    return 2 if created else 1
+    return 4 if created else 1
+
+
+def first_turn_project_generation_payload(
+    *,
+    user_text: str,
+    create_goal: str,
+    conversation_mode: str,
+    session_state: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    mode = str(conversation_mode or "").strip().upper()
+    goal_summary = (
+        sanitize_inline_text(str(create_goal or user_text), max_chars=280)
+        or sanitize_inline_text(current_project_brief(session_state), max_chars=280)
+        or "Build a runnable project MVP with clear feature structure."
+    )
+    constraint_brief = sanitize_inline_text(
+        str(_state_zone(session_state, "project_constraints_memory").get("constraint_brief", "")),
+        max_chars=220,
+    )
+    project_intent: dict[str, Any] = {
+        "goal_summary": goal_summary,
+        "target_user": "project owner",
+        "problem_to_solve": "deliver a runnable local MVP with clear evidence and interaction flow",
+        "assumptions": [
+            "first-turn run should prioritize concrete runnable output over generic placeholder skeleton",
+        ],
+    }
+    if constraint_brief:
+        project_intent["hard_constraints"] = [constraint_brief]
+    constraints: dict[str, Any] = {
+        "support_first_turn_quality_boost": True,
+        "first_turn_quality_boost": True,
+        "build_profile": "high_quality_extended",
+        "product_depth": "extended",
+        "required_pages": 8,
+        "required_screenshots": 8,
+        "require_feature_matrix": True,
+        "require_page_map": True,
+        "require_data_model_summary": True,
+        "require_search": True,
+        "require_import_or_export": "both",
+        "require_dashboard_or_project_overview": True,
+        "support_conversation_mode": mode,
+    }
+    project_spec: dict[str, Any] = {}
+    return constraints, project_intent, project_spec
 
 def _record_generation_state(
     generation_state: dict[str, Any],
@@ -2774,7 +2910,9 @@ def detect_conversation_mode(run_dir: Path, user_text: str, session_state: dict[
             mode = str(frontend_route_conversation_mode([user_text], user_text, active_state)).strip().upper() or "SMALLTALK"
             if mode == "STATUS_QUERY" and (not has_bound_run) and is_domain_lift_binding_request(user_text):
                 return "PROJECT_DETAIL"
-            if has_bound_run and mode in {"PROJECT_INTAKE", "PROJECT_DETAIL"} and is_previous_project_status_followup(user_text):
+            if mode == "STATUS_QUERY" and (not has_bound_run) and is_project_create_intent(user_text, "PROJECT_DETAIL"):
+                return "PROJECT_DETAIL"
+            if mode in {"PROJECT_INTAKE", "PROJECT_DETAIL"} and is_previous_project_status_followup(user_text):
                 return "STATUS_QUERY"
             if mode == "PROJECT_INTAKE" and current_project_brief(session_state) and not should_refresh_project_brief(user_text, mode):
                 return "PROJECT_DETAIL"
@@ -2793,7 +2931,7 @@ def detect_conversation_mode(run_dir: Path, user_text: str, session_state: dict[
             pass
     if is_smalltalk_only_message(user_text):
         return "SMALLTALK"
-    if has_bound_run and is_previous_project_status_followup(user_text):
+    if is_previous_project_status_followup(user_text):
         return "STATUS_QUERY"
     if is_domain_lift_binding_request(user_text):
         return "PROJECT_DETAIL"
@@ -3325,10 +3463,26 @@ def maybe_recover_previous_outline_context(
     )):
         return project_context, session_state, None
 
-    created = ctcp_front_bridge.ctcp_new_run(goal=recovered_brief)
-    new_run_id = sanitize_inline_text(str(created.get("run_id", "")), max_chars=80)
+    advance_steps = 0
+    if str(conversation_mode or "").strip().upper() in {"PROJECT_INTAKE", "PROJECT_DETAIL", "PROJECT_DECISION_REPLY", "STATUS_QUERY"}:
+        advance_steps = interactive_reply_advance_steps(created=(not bound_run_id))
+    refreshed = ctcp_front_bridge.ctcp_sync_support_project_turn(
+        create_goal=recovered_brief,
+        text=request_text,
+        source=source,
+        chat_id=chat_id,
+        conversation_mode=conversation_mode,
+        advance_steps=advance_steps,
+    )
+    if not isinstance(refreshed, dict):
+        refreshed = {}
+    created = refreshed.get("created", {}) if isinstance(refreshed.get("created", {}), dict) else {}
+    new_run_id = sanitize_inline_text(str(refreshed.get("run_id", "") or created.get("run_id", "")), max_chars=80)
     session_state["bound_run_id"] = new_run_id
-    session_state["bound_run_dir"] = sanitize_inline_text(str(created.get("run_dir", "")), max_chars=260)
+    session_state["bound_run_dir"] = sanitize_inline_text(
+        str(refreshed.get("run_dir", "") or created.get("run_dir", "")),
+        max_chars=260,
+    )
     set_current_project_brief(session_state, recovered_brief)
     project_memory = _state_zone(session_state, "project_memory")
     project_memory["last_detail_turn"] = recovered_brief
@@ -3342,32 +3496,6 @@ def maybe_recover_previous_outline_context(
         new_run_id=new_run_id,
         source_run_id=str(candidate.get("bound_run_id", "")),
     )
-
-    recorded = ctcp_front_bridge.ctcp_record_support_turn(
-        new_run_id,
-        text=request_text,
-        source=source,
-        chat_id=chat_id,
-        conversation_mode=conversation_mode,
-    )
-    refreshed = ctcp_front_bridge.ctcp_get_support_context(new_run_id)
-    advanced: dict[str, Any] | None = None
-    status = refreshed.get("status", {}) if isinstance(refreshed, dict) else {}
-    if (
-        str(conversation_mode or "").strip().upper() in {"PROJECT_INTAKE", "PROJECT_DETAIL", "PROJECT_DECISION_REPLY", "STATUS_QUERY"}
-        and isinstance(status, dict)
-        and (not bool(status.get("needs_user_decision", False)))
-    ):
-        advanced = ctcp_front_bridge.ctcp_advance(
-            new_run_id,
-            max_steps=interactive_reply_advance_steps(created=(not bound_run_id)),
-        )
-        refreshed = ctcp_front_bridge.ctcp_get_support_context(new_run_id)
-    if not isinstance(refreshed, dict):
-        refreshed = {}
-    refreshed["created"] = created
-    refreshed["recorded_turn"] = recorded or {}
-    refreshed["advance"] = advanced or {}
     session_state["last_bridge_sync_ts"] = now_iso()
     session_state["latest_support_context"] = {
         "run_id": str(refreshed.get("run_id", "")),
@@ -3432,58 +3560,65 @@ def sync_project_context(
             is_low_signal_project_followup=is_low_signal_project_followup,
             is_project_execution_followup=is_project_execution_followup,
         )
-        if not bound_run_id and mode != "STATUS_QUERY" and create_goal:
-            created = ctcp_front_bridge.ctcp_new_run(goal=create_goal)
-            bound_run_id = str(created.get("run_id", "")).strip()
-            session_state["bound_run_id"] = bound_run_id
-            session_state["bound_run_dir"] = str(created.get("run_dir", "")).strip()
-            session_state["active_goal"] = sanitize_inline_text(create_goal, max_chars=280)
-            session_state["active_task_id"] = sanitize_inline_text(bound_run_id, max_chars=80)
-            session_state["active_run_id"] = sanitize_inline_text(bound_run_id, max_chars=80)
-            if should_refresh_project_brief(user_text, mode):
-                set_current_project_brief(session_state, user_text)
-            elif not current_project_brief(session_state):
-                set_current_project_brief(session_state, create_goal)
-            append_event(run_dir, "SUPPORT_RUN_BOUND", "", run_id=bound_run_id)
-
-        if not bound_run_id:
-            return project_context if isinstance(project_context, dict) else {}, session_state
+        create_goal_for_sync = ""
+        if recovered_candidate is None and (not bound_run_id) and mode != "STATUS_QUERY":
+            create_goal_for_sync = create_goal
 
         if recovered_candidate is None:
-            recorded = ctcp_front_bridge.ctcp_record_support_turn(
-                bound_run_id,
+            if (not bound_run_id) and (not create_goal_for_sync):
+                return project_context if isinstance(project_context, dict) else {}, session_state
+
+            should_advance_after_turn = mode in {"PROJECT_INTAKE", "PROJECT_DETAIL"}
+            create_payload_constraints: dict[str, Any] | None = None
+            create_payload_intent: dict[str, Any] | None = None
+            create_payload_spec: dict[str, Any] | None = None
+            if (not bound_run_id) and create_goal_for_sync:
+                (
+                    create_payload_constraints,
+                    create_payload_intent,
+                    create_payload_spec,
+                ) = first_turn_project_generation_payload(
+                    user_text=user_text,
+                    create_goal=create_goal_for_sync,
+                    conversation_mode=mode,
+                    session_state=session_state,
+                )
+            advance_steps = interactive_reply_advance_steps(
+                created=bool((not bound_run_id) and create_goal_for_sync)
+            ) if should_advance_after_turn else 0
+            synced = ctcp_front_bridge.ctcp_sync_support_project_turn(
+                run_id=bound_run_id,
+                create_goal=create_goal_for_sync,
                 text=user_text,
                 source=source,
                 chat_id=chat_id,
                 conversation_mode=mode,
+                advance_steps=advance_steps,
+                constraints=create_payload_constraints,
+                project_intent=create_payload_intent,
+                project_spec=create_payload_spec,
             )
-            project_context, recovered_stale_bound = fetch_support_context_with_recovery(
-                run_dir=run_dir,
-                session_state=session_state,
-                bound_run_id=bound_run_id,
-                trigger="interactive_post_turn",
-            )
-            if recovered_stale_bound:
-                project_context["created"] = created or {}
-                project_context["recorded_turn"] = recorded or {}
-                project_context["advance"] = advanced or {}
-                return project_context, session_state
-            if mode in {"PROJECT_INTAKE", "PROJECT_DETAIL"}:
-                status = project_context.get("status", {})
-                if isinstance(status, dict) and not bool(status.get("needs_user_decision", False)):
-                    steps = interactive_reply_advance_steps(created=(created is not None))
-                    advanced = ctcp_front_bridge.ctcp_advance(bound_run_id, max_steps=steps)
-                    project_context, recovered_stale_bound = fetch_support_context_with_recovery(
-                        run_dir=run_dir,
-                        session_state=session_state,
-                        bound_run_id=bound_run_id,
-                        trigger="interactive_post_advance",
-                    )
-                    if recovered_stale_bound:
-                        project_context["created"] = created or {}
-                        project_context["recorded_turn"] = recorded or {}
-                        project_context["advance"] = advanced or {}
-                        return project_context, session_state
+            project_context = synced if isinstance(synced, dict) else {}
+            created = project_context.get("created", {}) if isinstance(project_context.get("created", {}), dict) else {}
+            recorded = project_context.get("recorded_turn", {}) if isinstance(project_context.get("recorded_turn", {}), dict) else {}
+            advanced = project_context.get("advance", {}) if isinstance(project_context.get("advance", {}), dict) else {}
+            bound_run_id = str(project_context.get("run_id", "") or created.get("run_id", "") or bound_run_id).strip()
+
+            if created:
+                session_state["bound_run_id"] = bound_run_id
+                session_state["bound_run_dir"] = str(project_context.get("run_dir", "") or created.get("run_dir", "")).strip()
+                session_state["active_goal"] = sanitize_inline_text(create_goal_for_sync, max_chars=280)
+                session_state["active_task_id"] = sanitize_inline_text(bound_run_id, max_chars=80)
+                session_state["active_run_id"] = sanitize_inline_text(bound_run_id, max_chars=80)
+                if should_refresh_project_brief(user_text, mode):
+                    set_current_project_brief(session_state, user_text)
+                elif not current_project_brief(session_state):
+                    set_current_project_brief(session_state, create_goal_for_sync)
+                append_event(run_dir, "SUPPORT_RUN_BOUND", "", run_id=bound_run_id)
+
+            if not bound_run_id:
+                return project_context if isinstance(project_context, dict) else {}, session_state
+
             if should_attempt_delivery_unblock_advance(project_context=project_context, user_text=user_text):
                 status_for_delivery = project_context.get("status", {}) if isinstance(project_context, dict) else {}
                 gate_for_delivery = status_for_delivery.get("gate", {}) if isinstance(status_for_delivery, dict) else {}
@@ -3589,6 +3724,62 @@ def _append_unique_path(paths: list[Path], candidate: Path | None) -> None:
     resolved = candidate.resolve()
     if resolved not in paths:
         paths.append(resolved)
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            if not chunk:
+                break
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _dedupe_paths_by_content(paths: list[Path]) -> list[Path]:
+    out: list[Path] = []
+    seen: set[str] = set()
+    for raw in paths:
+        try:
+            candidate = raw.resolve()
+        except Exception:
+            candidate = Path(str(raw)).resolve()
+        marker = f"path:{candidate}"
+        try:
+            if candidate.exists() and candidate.is_file():
+                stat = candidate.stat()
+                marker = f"sha256:{stat.st_size}:{_sha256_file(candidate)}"
+        except Exception:
+            marker = f"path:{candidate}"
+        if marker in seen:
+            continue
+        seen.add(marker)
+        out.append(candidate)
+    return out
+
+
+def _is_blocked_public_screenshot(candidate: Path) -> bool:
+    try:
+        resolved = candidate.resolve()
+    except Exception:
+        resolved = Path(str(candidate)).resolve()
+    normalized = resolved.as_posix().lower()
+    if any(marker in normalized for marker in _PUBLIC_SCREENSHOT_BLOCKED_PATH_MARKERS):
+        return True
+    name = resolved.name.lower()
+    if any(marker in name for marker in _PUBLIC_SCREENSHOT_BLOCKED_NAME_MARKERS):
+        return True
+    return False
+
+
+def _filter_public_screenshots(paths: list[Path]) -> list[Path]:
+    out: list[Path] = []
+    for candidate in paths:
+        if _is_blocked_public_screenshot(candidate):
+            continue
+        out.append(candidate)
+    return out
+
 
 def _parse_scope_allow_roots(plan_path: Path) -> list[Path]:
     roots: list[Path] = []
@@ -3846,6 +4037,15 @@ def collect_public_delivery_state(
     source: str,
     support_run_dir: Path | None = None,
 ) -> dict[str, Any]:
+    project_name_hint = _delivery_project_name_hint(
+        session_state=session_state,
+        project_context=project_context,
+        package_source_dirs=[],
+    )
+    project_slug_hint = _delivery_project_slug(project_name_hint)
+    brief_slug_hint = _delivery_project_slug(current_project_brief(session_state if isinstance(session_state, dict) else {}))
+    bound_run_slug_hint = _delivery_project_slug(str((session_state or {}).get("bound_run_id", "")).strip())
+    context_run_slug_hint = _delivery_project_slug(str((project_context or {}).get("run_id", "")).strip())
     state: dict[str, Any] = {
         "channel": str(source or "").strip().lower(),
         "channel_can_send_files": can_channel_send_files(source),
@@ -3858,7 +4058,8 @@ def collect_public_delivery_state(
         "final_project_bundle_files": [],
         "process_bundle_files": [],
         "screenshot_files": [],
-        "project_name_hint": "project",
+        "video_files": [],
+        "project_name_hint": project_name_hint,
         "package_delivery_mode": "",
         "package_structure_hint": [],
         "package_ready": False,
@@ -3870,10 +4071,12 @@ def collect_public_delivery_state(
         "package_quality_subject": "",
         "package_quality_reason": "",
         "screenshot_ready": False,
+        "video_ready": False,
     }
     package_source_dirs: list[Path] = []
     existing_package_files: list[Path] = []
     screenshot_files: list[Path] = []
+    video_files: list[Path] = []
     bound_run_dir: Path | None = None
     artifacts_dir: Path | None = None
     bound_run_id = ""
@@ -3895,6 +4098,11 @@ def collect_public_delivery_state(
             if _is_public_delivery_source_dir(candidate):
                 _append_unique_path(package_source_dirs, candidate)
         artifacts_dir = bound_run_dir / "artifacts"
+    support_exports_from_artifacts = (
+        (artifacts_dir / SUPPORT_EXPORTS_REL_DIR.name).resolve()
+        if isinstance(artifacts_dir, Path)
+        else None
+    )
 
     exports_root: Path | None = None
     if isinstance(support_run_dir, Path):
@@ -3905,17 +4113,46 @@ def collect_public_delivery_state(
             exports_root = candidate.resolve()
 
     if exports_root is not None and exports_root.exists() and exports_root.is_dir():
-        for node in sorted(exports_root.iterdir()):
-            if node.is_dir():
-                _append_unique_path(package_source_dirs, node)
-        for candidate in sorted(exports_root.rglob("*.zip")):
+        active_export_dirs: list[Path] = []
+        preferred_slugs = [
+            project_slug_hint,
+            brief_slug_hint,
+            bound_run_slug_hint,
+            context_run_slug_hint,
+        ]
+        for slug in preferred_slugs:
+            if not slug or slug == "project":
+                continue
+            preferred_export_dir = (exports_root / f"{slug}_ctcp_project").resolve()
+            if preferred_export_dir.exists() and preferred_export_dir.is_dir():
+                active_export_dirs.append(preferred_export_dir)
+                break
+        if not active_export_dirs:
+            export_dirs = [node.resolve() for node in exports_root.iterdir() if node.is_dir()]
+            if export_dirs:
+                newest_dir = max(export_dirs, key=lambda path: path.stat().st_mtime)
+                active_export_dirs.append(newest_dir)
+        for node in active_export_dirs:
+            _append_unique_path(package_source_dirs, node)
+        for candidate in sorted(exports_root.glob("*.zip")):
             if candidate.name.lower() == "failure_bundle.zip":
                 continue
             _append_unique_path(existing_package_files, candidate)
-        for candidate in sorted(exports_root.rglob("*")):
+        for root in active_export_dirs:
+            for candidate in sorted(root.rglob("*")):
+                if not candidate.is_file():
+                    continue
+                if candidate.suffix.lower() not in SCREENSHOT_SUFFIXES:
+                    if candidate.suffix.lower() in VIDEO_SUFFIXES:
+                        _append_unique_path(video_files, candidate)
+                    continue
+                _append_unique_path(screenshot_files, candidate)
+        for candidate in sorted(exports_root.glob("*")):
             if not candidate.is_file():
                 continue
             if candidate.suffix.lower() not in SCREENSHOT_SUFFIXES:
+                if candidate.suffix.lower() in VIDEO_SUFFIXES:
+                    _append_unique_path(video_files, candidate)
                 continue
             _append_unique_path(screenshot_files, candidate)
 
@@ -3923,7 +4160,15 @@ def collect_public_delivery_state(
     if artifacts_dir is not None and artifacts_dir.exists():
         search_roots.append(artifacts_dir)
     for root in search_roots:
+        root_resolved = root.resolve()
         for candidate in sorted(root.rglob("*.zip")):
+            candidate_resolved = candidate.resolve()
+            if (
+                support_exports_from_artifacts is not None
+                and root_resolved == artifacts_dir.resolve()
+                and support_exports_from_artifacts in candidate_resolved.parents
+            ):
+                continue
             if candidate.name.lower() == "failure_bundle.zip":
                 continue
             _append_unique_path(existing_package_files, candidate)
@@ -3931,10 +4176,20 @@ def collect_public_delivery_state(
     if artifacts_dir is not None and artifacts_dir.exists():
         screenshot_roots.append(artifacts_dir)
     for root in screenshot_roots:
+        root_resolved = root.resolve()
         for candidate in sorted(root.rglob("*")):
             if not candidate.is_file():
                 continue
+            candidate_resolved = candidate.resolve()
+            if (
+                support_exports_from_artifacts is not None
+                and root_resolved == artifacts_dir.resolve()
+                and support_exports_from_artifacts in candidate_resolved.parents
+            ):
+                continue
             if candidate.suffix.lower() not in SCREENSHOT_SUFFIXES:
+                if candidate.suffix.lower() in VIDEO_SUFFIXES:
+                    _append_unique_path(video_files, candidate)
                 continue
             _append_unique_path(screenshot_files, candidate)
 
@@ -3947,7 +4202,13 @@ def collect_public_delivery_state(
     state["existing_package_files"] = [str(path) for path in existing_package_files]
     state["final_project_bundle_files"] = [str(path) for path in existing_package_files if package_bundle_role(path) == "final_project_bundle"]
     state["process_bundle_files"] = [str(path) for path in existing_package_files if package_bundle_role(path) == "process_bundle"]
-    state["screenshot_files"] = [str(path) for path in prioritize_screenshot_files(screenshot_files)]
+    ordered_screenshots = [Path(str(path)).resolve() for path in prioritize_screenshot_files(screenshot_files)]
+    deduped_screenshots = _dedupe_paths_by_content(ordered_screenshots)
+    deduped_screenshots = _filter_public_screenshots(deduped_screenshots)
+    state["screenshot_files"] = [str(path) for path in deduped_screenshots]
+    ordered_videos = [Path(str(path)).resolve() for path in prioritize_video_files(video_files)]
+    deduped_videos = _dedupe_paths_by_content(ordered_videos)
+    state["video_files"] = [str(path) for path in deduped_videos]
     state["project_name_hint"] = _delivery_project_name_hint(
         session_state=session_state,
         project_context=project_context,
@@ -3988,7 +4249,8 @@ def collect_public_delivery_state(
     elif not quality_ready:
         state["package_blocked_reason"] = sanitize_inline_text(quality_reason, max_chars=120)
     state["package_ready"] = bool(state["package_delivery_allowed"])
-    state["screenshot_ready"] = bool(screenshot_files)
+    state["screenshot_ready"] = bool(deduped_screenshots)
+    state["video_ready"] = bool(deduped_videos)
     return state
 
 def public_delivery_prompt_context(delivery_state: dict[str, Any] | None) -> dict[str, Any]:
@@ -3997,6 +4259,7 @@ def public_delivery_prompt_context(delivery_state: dict[str, Any] | None) -> dic
     package_source_dirs = [Path(str(x)).name for x in delivery_state.get("package_source_dirs", []) if str(x).strip()]
     existing_packages = [Path(str(x)).name for x in (delivery_state.get("final_project_bundle_files") or delivery_state.get("existing_package_files", [])) if str(x).strip()]
     screenshot_count = len([x for x in delivery_state.get("screenshot_files", []) if str(x).strip()])
+    video_count = len([x for x in delivery_state.get("video_files", []) if str(x).strip()])
     return {
         "channel": str(delivery_state.get("channel", "")).strip(),
         "channel_can_send_files": bool(delivery_state.get("channel_can_send_files", False)),
@@ -4015,6 +4278,8 @@ def public_delivery_prompt_context(delivery_state: dict[str, Any] | None) -> dic
         ],
         "screenshot_ready": bool(delivery_state.get("screenshot_ready", False)),
         "screenshot_count": int(screenshot_count),
+        "video_ready": bool(delivery_state.get("video_ready", False)),
+        "video_count": int(video_count),
     }
 
 def default_prompt_template() -> str:
@@ -4029,16 +4294,18 @@ def default_prompt_template() -> str:
         "When session context contains an active project brief, keep it as memory only.\n"
         "On greeting, capability, or smalltalk turns, do not mention existing project memory unless the latest user message explicitly asks to continue it.\n"
         "When the current channel can send files directly, do not ask for email or off-platform transfer.\n"
-        "Only promise package/screenshot delivery when the prompt context says public delivery is ready for this turn.\n"
+        "Only promise package/screenshot/video delivery when the prompt context says public delivery is ready for this turn.\n"
         "If public delivery says package_delivery_mode is materialize_ctcp_scaffold, describe the package honestly as a CTCP-style scaffold using the provided structure hint.\n"
         "Do not describe a scaffold package as feature-complete business logic unless the prompt context explicitly says the implementation already exists.\n"
         "Short follow-up turns like 'continue', 'go ahead', or '没有，你先做着' refine execution and must not erase or pause the project unless the user explicitly says stop.\n"
         "If the prompt includes provider failover context, say plainly that the API reply path is unavailable and that you are temporarily continuing from the local path.\n"
         "reply_text must be customer-facing only and never include logs, file paths, or stack traces.\n"
+        "Unless the user explicitly asks for code, do not dump source code snippets in reply_text.\n"
         "reply_text must be natural conversational prose (no rigid section labels).\n"
         "The safeguards define leakage, actionability, and question-count boundaries only; they do not require a fixed reply template.\n"
         "Ask at most one high-leverage follow-up question when route-changing details are missing.\n"
-        "If package/screenshot delivery should happen now, use actions only: send_project_package(format=zip) and send_project_screenshot(count=1-3).\n"
+        "If package/screenshot/video delivery should happen now, use actions only: send_project_package(format=zip), send_project_screenshot(count=1-5), send_project_video(count=1-2).\n"
+        "When both test-evidence screenshots and pure GUI screenshots exist, default screenshot delivery should prioritize test evidence first.\n"
         "send_project_package is allowed only when public_delivery.package_delivery_allowed is true.\n"
         "If public_delivery.package_quality_ready is false, do not ask for package confirmation; explain that quality evidence is not complete yet.\n"
     )
@@ -4052,7 +4319,11 @@ def should_expose_existing_project_context(conversation_mode: str, user_text: st
 def should_expose_delivery_context(conversation_mode: str, user_text: str) -> bool:
     mode = str(conversation_mode or "").strip().upper()
     if mode in {"GREETING", "SMALLTALK", "CAPABILITY_QUERY"}:
-        return user_requests_project_package(user_text) or user_requests_project_screenshot(user_text)
+        return (
+            user_requests_project_package(user_text)
+            or user_requests_project_screenshot(user_text)
+            or user_requests_project_video(user_text)
+        )
     return True
 
 def load_prompt_template() -> str:
@@ -4123,11 +4394,13 @@ def build_support_prompt(
             "latest_turn_only": bool(frontdesk_strategy.get("latest_turn_only", (not expose_project_context))),
             "prefer_frontend_render": bool(frontdesk_strategy.get("prefer_frontend_render", False)),
             "prefer_progress_binding": bool(frontdesk_strategy.get("prefer_progress_binding", False)),
+            "allow_code_output": bool(frontdesk_strategy.get("allow_code_output", False)),
         },
         "reply_guard": {
             "preset_customer_reply_allowed": False,
             "allow_existing_project_reference": expose_project_context,
             "latest_turn_only": bool(frontdesk_strategy.get("latest_turn_only", (not expose_project_context))),
+            "allow_code_output": bool(frontdesk_strategy.get("allow_code_output", False)),
         },
     }
     if isinstance(session_state, dict):
@@ -4359,14 +4632,69 @@ def execute_provider(
     request: dict[str, Any],
     config: dict[str, Any],
 ) -> dict[str, Any]:
-    return provider_runtime.execute_provider(
-        provider,
-        repo_root=ROOT,
-        run_dir=run_dir,
-        request=request,
-        config=config,
-        guardrails_budgets={},
-    )
+    @contextmanager
+    def _with_env_overrides(values: dict[str, str]):
+        sentinel = object()
+        previous: dict[str, Any] = {}
+        for key, value in values.items():
+            previous[key] = os.environ.get(key, sentinel)
+            os.environ[key] = str(value)
+        try:
+            yield
+        finally:
+            for key, old in previous.items():
+                if old is sentinel:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = str(old)
+
+    provider_name = str(provider or "").strip().lower()
+    role = str(request.get("role", "")).strip().lower()
+    action = str(request.get("action", "")).strip().lower()
+    support_api_request = provider_name == PRIMARY_SUPPORT_PROVIDER and role == "support_lead" and action == "reply"
+
+    support_model = ""
+    overrides: dict[str, str] = {}
+    if support_api_request:
+        providers = config.get("providers", {}) if isinstance(config, dict) else {}
+        api_cfg: dict[str, Any] = {}
+        if isinstance(providers, dict):
+            raw_api_cfg = providers.get("api_agent", {})
+            if isinstance(raw_api_cfg, dict):
+                api_cfg = raw_api_cfg
+        support_model = _normalize_support_openai_model(
+            str(api_cfg.get("support_model", "")).strip()
+            or str(api_cfg.get("model", "")).strip()
+            or _default_support_openai_model()
+        )
+        overrides = {
+            "SDDAI_OPENAI_AGENT_MODEL": support_model,
+            "SDDAI_OPENAI_MODEL": support_model,
+        }
+
+    if overrides:
+        with _with_env_overrides(overrides):
+            result = provider_runtime.execute_provider(
+                provider,
+                repo_root=ROOT,
+                run_dir=run_dir,
+                request=request,
+                config=config,
+                guardrails_budgets={},
+            )
+    else:
+        result = provider_runtime.execute_provider(
+            provider,
+            repo_root=ROOT,
+            run_dir=run_dir,
+            request=request,
+            config=config,
+            guardrails_budgets={},
+        )
+
+    if support_model and isinstance(result, dict):
+        result.setdefault("model_name", support_model)
+    return result
 
 def _tail_text(path: Path, max_lines: int = 24, max_chars: int = 3000) -> str:
     if not path.exists():
@@ -4708,6 +5036,41 @@ def enforce_task_binding_truth_guard(
         {"applied": True, "reasons": ["execution_claim_without_binding"]},
     )
 
+def enforce_unsolicited_code_guard(
+    *,
+    reply_text: str,
+    next_question: str,
+    conversation_mode: str,
+    user_text: str,
+    project_context: dict[str, Any] | None,
+    task_summary_hint: str = "",
+    lang: str = "zh",
+) -> tuple[str, str, dict[str, Any]]:
+    if not reply_looks_like_unsolicited_code(reply_text, user_text=user_text):
+        return reply_text, next_question, {"applied": False, "reasons": []}
+    mode = str(conversation_mode or "").strip().upper()
+    use_en = str(lang or "").strip().lower().startswith("en")
+    if _task_like_mode(mode) and isinstance(project_context, dict):
+        status_hash, binding = build_progress_digest(project_context=project_context, task_summary_hint=task_summary_hint)
+        if not binding:
+            binding = build_progress_binding(project_context=project_context, task_summary_hint=task_summary_hint)
+        guarded_reply, guarded_question = _compose_grounded_progress_reply(
+            binding=binding,
+            lang=("en" if use_en else "zh"),
+            no_change=False,
+        )
+        if guarded_reply:
+            return (
+                guarded_reply,
+                guarded_question or "",
+                {"applied": True, "status_hash": status_hash, "reasons": ["unsolicited_code_dump"]},
+            )
+    if use_en:
+        fallback = "You did not ask for source code in this turn, so I will not dump code right now. Next step: I will keep the update focused on status and delivery actions."
+    else:
+        fallback = "你这轮没有要求源码，我先不贴代码。下一步我会只给状态进展和可执行动作。"
+    return fallback, "", {"applied": True, "reasons": ["unsolicited_code_dump"]}
+
 
 def is_smalltalk_only_message(text: str) -> bool:
     raw = str(text or "").strip()
@@ -4719,6 +5082,77 @@ def is_smalltalk_only_message(text: str) -> bool:
         return True
     if any(p.match(raw) for p in SMALLTALK_PATTERNS_EN):
         return True
+    return False
+
+def user_explicitly_requests_code(text: str) -> bool:
+    raw = sanitize_inline_text(str(text), max_chars=320)
+    if not raw:
+        return False
+    low = raw.lower()
+    return any(token in raw for token in CODE_REQUEST_HINTS_ZH) or any(token in low for token in CODE_REQUEST_HINTS_EN)
+
+def _code_like_line_count(text: str) -> int:
+    count = 0
+    for raw_line in str(text or "").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        low = line.lower()
+        if line.startswith(
+            (
+                "def ",
+                "class ",
+                "import ",
+                "from ",
+                "const ",
+                "let ",
+                "var ",
+                "function ",
+                "public ",
+                "private ",
+                "protected ",
+                "#include ",
+            )
+        ):
+            count += 1
+            continue
+        if re.match(r"^[A-Za-z_][A-Za-z0-9_]*\s*=\s*[^=].*$", line):
+            count += 1
+            continue
+        if line.endswith(";") and len(line) >= 6:
+            count += 1
+            continue
+        if any(token in line for token in ("=>", "::", "{", "}", "</", "/>", "__name__", "printf(", "console.log(")):
+            count += 1
+            continue
+        if low.startswith(("if (", "for (", "while (", "switch (", "return ")):
+            count += 1
+            continue
+    return count
+
+def reply_looks_like_unsolicited_code(reply_text: str, *, user_text: str) -> bool:
+    text = str(reply_text or "")
+    if not text.strip():
+        return False
+    if user_explicitly_requests_code(user_text):
+        return False
+    if "```" in text:
+        return True
+    non_empty_lines = [line for line in text.splitlines() if line.strip()]
+    code_like = _code_like_line_count(text)
+    if code_like >= 4 and len(non_empty_lines) >= 5:
+        return True
+    if code_like >= 3 and any(token in text for token in ("def ", "class ", "import ", "{", "=>", "function ")):
+        return True
+    if len(non_empty_lines) <= 2:
+        low = text.lower()
+        token_hits = sum(
+            1
+            for token in ("def ", "class ", "import ", "return ", "for ", "if ", "__name__", "function ", "=>", "{", "}", ";")
+            if token in low
+        )
+        if token_hits >= 4 and any(marker in text for marker in ("(", ")", "=", ":")):
+            return True
     return False
 
 def user_requests_project_package(text: str) -> bool:
@@ -4756,6 +5190,43 @@ def user_requests_project_screenshot(text: str) -> bool:
     low = raw.lower()
     return any(token in raw for token in ("截图", "界面图", "效果图", "项目图")) or ("screenshot" in low)
 
+
+def user_requests_test_screenshot(text: str) -> bool:
+    raw = str(text or "")
+    low = raw.lower()
+    return any(token in raw for token in ("测试图", "测试截图", "测试结果图", "测试证据图", "qa图")) or any(
+        token in low
+        for token in (
+            "test screenshot",
+            "testing screenshot",
+            "qa screenshot",
+            "smoke screenshot",
+            "acceptance screenshot",
+            "validation screenshot",
+            "replay screenshot",
+        )
+    )
+
+
+def _has_test_screenshot_candidates(paths: Any) -> bool:
+    if not isinstance(paths, list):
+        return False
+    for item in paths:
+        name = Path(str(item or "")).name.lower()
+        if not name:
+            continue
+        if any(marker in name for marker in _TEST_SCREENSHOT_NAME_HINTS):
+            return True
+    return False
+
+
+def user_requests_project_video(text: str) -> bool:
+    raw = str(text or "")
+    low = raw.lower()
+    return any(token in raw for token in ("视频", "测试视频", "演示视频", "运行视频")) or any(
+        token in low for token in ("video", "demo video", "test video", "recording")
+    )
+
 def normalize_actions(raw: Any) -> list[dict[str, Any]]:
     if not isinstance(raw, list):
         return []
@@ -4786,7 +5257,18 @@ def normalize_actions(raw: Any) -> list[dict[str, Any]]:
                 count = int(item.get("count", 1))
             except Exception:
                 count = 1
-            out.append({"type": "send_project_screenshot", "count": max(1, min(count, 3))})
+            normalized_action: dict[str, Any] = {"type": "send_project_screenshot", "count": max(1, min(count, 5))}
+            profile = sanitize_inline_text(str(item.get("profile", "")), max_chars=24).lower()
+            if profile in {"test_evidence"}:
+                normalized_action["profile"] = profile
+            out.append(normalized_action)
+            continue
+        if action_type == "send_project_video":
+            try:
+                count = int(item.get("count", 1))
+            except Exception:
+                count = 1
+            out.append({"type": "send_project_video", "count": max(1, min(count, 2))})
     return out
 
 def synthesize_delivery_actions(
@@ -4804,6 +5286,7 @@ def synthesize_delivery_actions(
         return out
     package_delivery_allowed = bool(delivery_state.get("package_delivery_allowed", False))
     screenshot_ready = bool(delivery_state.get("screenshot_ready", False))
+    video_ready = bool(delivery_state.get("video_ready", False))
     if not package_delivery_allowed:
         out = [
             dict(item)
@@ -4816,24 +5299,64 @@ def synthesize_delivery_actions(
             for item in out
             if str(item.get("type", "")).strip().lower() != "send_project_screenshot"
         ]
+    if not video_ready:
+        out = [
+            dict(item)
+            for item in out
+            if str(item.get("type", "")).strip().lower() != "send_project_video"
+        ]
     allow_delivery_actions = should_expose_delivery_context(conversation_mode, user_text)
     if not allow_delivery_actions:
         out = [
             dict(item)
             for item in out
-            if str(item.get("type", "")).strip().lower() not in {"send_project_package", "send_project_screenshot"}
+            if str(item.get("type", "")).strip().lower() not in {"send_project_package", "send_project_screenshot", "send_project_video"}
         ]
     types = {str(item.get("type", "")).strip().lower() for item in out}
     zip_intent = user_requests_project_package(user_text) or bool(zip_confirmation_intent)
+    test_screenshot_intent = user_requests_test_screenshot(user_text)
     if zip_intent and bool(delivery_state.get("package_ready", False)) and package_delivery_allowed and "send_project_package" not in types:
         out.append({"type": "send_project_package", "format": "zip"})
         types.add("send_project_package")
     screenshot_count = len([x for x in delivery_state.get("screenshot_files", []) if str(x).strip()])
-    if zip_intent and (not package_delivery_allowed) and screenshot_count > 0 and "send_project_screenshot" not in types:
-        out.append({"type": "send_project_screenshot", "count": 1})
+    has_test_screenshots = _has_test_screenshot_candidates(delivery_state.get("screenshot_files", []))
+
+    def _upsert_screenshot_action(*, count: int, profile: str = "") -> None:
+        desired = max(1, min(int(count), 5))
+        for row in out:
+            if str(row.get("type", "")).strip().lower() != "send_project_screenshot":
+                continue
+            try:
+                current = int(row.get("count", 1))
+            except Exception:
+                current = 1
+            row["count"] = max(1, min(max(current, desired), 5))
+            if profile:
+                row["profile"] = profile
+            return
+        payload: dict[str, Any] = {"type": "send_project_screenshot", "count": desired}
+        if profile:
+            payload["profile"] = profile
+        out.append(payload)
         types.add("send_project_screenshot")
-    if user_requests_project_screenshot(user_text) and screenshot_count > 0 and "send_project_screenshot" not in types:
-        out.append({"type": "send_project_screenshot", "count": min(3, screenshot_count)})
+
+    if zip_intent and (not package_delivery_allowed) and screenshot_count > 0:
+        _upsert_screenshot_action(count=1, profile="test_evidence" if has_test_screenshots else "")
+    if user_requests_project_screenshot(user_text) and screenshot_count > 0:
+        requested_count = min(5, screenshot_count) if test_screenshot_intent else min(3, screenshot_count)
+        _upsert_screenshot_action(
+            count=requested_count,
+            profile="test_evidence" if (test_screenshot_intent or has_test_screenshots) else "",
+        )
+    if has_test_screenshots:
+        for row in out:
+            if str(row.get("type", "")).strip().lower() != "send_project_screenshot":
+                continue
+            if not str(row.get("profile", "")).strip():
+                row["profile"] = "test_evidence"
+    video_count = len([x for x in delivery_state.get("video_files", []) if str(x).strip()])
+    if user_requests_project_video(user_text) and video_count > 0 and "send_project_video" not in types:
+        out.append({"type": "send_project_video", "count": min(2, video_count)})
     return out
 
 def normalize_reply_text(raw_reply: str, next_question: str) -> str:
@@ -5287,6 +5810,26 @@ def build_final_reply_doc(
                     reasons.append(item)
             runtime_guard["reasons"] = reasons
 
+    reply_text, next_question, code_guard = enforce_unsolicited_code_guard(
+        reply_text=reply_text,
+        next_question=next_question,
+        conversation_mode=conversation_mode,
+        user_text=latest_user_text,
+        project_context=project_context,
+        task_summary_hint=task_summary_hint,
+        lang=lang,
+    )
+    if bool(code_guard.get("applied", False)):
+        runtime_guard = dict(runtime_guard) if isinstance(runtime_guard, dict) else {"applied": False, "status_hash": "", "reasons": []}
+        runtime_guard["applied"] = True
+        if str(code_guard.get("status_hash", "")).strip():
+            runtime_guard["status_hash"] = str(code_guard.get("status_hash", "")).strip()
+        reasons = list(runtime_guard.get("reasons", []))
+        for item in list(code_guard.get("reasons", [])):
+            if str(item).strip() and item not in reasons:
+                reasons.append(item)
+        runtime_guard["reasons"] = reasons
+
     debug_notes = sanitize_inline_text(str(raw_doc.get("debug_notes", "")), max_chars=400)
     provider_status = str(provider_result.get("status", "")).strip()
     provider_reason = sanitize_inline_text(str(provider_result.get("reason", "")), max_chars=220)
@@ -5414,27 +5957,6 @@ def process_message(
         source=source,
         support_run_dir=run_dir,
     )
-    t2p_report: dict[str, Any] = {}
-    if should_trigger_t2p_state_machine(
-        session_state=session_state,
-        user_text=user_text,
-        source=source,
-        conversation_mode=conversation_mode,
-    ):
-        t2p_report = run_t2p_state_machine(
-            run_dir=run_dir,
-            session_state=session_state,
-            user_text=user_text,
-            source=source,
-            conversation_mode=conversation_mode,
-            delivery_state=delivery_state,
-        )
-        delivery_state = collect_public_delivery_state(
-            session_state=session_state,
-            project_context=project_context,
-            source=source,
-            support_run_dir=run_dir,
-        )
     frontdesk_state = sync_frontdesk_state(
         session_state,
         user_text=user_text,
@@ -5685,26 +6207,6 @@ def process_message(
                 str(result.get("reason", "")).strip()
                 or f"formal_api_only requires {PRIMARY_SUPPORT_PROVIDER} executed without fallback for support_reply"
             )
-    if (
-        isinstance(t2p_report, dict)
-        and str(t2p_report.get("pass_fail", "")).strip().upper() == "PASS"
-        and str(source or "").strip().lower() == "telegram"
-        and bool(delivery_state.get("package_delivery_allowed", False))
-    ):
-        action_types = {
-            str(item.get("type", "")).strip().lower()
-            for item in (final_doc.get("actions", []) if isinstance(final_doc.get("actions", []), list) else [])
-            if isinstance(item, dict)
-        }
-        if "send_project_package" not in action_types:
-            actions = list(final_doc.get("actions", [])) if isinstance(final_doc.get("actions", []), list) else []
-            actions.append({"type": "send_project_package", "format": "zip"})
-            final_doc["actions"] = actions
-            append_event(
-                run_dir,
-                "SUPPORT_T2P_PACKAGE_ACTION_INJECTED",
-                SUPPORT_T2P_STATE_MACHINE_REPORT_REL_PATH.as_posix(),
-            )
     write_json(run_dir / SUPPORT_REPLY_REL_PATH, final_doc)
     frontdesk_state = sync_frontdesk_state(
         session_state,
@@ -5757,6 +6259,7 @@ def process_message(
         "package_delivery_mode": str(delivery_state.get("package_delivery_mode", "")).strip(),
         "package_structure_hint": list(delivery_state.get("package_structure_hint", [])),
         "screenshot_ready": bool(delivery_state.get("screenshot_ready", False)),
+        "video_ready": bool(delivery_state.get("video_ready", False)),
         "t2p_state": sanitize_inline_text(str(latest_generation_state(session_state).get("current_state", "")), max_chars=32),
         "t2p_pass_fail": sanitize_inline_text(str(latest_generation_state(session_state).get("last_pass_fail", "")), max_chars=12),
         "t2p_failure_stage": sanitize_inline_text(
@@ -5921,7 +6424,12 @@ def resolve_public_delivery_plan(
     existing_packages = [Path(str(x)).resolve() for x in delivery_state.get("existing_package_files", []) if str(x).strip()]
     final_packages = [Path(str(x)).resolve() for x in delivery_state.get("final_project_bundle_files", []) if str(x).strip()]
     process_packages = [Path(str(x)).resolve() for x in delivery_state.get("process_bundle_files", []) if str(x).strip()]
-    screenshot_files = [Path(str(x)).resolve() for x in prioritize_screenshot_files(delivery_state.get("screenshot_files", []))]
+    screenshot_files = _filter_public_screenshots(_dedupe_paths_by_content(
+        [Path(str(x)).resolve() for x in prioritize_screenshot_files(delivery_state.get("screenshot_files", []))]
+    ))
+    video_files = _dedupe_paths_by_content(
+        [Path(str(x)).resolve() for x in prioritize_video_files(delivery_state.get("video_files", []))]
+    )
     export_dir = run_dir / SUPPORT_EXPORTS_REL_DIR
 
     for action in actions or []:
@@ -5976,7 +6484,15 @@ def resolve_public_delivery_plan(
                 count = int(action.get("count", 1))
             except Exception:
                 count = 1
-            selected = screenshot_files[: max(1, min(count, 3))]
+            profile = str(action.get("profile", "")).strip().lower()
+            if (not profile) and _has_test_screenshot_candidates([str(x) for x in screenshot_files]):
+                profile = "test_evidence"
+            ordered_screenshots = screenshot_files
+            if profile == "test_evidence":
+                ordered_screenshots = _dedupe_paths_by_content(
+                    [Path(str(x)).resolve() for x in prioritize_test_screenshot_files(screenshot_files)]
+                )
+            selected = ordered_screenshots[: max(1, min(count, 5))]
             if not selected:
                 plan["errors"].append("screenshot requested but no screenshot artifact is available")
                 continue
@@ -5985,7 +6501,29 @@ def resolve_public_delivery_plan(
                     {
                         "type": "photo",
                         "path": str(path),
-                        "caption": "这是当前项目可直接发送的截图。" if idx == 1 else "",
+                        "caption": (
+                            "这是当前项目可直接发送的测试证据截图。"
+                            if idx == 1 and profile == "test_evidence"
+                            else ("这是当前项目可直接发送的截图。" if idx == 1 else "")
+                        ),
+                    }
+                )
+            continue
+        if action_type == "send_project_video":
+            try:
+                count = int(action.get("count", 1))
+            except Exception:
+                count = 1
+            selected_videos = video_files[: max(1, min(count, 2))]
+            if not selected_videos:
+                plan["errors"].append("video requested but no video artifact is available")
+                continue
+            for idx, path in enumerate(selected_videos, start=1):
+                plan["deliveries"].append(
+                    {
+                        "type": "video",
+                        "path": str(path),
+                        "caption": "这是当前项目的测试视频。" if idx == 1 else "",
                     }
                 )
     return plan
@@ -6035,9 +6573,83 @@ class TelegramClient:
             params["caption"] = caption[:900]
         self._post_multipart("sendPhoto", params, "photo", file_path)
 
+    def send_video(self, chat_id: int, file_path: Path, caption: str = "") -> None:
+        params = {"chat_id": chat_id}
+        if caption:
+            params["caption"] = caption[:900]
+        self._post_multipart("sendVideo", params, "video", file_path)
+
 def emit_public_message(tg: TelegramClient, chat_id: int, text: str) -> None:
     # Single public-output gate for this support bot script.
     tg.send_message(chat_id, str(text or ""))
+
+def _rewrite_public_runtime_terms(reply_text: str, *, lang_hint: str = "") -> str:
+    text = str(reply_text or "").strip()
+    if not text:
+        return ""
+    lang = str(lang_hint or "").strip().lower() or detect_lang_hint(text)
+    use_en = lang.startswith("en")
+    waiting_replacement = "the planning draft is still being generated" if use_en else "方案草案还在生成中"
+    retry_replacement = (
+        "retry planning synthesis and verify the planning draft lands"
+        if use_en
+        else "继续重试方案整理，并确认方案草案真正生成出来"
+    )
+    text = re.sub(r"\bwaiting for PLAN_draft\.md\b", waiting_replacement, text, flags=re.IGNORECASE)
+    text = re.sub(r"\bretry planner to generate PLAN_draft\.md\b", retry_replacement, text, flags=re.IGNORECASE)
+    text = re.sub(r"\bPLAN_draft\.md\b", "planning draft" if use_en else "方案草案", text, flags=re.IGNORECASE)
+    return text
+
+def _reply_is_backend_placeholder(reply_text: str) -> bool:
+    text = str(reply_text or "").strip()
+    if not text:
+        return False
+    low = text.lower()
+    return any(token in text for token in _BACKEND_PLACEHOLDER_REPLY_MARKERS_ZH) or any(
+        token in low for token in _BACKEND_PLACEHOLDER_REPLY_MARKERS_EN
+    )
+
+def _delivery_ready_notice_from_plan(plan: dict[str, Any], *, lang_hint: str = "") -> str:
+    deliveries = [dict(item) for item in plan.get("deliveries", []) if isinstance(item, dict)] if isinstance(plan, dict) else []
+    if not deliveries:
+        return ""
+    lang = str(lang_hint or "").strip().lower()
+    if not lang:
+        lang = "zh"
+    use_en = lang.startswith("en")
+    types = {str(item.get("type", "")).strip().lower() for item in deliveries}
+    if use_en:
+        if {"photo", "document"} <= types:
+            return "The project is ready for delivery now; I will send test screenshots and the project zip in this chat."
+        if "photo" in types:
+            return "The project has reviewable output now; I will send test screenshots in this chat first."
+        if "document" in types:
+            return "The project package is ready now; I will send the zip in this chat."
+        if "video" in types:
+            return "The project has a reviewable run now; I will send the test video in this chat."
+        return "The project now has reviewable delivery output in this chat."
+    if {"photo", "document"} <= types:
+        return "当前项目结果已可交付，我先把测试截图和项目包直接发到当前对话。"
+    if "photo" in types:
+        return "当前项目已有可查看结果，我先把测试截图直接发到当前对话。"
+    if "document" in types:
+        return "当前项目包已可交付，我先把 zip 直接发到当前对话。"
+    if "video" in types:
+        return "当前项目已有可查看运行效果，我先把测试视频发到当前对话。"
+    return "当前项目已经有可查看的交付结果。"
+
+def _prepare_public_reply_for_telegram(
+    reply_text: str,
+    *,
+    delivery_preview: dict[str, Any] | None = None,
+    lang_hint: str = "",
+) -> str:
+    text = _rewrite_public_runtime_terms(reply_text, lang_hint=lang_hint)
+    if _reply_is_backend_placeholder(text):
+        delivery_notice = _delivery_ready_notice_from_plan(delivery_preview or {}, lang_hint=lang_hint or detect_lang_hint(text))
+        if delivery_notice:
+            return delivery_notice
+    return text
 
 def emit_public_delivery(
     tg: TelegramClient,
@@ -6067,6 +6679,8 @@ def emit_public_delivery(
             maybe_receipt = tg.send_document(chat_id, path, caption=caption)
         elif delivery_type == "photo":
             maybe_receipt = tg.send_photo(chat_id, path, caption=caption)
+        elif delivery_type == "video":
+            maybe_receipt = tg.send_video(chat_id, path, caption=caption)
         else:
             errors.append(f"unsupported delivery type: {delivery_type}")
             continue
@@ -6184,6 +6798,36 @@ def _normalize_proactive_progress_reply_text(reply_text: str, *, lang_hint: str 
         leak_tokens=_PROACTIVE_INTERNAL_GATE_LEAK_TOKENS,
     )
 
+def _handle_outbound_send_failure_with_limit(
+    *,
+    session_state: dict[str, Any],
+    job: dict[str, Any],
+    kind: str,
+    error_text: str,
+) -> bool:
+    # Returns True when the job should keep requeueing, False when dropped/suppressed.
+    clean_kind = sanitize_inline_text(kind, max_chars=24).lower() or "progress"
+    limit = int(dict(SUPPORT_OUTBOUND_REQUEUE_MAX_RETRIES).get(clean_kind, 2) or 2)
+    try:
+        fail_count = int(job.get("send_fail_count", 0) or 0)
+    except Exception:
+        fail_count = 0
+    fail_count += 1
+    job["send_fail_count"] = fail_count
+    job["last_send_error"] = sanitize_inline_text(str(error_text), max_chars=220)
+    job["last_send_error_ts"] = now_iso()
+    if fail_count <= max(1, limit):
+        ctcp_support_controller.requeue_outbound_job(session_state, job, sanitize_inline_text=sanitize_inline_text)
+        return True
+    # Drop the stuck stage job after retry cap and suppress same-hash repeats until status changes.
+    ctcp_support_controller.mark_job_sent(
+        session_state,
+        job,
+        now_ts=now_iso(),
+        cooldown_sec=SUPPORT_OUTBOUND_DROP_COOLDOWN_SEC,
+    )
+    return False
+
 
 def _emit_controller_outbound_jobs(
     *,
@@ -6225,6 +6869,19 @@ def _emit_controller_outbound_jobs(
             reply_text = _normalize_proactive_progress_reply_text(reply_text, lang_hint=lang_hint)
         if not reply_text:
             continue
+        reply_preview_plan = (
+            resolve_public_delivery_plan(run_dir=run_dir, actions=reply_actions, delivery_state=reply_delivery_state)
+            if reply_actions
+            else {}
+        )
+        lang_hint = str(_state_zone(session_state, "session_profile").get("lang_hint", "")).strip().lower()
+        public_reply_text = _prepare_public_reply_for_telegram(
+            reply_text,
+            delivery_preview=reply_preview_plan,
+            lang_hint=lang_hint,
+        )
+        if not public_reply_text:
+            continue
         binding = build_progress_binding(
             project_context=project_context,
             task_summary_hint=current_project_brief(session_state),
@@ -6244,6 +6901,7 @@ def _emit_controller_outbound_jobs(
             ),
             provider_result={"status": provider_status, "reason": str(job.get("reason", ""))},
             assistant_reply_text="",
+            rewrite_latest_user_turn=False,
         )
         frontdesk_state = current_frontdesk_state(session_state)
         session_state["latest_support_context"] = {
@@ -6262,15 +6920,21 @@ def _emit_controller_outbound_jobs(
             "package_delivery_mode": "",
             "package_structure_hint": [],
             "screenshot_ready": False,
+            "video_ready": False,
         }
         try:
-            emit_public_message(tg, chat_id, reply_text)
+            emit_public_message(tg, chat_id, public_reply_text)
             if reply_actions:
                 config, _ = load_dispatch_config(run_dir)
                 plan = emit_public_delivery(build_public_delivery_transport(config=config, run_dir=run_dir, live_transport=tg), chat_id=chat_id, run_dir=run_dir, actions=reply_actions, delivery_state=reply_delivery_state)
                 if delivery_plan_failed(reply_actions, plan): raise RuntimeError("public delivery action produced no sent files")
         except Exception as exc:
-            ctcp_support_controller.requeue_outbound_job(session_state, job, sanitize_inline_text=sanitize_inline_text)
+            keep_retrying = _handle_outbound_send_failure_with_limit(
+                session_state=session_state,
+                job=job,
+                kind=kind,
+                error_text=str(exc),
+            )
             append_event(
                 run_dir,
                 "SUPPORT_PROGRESS_SEND_FAILED",
@@ -6280,6 +6944,16 @@ def _emit_controller_outbound_jobs(
                 reason=str(job.get("reason", "")),
                 error=sanitize_inline_text(str(exc), max_chars=220),
             )
+            if not keep_retrying:
+                append_event(
+                    run_dir,
+                    "SUPPORT_PROGRESS_SUPPRESSED",
+                    SUPPORT_REPLY_REL_PATH.as_posix(),
+                    run_id=str((project_context or {}).get("run_id", "")),
+                    kind=kind,
+                    reason="retry_limit_reached",
+                    fail_count=int(job.get("send_fail_count", 0) or 0),
+                )
             continue
         sent += 1
         ctcp_support_controller.mark_job_sent(
@@ -6408,6 +7082,7 @@ def run_proactive_support_cycle(tg: TelegramClient, allowlist: set[int] | None) 
             "package_delivery_mode": str(proactive_delivery_state.get("package_delivery_mode", "")).strip(),
             "package_structure_hint": list(proactive_delivery_state.get("package_structure_hint", [])),
             "screenshot_ready": bool(proactive_delivery_state.get("screenshot_ready", False)),
+            "video_ready": bool(proactive_delivery_state.get("video_ready", False)),
             "t2p_state": sanitize_inline_text(str(latest_generation_state(session_state).get("current_state", "")), max_chars=32),
             "t2p_pass_fail": sanitize_inline_text(str(latest_generation_state(session_state).get("last_pass_fail", "")), max_chars=12),
             "t2p_failure_stage": sanitize_inline_text(str(latest_generation_state(session_state).get("last_failure_stage", "")), max_chars=40),
@@ -6589,7 +7264,6 @@ def run_telegram_mode(token: str, poll_seconds: int, allowlist_raw: str, provide
                         source="telegram",
                         provider_override=provider_override,
                     )
-                    emit_public_message(tg, chat_id, str(doc.get("reply_text", "")).strip())
                     session_state = load_support_session_state(support_run_dir, str(chat_id))
                     project_context: dict[str, Any] | None = None
                     bound_run_id = sanitize_inline_text(str(session_state.get("bound_run_id", "")), max_chars=80)
@@ -6611,15 +7285,29 @@ def run_telegram_mode(token: str, poll_seconds: int, allowlist_raw: str, provide
                         source="telegram",
                         support_run_dir=support_run_dir,
                     )
+                    reply_actions = list(doc.get("actions", []) or [])
+                    reply_preview_plan = resolve_public_delivery_plan(
+                        run_dir=support_run_dir,
+                        actions=reply_actions,
+                        delivery_state=delivery_state,
+                    )
+                    lang_hint = str(_state_zone(session_state, "session_profile").get("lang_hint", "")).strip().lower()
+                    public_reply_text = _prepare_public_reply_for_telegram(
+                        str(doc.get("reply_text", "")).strip(),
+                        delivery_preview=reply_preview_plan,
+                        lang_hint=lang_hint,
+                    )
+                    if public_reply_text:
+                        emit_public_message(tg, chat_id, public_reply_text)
                     config, _ = load_dispatch_config(support_run_dir)
                     plan = emit_public_delivery(
                         build_public_delivery_transport(config=config, run_dir=support_run_dir, live_transport=tg),
                         chat_id=chat_id,
                         run_dir=support_run_dir,
-                        actions=list(doc.get("actions", []) or []),
+                        actions=reply_actions,
                         delivery_state=delivery_state,
                     )
-                    if delivery_plan_failed(list(doc.get("actions", []) or []), plan):
+                    if delivery_plan_failed(reply_actions, plan):
                         emit_public_message(tg, chat_id, "交付文件发送失败：我没有把 zip 或截图成功发出，后台会保留失败记录并等待下一次重试。")
                 except Exception as exc:
                     print(f"[ctcp_support_bot] telegram update error: {exc}", file=sys.stderr)

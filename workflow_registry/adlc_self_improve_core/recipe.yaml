@@ -1,6 +1,8 @@
 id: adlc_self_improve_core
 version: 0.1.0
 description: Minimal self-improve core loop with local librarian, contract guard, and verify contrast loop.
+operator_status: non_mainline
+non_mainline_reason: Support self-improve loop only; not the project-generation product mainline.
 
 inputs:
   required:

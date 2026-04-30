@@ -36,6 +36,12 @@ The following interfaces must remain compatible with baseline behavior:
 - `get_last_report`
 - `get_support_context`
 - `record_support_turn`
+- `sync_support_project_turn`
+
+Support mainline hard rule:
+
+- customer-facing support project turns must use `sync_support_project_turn` as the single mutation entrypoint.
+- support runtime should not re-assemble create/bind/record/advance sequences by itself outside bridge.
 
 ### 1) `create_run`
 
@@ -137,6 +143,30 @@ Purpose:
 Purpose:
 
 - persist support-facing turns for replay/audit
+
+### 10) `sync_support_project_turn`
+
+Purpose:
+
+- single support project-turn mainline entry for create/bind/record/advance synchronization
+
+Rules:
+
+- request must provide `run_id` (existing run) or `create_goal` (new run)
+- `text` is recorded as support frontend turn when provided
+- when creating a new run, support may pass optional create payload fields:
+  - `constraints`
+  - `project_intent`
+  - `project_spec`
+  and bridge must forward them to `create_run/new-run` request materialization (`artifacts/frontend_request.json`)
+- `advance_steps > 0` advances run only when no pending user decision is blocking
+- support first-turn quality uplift must be implemented via this single interface payload (no support-side side channel)
+- response must include current support context plus execution evidence:
+  - `run_id`
+  - `run_dir`
+  - `created`
+  - `recorded_turn`
+  - `advance`
 
 ## Required Output and Snapshot Interfaces
 

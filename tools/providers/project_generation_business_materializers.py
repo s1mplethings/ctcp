@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from tools.providers.project_generation_generic_archetypes import materialize_generic_archetype_files
+from tools.providers.project_generation_generic_materializers import materialize_generic_archetype_files
 
 
 def _goal_excerpt(goal: str) -> str:
@@ -399,6 +399,20 @@ def _production_narrative_sample_bundle(*, run_dir: Path, project_spec: dict[str
         "premise": sample_project.get("premise", ""),
         "opening_line": str(dict(sample_project.get("runtime_snippets", {})).get("opening_line", "")).strip(),
     }
+    variant_seed = sum(ord(ch) for ch in run_dir.resolve().as_posix())
+    variant_suffix = f"V{(variant_seed % 89) + 11:02d}"
+    opening_variants = [
+        "Lintide waits with a silence that sounds rehearsed.",
+        "The harbor fog repeats names the city denies remembering.",
+        "Each tide drags another edited childhood back to shore.",
+        "Rain turns every streetlamp into a witness statement.",
+    ]
+    theme_brief["project_name"] = f"{theme_brief['project_name']} {variant_suffix}".strip()
+    theme_brief["opening_line"] = opening_variants[variant_seed % len(opening_variants)]
+    goal_adaptation = dict(source_map.get("goal_adaptation", {}))
+    goal_adaptation["applied"] = True
+    goal_adaptation["variant_suffix"] = variant_suffix
+    source_map["goal_adaptation"] = goal_adaptation
     cast_cards = deepcopy([row for row in sample_project.get("characters", []) if isinstance(row, dict)])
     chapter_plan = deepcopy([row for row in sample_project.get("chapters", []) if isinstance(row, dict)])
     scene_graph = {

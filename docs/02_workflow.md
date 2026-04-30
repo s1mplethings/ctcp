@@ -25,6 +25,7 @@ Default responsibilities:
 - Whiteboard is the runtime-visible progress layer. It records support turns, librarian lookups, dispatch lookups, and dispatch results as an append-only run artifact.
 - Bridge is the external consumption layer. Frontend/support clients consume run state, decisions, support context, whiteboard snapshots, and output artifact metadata only through bridge interfaces.
 - `artifacts/run_manifest.json` is the run-level truth source. It summarizes whether Librarian, ADLC, Whiteboard, and Bridge participated in the same run and records final status or first failure.
+- `artifacts/run_responsibility_manifest.json` is the only responsibility ledger. It records goal/entry/workflow/provider/API/fallback/final-producer/final-verdict accountability for the run.
 
 ### Responsibility Split Table
 
@@ -49,6 +50,18 @@ Every lane MUST report these fields into `artifacts/run_manifest.json`:
 
 Project-generation may keep its project-spec, capability, sample-generation, and refinement artifacts, but it is still required to surface the current phase, gate result, and final status through the ADLC/run-manifest layer.
 
+## Canonical Product Mainline
+
+For project-generation tasks, the only product mainline is:
+
+`Goal -> Intent -> Spec -> Scaffold -> Core Feature -> Smoke Verify -> Demo Evidence -> Delivery Package`
+
+Rules:
+
+- canonical workflow id for product generation: `wf_project_generation_manifest`
+- `pipeline_contract.source_contract` must be `docs/02_workflow.md`
+- capability/sample/refinement remain support artifacts; they must not become parallel stage truth
+
 ## Canonical Entrypoint
 
 - Only `scripts/ctcp_orchestrate.py` is supported for execution.
@@ -72,15 +85,21 @@ Project-generation may keep its project-spec, capability, sample-generation, and
 ### Hard gate rule for `context_pack`
 
 - Orchestrator/dispatcher MUST block plan signing and execution until `artifacts/context_pack.json` exists.
-- If context_pack is missing, dispatcher MUST route to the hard-local-model Librarian path by default (`ollama_agent` / local Ollama).
-- `librarian/context_pack` is the only hard-local role.
-- Manual outbox, remote API providers, and `CTCP_FORCE_PROVIDER` MUST NOT bypass that hard-local role (except explicit `mock_agent` test mode).
+- If context_pack is missing, dispatcher MUST route to `librarian/context_pack` through `api_agent` on the mainline.
+- `librarian/context_pack` is hard-locked to `api_agent` on the mainline (`mock_agent` mode remains test-only).
+- Manual outbox, local providers, and `CTCP_FORCE_PROVIDER` MUST NOT bypass that hard lock.
+
+### Formal API-only Rule (`CTCP_FORMAL_API_ONLY=1`)
+
+- For formal runs, every critical stage (including `librarian/context_pack`) must resolve to `api_agent`.
+- Local fallback or local function execution on critical stages cannot be counted as formal PASS.
 
 ## Standard Artifact Paths
 
 - External run root (must be outside repo): `${CTCP_RUNS_ROOT}/<repo_slug>/<run_id>/`
 - Run artifacts: `${run_dir}/artifacts/*`
 - Run manifest truth source: `${run_dir}/artifacts/run_manifest.json`
+- Responsibility ledger (single source for accountability): `${run_dir}/artifacts/run_responsibility_manifest.json`
 - Reviews: `${run_dir}/reviews/*`
 - Trace: `${run_dir}/TRACE.md`
 - Failure bundle: `${run_dir}/failure_bundle.zip` (only on failure)

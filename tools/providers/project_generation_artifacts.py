@@ -6,17 +6,15 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-from tools.providers.project_generation_business_templates import materialize_business_files
 from tools.providers.project_generation_decisions import (
     BENCHMARK_MODE,
     CLI_SHAPE,
     FLOW_NODES,
     PRODUCTION_MODE,
-    NARRATIVE_KEYWORDS,
     STRONG_DECISION_NODES,
     TEAM_PM_KEYWORDS,
-    enrich_project_spec,
     contains_any as _contains_any,
+    enrich_project_spec,
     decide_project_generation,
     default_package_name,
     default_project_id,
@@ -25,10 +23,8 @@ from tools.providers.project_generation_decisions import (
     resolve_capability_plan,
     shape_contract,
 )
-from tools.providers.project_generation_source_stage import (
-    normalize_project_queue_source_generation_stage,
-    normalize_source_generation_stage,
-)
+from tools.providers.project_generation_queue_stage import normalize_project_queue_source_generation_stage
+from tools.providers.project_generation_source_stage import normalize_source_generation_stage
 from tools.providers.project_generation_validation import (
     pipeline_contract as _pipeline_contract,
     resolve_project_intent as _resolve_project_intent,
@@ -41,75 +37,7 @@ from tools.providers.project_generation_runtime_support import (
     _load_context_pack,
     _stage_report,
 )
-PROJECT_GENERATION_KEYWORDS = (
-    "generate",
-    "generator",
-    "project",
-    "assistant",
-    "copilot",
-    "tool",
-    "app",
-    "application",
-    "platform",
-    "dashboard",
-    "portal",
-    "service",
-    "workspace",
-    "task management",
-    "task collaboration",
-    "team task",
-    "local-first",
-    "plane-lite",
-    "focalboard-lite",
-    "生成",
-    "项目",
-    "工具",
-    "助手",
-    "服务",
-    "应用",
-    "平台",
-    "工作台",
-    "管理平台",
-    "协作平台",
-    "任务协作",
-    "团队任务",
-    "任务管理",
-    "看板",
-    "本地部署",
-    "粗目标",
-    "不要细规格",
-    "重跑生成测试",
-    "重跑测试",
-    "域提升",
-    "完整产品域",
-    "资产库",
-    "bug tracker",
-    "build / release",
-    "文档中心",
-)
-PROJECT_GENERATION_BINDING_HINTS = (
-    "绑定任务",
-    "绑定一个新任务",
-    "绑定新任务",
-    "新任务",
-    "bind a new task",
-    "bind this task",
-)
-PROJECT_GENERATION_RERUN_HINTS = (
-    "重跑生成测试",
-    "重跑测试",
-    "rerun generation test",
-    "rerun the generation test",
-    "rerun",
-)
-PROJECT_GENERATION_DOMAIN_LIFT_HINTS = (
-    "domain lift",
-    "domain-lift",
-    "域提升",
-    "coverage gate",
-    "user_acceptance_status",
-    "internal_runtime_status",
-)
+from tools.providers.project_generation_goal_detection import is_project_generation_goal_text
 
 
 def _slug(text: str) -> str:
@@ -420,14 +348,7 @@ def _portfolio_output_contract(goal_text: str, *, src: dict[str, Any], run_dir: 
 
 
 def is_project_generation_goal(goal: str) -> bool:
-    text = str(goal or "")
-    low = text.lower()
-    binding = any(token in text or token in low for token in PROJECT_GENERATION_BINDING_HINTS)
-    rerun = any(token in text or token in low for token in PROJECT_GENERATION_RERUN_HINTS)
-    domain_lift = any(token in text or token in low for token in PROJECT_GENERATION_DOMAIN_LIFT_HINTS)
-    if binding and (rerun or domain_lift):
-        return True
-    return _contains_any(text, NARRATIVE_KEYWORDS + PROJECT_GENERATION_KEYWORDS)
+    return is_project_generation_goal_text(goal)
 
 
 def build_default_context_request(goal: str) -> dict[str, Any]:

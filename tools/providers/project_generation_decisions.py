@@ -152,7 +152,6 @@ BENCHMARK_HINTS = ("benchmark", "regression", "fixed_narrative", "回归", "基�
 HIGH_QUALITY_KEYWORDS = (
     "high-quality",
     "high quality",
-    "extended",
     "product depth",
     "thicker",
     "formal product",
@@ -165,7 +164,6 @@ HIGH_QUALITY_KEYWORDS = (
     "更厚",
     "正式产品",
     "高质量",
-    "扩展",
     "不是最小 mvp",
     "不要缩回基础 mvp",
     "8 张",
@@ -871,6 +869,22 @@ def is_high_quality_extended_signal(
     context_files: list[dict[str, Any]] | None = None,
     constraints: dict[str, Any] | None = None,
 ) -> bool:
+    constraints_doc = dict(constraints or {}) if isinstance(constraints, dict) else {}
+    explicit_high_quality_keys = (
+        "support_first_turn_quality_boost",
+        "first_turn_quality_boost",
+        "force_high_quality",
+    )
+    for key in explicit_high_quality_keys:
+        value = constraints_doc.get(key)
+        if value is True:
+            return True
+        if str(value).strip().lower() in {"1", "true", "yes", "on", "required"}:
+            return True
+    quality_tier = str(constraints_doc.get("quality_tier", "")).strip().lower()
+    if quality_tier in {"high", "extended", "high_quality_extended"}:
+        return True
+
     parts = [
         str(goal or ""),
         intent_text_signal(project_intent or {}),
@@ -884,10 +898,10 @@ def is_high_quality_extended_signal(
     if contains_any(signal, HIGH_QUALITY_KEYWORDS):
         return True
     try:
-        required_screenshots = int(dict(constraints or {}).get("required_screenshots", 0) or 0)
+        required_screenshots = int(constraints_doc.get("required_screenshots", 0) or 0)
     except Exception:
         required_screenshots = 0
-    return required_screenshots >= 8 or str(dict(constraints or {}).get("build_profile", "")).strip() == "high_quality_extended"
+    return required_screenshots >= 8 or str(constraints_doc.get("build_profile", "")).strip() == "high_quality_extended"
 
 
 def detect_project_type(goal: str, context_files: list[dict[str, Any]] | None = None, *, execution_mode: str, benchmark_case_value: str, project_intent: dict[str, Any] | None = None) -> str:

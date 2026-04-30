@@ -15,22 +15,23 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 import resolve_workflow
+from tools.providers.project_generation_artifacts import is_project_generation_goal
 
 
 class WorkflowDispatchTests(unittest.TestCase):
-    def test_registry_contains_orchestrator_workflow(self) -> None:
+    def test_registry_contains_project_generation_mainline_only(self) -> None:
         index_path = ROOT / "workflow_registry" / "index.json"
         doc = json.loads(index_path.read_text(encoding="utf-8"))
         ids = {str(row.get("id", "")) for row in doc.get("workflows", [])}
-        self.assertIn("wf_orchestrator_only", ids)
+        self.assertEqual(ids, {"wf_project_generation_manifest"})
         self.assertIn("wf_project_generation_manifest", ids)
         fallback = str(doc.get("resolver_policy", {}).get("fallback_workflow_id", ""))
-        self.assertEqual(fallback, "wf_orchestrator_only")
+        self.assertEqual(fallback, "wf_project_generation_manifest")
 
-    def test_resolve_selects_orchestrator_workflow(self) -> None:
+    def test_resolve_selects_project_generation_workflow_for_headless_lite_goal(self) -> None:
         result = resolve_workflow.resolve(goal="headless-lite", repo=ROOT)
-        self.assertEqual(result.get("selected_workflow_id"), "wf_orchestrator_only")
-        self.assertEqual(result.get("selected_path"), "workflow_registry/wf_minimal_patch_verify/recipe.yaml")
+        self.assertEqual(result.get("selected_workflow_id"), "wf_project_generation_manifest")
+        self.assertEqual(result.get("selected_path"), "workflow_registry/wf_project_generation_manifest/recipe.yaml")
 
     def test_resolve_selects_project_generation_workflow_for_runnable_delivery_goal(self) -> None:
         result = resolve_workflow.resolve(
@@ -52,6 +53,13 @@ class WorkflowDispatchTests(unittest.TestCase):
         )
         self.assertEqual(result.get("selected_workflow_id"), "wf_project_generation_manifest")
         self.assertTrue(bool(dict(result.get("decision", {})).get("project_generation_goal", False)))
+
+    def test_status_query_about_previous_project_is_not_treated_as_new_generation_goal(self) -> None:
+        goal = "你还有之前你生成的项目吗？"
+        self.assertFalse(resolve_workflow._is_project_generation_goal(goal))
+        self.assertFalse(is_project_generation_goal(goal))
+        result = resolve_workflow.resolve(goal=goal, repo=ROOT)
+        self.assertFalse(bool(dict(result.get("decision", {})).get("project_generation_goal", False)))
 
 
 if __name__ == "__main__":

@@ -67,7 +67,7 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
 ## 对话式 Telegram 客服（可选）
 - 旧入口 `tools/telegram_cs_bot.py` 已移除，不再作为 support lane 的可运行路径。
 - 当前 Telegram/customer-facing 入口统一到 `scripts/ctcp_support_bot.py`。
-- 该入口保留 support session artifacts 与 customer-facing reply 壳；项目型消息若要进入 CTCP 执行流，只能经 `scripts/ctcp_front_bridge.py` 创建/绑定/推进 run，不允许在 support bot 内直接改写 project run state。
+- 该入口保留 support session artifacts 与 customer-facing reply 壳；项目型消息若要进入 CTCP 执行流，只能经 `scripts/ctcp_front_bridge.py` 的单入口 `ctcp_sync_support_project_turn` 做创建/绑定/记录/推进，不允许在 support bot 内直接改写 project run state。
 - 用户可见输出只取 `support_reply.json.reply_text`；provider 调试细节只写 `logs/support_bot.*.log` 与 `TRACE.md`。
 
 ## CTCP Support Bot（CEO 口径，双通道）
@@ -87,7 +87,7 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
     - `artifacts/support_reply.json`
   - provider 调试日志统一写入 `logs/support_bot.*.log`，并追加 `TRACE.md`。
 - 项目型消息接线：
-  - 单主流程硬规则：support runtime 禁止触发 `run_t2p_state_machine()` 的快速脚手架旁路（含 `telegram_ingress_sanity` / `fallback_generation`）；项目型 turn 只能进入 bridge 主流程状态机。
+  - 单主流程硬规则：support runtime 禁止触发 `run_t2p_state_machine()` 的快速脚手架旁路（含 `telegram_ingress_sanity` / `fallback_generation`）；项目型 turn 只能进入 bridge 主流程状态机，并统一经 `ctcp_sync_support_project_turn`。
   - support bot 先做规则型 conversation-mode 首判；若命中歧义/解释型 turn（例如已绑定 run 下的“为什么会这样”），runtime 可触发 model-assisted 二段仲裁（api-first，失败降级到本地），再决定最终 mode。
   - 在任何 prompt/reply 生成前，runtime 还必须基于 latest turn、active run、session slots 解析一层显式 frontdesk state machine；权威结构见 `docs/architecture/contracts/frontend_session_contract.md`。
   - 这层 frontdesk state machine 至少要覆盖 `Idle / IntentDetect / Collect / Clarify / Confirm / Execute / AwaitDecision / ReturnResult / InterruptRecover / StyleAdjust / Error`，并持久化 `current_goal / current_scope / active_task_id / waiting_for / user_style_profile / decision_points / artifacts / blocked_reason / resumable_state`。
@@ -95,13 +95,14 @@ powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
   - 会话历史必须分层为 `raw_turns / working_memory / task_summary / user_preferences`；前台 prompt 默认消费 `working_memory + task_summary + 最近少量 raw_turns`，禁止把全量 raw 对话直接当唯一上下文。
   - 每条新消息必须先写入 `message_intent` 分类（`continue|clarify|constraint_update|new_task|small_talk|status_check`），再决定是否继续当前主线或显式切换任务。
   - 处理顺序必须是：先判断 frontdesk state，再决定回复策略，再生成回复内容；`visible_state` 只是用户可见执行态折叠，不能替代 frontdesk state。
-  - `PROJECT_INTAKE / PROJECT_DETAIL / STATUS_QUERY` 等项目型 turn 只能通过 `scripts/ctcp_front_bridge.py` 创建/绑定/查询/推进 CTCP run。
+  - `PROJECT_INTAKE / PROJECT_DETAIL / STATUS_QUERY` 等项目型 turn 只能通过 `scripts/ctcp_front_bridge.py::ctcp_sync_support_project_turn` 执行创建/绑定/记录/推进，再通过 `get_support_context`/snapshot 接口读取真值。
+  - 首轮创建 run 的质量提升约束（如 `build_profile=high_quality_extended`、首轮质量标记）也必须仅通过该单入口 payload 传入 `frontend_request`，禁止 support 侧旁路写入。
   - 当 bound run 的 `status.gate.state=blocked` 时，runtime 只允许输出 grounded 状态与下一步，不允许注入“已完成生成/已可交付包”的快通道语义。
   - 绑定 run 后，support bot 只能消费 bridge/back-end 提供的 `get_support_context` / `get_current_state_snapshot` / `get_render_state_snapshot` / artifact interfaces；兼容性文件读取只允许留在 bridge/backend 内部，不得在客服层直接扫描 `RUN.json` / `verify_report.json` / `TRACE.md` 伪造工程真值。
   - 在发出 `support_reply.json.reply_text` 前，reply builder 必须绑定 `task_goal / current_phase / last_confirmed_items / current_blocker / message_purpose / question_needed / next_action`。
   - `style_change` 必须只更新持久 `user_style_profile`，不得覆盖当前任务主线；`clarify / redirect / override / sidequest / status_query / result_query` 等中断分类必须显式写入 frontdesk state，并保留 `resumable_state`。
   - 对 `STATUS_QUERY` 以及“继续按这个做 / 现在做到什么程度了”这类 status-like progress follow-up，runtime 必须消费 bound run 的 gate/status 与 whiteboard tail，自动总结已完成事项、当前阶段、当前阻塞或 clear path、以及下一步；不得退回 `EXECUTING` 固定壳文案。
-  - 对“之前那个项目现在做成什么样了 / 之前的项目现在怎么样”这类旧项目状态追问，只要 support session 已绑定 active run，runtime 必须优先走 `STATUS_QUERY`/grounded progress path；不得把这类句子写回长期 `project_brief`，也不得因此触发新的 planning/file-request 轮次。
+  - 对“之前那个项目现在做成什么样了 / 之前的项目现在怎么样”这类旧项目状态追问，runtime 必须优先走 `STATUS_QUERY`/grounded progress path（即使当前未绑定 run 也不得回退成新的 intake 创建）；不得把这类句子写回长期 `project_brief`，也不得因此触发新的 planning/file-request 轮次。
   - Telegram long-poll 在空闲轮询周期里必须检查 active bound run：若 run 仍可推进且不需要用户决策，runtime 可自动 `advance`；一旦 grounded progress digest 发生变化，必须主动发送一条新的 progress update，而不是等用户追问。
   - 后台主动通知判定必须由独立 support controller 负责（规则优先，基于 bridge/run truth），support bot 只负责 Telegram 收发与 outbound job 发送，不得再把“该不该通知/该发哪类通知”分散在文案层分支里。
   - 若用户显式要求“按之前的大纲 / 之前的项目继续”，而当前会话只有 generic previous-project 占位语，runtime 必须优先恢复 archived support session 里的 concrete project brief，再创建或重绑 run；不得把这类句子直接当成一个新的空泛 goal。

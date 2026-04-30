@@ -81,9 +81,8 @@ Purpose:
 
 Formal benchmark, portfolio, and endurance runs treat the formal project-generation mainline as API-only.
 
-- `librarian/context_pack` is the only local exception.
-- Every other project-impacting role or step must execute through `api_agent`.
-- A non-librarian step that resolves to `local_exec`, `ollama_agent`, `manual_outbox`, `mock_agent`, or any other non-`api_agent` provider must fail fast.
+- Every project-impacting role or step (including `librarian/context_pack`) must execute through `api_agent`.
+- A critical step that resolves to `local_exec`, `ollama_agent`, `manual_outbox`, `mock_agent`, or any other non-`api_agent` provider must fail fast.
 - Silent fallback to local generation, local normalizer synthesis, or manual/local success artifacts must not count as formal success.
 - Formal PASS requires provider-ledger coverage proving the critical steps were API-executed.
 

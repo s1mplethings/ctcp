@@ -42,7 +42,13 @@ class VirtualDeliveryTransport:
 
     def _deliver(self, *, delivery_type: str, chat_id: int, file_path: Path, caption: str = "") -> dict[str, Any]:
         source = Path(file_path).resolve()
-        target_dir = self.run_dir / VIRTUAL_SENT_REL_DIR / ("documents" if delivery_type == "document" else "photos")
+        if delivery_type == "document":
+            rel_dir = "documents"
+        elif delivery_type == "video":
+            rel_dir = "videos"
+        else:
+            rel_dir = "photos"
+        target_dir = self.run_dir / VIRTUAL_SENT_REL_DIR / rel_dir
         target_dir.mkdir(parents=True, exist_ok=True)
         target_path = (target_dir / source.name).resolve()
         shutil.copy2(source, target_path)
@@ -62,6 +68,9 @@ class VirtualDeliveryTransport:
 
     def send_photo(self, chat_id: int, file_path: Path, caption: str = "") -> dict[str, Any]:
         return self._deliver(delivery_type="photo", chat_id=chat_id, file_path=file_path, caption=caption)
+
+    def send_video(self, chat_id: int, file_path: Path, caption: str = "") -> dict[str, Any]:
+        return self._deliver(delivery_type="video", chat_id=chat_id, file_path=file_path, caption=caption)
 
 
 def auto_emit_virtual_delivery_for_ready_run(

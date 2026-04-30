@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 _FINAL_READY_RUN_STATUSES = {"pass", "done", "completed", "success"}
-_DELIVERY_ACTION_TYPES = {"send_project_package", "send_project_screenshot"}
+_DELIVERY_ACTION_TYPES = {"send_project_package", "send_project_screenshot", "send_project_video"}
 _HIGH_VALUE_SCREENSHOT_MARKERS = (
     "final-ui",
     "final",
@@ -20,6 +20,8 @@ _HIGH_VALUE_SCREENSHOT_MARKERS = (
 )
 _MID_VALUE_SCREENSHOT_MARKERS = ("preview", "screen", "screenshot")
 _LOW_VALUE_SCREENSHOT_MARKERS = ("overview", "debug", "trace", "proof", "evidence", "timeline")
+_TEST_VALUE_SCREENSHOT_MARKERS = ("test", "qa", "smoke", "acceptance", "validation", "replay")
+_HIGH_VALUE_VIDEO_MARKERS = ("demo", "walkthrough", "preview", "test", "run", "result")
 _INTERNAL_REPLY_MARKERS = (
     "stage",
     "gate",
@@ -57,11 +59,51 @@ def prioritize_screenshot_files(paths: Iterable[Any]) -> list[str]:
     return sorted(normalized, key=_screenshot_priority_key)
 
 
+def _test_screenshot_priority_key(value: Any) -> tuple[int, str]:
+    name = Path(str(value or "")).name.lower()
+    if any(marker in name for marker in _TEST_VALUE_SCREENSHOT_MARKERS):
+        return (0, name)
+    if any(marker in name for marker in _HIGH_VALUE_SCREENSHOT_MARKERS):
+        return (1, name)
+    if any(marker in name for marker in _MID_VALUE_SCREENSHOT_MARKERS):
+        return (2, name)
+    if any(marker in name for marker in _LOW_VALUE_SCREENSHOT_MARKERS):
+        return (4, name)
+    return (3, name)
+
+
+def prioritize_test_screenshot_files(paths: Iterable[Any]) -> list[str]:
+    normalized = [str(item).strip() for item in paths if str(item).strip()]
+    return sorted(normalized, key=_test_screenshot_priority_key)
+
+
+def _has_test_screenshot_candidates(paths: Iterable[Any]) -> bool:
+    for item in paths:
+        name = Path(str(item or "")).name.lower()
+        if not name:
+            continue
+        if any(marker in name for marker in _TEST_VALUE_SCREENSHOT_MARKERS):
+            return True
+    return False
+
+
 def _looks_internal(text: str) -> bool:
     low = text.lower()
     if re.search(r"\b[a-f0-9]{40}\b", low):
         return True
     return any(marker in low for marker in _INTERNAL_REPLY_MARKERS)
+
+
+def _video_priority_key(value: Any) -> tuple[int, str]:
+    name = Path(str(value or "")).name.lower()
+    if any(marker in name for marker in _HIGH_VALUE_VIDEO_MARKERS):
+        return (0, name)
+    return (1, name)
+
+
+def prioritize_video_files(paths: Iterable[Any]) -> list[str]:
+    normalized = [str(item).strip() for item in paths if str(item).strip()]
+    return sorted(normalized, key=_video_priority_key)
 
 
 def align_reply_with_delivery_actions(reply_text: str, *, actions: list[dict[str, Any]], source_hint: str) -> str:
@@ -104,6 +146,9 @@ def align_reply_with_delivery_actions(reply_text: str, *, actions: list[dict[str
         delivery_note = "我先把成品截图直接发到当前对话。"
     if delivery_note and delivery_note not in text:
         text = f"{text}\n\n{delivery_note}" if text else delivery_note
+    if "send_project_video" in action_types and ("视频" not in text and "video" not in low):
+        video_note = "我会把测试视频直接发到当前对话，方便你先看运行效果。"
+        text = f"{text}\n\n{video_note}" if text else video_note
     return text
 
 
@@ -137,9 +182,19 @@ def inject_ready_delivery_actions(
         return out
     types = {str(item.get("type", "")).strip().lower() for item in out}
     screenshot_files = prioritize_screenshot_files(delivery_state.get("screenshot_files", []) or [])
+    video_files = prioritize_video_files(delivery_state.get("video_files", []) or [])
     screenshot_count = len(screenshot_files)
+    video_count = len(video_files)
+    if bool(delivery_state.get("video_ready", False)) and video_count > 0 and "send_project_video" not in types:
+        out.append({"type": "send_project_video", "count": min(1, video_count)})
+        types.add("send_project_video")
     if bool(delivery_state.get("screenshot_ready", False)) and screenshot_count > 0 and "send_project_screenshot" not in types:
-        out.append({"type": "send_project_screenshot", "count": min(2, screenshot_count)})
+        has_test_screenshots = _has_test_screenshot_candidates(screenshot_files)
+        default_count = min(3, screenshot_count) if has_test_screenshots else min(2, screenshot_count)
+        payload: dict[str, Any] = {"type": "send_project_screenshot", "count": default_count}
+        if has_test_screenshots:
+            payload["profile"] = "test_evidence"
+        out.append(payload)
         types.add("send_project_screenshot")
     if bool(delivery_state.get("package_delivery_allowed", False)) and "send_project_package" not in types:
         out.append({"type": "send_project_package", "format": "zip"})
@@ -153,7 +208,21 @@ def _required_sent_types(actions: list[dict[str, Any]] | None) -> set[str]:
         required.add("document")
     if "send_project_screenshot" in action_types:
         required.add("photo")
+    if "send_project_video" in action_types:
+        required.add("video")
     return required
+
+
+def _requested_screenshot_profile(actions: list[dict[str, Any]] | None) -> str:
+    for item in actions or []:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("type", "")).strip().lower() != "send_project_screenshot":
+            continue
+        profile = str(item.get("profile", "")).strip().lower()
+        if profile:
+            return profile
+    return ""
 
 
 def _existing_sent_paths(plan: dict[str, Any] | None, *, delivery_type: str, require_existing_files: bool) -> list[str]:
@@ -209,6 +278,7 @@ def evaluate_delivery_completion(
     document_paths = _existing_sent_paths(plan, delivery_type="document", require_existing_files=require_existing_files)
     document_paths = sorted(document_paths, key=_document_priority)
     photo_paths = _existing_sent_paths(plan, delivery_type="photo", require_existing_files=require_existing_files)
+    video_paths = _existing_sent_paths(plan, delivery_type="video", require_existing_files=require_existing_files)
     if "document" in required_sent_types and not document_paths:
         reasons.append("document artifact missing")
     if document_paths and Path(document_paths[0]).name.lower() == "process_bundle.zip":
@@ -216,11 +286,22 @@ def evaluate_delivery_completion(
     first_photo = photo_paths[0] if photo_paths else ""
     if "photo" in required_sent_types and not photo_paths:
         reasons.append("photo artifact missing")
-    prioritized_photos = prioritize_screenshot_files(photo_paths)
+    if "video" in required_sent_types and not video_paths:
+        reasons.append("video artifact missing")
+    screenshot_profile = _requested_screenshot_profile(actions)
+    prioritized_photos = (
+        prioritize_test_screenshot_files(photo_paths)
+        if screenshot_profile == "test_evidence"
+        else prioritize_screenshot_files(photo_paths)
+    )
     if first_photo and prioritized_photos and first_photo != prioritized_photos[0]:
         reasons.append("first delivered photo is not the highest-value screenshot")
     first_photo_name = Path(first_photo).name.lower() if first_photo else ""
-    if first_photo_name and any(marker in first_photo_name for marker in _LOW_VALUE_SCREENSHOT_MARKERS):
+    if (
+        screenshot_profile != "test_evidence"
+        and first_photo_name
+        and any(marker in first_photo_name for marker in _LOW_VALUE_SCREENSHOT_MARKERS)
+    ):
         reasons.append("first delivered photo is low-value")
     replay_report = dict(plan.get("replay_report", {})) if isinstance(plan, dict) and isinstance(plan.get("replay_report", {}), dict) else {}
     if require_cold_replay:
@@ -234,6 +315,7 @@ def evaluate_delivery_completion(
         "sent_types": sorted(sent_types),
         "selected_document": document_paths[0] if document_paths else "",
         "selected_photo": first_photo,
+        "selected_video": video_paths[0] if video_paths else "",
         "manifest_path": manifest_text,
         "cold_replay_required": bool(require_cold_replay),
         "cold_replay_passed": bool(replay_report.get("overall_pass", False)),

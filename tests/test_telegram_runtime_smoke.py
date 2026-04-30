@@ -60,9 +60,9 @@ class TelegramRuntimeSmokeTests(unittest.TestCase):
             run_dir / "artifacts" / "find_result.json",
             {
                 "schema_version": "ctcp-find-result-v1",
-                "selected_workflow_id": "wf_orchestrator_only",
+                "selected_workflow_id": "wf_project_generation_manifest",
                 "selected_version": "1.0",
-                "candidates": [{"workflow_id": "wf_orchestrator_only", "version": "1.0", "score": 1.0, "why": "test"}],
+                "candidates": [{"workflow_id": "wf_project_generation_manifest", "version": "1.0", "score": 1.0, "why": "test"}],
             },
         )
         (session_dir / support_bot.SUPPORT_INBOX_REL_PATH).parent.mkdir(parents=True, exist_ok=True)
@@ -176,3 +176,4 @@ class TelegramRuntimeSmokeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

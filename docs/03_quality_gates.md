@@ -12,12 +12,13 @@ Only these commands are valid acceptance gate entrypoints:
 No alternative `scripts/verify.*` family is authoritative for DoD in this repo.
 
 Verify is the canonical acceptance entrypoint, but it is not the product mainline. The product mainline is:
-`ProjectIntent -> Spec -> Scaffold -> Core Feature Implementation -> Smoke Run -> Demo Evidence -> Delivery Package`.
+`Goal -> Intent -> Spec -> Scaffold -> Core Feature -> Smoke Verify -> Demo Evidence -> Delivery Package`.
 The job of verify is to prove that this chain really produced a runnable MVP, not to substitute for that chain.
 
 ## 2) Verify Evidence Naming (Unified Contract)
 
 - Canonical machine verify artifact (run_dir): `artifacts/verify_report.json`.
+- Canonical responsibility ledger (run_dir): `artifacts/run_responsibility_manifest.json`.
 - `proof.json` is removed from hard DoD contract; it is not required by `verify_repo.*`.
 - `verify_report.md` may exist as optional human summary, but it is non-authoritative.
 - Running `verify_repo.*` directly decides pass/fail by command exit code + logs.
@@ -112,6 +113,10 @@ The following rule classes are part of contract acceptance and MUST be owned by 
    - Blocking when a generated project contains contamination from an incompatible family such as `run_v2p.py`, `eval_v2p.py`, `make_synth_fixture.py`, or `test_pipeline_synth.py` inside a narrative/editor delivery.
 14. Delivery split lint (project-generation tasks)
    - Blocking when user-facing delivery defaults to a process/run bundle instead of a pure final project bundle, or when README/meta quality is still placeholder-like / goal-dump style.
+15. Project-generation PLAN routing lint (project-generation tasks)
+   - Blocking when `PLAN_draft` normalization decides project-generation requirements from goal keywords only and ignores routed workflow evidence (`artifacts/find_result.json` / gate reason), because this can cause repeated `PLAN_draft` loop failures.
+16. Support export isolation lint (support delivery tasks)
+   - Blocking when screenshot/package discovery mixes historical `artifacts/support_exports/*` projects into the active session instead of filtering to the active project export directory.
 
 ## 5) Failure Attribution for New Contract Lints
 
@@ -124,6 +129,8 @@ The following rule classes are part of contract acceptance and MUST be owned by 
 - Missing or generic-only team-stage artifacts are blocking for project-generation completion.
 - Generic MVP validation is blocking even when manifest/verify artifacts exist.
 - Domain-specific validation may strengthen checks for a matched domain, but it must not leak into the generic gate for all projects.
+- Routed project-generation runs must not let `PLAN_draft` miss delivery requirements due to keyword-only detection.
+- Support public delivery must not send screenshots from inactive historical export projects.
 
 ## 6) Optional Full Gate
 
@@ -140,3 +147,9 @@ If a failure class is not covered by current gates:
 2. Add/adjust tests or scenarios so the new gate is reproducible.
 3. Update this document and `docs/30_artifact_contracts.md` in the same patch.
 4. If the failure class changes user-visible task dialogue, persona regression, showcase semantics, or project-generation completion rules, update the relevant routed contracts in the same patch (`docs/11_task_progress_dialogue.md`, `docs/14_persona_test_lab.md`, `docs/40_reference_project.md`, `docs/41_low_capability_project_generation.md`).
+
+## 8) Formal API-only Lock
+
+- `CTCP_FORMAL_API_ONLY=1` is the formal execution lock.
+- In this mode, all critical stages (including `librarian/context_pack`) must be `api_agent`.
+- Formal PASS evidence must include API accountability in `artifacts/run_responsibility_manifest.json`.

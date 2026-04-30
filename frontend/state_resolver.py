@@ -98,7 +98,7 @@ def _is_executing(doc: Mapping[str, Any]) -> bool:
         return True
     if stage in {"advance_success", "executing", "status_reply"}:
         return True
-    if next_step in {"ready_apply", "resolve_find_local", "ready_verify"}:
+    if next_step in {"resolve_find_local", "ready_verify"}:
         return True
     return False
 
@@ -128,4 +128,3 @@ def resolve_visible_state(raw_backend_state: Mapping[str, Any]) -> VisibleState:
     if _as_bool(data, "first_pass_understood") or _as_bool(data, "has_actionable_goal"):
         return "UNDERSTOOD"
     return "NEEDS_ONE_OR_TWO_DETAILS"
-

@@ -620,9 +620,12 @@ class RuntimeWiringContractTests(unittest.TestCase):
                 )
 
             self.assertEqual(str(doc.get("provider_status", "")), "executed")
-            new_run_spy.assert_called_once_with(goal="我想做一个帮我整理剧情节奏的项目。")
+            new_run_spy.assert_called_once()
+            new_run_kwargs = dict(new_run_spy.call_args.kwargs)
+            self.assertEqual(str(new_run_kwargs.get("goal", "")), "我想做一个帮我整理剧情节奏的项目。")
+            self.assertTrue(bool(dict(new_run_kwargs.get("constraints", {})).get("support_first_turn_quality_boost", False)))
             record_spy.assert_called_once()
-            advance_spy.assert_called_once_with("r-demo", max_steps=2)
+            advance_spy.assert_called_once_with("r-demo", max_steps=4)
             self.assertEqual(context_spy.call_count, 2)
             session_state = json.loads((run_dir / support_bot.SUPPORT_SESSION_STATE_REL_PATH).read_text(encoding="utf-8"))
             self.assertEqual(str(session_state.get("bound_run_id", "")), "r-demo")
@@ -690,17 +693,14 @@ class RuntimeWiringContractTests(unittest.TestCase):
             }
             with mock.patch.object(
                 support_bot.ctcp_front_bridge,
-                "ctcp_new_run",
-                return_value={"run_id": "r-domain-lift", "run_dir": "D:/tmp/r-domain-lift"},
-            ) as new_run_spy, mock.patch.object(
-                support_bot.ctcp_front_bridge,
-                "ctcp_record_support_turn",
-                return_value={"status": "recorded"},
-            ) as record_spy, mock.patch.object(
-                support_bot.ctcp_front_bridge,
-                "ctcp_advance",
-                return_value={"status": "advanced"},
-            ) as advance_spy, mock.patch.object(
+                "ctcp_sync_support_project_turn",
+                return_value={
+                    **context_doc,
+                    "created": {"run_id": "r-domain-lift", "run_dir": "D:/tmp/r-domain-lift"},
+                    "recorded_turn": {"status": "recorded"},
+                    "advance": {"status": "advanced"},
+                },
+            ) as sync_spy, mock.patch.object(
                 support_bot,
                 "fetch_support_context_with_recovery",
                 side_effect=[(context_doc, False), (context_doc, False)],
@@ -722,9 +722,11 @@ class RuntimeWiringContractTests(unittest.TestCase):
             self.assertEqual(str(updated_state.get("bound_run_id", "")), "r-domain-lift")
             self.assertEqual(str(updated_state.get("bound_run_dir", "")), "D:/tmp/r-domain-lift")
             self.assertTrue(bool(str(updated_state.get("active_goal", "")).strip()))
-            new_run_spy.assert_called_once()
-            record_spy.assert_called_once()
-            advance_spy.assert_called_once_with("r-domain-lift", max_steps=2)
+            sync_spy.assert_called_once()
+            sync_kwargs = dict(sync_spy.call_args.kwargs)
+            self.assertEqual(str(sync_kwargs.get("create_goal", "")), request)
+            self.assertEqual(int(sync_kwargs.get("advance_steps", 0) or 0), 4)
+            self.assertTrue(bool(dict(sync_kwargs.get("constraints", {})).get("support_first_turn_quality_boost", False)))
 
     def test_support_bot_capability_query_stays_non_project_mode(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_runtime_support_capability_mode_") as td:
@@ -824,6 +826,8 @@ class RuntimeWiringContractTests(unittest.TestCase):
                 )
             ) as process_spy, mock.patch.object(
                 support_bot, "ROOT", root
+            ), mock.patch.object(
+                support_bot, "get_runs_root", return_value=root / "runs"
             ), mock.patch.object(
                 support_bot.ctcp_front_bridge,
                 "ctcp_get_support_context",

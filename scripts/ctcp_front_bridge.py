@@ -817,6 +817,63 @@ def ctcp_record_support_turn(
         "whiteboard": whiteboard,
     }
 
+def ctcp_sync_support_project_turn(
+    *,
+    run_id: str = "",
+    create_goal: str = "",
+    text: str = "",
+    source: str = "support_bot",
+    chat_id: str = "",
+    conversation_mode: str = "",
+    advance_steps: int = 0,
+    constraints: dict[str, Any] | None = None,
+    project_intent: dict[str, Any] | None = None,
+    project_spec: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    rid = str(run_id or "").strip()
+    created: dict[str, Any] = {}
+    if not rid:
+        goal_text = str(create_goal or "").strip()
+        if not goal_text:
+            raise BridgeError("run_id or create_goal is required for support project turn sync")
+        created = ctcp_new_run(
+            goal=goal_text,
+            constraints=constraints if isinstance(constraints, dict) else None,
+            project_intent=project_intent if isinstance(project_intent, dict) else None,
+            project_spec=project_spec if isinstance(project_spec, dict) else None,
+        )
+        rid = str(created.get("run_id", "")).strip()
+        if not rid:
+            raise BridgeError("ctcp_new_run returned empty run_id")
+
+    recorded_turn: dict[str, Any] = {}
+    message = str(text or "").strip()
+    if message:
+        recorded_turn = ctcp_record_support_turn(
+            rid,
+            text=message,
+            source=source,
+            chat_id=chat_id,
+            conversation_mode=conversation_mode,
+        )
+
+    context = ctcp_get_support_context(rid)
+    advance: dict[str, Any] = {}
+    steps = max(0, int(advance_steps or 0))
+    if steps > 0:
+        status = context.get("status", {}) if isinstance(context, dict) else {}
+        if not isinstance(status, dict):
+            status = {}
+        if not bool(status.get("needs_user_decision", False)):
+            advance = ctcp_advance(rid, max_steps=min(steps, 32))
+            context = ctcp_get_support_context(rid)
+
+    out = dict(context) if isinstance(context, dict) else {"run_id": rid}
+    out["created"] = created
+    out["recorded_turn"] = recorded_turn
+    out["advance"] = advance
+    return out
+
 def ctcp_get_last_report(run_id: str = "") -> dict[str, Any]:
     run_dir = _resolve_run_dir(run_id)
     verify_report_path = run_dir / "artifacts" / "verify_report.json"
@@ -1155,6 +1212,32 @@ def record_support_turn(
         conversation_mode=conversation_mode,
     )
 
+def sync_support_project_turn(
+    *,
+    run_id: str = "",
+    create_goal: str = "",
+    text: str = "",
+    source: str = "support_bot",
+    chat_id: str = "",
+    conversation_mode: str = "",
+    advance_steps: int = 0,
+    constraints: dict[str, Any] | None = None,
+    project_intent: dict[str, Any] | None = None,
+    project_spec: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return ctcp_sync_support_project_turn(
+        run_id=run_id,
+        create_goal=create_goal,
+        text=text,
+        source=source,
+        chat_id=chat_id,
+        conversation_mode=conversation_mode,
+        advance_steps=advance_steps,
+        constraints=constraints,
+        project_intent=project_intent,
+        project_spec=project_spec,
+    )
+
 def list_output_artifacts(run_id: str = "") -> dict[str, Any]:
     return ctcp_list_output_artifacts(run_id=run_id)
 
@@ -1182,6 +1265,7 @@ __all__ = [
     "ctcp_get_support_context",
     "ctcp_get_status",
     "ctcp_advance",
+    "ctcp_sync_support_project_turn",
     "ctcp_record_support_turn",
     "ctcp_get_last_report",
     "ctcp_list_decisions_needed",
@@ -1197,6 +1281,7 @@ __all__ = [
     "create_run",
     "get_run_status",
     "advance_run",
+    "sync_support_project_turn",
     "list_pending_decisions",
     "submit_decision",
     "upload_input_artifact",

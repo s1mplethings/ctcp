@@ -1,0 +1,792 @@
+{
+  "run_id": "20260428-160901",
+  "generated_at": "2026-04-28T16:20:12",
+  "suite": "lite",
+  "runs_root": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2",
+  "run_dir": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901",
+  "total": 15,
+  "passed": 6,
+  "failed": 9,
+  "scenarios": [
+    {
+      "id": "S00_lite_headless",
+      "name": "lite headless sanity",
+      "suite": "lite",
+      "status": "pass",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S00_lite_headless/TRACE.md",
+      "bundle": "",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py new-run --goal lite-headless",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\simlab_external_runs\\20260428-160901\\S00_lite_headless\\sandbox\\20260428-160929-081407-orchestrate\n",
+          "stderr_tail": ""
+        },
+        {
+          "type": "expect_path",
+          "path": "meta/tasks/CURRENT.md",
+          "exists": true,
+          "expect": true
+        },
+        {
+          "type": "expect_text",
+          "path": "meta/tasks/CURRENT.md",
+          "includes": [
+            "## Acceptance",
+            "Code changes allowed"
+          ],
+          "excludes": [],
+          "size": 8970
+        }
+      ]
+    },
+    {
+      "id": "S10_lite_resolve_workflow",
+      "name": "lite resolver artifact sanity",
+      "suite": "lite",
+      "status": "pass",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S10_lite_resolve_workflow/TRACE.md",
+      "bundle": "",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python scripts/resolve_workflow.py --goal headless-lite --out artifacts/_simlab_find.json",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "[resolve_workflow] out=C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S10_lite_resolve_workflow/sandbox/artifacts/_simlab_find.json\n[resolve_workflow] selected=wf_project_generation_manifest\n",
+          "stderr_tail": ""
+        },
+        {
+          "type": "expect_path",
+          "path": "artifacts/_simlab_find.json",
+          "exists": true,
+          "expect": true
+        },
+        {
+          "type": "expect_text",
+          "path": "artifacts/_simlab_find.json",
+          "includes": [
+            "\"schema_version\": \"ctcp-find-result-v1\"",
+            "\"selected_workflow_id\""
+          ],
+          "excludes": [],
+          "size": 1390
+        }
+      ]
+    },
+    {
+      "id": "S11_lite_find_web_contract",
+      "name": "lite resolver_plus_web find_web contract check",
+      "suite": "lite",
+      "status": "pass",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S11_lite_find_web_contract/TRACE.md",
+      "bundle": "",
+      "steps": [
+        {
+          "type": "write",
+          "path": "artifacts/_simlab_find_web.json",
+          "mode": "overwrite",
+          "bytes": 539
+        },
+        {
+          "type": "run",
+          "cmd": "python tools/checks/find_web_contract.py --mode resolver_plus_web --path artifacts/_simlab_find_web.json",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "[find_web_contract] ok: C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S11_lite_find_web_contract/sandbox/artifacts/_simlab_find_web.json\n",
+          "stderr_tail": ""
+        },
+        {
+          "type": "expect_text",
+          "path": "artifacts/_simlab_find_web.json",
+          "includes": [
+            "\"schema_version\": \"ctcp-find-web-v1\"",
+            "\"risk_flags\""
+          ],
+          "excludes": [],
+          "size": 539
+        }
+      ]
+    },
+    {
+      "id": "S12_lite_orchestrate_context_gate",
+      "name": "lite orchestrator blocks on missing context_pack with external run dir",
+      "suite": "lite",
+      "status": "fail",
+      "error": "step 8: include assertion failed: missing expected text: blocked: waiting for PLAN_draft.md",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S12_lite_orchestrate_context_gate/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S12_lite_orchestrate_context_gate/failure_bundle.zip",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-orchestrate-lite > artifacts/_orch_newrun.out.txt 2>&1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "expect_text",
+          "path": "artifacts/_orch_newrun.out.txt",
+          "includes": [
+            "[ctcp_orchestrate] run_dir="
+          ],
+          "excludes": [],
+          "size": 190
+        },
+        {
+          "type": "expect_text",
+          "path": "meta/run_pointers/LAST_RUN.txt",
+          "includes": [
+            "ctcp",
+            "runs"
+          ],
+          "excludes": [
+            "simlab_runs"
+          ],
+          "size": 163
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; art.mkdir(parents=True, exist_ok=True); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_project_generation_manifest','selected_version':'1.0','candidates':[{'workflow_id':'wf_project_generation_manifest','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-orchestrate-lite','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':10,'max_total_bytes':200000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); cfg=Path(rd)/'artifacts'/'dispatch_config.json'; doc={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'manual_outbox','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; cfg.write_text(json.dumps(doc, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python simlab/ollama_stub_runner.py --shell-command \"python scripts/ctcp_orchestrate.py advance --max-steps 8 > artifacts/_orch_advance.out.txt 2>&1\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py status > artifacts/_orch_status.out.txt 2>&1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "expect_text",
+          "path": "artifacts/_orch_status.out.txt",
+          "includes": [
+            "blocked: waiting for PLAN_draft.md",
+            "owner=Chair/Planner"
+          ],
+          "excludes": [],
+          "size": 622
+        }
+      ]
+    },
+    {
+      "id": "S13_lite_dispatch_outbox_on_missing_review",
+      "name": "lite dispatch creates contract_guardian outbox when review_contract is missing",
+      "suite": "lite",
+      "status": "fail",
+      "error": "step 6: include assertion failed: missing expected text: blocked: waiting for review_contract.md",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S13_lite_dispatch_outbox_on_missing_review/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S13_lite_dispatch_outbox_on_missing_review/failure_bundle.zip",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-dispatch-review > artifacts/_dispatch_newrun.out.txt 2>&1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; rev=Path(rd)/'reviews'; art.mkdir(parents=True, exist_ok=True); rev.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'manual_outbox','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_project_generation_manifest','selected_version':'1.0','candidates':[{'workflow_id':'wf_project_generation_manifest','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-dispatch-review','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':1,'max_total_bytes':2000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); ctx={'schema_version':'ctcp-context-pack-v1','goal':'simlab-dispatch-review','repo_slug':'ctcp','summary':'simlab','files':[],'omitted':[]}; (art/'context_pack.json').write_text(json.dumps(ctx, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'PLAN_draft.md').write_text('# draft\\n', encoding='utf-8')\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 8 > artifacts/_dispatch_advance.out.txt 2>&1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='contract_guardian'; action='review_contract'; target='reviews/review_contract.md'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_dispatch_outbox_review_contract.md')\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py status > artifacts/_dispatch_status.out.txt 2>&1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "expect_text",
+          "path": "artifacts/_dispatch_status.out.txt",
+          "includes": [
+            "blocked: waiting for review_contract.md",
+            "owner=Contract Guardian"
+          ],
+          "excludes": [],
+          "size": 545
+        }
+      ]
+    },
+    {
+      "id": "S14_lite_dispatch_local_exec_librarian",
+      "name": "lite dispatch runs librarian ollama local model for missing context_pack",
+      "suite": "lite",
+      "status": "fail",
+      "error": "step 5: include assertion failed: missing expected text: \"schema_version\": \"ctcp-context-pack-v1\"",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S14_lite_dispatch_local_exec_librarian/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S14_lite_dispatch_local_exec_librarian/failure_bundle.zip",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-dispatch-librarian > artifacts/_localexec_newrun.out.txt 2>&1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; art.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'ollama_agent','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_project_generation_manifest','selected_version':'1.0','candidates':[{'workflow_id':'wf_project_generation_manifest','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-dispatch-librarian','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':10,'max_total_bytes':200000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python simlab/ollama_stub_runner.py --shell-command \"python scripts/ctcp_orchestrate.py advance --max-steps 8 > artifacts/_localexec_advance.out.txt 2>&1\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); p=Path(rd)/'artifacts'/'context_pack.json'; assert p.exists(), str(p); Path('artifacts/_localexec_context_pack.json').write_text(p.read_text(encoding='utf-8'), encoding='utf-8')\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "expect_text",
+          "path": "artifacts/_localexec_context_pack.json",
+          "includes": [
+            "\"schema_version\": \"ctcp-context-pack-v1\""
+          ],
+          "excludes": [],
+          "size": 311
+        }
+      ]
+    },
+    {
+      "id": "S15_lite_fail_produces_bundle",
+      "name": "lite orchestrator verify fail must produce valid failure bundle",
+      "suite": "lite",
+      "status": "fail",
+      "error": "step 3: expect_exit mismatch, rc=0, expect=nonzero",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S15_lite_fail_produces_bundle/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S15_lite_fail_produces_bundle/failure_bundle.zip",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-fail-bundle > artifacts/_s15_newrun.out.txt 2>&1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; import shutil, json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; rev=r/'reviews'; art.mkdir(parents=True, exist_ok=True); rev.mkdir(parents=True, exist_ok=True); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_project_generation_manifest','selected_version':'1.0','candidates':[{'workflow_id':'wf_project_generation_manifest','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-fail-bundle','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':1,'max_total_bytes':5000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); ctx={'schema_version':'ctcp-context-pack-v1','goal':'simlab-fail-bundle','repo_slug':'ctcp','summary':'simlab','files':[],'omitted':[]}; (art/'context_pack.json').write_text(json.dumps(ctx, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'PLAN_draft.md').write_text('# draft\\n', encoding='utf-8'); (art/'PLAN.md').write_text('Status: SIGNED\\nScope-Allow: README.md,meta/tasks/CURRENT.md,meta/reports/LAST.md\\nScope-Deny: none\\nGates: lite\\nStop: max_iterations=2\\nBudgets: max_files=5,max_total_bytes=20000\\nSteps: patch->verify\\n', encoding='utf-8'); (rev/'review_contract.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); (rev/'review_cost.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); shutil.copy2('tests/fixtures/patches/lite_fail_bad_readme_link.patch', art/'diff.patch')\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 16 > artifacts/_s15_advance.out.txt 2>&1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": "nonzero",
+          "stdout_tail": "",
+          "stderr_tail": ""
+        }
+      ]
+    },
+    {
+      "id": "S16_lite_fixer_loop_pass",
+      "name": "lite fixer loop should pass after replacing failed patch",
+      "suite": "lite",
+      "status": "fail",
+      "error": "step 3: expect_exit mismatch, rc=0, expect=nonzero",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S16_lite_fixer_loop_pass/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S16_lite_fixer_loop_pass/failure_bundle.zip",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-fixer-loop > artifacts/_s16_newrun.out.txt 2>&1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; import shutil, json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); Path('artifacts/_s16_run_dir.txt').write_text(str(r), encoding='utf-8'); art=r/'artifacts'; rev=r/'reviews'; art.mkdir(parents=True, exist_ok=True); rev.mkdir(parents=True, exist_ok=True); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'manual_outbox','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_project_generation_manifest','selected_version':'1.0','candidates':[{'workflow_id':'wf_project_generation_manifest','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-fixer-loop','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':1,'max_total_bytes':5000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); ctx={'schema_version':'ctcp-context-pack-v1','goal':'simlab-fixer-loop','repo_slug':'ctcp','summary':'simlab','files':[],'omitted':[]}; (art/'context_pack.json').write_text(json.dumps(ctx, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'PLAN_draft.md').write_text('# draft\\n', encoding='utf-8'); (art/'PLAN.md').write_text('Status: SIGNED\\nScope-Allow: README.md,meta/tasks/CURRENT.md,meta/reports/LAST.md\\nScope-Deny: none\\nGates: lite\\nStop: max_iterations=2\\nBudgets: max_files=5,max_total_bytes=20000\\nSteps: patch->verify\\n', encoding='utf-8'); (rev/'review_contract.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); (rev/'review_cost.md').write_text('Verdict: APPROVE\\nBlocking Reasons: none\\nRequired Fix/Artifacts: none\\n', encoding='utf-8'); shutil.copy2('tests/fixtures/patches/lite_fail_bad_readme_link.patch', art/'diff.patch')\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 16 > artifacts/_s16_advance_fail.out.txt 2>&1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": "nonzero",
+          "stdout_tail": "",
+          "stderr_tail": ""
+        }
+      ]
+    },
+    {
+      "id": "S17_lite_linear_mainline_resolver_only",
+      "name": "lite linear: mainline resolver_only with local steps and manual outbox",
+      "suite": "lite",
+      "status": "fail",
+      "error": "step 5: include assertion failed: missing expected text: write to: artifacts/analysis.md",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S17_lite_linear_mainline_resolver_only/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S17_lite_linear_mainline_resolver_only/failure_bundle.zip",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-linear-mainline-resolver-only > artifacts/_s17_newrun.out.txt 2>&1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; art.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'ollama_agent','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 10\\nmax_total_bytes: 200000\\nmax_iterations: 3\\n', encoding='utf-8')\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s17_adv_01.out.txt 2>&1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='chair'; action='plan_draft'; target='artifacts/analysis.md'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s17_outbox_analysis.md')\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "expect_text",
+          "path": "artifacts/_s17_outbox_analysis.md",
+          "includes": [
+            "Role: chair",
+            "Action: plan_draft",
+            "Target-Path: artifacts/analysis.md",
+            "write to: artifacts/analysis.md"
+          ],
+          "excludes": [],
+          "size": 2619
+        }
+      ]
+    },
+    {
+      "id": "S18_lite_linear_mainline_resolver_plus_web",
+      "name": "lite linear: resolver_plus_web researcher branch",
+      "suite": "lite",
+      "status": "fail",
+      "error": "step 7: include assertion failed: missing expected text: write to: artifacts/find_web.json",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S18_lite_linear_mainline_resolver_plus_web/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S18_lite_linear_mainline_resolver_plus_web/failure_bundle.zip",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-linear-mainline-resolver-plus-web > artifacts/_s18_newrun.out.txt 2>&1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; art.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'ollama_agent','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_plus_web\\nallow_domains: docs.python.org,openai.com\\nmax_queries: 2\\nmax_pages: 2\\nmax_files: 10\\nmax_total_bytes: 200000\\nmax_iterations: 3\\n', encoding='utf-8'); (art/'analysis.md').write_text('# Analysis\\n- Goal: simlab-linear-mainline-resolver-plus-web\\n- Needs: researcher\\n', encoding='utf-8')\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s18_adv_01.out.txt 2>&1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; outbox=r/'outbox'; doc=json.loads((art/'find_result.json').read_text(encoding='utf-8')); assert doc.get('schema_version')=='ctcp-find-result-v1', doc.get('schema_version'); md=[p for p in outbox.glob('*.md')]; assert len(md)==0, f'expected 0 outbox prompts, got {len(md)}'\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s18_adv_02.out.txt 2>&1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; import shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='researcher'; action='find_web'; target='artifacts/find_web.json'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s18_outbox_find_web.md')\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "expect_text",
+          "path": "artifacts/_s18_outbox_find_web.md",
+          "includes": [
+            "Role: researcher",
+            "Action: find_web",
+            "Target-Path: artifacts/find_web.json",
+            "write to: artifacts/find_web.json"
+          ],
+          "excludes": [],
+          "size": 2804
+        }
+      ]
+    },
+    {
+      "id": "S19_lite_linear_robustness_tripwire",
+      "name": "lite linear: robustness tripwire on mainline",
+      "suite": "lite",
+      "status": "fail",
+      "error": "step 8: include assertion failed: missing expected text: write to: artifacts/find_web.json",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S19_lite_linear_robustness_tripwire/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S19_lite_linear_robustness_tripwire/failure_bundle.zip",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-linear-robustness-tripwire > artifacts/_s19_newrun.out.txt 2>&1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; art.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'ollama_agent','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_plus_web\\nallow_domains: docs.python.org,openai.com\\nmax_queries: 2\\nmax_pages: 2\\nmax_files: 10\\nmax_total_bytes: 200000\\nmax_iterations: 3\\n', encoding='utf-8'); (art/'analysis.md').write_text('# Analysis\\n- Goal: simlab-linear-robustness-tripwire\\n- Needs: researcher\\n', encoding='utf-8')\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s19_adv_01.out.txt 2>&1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; outbox=r/'outbox'; doc=json.loads((art/'find_result.json').read_text(encoding='utf-8')); assert doc.get('schema_version')=='ctcp-find-result-v1', doc.get('schema_version'); md=[p for p in outbox.glob('*.md')]; assert len(md)==0, f'expected 0 outbox prompts, got {len(md)}'\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; (art/'find_web.json').write_text('{', encoding='utf-8')\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s19_adv_02.out.txt 2>&1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; import json, shutil; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); outbox=Path(rd)/'outbox'; role='researcher'; action='find_web'; target='artifacts/find_web.json'; picked=[p for p in sorted(outbox.glob('*.md')) if (lambda t: (f'Role: {role}' in t and f'Action: {action}' in t and (f'Target-Path: {target}' in t or f'write to: {target}' in t)))(p.read_text(encoding='utf-8', errors='replace'))]; assert picked, 'missing matched outbox prompt'; shutil.copy2(picked[0], 'artifacts/_s19_outbox_find_web.md'); rows=[(role_v, action_v, target_v) for p in sorted(outbox.glob('*.md')) for lines in [p.read_text(encoding='utf-8', errors='replace').splitlines()] for role_v in [next((ln.split(':',1)[1].strip() for ln in lines if ln.startswith('Role:')), '')] for action_v in [next((ln.split(':',1)[1].strip() for ln in lines if ln.startswith('Action:')), '')] for target_v in [next((ln.split(':',1)[1].strip() for ln in lines if ln.startswith('Target-Path:')), '') or next((ln.split(':',1)[1].strip() for ln in lines if ln.startswith('write to:')), '')]]; counts={}; [counts.__setitem__(f'{r}|{a}|{t}', counts.get(f'{r}|{a}|{t}',0)+1) for (r,a,t) in rows]; Path('artifacts/_s19_outbox_counts_before.json').write_text(json.dumps(counts, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "expect_text",
+          "path": "artifacts/_s19_outbox_find_web.md",
+          "includes": [
+            "Role: researcher",
+            "Action: find_web",
+            "Target-Path: artifacts/find_web.json",
+            "write to: artifacts/find_web.json"
+          ],
+          "excludes": [],
+          "size": 2728
+        }
+      ]
+    },
+    {
+      "id": "S26_lite_librarian_auto_context_pack_mandatory",
+      "name": "lite librarian auto-generates deterministic context_pack with mandatory contracts",
+      "suite": "lite",
+      "status": "fail",
+      "error": "step 4: expect_exit mismatch, rc=1, expect=0",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S26_lite_librarian_auto_context_pack_mandatory/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S26_lite_librarian_auto_context_pack_mandatory/failure_bundle.zip",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-librarian-auto-context-pack > artifacts/_s26_newrun.out.txt 2>&1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; art.mkdir(parents=True, exist_ok=True); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 20\\nmax_total_bytes: 500000\\nmax_iterations: 3\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_project_generation_manifest','selected_version':'1.0','candidates':[{'workflow_id':'wf_project_generation_manifest','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-librarian-auto-context-pack','needs':[{'path':'README.md','mode':'snippets','line_ranges':[[1,20]]}], 'budget':{'max_files':20,'max_total_bytes':500000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python simlab/ollama_stub_runner.py --shell-command \"python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_s26_advance.out.txt 2>&1\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(rd); art=r/'artifacts'; outbox=r/'outbox'; cp=art/'context_pack.json'; assert cp.exists(), str(cp); doc=json.loads(cp.read_text(encoding='utf-8')); assert doc.get('schema_version')=='ctcp-context-pack-v1', doc.get('schema_version'); paths=[str(x.get('path','')) for x in doc.get('files',[]) if isinstance(x,dict)]; req={'AGENTS.md','ai_context/00_AI_CONTRACT.md','ai_context/CTCP_FAST_RULES.md','docs/00_CORE.md','PATCH_README.md'}; assert req.issubset(set(paths)), paths; prompts=[p for p in outbox.glob('[0-9][0-9][0-9]_*.md') if 'Role: librarian' in p.read_text(encoding='utf-8', errors='replace')]; assert not prompts, [str(p) for p in prompts]; assert (outbox/'AGENT_PROMPT_librarian_context_pack.md').exists(), 'missing librarian agent prompt evidence'; Path('artifacts/_s26_context_pack.json').write_text(cp.read_text(encoding='utf-8'), encoding='utf-8')\"",
+          "cwd": ".",
+          "rc": 1,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nAssertionError: C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\simlab_external_runs\\20260428-160901\\S26_lite_librarian_auto_context_pack_mandatory\\sandbox\\20260428-161845-183715-orchestrate\\artifacts\\context_pack.json\n"
+        }
+      ]
+    },
+    {
+      "id": "S27_lite_librarian_budget_mandatory_fail",
+      "name": "lite librarian fails with clear increase-budget error when mandatory docs exceed budget",
+      "suite": "lite",
+      "status": "pass",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S27_lite_librarian_budget_mandatory_fail/TRACE.md",
+      "bundle": "",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py new-run --goal simlab-librarian-budget-fail > artifacts/_s27_newrun.out.txt 2>&1",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; art.mkdir(parents=True, exist_ok=True); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 2\\nmax_total_bytes: 64\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_project_generation_manifest','selected_version':'1.0','candidates':[{'workflow_id':'wf_project_generation_manifest','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-librarian-budget-fail','needs':[{'path':'README.md','mode':'full'}], 'budget':{'max_files':2,'max_total_bytes':64},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; import subprocess, sys; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); cmd=[sys.executable,'scripts/ctcp_librarian.py','--run-dir',rd]; p=subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace'); print(p.stdout, end=''); print(p.stderr, end=''); raise SystemExit(p.returncode)\"",
+          "cwd": ".",
+          "rc": 1,
+          "expect_exit": "nonzero",
+          "stdout_tail": "[ctcp_librarian] budget too small for mandatory contract files; requires max_files>=5 and max_total_bytes>=39077. Please increase budget.max_files and budget.max_total_bytes.\n",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); cp=Path(rd)/'artifacts'/'context_pack.json'; assert not cp.exists(), str(cp); Path('artifacts/_s27_budget_fail_ok.txt').write_text('ok\\n', encoding='utf-8')\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "expect_text",
+          "path": "artifacts/_s27_budget_fail_ok.txt",
+          "includes": [
+            "ok"
+          ],
+          "excludes": [],
+          "size": 3
+        }
+      ]
+    },
+    {
+      "id": "S28_cos_user_v2p_dialogue_to_D_drive",
+      "name": "cos-user-v2p runs dialogue and copies outputs to destination out dir",
+      "suite": "lite",
+      "status": "pass",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S28_cos_user_v2p_dialogue_to_D_drive/TRACE.md",
+      "bundle": "",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python scripts/ctcp_orchestrate.py cos-user-v2p --repo . --project v2p_lab --testkit-zip tests/fixtures/testkits/stub_ok.zip --entry \"python run_all.py\" --dialogue-script tests/fixtures/dialogues/v2p_cos_user.jsonl --skip-verify",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_runs\\ctcp\\simlab_external_runs\\20260428-160901\\S28_cos_user_v2p_dialogue_to_D_drive\\cos_user_v2p\\20260428-161943-908751-cos-user-v2p-v2p_lab\n[ctcp_orchestrate] out_dir=D:/v2p_tests/v2p_lab/20260428-161943-908751-cos-user-v2p-v2p_lab/out\n",
+          "stderr_tail": ""
+        },
+        {
+          "type": "run",
+          "cmd": "python -c \"from pathlib import Path; import json; run_dir=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); r=Path(run_dir); req=[r/'TRACE.md', r/'events.jsonl', r/'artifacts'/'USER_SIM_PLAN.md', r/'artifacts'/'v2p_report.json']; miss=[str(p) for p in req if not p.exists()]; assert not miss, miss; rep=json.loads((r/'artifacts'/'v2p_report.json').read_text(encoding='utf-8')); out_dir=Path(rep['paths']['dest_out_dir']); need=['scorecard.json','eval.json','cloud.ply','cloud_sem.ply']; miss2=[n for n in need if not (out_dir/n).exists()]; assert not miss2, miss2\"",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        }
+      ]
+    },
+    {
+      "id": "S28_lite_virtual_delivery_e2e",
+      "name": "virtual delivery golden e2e",
+      "suite": "lite",
+      "status": "pass",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug2/20260428-160901/S28_lite_virtual_delivery_e2e/TRACE.md",
+      "bundle": "",
+      "steps": [
+        {
+          "type": "run",
+          "cmd": "python tests/support_virtual_delivery_e2e_runner.py --json-out artifacts/_virtual_delivery_e2e.json",
+          "cwd": ".",
+          "rc": 0,
+          "expect_exit": 0,
+          "stdout_tail": "",
+          "stderr_tail": ""
+        },
+        {
+          "type": "expect_path",
+          "path": "artifacts/_virtual_delivery_e2e.json",
+          "exists": true,
+          "expect": true
+        },
+        {
+          "type": "expect_text",
+          "path": "artifacts/_virtual_delivery_e2e.json",
+          "includes": [
+            "\"passed\": true",
+            "\"sent_types\": [",
+            "\"document\"",
+            "\"photo\"",
+            "final-ui.png"
+          ],
+          "excludes": [],
+          "size": 14552
+        }
+      ]
+    }
+  ]
+}

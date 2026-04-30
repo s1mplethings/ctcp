@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import hashlib
 import json
 import shutil
 import struct
@@ -525,14 +526,30 @@ def _capture_visual_evidence(
             "preview_source": preview_source_path.resolve().relative_to(run_dir.resolve()).as_posix(),
         }
 
-    title = "CTCP VISUAL EVIDENCE"
-    subtitle = f"{shape.upper()} {Path(entry_script).name}"
+    signature_rows = [
+        f"{path.name}:{path.stat().st_size}"
+        for path in exported_files[:8]
+        if path.exists() and path.is_file()
+    ]
+    signature_seed = "|".join(
+        [
+            str(run_dir.resolve().as_posix()),
+            str(project_root or ""),
+            str(shape or ""),
+            str(entry_script or ""),
+            "|".join(signature_rows),
+        ]
+    )
+    signature = hashlib.sha256(signature_seed.encode("utf-8", errors="replace")).hexdigest()[:8].upper()
+    title = f"VISUAL EVIDENCE {signature}"
+    subtitle = f"{shape.upper()} {Path(entry_script).name} [{Path(project_root).name}]"
     detail_lines = [
+        f"RUN {Path(run_dir).name}",
         f"STARTUP {'PASS' if behavior_rc == 0 else 'BLOCKED'}",
         f"EXPORT {'PASS' if export_rc == 0 else 'BLOCKED'}",
     ]
     for path in exported_files[:5]:
-        detail_lines.append(f"OUT {path.name}")
+        detail_lines.append(f"OUT {path.name} ({int(path.stat().st_size)} bytes)")
     _render_visual_evidence_png(path=screenshot_path, title=title, subtitle=subtitle, detail_lines=detail_lines)
     rel_file = screenshot_path.resolve().relative_to(run_dir.resolve()).as_posix()
     _clear_visual_failure_note(project_artifacts_dir)

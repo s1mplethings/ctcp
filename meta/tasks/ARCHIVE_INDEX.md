@@ -7,6 +7,10 @@
 
 | Date | Topic | File |
 |------|-------|------|
+| 2026-04-28 | Template Chain Removal Pivot | [->](archive/20260428-template-chain-removal-pivot.md) |
+| 2026-04-26 | Support Single Project-Generation Interface (Mainline) | [->](archive/20260426-single-support-project-generation-interface.md) |
+| 2026-04-25 | Mainline Reduction Closure (No New Layer) | [->](archive/20260425-mainline-reduction-closure.md) |
+| 2026-04-25 | Formal API-Only Execution Lock | [->](archive/20260425-formal-api-only-execution-lock.md) |
 | 2026-04-25 | Five-Project Portfolio Execution | [->](archive/20260425-five-project-portfolio-execution.md) |
 | 2026-04-25 | Project Queue Portfolio Mainline | [->](archive/20260425-project-queue-portfolio-mainline.md) |
 | 2026-04-25 | Endurance Benchmark Formalization | [->](archive/20260425-endurance-benchmark-formalization.md) |

@@ -40,7 +40,13 @@ except ModuleNotFoundError:
 KNOWN_PROVIDERS = {"manual_outbox", "ollama_agent", "api_agent", "codex_agent", "mock_agent", "local_exec"}
 STEP_META_PATH = Path("step_meta.jsonl")
 HARD_ROLE_PROVIDERS = {
-    "librarian": "ollama_agent",
+    "librarian": "api_agent",
+    "chair": "api_agent",
+    "contract_guardian": "api_agent",
+    "cost_controller": "api_agent",
+    "researcher": "api_agent",
+    "patchmaker": "api_agent",
+    "fixer": "api_agent",
 }
 
 # BEHAVIOR_ID: B017
@@ -715,58 +721,6 @@ def _resolve_provider(config: dict[str, Any], role: str, action: str) -> tuple[s
     )
 
 
-def _is_patchmaker_fallback_candidate(request: dict[str, Any], result: dict[str, Any], run_dir: Path) -> bool:
-    if formal_api_only_enabled():
-        return False
-    if _forced_provider():
-        return False
-    if str(result.get("status", "")).strip() != "exec_failed":
-        return False
-    role = str(request.get("role", "")).strip().lower()
-    action = str(request.get("action", "")).strip().lower()
-    target_rel = str(request.get("target_path", "")).strip()
-    if role not in {"patchmaker", "fixer"} or action not in {"make_patch", "fix_patch"}:
-        return False
-    if target_rel not in {"artifacts/diff.patch", "artifacts/diff.patch.v2"}:
-        return False
-    return not (run_dir / target_rel).exists()
-
-
-def _run_patchmaker_local_fallback(
-    *,
-    repo_root: Path,
-    run_dir: Path,
-    request: dict[str, Any],
-    config: dict[str, Any],
-    provider: str,
-    result: dict[str, Any],
-) -> tuple[str, dict[str, Any]]:
-    fallback_config = dict(config)
-    fallback_config["mode"] = "mock_agent"
-    fallback_result = mock_agent.execute(
-        repo_root=repo_root,
-        run_dir=run_dir,
-        request=request,
-        config=fallback_config,
-        guardrails_budgets=_parse_guardrails_budgets(run_dir),
-    )
-    fallback_result["fallback_from_provider"] = provider
-    fallback_result["fallback_reason"] = str(result.get("reason", "")).strip() or "provider exec_failed"
-    fallback_result["chosen_provider"] = "mock_agent"
-    fallback_result["provider_mode"] = "local_fallback"
-    if str(fallback_result.get("status", "")) == "executed":
-        _append_trace(
-            run_dir,
-            f"PatchMaker provider fallback: {provider} failed; mock_agent wrote {fallback_result.get('target_path', '')}",
-        )
-        return "mock_agent", fallback_result
-    _append_trace(
-        run_dir,
-        f"PatchMaker provider fallback failed after {provider}: {fallback_result.get('reason', '')}",
-    )
-    return provider, result
-
-
 def dispatch_preview(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str]) -> dict[str, Any]:
     config, cfg_msg = load_dispatch_config(run_dir)
     if config is None:
@@ -784,6 +738,8 @@ def dispatch_preview(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str
         hard_role_providers=HARD_ROLE_PROVIDERS,
         live_policy=lambda **kwargs: _live_provider_violation(gate=gate, **kwargs),
     )
+
+
 def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], repo_root: Path) -> dict[str, Any]:
     # BEHAVIOR_ID: B027
     config, cfg_msg = load_dispatch_config(run_dir)
@@ -819,15 +775,7 @@ def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], 
         hard_role_providers=HARD_ROLE_PROVIDERS,
         live_policy=lambda **kwargs: _live_provider_violation(gate=gate, **kwargs),
     )
-    if _is_patchmaker_fallback_candidate(request, result, run_dir):
-        provider, result = _run_patchmaker_local_fallback(
-            repo_root=repo_root,
-            run_dir=run_dir,
-            request=request,
-            config=config,
-            provider=provider,
-            result=result,
-        )
+
     result_snapshot = _append_dispatch_result_whiteboard(
         run_dir=run_dir,
         request=request,
@@ -840,25 +788,30 @@ def dispatch_once(run_dir: Path, run_doc: dict[str, Any], gate: dict[str, str], 
         "lookup_error": str(whiteboard_context.get("lookup_error", "")),
         "snapshot": result_snapshot,
     }
+    provider_used = (
+        str(result.get("provider", "")).strip()
+        or str(result.get("chosen_provider", "")).strip()
+        or str(provider).strip()
+    )
     append_provider_ledger(
         run_dir,
         role=str(request.get("role", "")),
         action=str(request.get("action", "")),
-        provider_used=provider,
+        provider_used=provider_used,
         result=result,
     )
     _append_step_meta(
         run_dir=run_dir,
         gate=gate,
         request=request,
-        provider=provider,
+        provider=provider_used,
         result=result,
     )
     _write_step_acceptance(
         run_dir=run_dir,
         gate=gate,
         request=request,
-        provider=provider,
+        provider=provider_used,
         result=result,
     )
     return result

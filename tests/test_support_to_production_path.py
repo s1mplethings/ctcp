@@ -653,7 +653,7 @@ class SupportToProductionPathTests(unittest.TestCase):
 
             self.assertEqual(int(state.get("new_run_calls", 0) or 0), 1)
             self.assertEqual(int(state.get("advance_calls", 0) or 0), 1)
-            self.assertEqual(int(state.get("last_max_steps", 0) or 0), 2)
+            self.assertEqual(int(state.get("last_max_steps", 0) or 0), 4)
             self.assertTrue((production_run / "artifacts" / "frontend_request.json").exists())
             self.assertTrue((production_run / SUPPORT_FRONTEND_TURNS_REL).exists())
             self.assertTrue((production_run / SUPPORT_WHITEBOARD_REL).exists())
@@ -962,6 +962,39 @@ class SupportToProductionPathTests(unittest.TestCase):
                 self.assertEqual(int(status.get("decisions_needed_count", 0) or 0), 0)
                 pending_rows = list(dict(status.get("runtime_state", {})).get("pending_decisions", []))
                 self.assertEqual(len(pending_rows), 0)
+
+    def test_collect_public_delivery_state_uses_active_project_export_only(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_exports_filter_") as td:
+            run_dir = Path(td)
+            exports_root = run_dir / "artifacts" / "support_exports"
+            current_screenshot = exports_root / "current_app_ctcp_project" / "artifacts" / "screenshots" / "final-ui.png"
+            old_screenshot = exports_root / "old_app_ctcp_project" / "artifacts" / "screenshots" / "final-ui.png"
+            current_screenshot.parent.mkdir(parents=True, exist_ok=True)
+            old_screenshot.parent.mkdir(parents=True, exist_ok=True)
+            current_screenshot.write_bytes(b"current-screenshot")
+            old_screenshot.write_bytes(b"old-screenshot")
+
+            session_state = {
+                "project_memory": {"project_brief": "current app"},
+                "task_summary": "current app",
+                "bound_run_id": "r-export-filter",
+                "bound_run_dir": str(run_dir),
+            }
+            project_context = {
+                "run_id": "r-export-filter",
+                "run_dir": str(run_dir),
+            }
+
+            delivery_state = support_bot.collect_public_delivery_state(
+                session_state=session_state,
+                project_context=project_context,
+                source="telegram",
+                support_run_dir=run_dir,
+            )
+            screenshot_files = [Path(str(item)).resolve() for item in delivery_state.get("screenshot_files", [])]
+
+            self.assertIn(current_screenshot.resolve(), screenshot_files)
+            self.assertNotIn(old_screenshot.resolve(), screenshot_files)
 
 
 if __name__ == "__main__":

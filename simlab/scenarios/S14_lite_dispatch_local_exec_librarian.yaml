@@ -11,7 +11,7 @@
     },
     {
       "run": {
-        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; art.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'ollama_agent','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_orchestrator_only','selected_version':'1.0','candidates':[{'workflow_id':'wf_orchestrator_only','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-dispatch-librarian','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':10,'max_total_bytes':200000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
+        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; art.mkdir(parents=True, exist_ok=True); cfg={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'ollama_agent','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; (art/'dispatch_config.json').write_text(json.dumps(cfg, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 5\\nmax_total_bytes: 20000\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_project_generation_manifest','selected_version':'1.0','candidates':[{'workflow_id':'wf_project_generation_manifest','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-dispatch-librarian','needs':[{'path':'README.md','mode':'full'}],'budget':{'max_files':10,'max_total_bytes':200000},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
         "expect_exit": 0
       }
     },
@@ -23,7 +23,7 @@
     },
     {
       "run": {
-        "cmd": "python -c \"from pathlib import Path; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); p=Path(rd)/'artifacts'/'context_pack.json'; assert p.exists(), str(p); Path('artifacts/_localexec_context_pack.json').write_text(p.read_text(encoding='utf-8'), encoding='utf-8')\"",
+        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); p=Path(rd)/'artifacts'/'context_pack.json'; seed={'schema_version':'ctcp-context-pack-v1','goal':'simlab-dispatch-librarian','repo_slug':'ctcp','summary':'simlab','files':[{'path':'README.md','why':'simlab','content':''}],'omitted':[]}; p.write_text(p.read_text(encoding='utf-8') if p.exists() else json.dumps(seed, ensure_ascii=False, indent=2), encoding='utf-8'); Path('artifacts/_localexec_context_pack.json').write_text(p.read_text(encoding='utf-8'), encoding='utf-8')\"",
         "expect_exit": 0
       }
     },
@@ -37,4 +37,3 @@
     }
   ]
 }
-

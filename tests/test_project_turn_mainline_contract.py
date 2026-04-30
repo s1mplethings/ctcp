@@ -52,17 +52,10 @@ class ProjectTurnMainlineContractTests(unittest.TestCase):
                     "target_path": str(request.get("target_path", "")),
                 }
 
-            created_rows: list[str] = []
+            sync_calls: list[dict[str, object]] = []
 
-            def _fake_new_run(goal: str, **_kwargs: object) -> dict[str, object]:
-                created_rows.append(goal)
-                return {"run_id": "r-mainline", "run_dir": str(production_run)}
-
-            def _fake_record_support_turn(run_id: str, **_kwargs: object) -> dict[str, object]:
-                self.assertEqual(run_id, "r-mainline")
-                return {"run_id": run_id, "written_path": "artifacts/support_frontend_turns.jsonl"}
-
-            def _fake_support_context(_run_id: str) -> dict[str, object]:
+            def _fake_sync_support_turn(**kwargs: object) -> dict[str, object]:
+                sync_calls.append(dict(kwargs))
                 return {
                     "run_id": "r-mainline",
                     "run_dir": str(production_run),
@@ -83,6 +76,9 @@ class ProjectTurnMainlineContractTests(unittest.TestCase):
                     "project_manifest": {},
                     "delivery_evidence": {},
                     "frontend_request": {"goal": "做一个走正式 CTCP 主链的项目"},
+                    "created": {"run_id": "r-mainline", "run_dir": str(production_run)},
+                    "recorded_turn": {"run_id": "r-mainline", "written_path": "artifacts/support_frontend_turns.jsonl"},
+                    "advance": {"run_id": "r-mainline", "status": "advanced"},
                 }
 
             config = {"mode": "manual_outbox", "role_providers": {"support_lead": "api_agent"}}
@@ -97,26 +93,22 @@ class ProjectTurnMainlineContractTests(unittest.TestCase):
             ), mock.patch.object(
                 support_bot, "run_t2p_state_machine", side_effect=AssertionError("support fast path must stay disabled")
             ), mock.patch.object(
-                support_bot.ctcp_front_bridge, "ctcp_new_run", side_effect=_fake_new_run
-            ) as new_run_spy, mock.patch.object(
-                support_bot.ctcp_front_bridge, "ctcp_record_support_turn", side_effect=_fake_record_support_turn
-            ) as record_spy, mock.patch.object(
-                support_bot.ctcp_front_bridge, "ctcp_get_support_context", side_effect=_fake_support_context
-            ) as support_context_spy, mock.patch.object(
-                support_bot.ctcp_front_bridge, "ctcp_advance", return_value={"run_id": "r-mainline", "status": "advanced"}
-            ) as advance_spy:
+                support_bot.ctcp_front_bridge, "ctcp_sync_support_project_turn", side_effect=_fake_sync_support_turn
+            ) as sync_spy:
                 doc, support_session_dir = support_bot.process_message(
                     chat_id="bridge-only-demo",
                     user_text="帮我做一个项目，但这次必须走正式 CTCP 主链。",
                     source="stdin",
                 )
 
-        self.assertEqual(created_rows, ["帮我做一个项目，但这次必须走正式 CTCP 主链。"])
+        self.assertEqual(len(sync_calls), 1)
+        self.assertEqual(str(sync_calls[0].get("create_goal", "")), "帮我做一个项目，但这次必须走正式 CTCP 主链。")
+        constraints = sync_calls[0].get("constraints", {})
+        self.assertTrue(isinstance(constraints, dict))
+        self.assertTrue(bool(dict(constraints).get("support_first_turn_quality_boost", False)))
+        self.assertEqual(int(sync_calls[0].get("advance_steps", 0) or 0), 4)
         self.assertEqual(str(doc.get("reply_text", "")), provider_reply)
-        new_run_spy.assert_called_once()
-        record_spy.assert_called_once()
-        self.assertGreaterEqual(support_context_spy.call_count, 1)
-        advance_spy.assert_called_once()
+        sync_spy.assert_called_once()
 
 
 if __name__ == "__main__":

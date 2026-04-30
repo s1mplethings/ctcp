@@ -55,12 +55,12 @@ B.1) Librarian prompt/input contract (hard)
 
 - The librarian execution path MUST consume `artifacts/file_request.json` before generating `artifacts/context_pack.json`.
 - If `artifacts/file_request.json` is missing or unreadable, librarian MUST fail fast with an explicit error.
-- Local prompt/context preparation MAY prepend repo-local contract docs and helper context, but the provider path MUST remain local-model only and MUST NOT silently fall back to remote `api_agent`.
+- Local prompt/context preparation MAY prepend repo-local contract docs and helper context, but the mainline provider path MUST remain `api_agent` and MUST NOT silently fall back to `local_exec`/`ollama_agent`.
 - Chair/Planner MUST still provide budget and `needs[]` intent through `file_request.json`.
 
-B.2) Context pack generation rules (MUST, local-model locked)
+B.2) Context pack generation rules (MUST, api-locked)
 
-The librarian output MUST come from the hard-local-model provider path for the same run and `file_request.json`.
+The librarian output MUST come from the hard-locked `api_agent` path for the same run and `file_request.json`.
 
 Path rules:
 - `needs[].path` MUST be repo-relative POSIX paths (no drive letters, no `..`, no leading `/`).
@@ -68,9 +68,9 @@ Path rules:
 - If a path does not exist: omit with `reason: not_found`.
 
 Provider rules:
-- Default provider for `librarian/context_pack` is `ollama_agent`.
-- `librarian/context_pack` is the hard-local-model role; `mode`, `role_providers`, and `CTCP_FORCE_PROVIDER` MUST NOT remap it away from `ollama_agent` (except explicit `mock_agent` test mode).
-- If the local model is unavailable, returns empty content, or produces non-normalizable output, librarian MUST fail explicitly instead of pretending success.
+- Default provider for `librarian/context_pack` is `api_agent`.
+- `librarian/context_pack` is hard-locked to `api_agent`; `mode`, `role_providers`, and `CTCP_FORCE_PROVIDER` MUST NOT remap it away from `api_agent` (except explicit `mock_agent` test mode).
+- If API execution is unavailable, returns empty content, or produces non-normalizable output, librarian MUST fail explicitly instead of pretending success.
 
 Output rules:
 - `files[].path` and `omitted[].path` MUST remain repo-relative POSIX paths.
@@ -262,7 +262,7 @@ schema_version: "ctcp-dispatch-config-v1"
 mode: "manual_outbox" | "ollama_agent" | "api_agent" | "local_exec"
 
 role_providers: {
-  "librarian": "ollama_agent",
+  "librarian": "api_agent",
   "chair": "manual_outbox|api_agent",
   "contract_guardian": "manual_outbox|api_agent",
   "cost_controller": "manual_outbox",
@@ -274,9 +274,9 @@ role_providers: {
 budgets: { "max_outbox_prompts": int }
 
 Rules:
-- Default path for missing `artifacts/context_pack.json` is hard-local-model librarian execution (`ollama_agent` / local Ollama).
-- `librarian/context_pack` is the hard-local-model role; `mode`, `role_providers`, and `CTCP_FORCE_PROVIDER` MUST NOT remap it away from `ollama_agent` (except explicit `mock_agent` test mode).
-- `ollama_agent` librarian execution MUST emit explicit local-model evidence (`provider_mode`, `model_name`, failure reason when relevant) and MUST NOT silently fall back to `api_agent`.
+- Default path for missing `artifacts/context_pack.json` is `api_agent` librarian execution.
+- `librarian/context_pack` is hard-locked to `api_agent`; `mode`, `role_providers`, and `CTCP_FORCE_PROVIDER` MUST NOT remap it away from `api_agent` (except explicit `mock_agent` test mode).
+- `api_agent` librarian execution MUST emit explicit provider evidence (`provider_mode`, `model_name`, failure reason when relevant) and MUST NOT silently fall back to local providers.
 - `api_agent` executes configured external command templates (`SDDAI_PLAN_CMD`, `SDDAI_PATCH_CMD`, `SDDAI_AGENT_CMD`) and records stdout/stderr logs.
 - For patch targets, `api_agent` output MUST start with `diff --git`, otherwise provider execution fails with explicit logs/reason.
 

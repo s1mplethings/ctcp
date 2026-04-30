@@ -1,6 +1,10 @@
 id: wf_project_generation_manifest
 version: 1.0.0
 description: Dedicated low-capability project-generation path with manifest and deliver-stage gating.
+operator_status: canonical_mainline
+canonical_mainline_contract: docs/02_workflow.md
+canonical_freeze_contract: docs/architecture/contracts/default_mainline_freeze_contract.md
+canonical_responsibility_ledger: artifacts/run_responsibility_manifest.json
 
 inputs:
   required:
@@ -56,16 +60,12 @@ cost_hints:
 
 roles:
   librarian:
-    provider: ollama_agent
+    provider: api_agent
   contract_guardian:
     provider: api_agent
   chair:
     provider: api_agent
   cost_controller:
-    provider: api_agent
-  patchmaker:
-    provider: api_agent
-  fixer:
     provider: api_agent
   researcher:
     provider: api_agent

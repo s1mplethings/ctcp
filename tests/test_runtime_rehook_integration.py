@@ -51,9 +51,9 @@ class RuntimeRehookIntegrationTests(unittest.TestCase):
                 run_dir / "artifacts" / "find_result.json",
                 {
                     "schema_version": "ctcp-find-result-v1",
-                    "selected_workflow_id": "wf_orchestrator_only",
+                    "selected_workflow_id": "wf_project_generation_manifest",
                     "selected_version": "1.0",
-                    "candidates": [{"workflow_id": "wf_orchestrator_only", "version": "1.0", "score": 1.0, "why": "test"}],
+                    "candidates": [{"workflow_id": "wf_project_generation_manifest", "version": "1.0", "score": 1.0, "why": "test"}],
                 },
             )
             _write_json(
@@ -103,7 +103,7 @@ class RuntimeRehookIntegrationTests(unittest.TestCase):
             self.assertEqual(str(request.get("target_path", "")), "artifacts/PLAN_draft.md")
             self.assertTrue((run_dir / "artifacts" / "PLAN_draft.md").exists())
             gate = ctcp_orchestrate.current_gate(run_dir, json.loads((run_dir / "RUN.json").read_text(encoding="utf-8")))
-            self.assertEqual(str(gate.get("path", "")), "reviews/review_contract.md")
+            self.assertEqual(str(gate.get("path", "")), "artifacts/PLAN_draft.md")
 
     def test_support_bot_execute_provider_uses_runtime_facade(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_runtime_rehook_support_") as td:
@@ -199,3 +199,4 @@ class RuntimeRehookIntegrationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

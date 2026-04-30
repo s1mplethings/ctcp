@@ -8,7 +8,7 @@ Both formal benchmarks require:
 
 - true API only: `CTCP_FORCE_PROVIDER=api_agent`
 - formal execution lock: `CTCP_FORMAL_API_ONLY=1`
-- only `librarian/context_pack` may stay local
+- no local-provider exception on critical steps (including `librarian/context_pack`)
 - no `mock_agent`
 - at least one successful remote API request recorded in `api_calls.jsonl`
 - no fallback result accepted as a passed true-API step
@@ -90,7 +90,7 @@ Pass requires:
 
 - true API only: `CTCP_FORCE_PROVIDER=api_agent`
 - formal execution lock: `CTCP_FORMAL_API_ONLY=1`
-- only `librarian/context_pack` may stay local
+- no local-provider exception on critical steps (including `librarian/context_pack`)
 - no `mock_agent`
 - `artifacts/provider_ledger.jsonl` exists
 - `artifacts/provider_ledger_summary.json` exists

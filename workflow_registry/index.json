@@ -10,9 +10,12 @@
       "last_known_good",
       "historical_success"
     ],
-    "fallback_workflow_id": "wf_orchestrator_only",
+    "fallback_workflow_id": "wf_project_generation_manifest",
     "must_not_require_web": true
   },
+  "canonical_mainline_doc": "docs/02_workflow.md",
+  "canonical_freeze_contract": "docs/architecture/contracts/default_mainline_freeze_contract.md",
+  "canonical_responsibility_ledger": "artifacts/run_responsibility_manifest.json",
   "externals_pack_policy": {
     "input_path_pattern": "meta/externals/<goal_slug>/externals_pack.json",
     "usage": "candidate_supplement_only",
@@ -20,38 +23,6 @@
     "replace_resolver": false
   },
   "workflows": [
-    {
-      "id": "wf_orchestrator_only",
-      "version": "1.0.0",
-      "path": "workflow_registry/wf_minimal_patch_verify/recipe.yaml",
-      "entry": "scripts/ctcp_orchestrate.py",
-      "tags": [
-        "ctcp",
-        "orchestrator",
-        "headless",
-        "adlc",
-        "verify"
-      ],
-      "supported_goals": [
-        "bugfix",
-        "refactor-minimal",
-        "workflow-hardening",
-        "headless-lite",
-        "gate-fix",
-        "api-only-integration",
-        "live-routing-matrix",
-        "live-robustness"
-      ],
-      "dependency_level": "low",
-      "cost_hint": {
-        "time_level": "low",
-        "api_level": "high"
-      },
-      "last_known_good": {
-        "status": "pass",
-        "source": "simlab_lite"
-      }
-    },
     {
       "id": "wf_project_generation_manifest",
       "version": "1.0.0",
@@ -78,6 +49,8 @@
         "time_level": "med",
         "api_level": "high"
       },
+      "operator_status": "canonical_mainline",
+      "mainline_scope": "project_generation_product_mainline",
       "last_known_good": {
         "status": "unknown",
         "source": "pending_regression"

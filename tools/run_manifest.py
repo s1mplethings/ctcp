@@ -6,7 +6,9 @@ from pathlib import Path
 from typing import Any
 
 RUN_MANIFEST_REL = Path("artifacts") / "run_manifest.json"
+RUN_RESPONSIBILITY_MANIFEST_REL = Path("artifacts") / "run_responsibility_manifest.json"
 SCHEMA_VERSION = "ctcp-run-manifest-v1"
+RESPONSIBILITY_SCHEMA_VERSION = "ctcp-run-responsibility-manifest-v1"
 
 
 def _now_utc_iso() -> str:
@@ -24,6 +26,23 @@ def _read_json(path: Path) -> dict[str, Any]:
 def _write_json(path: Path, doc: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    rows: list[dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        text = line.strip()
+        if not text:
+            continue
+        try:
+            doc = json.loads(text)
+        except Exception:
+            continue
+        if isinstance(doc, dict):
+            rows.append(doc)
+    return rows
 
 
 def _rel(path: Path, run_dir: Path) -> str:
@@ -73,6 +92,162 @@ def _dedupe_strings(values: Any) -> list[str]:
     return out
 
 
+def _selected_workflow_id(run_dir: Path) -> str:
+    doc = _read_json(run_dir / "artifacts" / "find_result.json")
+    return str(doc.get("selected_workflow_id", "")).strip()
+
+
+def _first_non_empty(*values: Any) -> str:
+    for value in values:
+        text = str(value or "").strip()
+        if text:
+            return text
+    return ""
+
+
+def _critical_stage(action: str, role: str) -> str:
+    action_text = str(action or "").strip().lower()
+    role_text = str(role or "").strip().lower()
+    if any(token in action_text for token in ("output_contract_freeze", "project_intent", "project_spec")):
+        return "intent"
+    if any(token in action_text for token in ("source_generation", "build", "implementation", "materialize")):
+        return "core_feature"
+    if any(token in action_text for token in ("verify", "smoke")):
+        return "smoke_verify"
+    if any(token in action_text for token in ("docs_generation", "workflow_generation", "manifest")):
+        return "demo_evidence"
+    if any(token in action_text for token in ("deliver", "delivery", "bundle", "support_reply")):
+        return "delivery_package"
+    if role_text == "librarian" and action_text == "context_pack":
+        return "goal"
+    return ""
+
+
+def _critical_stage_usage(run_dir: Path) -> tuple[dict[str, str], dict[str, bool], bool, list[dict[str, Any]]]:
+    rows = _read_jsonl(run_dir / "artifacts" / "provider_ledger.jsonl")
+    provider_by_stage: dict[str, str] = {}
+    external_by_stage: dict[str, bool] = {}
+    details: list[dict[str, Any]] = []
+    fallback_used = False
+    for row in rows:
+        stage = _critical_stage(str(row.get("action", "")), str(row.get("role", "")))
+        if not stage:
+            continue
+        provider = str(row.get("provider_used", "")).strip()
+        external = bool(row.get("external_api_used", False))
+        fallback = bool(row.get("fallback_used", False))
+        fallback_used = fallback_used or fallback
+        if stage not in provider_by_stage:
+            provider_by_stage[stage] = provider
+            external_by_stage[stage] = external
+        details.append(
+            {
+                "stage": stage,
+                "role": str(row.get("role", "")).strip().lower(),
+                "action": str(row.get("action", "")).strip().lower(),
+                "provider_used": provider,
+                "external_api_used": external,
+                "fallback_used": fallback,
+                "local_function_used": str(row.get("local_function_used", "")).strip(),
+                "verdict": str(row.get("verdict", "")).strip(),
+            }
+        )
+    return provider_by_stage, external_by_stage, fallback_used, details
+
+
+def _stage_owners() -> dict[str, str]:
+    return {
+        "goal": "Chair/Planner",
+        "intent": "Chair/Planner",
+        "spec": "Chair/Planner",
+        "scaffold": "Chair/Planner",
+        "core_feature": "Chair/Planner",
+        "smoke_verify": "Local Verifier",
+        "demo_evidence": "Chair/Planner",
+        "delivery_package": "Chair/Planner",
+    }
+
+
+def _derive_delivery_status(manifest: dict[str, Any], run_dir: Path) -> tuple[str, str, str, str]:
+    verify_doc = _read_json(run_dir / "artifacts" / "verify_report.json")
+    support_doc = _read_json(run_dir / "artifacts" / "support_public_delivery.json")
+    internal_runtime_status = _first_non_empty(
+        verify_doc.get("internal_runtime_status"),
+        support_doc.get("internal_runtime_status"),
+    )
+    user_acceptance_status = _first_non_empty(
+        verify_doc.get("user_acceptance_status"),
+        support_doc.get("user_acceptance_status"),
+    )
+    final_verdict = _first_non_empty(
+        verify_doc.get("final_verdict"),
+        support_doc.get("final_verdict"),
+    )
+    first_failure_point = _first_non_empty(
+        verify_doc.get("first_failure_point"),
+        support_doc.get("first_failure_point"),
+        manifest.get("first_failure_gate"),
+    )
+    final_status = str(manifest.get("final_status", "")).strip().lower()
+    if not internal_runtime_status:
+        internal_runtime_status = "PASS" if final_status == "pass" else ("FAIL" if final_status == "fail" else "")
+    if not user_acceptance_status:
+        user_acceptance_status = "PASS" if final_verdict == "PASS" else ("NEEDS_REWORK" if final_verdict else "")
+    if not final_verdict:
+        if user_acceptance_status == "PASS":
+            final_verdict = "PASS"
+        elif internal_runtime_status == "PASS":
+            final_verdict = "PARTIAL"
+        elif final_status in {"fail", "blocked"}:
+            final_verdict = "NEEDS_REWORK"
+    return internal_runtime_status, user_acceptance_status, first_failure_point, final_verdict
+
+
+def _final_producers(provider_by_stage: dict[str, str]) -> tuple[str, str]:
+    final_code_producer = _first_non_empty(
+        provider_by_stage.get("core_feature"),
+        provider_by_stage.get("scaffold"),
+    )
+    final_doc_producer = _first_non_empty(
+        provider_by_stage.get("demo_evidence"),
+        provider_by_stage.get("delivery_package"),
+    )
+    return final_code_producer, final_doc_producer
+
+
+def _write_run_responsibility_manifest(run_dir: Path, manifest: dict[str, Any]) -> None:
+    run_doc = _run_doc(run_dir)
+    provider_by_stage, external_by_stage, fallback_used, stage_usage_rows = _critical_stage_usage(run_dir)
+    internal_runtime_status, user_acceptance_status, first_failure_point, final_verdict = _derive_delivery_status(
+        manifest,
+        run_dir,
+    )
+    final_code_producer, final_doc_producer = _final_producers(provider_by_stage)
+    responsibility = {
+        "schema_version": RESPONSIBILITY_SCHEMA_VERSION,
+        "run_id": str(run_doc.get("run_id", manifest.get("run_id", run_dir.name))).strip() or run_dir.name,
+        "run_dir": str(run_dir.resolve()),
+        "raw_user_goal": str(run_doc.get("goal", "")).strip(),
+        "chosen_entry": "scripts/ctcp_orchestrate.py",
+        "chosen_workflow": _selected_workflow_id(run_dir),
+        "bound_run_id": str(run_doc.get("run_id", manifest.get("run_id", run_dir.name))).strip() or run_dir.name,
+        "bound_run_dir": str(run_dir.resolve()),
+        "stage_owners": _stage_owners(),
+        "provider_used_per_critical_stage": provider_by_stage,
+        "external_api_used_per_critical_stage": external_by_stage,
+        "critical_stage_execution": stage_usage_rows,
+        "fallback_used": bool(fallback_used),
+        "final_code_producer": final_code_producer,
+        "final_doc_producer": final_doc_producer,
+        "internal_runtime_status": internal_runtime_status,
+        "user_acceptance_status": user_acceptance_status,
+        "first_failure_point": first_failure_point,
+        "final_verdict": final_verdict,
+        "updated_at": _now_utc_iso(),
+    }
+    _write_json(run_dir / RUN_RESPONSIBILITY_MANIFEST_REL, responsibility)
+
+
 def load_run_manifest(run_dir: Path) -> dict[str, Any]:
     path = run_dir / RUN_MANIFEST_REL
     base = _default_manifest(run_dir)
@@ -119,6 +294,7 @@ def update_run_manifest(run_dir: Path, **updates: Any) -> dict[str, Any]:
             manifest[key] = value
     manifest["updated_at"] = _now_utc_iso()
     _write_json(run_dir / RUN_MANIFEST_REL, manifest)
+    _write_run_responsibility_manifest(run_dir, manifest)
     return manifest
 
 
@@ -182,4 +358,3 @@ def infer_run_dir_from_path(path: Path) -> Path | None:
         if (candidate / "RUN.json").exists():
             return candidate
     return None
-

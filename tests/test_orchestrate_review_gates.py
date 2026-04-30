@@ -45,7 +45,7 @@ def _prepare_until_reviews(run_dir: Path) -> None:
         artifacts / "find_result.json",
         {
             "schema_version": "ctcp-find-result-v1",
-            "selected_workflow_id": "wf_orchestrator_only",
+            "selected_workflow_id": "wf_project_generation_manifest",
         },
     )
     _write_json(
@@ -69,7 +69,21 @@ def _prepare_until_reviews(run_dir: Path) -> None:
             "omitted": [],
         },
     )
-    (artifacts / "PLAN_draft.md").write_text("Status: DRAFT\n", encoding="utf-8")
+    (artifacts / "PLAN_draft.md").write_text(
+        "\n".join(
+            [
+                "Status: DRAFT",
+                "Deliverable: runnable app delivery package",
+                "Startup: local startup steps included",
+                "README: include startup and verify section",
+                "Verify: smoke verify and acceptance checks",
+                "Screenshot: final screenshot evidence",
+                "Package: final package zip output",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
 
 
 class OrchestrateReviewGateTests(unittest.TestCase):
@@ -147,7 +161,10 @@ class OrchestrateReviewGateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             run_dir = Path(td)
             _prepare_until_reviews(run_dir)
-            (run_dir / "reviews" / "review_contract.md").write_text("Verdict: APPROVE\n", encoding="utf-8")
+            (run_dir / "reviews" / "review_contract.md").write_text(
+                "Verdict: APPROVE\nBlocking Reasons: none\nRequired Fix/Artifacts: none\n",
+                encoding="utf-8",
+            )
             (run_dir / "reviews" / "review_cost.md").write_text("# invalid\n", encoding="utf-8")
 
             gate = ctcp_orchestrate.current_gate(run_dir, {"goal": "test"})
@@ -157,3 +174,4 @@ class OrchestrateReviewGateTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

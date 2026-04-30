@@ -15,7 +15,7 @@ from ctcp_adapters import ctcp_artifact_normalizers as normalizers
 
 
 class CtcpArtifactNormalizersTests(unittest.TestCase):
-    def test_normalize_target_payload_builds_file_request_json_from_non_json_output(self) -> None:
+    def test_normalize_target_payload_rejects_non_json_file_request_in_api_agent_only_flow(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             repo_root = Path(td) / "repo"
             run_dir = Path(td) / "run"
@@ -34,11 +34,8 @@ class CtcpArtifactNormalizersTests(unittest.TestCase):
                 raw_text="# not json\n- but still normalize",
             )
 
-            self.assertEqual(err, "")
-            doc = json.loads(payload)
-            self.assertEqual(doc.get("schema_version"), "ctcp-file-request-v1")
-            self.assertIsInstance(doc.get("needs"), list)
-            self.assertIsInstance(doc.get("budget"), dict)
+            self.assertEqual(payload, "")
+            self.assertIn("forbids local normalizer synthesis", err)
 
     def test_render_prompt_keeps_whiteboard_context(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -103,6 +100,41 @@ class CtcpArtifactNormalizersTests(unittest.TestCase):
         self.assertIn("Status: SIGNED", text)
         self.assertIn("Scope-Allow:", text)
         self.assertIn("index.html", text)
+
+    def test_plan_draft_includes_project_generation_requirements_when_routed_by_workflow(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo_root = Path(td) / "repo"
+            run_dir = Path(td) / "run"
+            repo_root.mkdir(parents=True, exist_ok=True)
+            (run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+            (run_dir / "artifacts" / "find_result.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": "ctcp-find-result-v1",
+                        "selected_workflow_id": "wf_project_generation_manifest",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            payload, err = normalizers.normalize_target_payload(
+                repo_root=repo_root,
+                run_dir=run_dir,
+                request={
+                    "role": "chair",
+                    "action": "plan_draft",
+                    "target_path": "artifacts/PLAN_draft.md",
+                    "goal": "请继续推进这个任务",
+                },
+                raw_text="",
+            )
+
+            self.assertEqual(err, "")
+            self.assertIn("Project-Generation: true", payload)
+            self.assertIn("Deliverables: runnable_app,README,startup_steps,verify_report,final_screenshot,final_package", payload)
 
 
 if __name__ == "__main__":

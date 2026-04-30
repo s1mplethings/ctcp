@@ -9,7 +9,6 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from tools.providers.project_generation_business_templates import _launcher_script
 from tools.providers.project_generation_artifacts import (
     build_default_context_request,
     normalize_deliverable_index,
@@ -57,12 +56,16 @@ def _write_json(path: Path, doc: dict[str, object]) -> None:
     path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def _materialize_production_narrative_project(run_dir: Path) -> tuple[dict[str, object], dict[str, object], Path]:
+def _materialize_production_narrative_project(
+    run_dir: Path,
+    *,
+    goal: str = PRODUCTION_GUI_NARRATIVE_GOAL,
+) -> tuple[dict[str, object], dict[str, object], Path]:
     _write_json(
         run_dir / "artifacts" / "frontend_request.json",
         {
             "schema_version": "ctcp-frontend-request-v1",
-            "goal": PRODUCTION_GUI_NARRATIVE_GOAL,
+            "goal": goal,
             "constraints": {
                 "project_domain": "narrative_vn_editor",
                 "story_knowledge_ops": "required",
@@ -70,13 +73,13 @@ def _materialize_production_narrative_project(run_dir: Path) -> tuple[dict[str, 
             "attachments": [],
         },
     )
-    contract = normalize_output_contract_freeze(None, goal=PRODUCTION_GUI_NARRATIVE_GOAL, run_dir=run_dir)
+    contract = normalize_output_contract_freeze(None, goal=goal, run_dir=run_dir)
     _write_json(run_dir / "artifacts" / "output_contract_freeze.json", contract)
     _write_json(
         run_dir / "artifacts" / "context_pack.json",
         {
             "schema_version": "ctcp-context-pack-v1",
-            "goal": PRODUCTION_GUI_NARRATIVE_GOAL,
+            "goal": goal,
             "repo_slug": "ctcp",
             "summary": "production narrative gui context",
             "files": [
@@ -91,7 +94,7 @@ def _materialize_production_narrative_project(run_dir: Path) -> tuple[dict[str, 
     )
     project_root = run_dir / "project_output" / str(contract.get("project_id", "vn-project"))
     _write_json(project_root / "meta" / "manifest.json", {"schema_version": "ctcp-pointcloud-manifest-v1"})
-    report = normalize_source_generation(None, goal=PRODUCTION_GUI_NARRATIVE_GOAL, run_dir=run_dir)
+    report = normalize_source_generation(None, goal=goal, run_dir=run_dir)
     return contract, report, project_root
 
 
@@ -154,16 +157,6 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
             for rel in ("docs/milestone_plan.md", "docs/startup_guide.md", "docs/replay_guide.md", "docs/mid_stage_review.md"):
                 self.assertTrue(any(str(path).endswith(rel) for path in list(doc.get("doc_files", []))), rel)
 
-    def test_narrative_launcher_script_is_python_parseable_for_gui_shape(self) -> None:
-        script = _launcher_script(
-            package_name="vn_mvp_ren_py_json",
-            mode_label="Narrative project launcher.",
-            startup_rel="scripts/run_project_gui.py",
-        )
-        ast.parse(script, filename="run_project_gui.py")
-        self.assertIn("def main() -> int:", script)
-        self.assertIn("if not args.headless and len(sys.argv) == 1:", script)
-
     def test_generic_validation_rejects_syntax_invalid_python_business_file(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_syntax_invalid_") as td:
             run_dir = Path(td)
@@ -205,18 +198,17 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
         self.assertEqual(
             [str(dict(row).get("name", "")) for row in list(dict(doc.get("pipeline_contract", {})).get("stages", [])) if isinstance(row, dict)],
             [
-                "project_intent",
+                "goal",
+                "intent",
                 "spec",
-                "capability_plan",
-                "sample_generation_plan",
                 "scaffold",
-                "core_feature_implementation",
-                "refinement",
-                "smoke_run",
+                "core_feature",
+                "smoke_verify",
                 "demo_evidence",
                 "delivery_package",
             ],
         )
+        self.assertEqual(str(dict(doc.get("pipeline_contract", {})).get("source_contract", "")), "docs/02_workflow.md")
         self.assertEqual(str(doc.get("project_spec_path", "")), "artifacts/project_spec.json")
         self.assertEqual(str(doc.get("capability_plan_path", "")), "artifacts/capability_plan.json")
         self.assertEqual(str(doc.get("generation_quality_report_path", "")), "artifacts/generation_quality_report.json")
@@ -1366,6 +1358,13 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
                 f"{freeze['project_root']}/src/{freeze['package_name']}/docs_center.py",
             ):
                 self.assertTrue((run_dir / rel).exists(), rel)
+            for rel in (
+                f"{freeze['project_root']}/artifacts/test_screenshots/test-smoke-runtime.png",
+                f"{freeze['project_root']}/artifacts/test_screenshots/test-export-validation.png",
+                f"{freeze['project_root']}/artifacts/test_screenshots/test-replay-acceptance.png",
+            ):
+                self.assertTrue((run_dir / rel).exists(), rel)
+            self.assertGreaterEqual(len(list(ledger.get("test_screenshot_files", []))), 3)
 
     def test_source_generation_numeric_leading_goal_uses_valid_package_name_and_resolvable_imports(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_numeric_pkg_") as td:

@@ -20,6 +20,7 @@ InterruptKind = Literal[
     "override",
     "sidequest",
     "style_change",
+    "code_request",
     "status_query",
     "result_query",
 ]
@@ -41,6 +42,7 @@ INTERRUPT_KINDS: tuple[InterruptKind, ...] = (
     "override",
     "sidequest",
     "style_change",
+    "code_request",
     "status_query",
     "result_query",
 )
@@ -92,6 +94,10 @@ _OVERRIDE_RE = re.compile(r"(别做之前|换成|改成|不要之前|重新换�
 _SIDEQUEST_RE = re.compile(r"(顺便|另外|还有一个|与此同时|by the way|also help|another thing)", re.IGNORECASE)
 _CLARIFY_RE = re.compile(r"(补充一下|我的意思是|准确来说|更准确地说|补一句|clarify|to clarify|i mean)", re.IGNORECASE)
 _REDIRECT_RE = re.compile(r"(先不说这个|先看这个|回到刚才|先聊这个|switch back|let.?s focus on)", re.IGNORECASE)
+_CODE_REQUEST_RE = re.compile(
+    r"(代码|源码|源代码|完整代码|示例代码|代码片段|贴代码|写代码|实现代码|给我代码|show code|source code|code snippet|write code|implementation code|full code)",
+    re.IGNORECASE,
+)
 _STYLE_LANGUAGE_ZH_RE = re.compile(r"(中文|汉语|Chinese)", re.IGNORECASE)
 _STYLE_LANGUAGE_EN_RE = re.compile(r"(英文|English)", re.IGNORECASE)
 _STYLE_TONE_MAP: tuple[tuple[re.Pattern[str], str], ...] = (
@@ -138,6 +144,7 @@ def default_frontdesk_state(default_language: str = "") -> dict[str, Any]:
         "user_style_profile": default_style_profile(default_language),
         "decision_points": [],
         "artifacts": [],
+        "allow_code_output": False,
         "blocked_reason": "",
         "resumable_state": "",
         "latest_conversation_mode": "",
@@ -175,6 +182,7 @@ def normalize_frontdesk_state(raw: Any, default_language: str = "") -> dict[str,
         "state_reason",
     ):
         state[key] = _norm(data.get(key, state[key]))
+    state["allow_code_output"] = bool(data.get("allow_code_output", state["allow_code_output"]))
     state["user_style_profile"] = normalize_style_profile(data.get("user_style_profile", {}), default_language)
     decision_points = data.get("decision_points", [])
     if isinstance(decision_points, list):
@@ -229,6 +237,7 @@ def classify_interrupt_kind(
     conversation_mode: str,
     has_active_task: bool,
     style_changed: bool = False,
+    code_requested: bool = False,
     result_ready: bool = False,
 ) -> InterruptKind:
     raw = _norm(user_text)
@@ -237,6 +246,8 @@ def classify_interrupt_kind(
         return ""
     if style_changed or _STYLE_CHANGE_RE.search(raw):
         return "style_change"
+    if code_requested and has_active_task:
+        return "code_request"
     if mode == "STATUS_QUERY" or _STATUS_QUERY_RE.search(raw):
         if result_ready or _RESULT_QUERY_RE.search(raw):
             return "result_query"
@@ -360,6 +371,13 @@ def _artifacts_from_context(project_context: Mapping[str, Any] | None) -> list[s
     return out[:8]
 
 
+def _user_requests_code(text: str) -> bool:
+    raw = _norm(text)
+    if not raw:
+        return False
+    return bool(_CODE_REQUEST_RE.search(raw))
+
+
 def derive_frontdesk_state(
     *,
     user_text: str,
@@ -401,6 +419,7 @@ def derive_frontdesk_state(
         or _norm(previous.get("active_task_id", ""))
     )
     has_active_task = bool(active_task_id or current_goal)
+    code_requested = _user_requests_code(user_text)
 
     style_profile, style_changed = apply_style_preferences(
         user_text,
@@ -451,6 +470,7 @@ def derive_frontdesk_state(
         conversation_mode=conversation_mode,
         has_active_task=has_active_task,
         style_changed=style_changed,
+        code_requested=code_requested,
         result_ready=bool(done_from_render and has_result_payload),
     )
 
@@ -510,6 +530,7 @@ def derive_frontdesk_state(
             "user_style_profile": style_profile,
             "decision_points": decision_points,
             "artifacts": _artifacts_from_context(project_context),
+            "allow_code_output": code_requested,
             "blocked_reason": blocked_reason,
             "resumable_state": resumable_state,
             "latest_conversation_mode": mode,
@@ -543,6 +564,7 @@ def prompt_context_from_frontdesk_state(frontdesk_state: Mapping[str, Any] | Non
                 "active_task_id": state["active_task_id"],
                 "decision_points": list(state["decision_points"]),
                 "artifacts": list(state["artifacts"]),
+                "allow_code_output": bool(state["allow_code_output"]),
                 "blocked_reason": state["blocked_reason"],
             }
         )
@@ -554,6 +576,7 @@ def prompt_context_from_frontdesk_state(frontdesk_state: Mapping[str, Any] | Non
                 "active_task_id": "",
                 "decision_points": [],
                 "artifacts": [],
+                "allow_code_output": False,
                 "blocked_reason": "",
             }
         )
@@ -584,9 +607,11 @@ def reply_strategy_from_frontdesk_state(
         allow_existing_project_reference = active_task
     else:
         allow_existing_project_reference = active_task and state["state"] not in {"idle", "collecting_input"}
+    allow_code_output = bool(state.get("allow_code_output", False)) and mode not in {"GREETING", "SMALLTALK", "CAPABILITY_QUERY"}
     return {
         "allow_existing_project_reference": bool(allow_existing_project_reference),
         "latest_turn_only": not bool(allow_existing_project_reference),
         "prefer_frontend_render": bool(prefer_frontend_render),
         "prefer_progress_binding": bool(prefer_progress_binding),
+        "allow_code_output": bool(allow_code_output),
     }

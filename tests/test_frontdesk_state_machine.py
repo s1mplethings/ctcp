@@ -186,6 +186,32 @@ class FrontdeskStateMachineTests(unittest.TestCase):
         self.assertTrue(bool(strategy["allow_existing_project_reference"]))
         self.assertTrue(bool(strategy["prefer_frontend_render"]))
         self.assertTrue(bool(strategy["prefer_progress_binding"]))
+        self.assertFalse(bool(strategy["allow_code_output"]))
+
+    def test_code_request_sets_allow_code_output_flag(self) -> None:
+        state = derive_frontdesk_state(
+            user_text="给我贴一段完整代码",
+            conversation_mode="PROJECT_DETAIL",
+            session_state={
+                "task_summary": "继续推进项目",
+                "bound_run_id": "run-code",
+                "session_profile": {"lang_hint": "zh"},
+                "project_memory": {"project_brief": "继续推进项目"},
+                "project_constraints_memory": {},
+                "execution_memory": {},
+                "frontdesk_state": {},
+            },
+            project_context={
+                "run_id": "run-code",
+                "render_snapshot": {"visible_state": "EXECUTING", "ui_badge": "in_progress", "decision_cards": []},
+                "current_snapshot": {"authoritative_stage": "EXECUTE", "current_blocker": "none"},
+            },
+        )
+
+        self.assertEqual(str(state.get("interrupt_kind", "")), "code_request")
+        self.assertTrue(bool(state.get("allow_code_output", False)))
+        strategy = reply_strategy_from_frontdesk_state(state, conversation_mode="PROJECT_DETAIL")
+        self.assertTrue(bool(strategy.get("allow_code_output", False)))
 
 
 if __name__ == "__main__":

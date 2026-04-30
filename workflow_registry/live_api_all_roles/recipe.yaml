@@ -30,7 +30,7 @@ roles:
   planner:
     provider: api_agent
   librarian:
-    provider: ollama_agent
+    provider: api_agent
   researcher:
     provider: api_agent
   contract_guardian:

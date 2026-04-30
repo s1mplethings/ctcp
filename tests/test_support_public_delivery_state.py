@@ -167,6 +167,38 @@ class SupportPublicDeliveryStateTests(unittest.TestCase):
             self.assertEqual(str(delivery.get("package_delivery_mode", "")), "")
             self.assertEqual(str(delivery.get("package_blocked_reason", "")), "package artifact not ready")
 
+    def test_collect_public_delivery_state_excludes_replay_evidence_screenshots(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_replay_filter_") as td:
+            repo_root = Path(td)
+            bound_run = repo_root / "runs" / "bound-story"
+            replay_dir = bound_run / "artifacts" / "delivery_replay" / "replay_artifacts"
+            replay_dir.mkdir(parents=True, exist_ok=True)
+            (replay_dir / "replayed_screenshot.png").write_bytes(b"\x89PNG\r\n")
+
+            state = support_bot.default_support_session_state("delivery-replay-filter")
+            state["bound_run_id"] = "r-story"
+            state["bound_run_dir"] = str(bound_run)
+
+            with mock.patch.object(support_bot, "ROOT", repo_root):
+                delivery = support_bot.collect_public_delivery_state(
+                    session_state=state,
+                    project_context={
+                        "run_id": "r-story",
+                        "run_dir": str(bound_run),
+                        "status": {
+                            "run_status": "completed",
+                            "verify_result": "PASS",
+                            "needs_user_decision": False,
+                            "decisions_needed_count": 0,
+                            "gate": {"state": "closed", "owner": "", "reason": ""},
+                        },
+                    },
+                    source="telegram",
+                )
+
+            self.assertEqual(list(delivery.get("screenshot_files", [])), [])
+            self.assertFalse(bool(delivery.get("screenshot_ready", False)))
+
     def test_auto_emit_virtual_delivery_for_ready_run_materializes_zip_and_manifest(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_support_delivery_auto_emit_") as td:
             repo_root = Path(td)

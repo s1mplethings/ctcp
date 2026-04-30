@@ -179,24 +179,25 @@ def _validate_pipeline_contract(doc: dict[str, Any]) -> tuple[bool, str]:
     ok, msg = _validate_json_object_field(doc, "pipeline_contract")
     if not ok:
         return False, msg
-    stages = dict(doc.get("pipeline_contract", {})).get("stages")
+    contract = dict(doc.get("pipeline_contract", {}))
+    if str(contract.get("source_contract", "")).strip() != "docs/02_workflow.md":
+        return False, "pipeline_contract.source_contract must be docs/02_workflow.md"
+    stages = contract.get("stages")
     if not isinstance(stages, list):
         return False, "pipeline_contract.stages must be array"
     names = [str(dict(row).get("name", "")).strip() for row in stages if isinstance(row, dict)]
     expected = [
-        "project_intent",
+        "goal",
+        "intent",
         "spec",
-        "capability_plan",
-        "sample_generation_plan",
         "scaffold",
-        "core_feature_implementation",
-        "refinement",
-        "smoke_run",
+        "core_feature",
+        "smoke_verify",
         "demo_evidence",
         "delivery_package",
     ]
     if names != expected:
-        return False, "pipeline_contract.stages must follow project_intent -> spec -> capability_plan -> sample_generation_plan -> scaffold -> core_feature_implementation -> refinement -> smoke_run -> demo_evidence -> delivery_package"
+        return False, "pipeline_contract.stages must follow goal -> intent -> spec -> scaffold -> core_feature -> smoke_verify -> demo_evidence -> delivery_package"
     return True, "ok"
 
 

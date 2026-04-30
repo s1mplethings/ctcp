@@ -52,7 +52,10 @@ class MainlineRunContractTests(unittest.TestCase):
                 "find_mode: resolver_only\nmax_files: 8\nmax_total_bytes: 50000\nmax_iterations: 1\n",
             )
             _write_text(artifacts / "analysis.md", "# Analysis\n")
-            _write_json(artifacts / "find_result.json", {"schema_version": "ctcp-find-result-v1", "selected_workflow_id": "wf_minimal_patch_verify"})
+            _write_json(
+                artifacts / "find_result.json",
+                {"schema_version": "ctcp-find-result-v1", "selected_workflow_id": "wf_project_generation_manifest"},
+            )
             _write_json(
                 artifacts / "file_request.json",
                 {
@@ -101,7 +104,19 @@ class MainlineRunContractTests(unittest.TestCase):
             self.assertIn("artifacts/support_frontend_turns.jsonl", manifest["bridge_output_refs"])
             self.assertEqual(manifest["final_status"], "fail")
             self.assertTrue(str(manifest.get("first_failure_gate", "")).strip())
-            self.assertIn("simulated_gate_failure", str(manifest.get("first_failure_reason", "")))
+            self.assertIn("project-generation run failed", str(manifest.get("first_failure_reason", "")))
+
+            responsibility_path = artifacts / "run_responsibility_manifest.json"
+            self.assertTrue(responsibility_path.exists())
+            responsibility = json.loads(responsibility_path.read_text(encoding="utf-8"))
+            self.assertEqual(responsibility["run_id"], run_id)
+            self.assertEqual(responsibility["chosen_entry"], "scripts/ctcp_orchestrate.py")
+            self.assertEqual(responsibility["chosen_workflow"], "wf_project_generation_manifest")
+            self.assertIn("core_feature", responsibility.get("stage_owners", {}))
+            self.assertIn("internal_runtime_status", responsibility)
+            self.assertIn("user_acceptance_status", responsibility)
+            self.assertIn("first_failure_point", responsibility)
+            self.assertIn("final_verdict", responsibility)
 
 
 if __name__ == "__main__":

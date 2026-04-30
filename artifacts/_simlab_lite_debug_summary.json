@@ -1,0 +1,169 @@
+{
+  "run_id": "20260428-160115",
+  "generated_at": "2026-04-28T16:08:10",
+  "suite": "lite",
+  "runs_root": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug",
+  "run_dir": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115",
+  "total": 15,
+  "passed": 0,
+  "failed": 15,
+  "scenarios": [
+    {
+      "id": "S00_lite_headless",
+      "name": "lite headless sanity",
+      "suite": "lite",
+      "status": "fail",
+      "error": "[WinError 5] 拒绝访问。: 'D:\\\\ctcp_runs'",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S00_lite_headless/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S00_lite_headless/failure_bundle.zip",
+      "steps": []
+    },
+    {
+      "id": "S10_lite_resolve_workflow",
+      "name": "lite resolver artifact sanity",
+      "suite": "lite",
+      "status": "fail",
+      "error": "[WinError 5] 拒绝访问。: 'D:\\\\ctcp_runs'",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S10_lite_resolve_workflow/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S10_lite_resolve_workflow/failure_bundle.zip",
+      "steps": []
+    },
+    {
+      "id": "S11_lite_find_web_contract",
+      "name": "lite resolver_plus_web find_web contract check",
+      "suite": "lite",
+      "status": "fail",
+      "error": "[WinError 5] 拒绝访问。: 'D:\\\\ctcp_runs'",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S11_lite_find_web_contract/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S11_lite_find_web_contract/failure_bundle.zip",
+      "steps": [
+        {
+          "type": "write",
+          "path": "artifacts/_simlab_find_web.json",
+          "mode": "overwrite",
+          "bytes": 539
+        }
+      ]
+    },
+    {
+      "id": "S12_lite_orchestrate_context_gate",
+      "name": "lite orchestrator blocks on missing context_pack with external run dir",
+      "suite": "lite",
+      "status": "fail",
+      "error": "[WinError 5] 拒绝访问。: 'D:\\\\ctcp_runs'",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S12_lite_orchestrate_context_gate/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S12_lite_orchestrate_context_gate/failure_bundle.zip",
+      "steps": []
+    },
+    {
+      "id": "S13_lite_dispatch_outbox_on_missing_review",
+      "name": "lite dispatch creates contract_guardian outbox when review_contract is missing",
+      "suite": "lite",
+      "status": "fail",
+      "error": "[WinError 5] 拒绝访问。: 'D:\\\\ctcp_runs'",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S13_lite_dispatch_outbox_on_missing_review/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S13_lite_dispatch_outbox_on_missing_review/failure_bundle.zip",
+      "steps": []
+    },
+    {
+      "id": "S14_lite_dispatch_local_exec_librarian",
+      "name": "lite dispatch runs librarian ollama local model for missing context_pack",
+      "suite": "lite",
+      "status": "fail",
+      "error": "[WinError 5] 拒绝访问。: 'D:\\\\ctcp_runs'",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S14_lite_dispatch_local_exec_librarian/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S14_lite_dispatch_local_exec_librarian/failure_bundle.zip",
+      "steps": []
+    },
+    {
+      "id": "S15_lite_fail_produces_bundle",
+      "name": "lite orchestrator verify fail must produce valid failure bundle",
+      "suite": "lite",
+      "status": "fail",
+      "error": "[WinError 5] 拒绝访问。: 'D:\\\\ctcp_runs'",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S15_lite_fail_produces_bundle/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S15_lite_fail_produces_bundle/failure_bundle.zip",
+      "steps": []
+    },
+    {
+      "id": "S16_lite_fixer_loop_pass",
+      "name": "lite fixer loop should pass after replacing failed patch",
+      "suite": "lite",
+      "status": "fail",
+      "error": "[WinError 5] 拒绝访问。: 'D:\\\\ctcp_runs'",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S16_lite_fixer_loop_pass/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S16_lite_fixer_loop_pass/failure_bundle.zip",
+      "steps": []
+    },
+    {
+      "id": "S17_lite_linear_mainline_resolver_only",
+      "name": "lite linear: mainline resolver_only with local steps and manual outbox",
+      "suite": "lite",
+      "status": "fail",
+      "error": "[WinError 5] 拒绝访问。: 'D:\\\\ctcp_runs'",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S17_lite_linear_mainline_resolver_only/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S17_lite_linear_mainline_resolver_only/failure_bundle.zip",
+      "steps": []
+    },
+    {
+      "id": "S18_lite_linear_mainline_resolver_plus_web",
+      "name": "lite linear: resolver_plus_web researcher branch",
+      "suite": "lite",
+      "status": "fail",
+      "error": "[WinError 5] 拒绝访问。: 'D:\\\\ctcp_runs'",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S18_lite_linear_mainline_resolver_plus_web/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S18_lite_linear_mainline_resolver_plus_web/failure_bundle.zip",
+      "steps": []
+    },
+    {
+      "id": "S19_lite_linear_robustness_tripwire",
+      "name": "lite linear: robustness tripwire on mainline",
+      "suite": "lite",
+      "status": "fail",
+      "error": "[WinError 5] 拒绝访问。: 'D:\\\\ctcp_runs'",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S19_lite_linear_robustness_tripwire/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S19_lite_linear_robustness_tripwire/failure_bundle.zip",
+      "steps": []
+    },
+    {
+      "id": "S26_lite_librarian_auto_context_pack_mandatory",
+      "name": "lite librarian auto-generates deterministic context_pack with mandatory contracts",
+      "suite": "lite",
+      "status": "fail",
+      "error": "[WinError 5] 拒绝访问。: 'D:\\\\ctcp_runs'",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S26_lite_librarian_auto_context_pack_mandatory/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S26_lite_librarian_auto_context_pack_mandatory/failure_bundle.zip",
+      "steps": []
+    },
+    {
+      "id": "S27_lite_librarian_budget_mandatory_fail",
+      "name": "lite librarian fails with clear increase-budget error when mandatory docs exceed budget",
+      "suite": "lite",
+      "status": "fail",
+      "error": "[WinError 5] 拒绝访问。: 'D:\\\\ctcp_runs'",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S27_lite_librarian_budget_mandatory_fail/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S27_lite_librarian_budget_mandatory_fail/failure_bundle.zip",
+      "steps": []
+    },
+    {
+      "id": "S28_cos_user_v2p_dialogue_to_D_drive",
+      "name": "cos-user-v2p runs dialogue and copies outputs to destination out dir",
+      "suite": "lite",
+      "status": "fail",
+      "error": "[WinError 5] 拒绝访问。: 'D:\\\\ctcp_runs'",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S28_cos_user_v2p_dialogue_to_D_drive/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S28_cos_user_v2p_dialogue_to_D_drive/failure_bundle.zip",
+      "steps": []
+    },
+    {
+      "id": "S28_lite_virtual_delivery_e2e",
+      "name": "virtual delivery golden e2e",
+      "suite": "lite",
+      "status": "fail",
+      "error": "[WinError 5] 拒绝访问。: 'D:\\\\ctcp_runs'",
+      "trace": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S28_lite_virtual_delivery_e2e/TRACE.md",
+      "bundle": "C:/Users/sunom/AppData/Local/Temp/ctcp_simlab_debug/20260428-160115/S28_lite_virtual_delivery_e2e/failure_bundle.zip",
+      "steps": []
+    }
+  ]
+}

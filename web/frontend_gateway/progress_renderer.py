@@ -37,7 +37,7 @@ def derive_presentation_state(status: Mapping[str, Any]) -> str:
         return "BLOCKED"
     if gate_state == "ready_verify":
         return "VERIFYING"
-    if gate_state in {"ready_apply", "resolve_find_local"}:
+    if gate_state == "resolve_find_local":
         return "EXECUTING"
     if gate_path.endswith("analysis.md") or gate_path.endswith("file_request.json") or gate_path.endswith("context_pack.json"):
         return "ANALYZING"

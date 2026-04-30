@@ -151,7 +151,7 @@ def _common_files(
             "# Core Runtime Notes\n\n"
             f"- archetype: {project_archetype}\n"
             "- mainline: ProjectIntent -> Spec -> Scaffold -> Core Feature -> Smoke Run -> Delivery Package\n"
-            "- generation is spec-driven first, templates only provide bootstrap structure\n"
+            "- generation is spec-driven first, bootstrap codegen provides initial structure\n"
         ),
         f"{project_root}/{workflow_doc_rel}": (
             f"# {workflow_title}\n\n"
@@ -2340,3 +2340,4 @@ def materialize_generic_archetype_files(
         project_intent=project_intent,
         project_spec=project_spec,
     )
+

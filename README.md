@@ -22,7 +22,7 @@ CTCP is a structured goal-to-delivery generation system that turns vague user go
 
 Its mainline is:
 
-`Goal -> Intent -> Spec -> Scaffold -> Core Feature -> Smoke Run -> Demo Evidence -> Delivery Package`
+`Goal -> Intent -> Spec -> Scaffold -> Core Feature -> Smoke Verify -> Demo Evidence -> Delivery Package`
 
 CTCP does not optimize for giant-context code dumping or generic one-shot project generation.  
 It optimizes for making projects **more structured, more customized, more visible during execution, and more reliable to deliver**.
@@ -96,6 +96,14 @@ bash scripts/verify_repo.sh
 - `proof.json` 不是当前硬规则验收产物，仅可作为兼容遗留项。
 - `verify_report.md` 是可选的人类可读总结，不是权威 gate 判据。
 - verify 负责回答“项目是否真的可运行、可交付、可追溯”，而不是替代 ProjectIntent 和 generation pipeline。
+
+## Mainline Canonical Surface
+
+- 唯一执行入口：`scripts/ctcp_orchestrate.py`
+- 唯一产品主线 workflow id：`wf_project_generation_manifest`
+- 唯一 freeze 真相面：`docs/architecture/contracts/default_mainline_freeze_contract.md` 与 `artifacts/mainline_freeze_manifest.json`
+- 唯一责任账本面（run_dir）：`artifacts/run_responsibility_manifest.json`
+- formal API-only：`CTCP_FORMAL_API_ONLY=1` 时，所有关键阶段（含 `librarian/context_pack`）必须由 `api_agent` 执行
 
 ---
 

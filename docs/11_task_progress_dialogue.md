@@ -27,6 +27,9 @@ User-visible task replies MUST be task-progressive, not reception-desk dialogue.
 Hard rules:
 - First sentence MUST enter the task body directly.
 - Judgment MUST appear before action details.
+- Message structure MUST be explicit and stable: `结论 -> 依据 -> 下一步`.
+- Avoid ambiguous filler wording (`先看看`, `尽快处理`, `后续再说`) when concrete state/action is available.
+- Unless user explicitly asks for source code, do not dump code snippets/pseudo-code; keep the reply at status/progress/action level.
 - Empty greetings / thanks / comfort phrases are forbidden as standalone lead sentences.
 - Do not repeat the user's already-bound goal unless the goal itself changed or is being corrected.
 - Do not send low-information acknowledgements (`我在/好的/明白了/稍等`) as the main content.

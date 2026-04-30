@@ -295,7 +295,7 @@ def _tail_jsonl(path: Path, limit: int = 5) -> list[dict[str, Any]]:
 def _expected_provider_for_gate(*, gate: dict[str, str], force_provider: bool) -> str:
     gate_path = str(gate.get("path", "")).strip().lower()
     if "context_pack.json" in gate_path:
-        return "ollama_agent"
+        return "api_agent"
     if force_provider:
         return "api_agent"
     return "api_agent"

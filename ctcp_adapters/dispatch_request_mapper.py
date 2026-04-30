@@ -12,7 +12,13 @@ DISPATCH_CONFIG_PATH = Path("artifacts") / "dispatch_config.json"
 FIND_RESULT_PATH = Path("artifacts") / "find_result.json"
 WORKFLOW_INDEX_PATH = ROOT / "workflow_registry" / "index.json"
 HARD_ROLE_PROVIDERS = {
-    "librarian": "ollama_agent",
+    "librarian": "api_agent",
+    "chair": "api_agent",
+    "contract_guardian": "api_agent",
+    "cost_controller": "api_agent",
+    "researcher": "api_agent",
+    "patchmaker": "api_agent",
+    "fixer": "api_agent",
 }
 
 
@@ -267,11 +273,6 @@ def derive_request(gate: dict[str, str], run_doc: dict[str, Any]) -> dict[str, A
         role, action, target = "chair", "plan_draft", "artifacts/analysis.md"
     elif "guardrails.md" in path_l:
         role, action, target = "chair", "plan_draft", "artifacts/guardrails.md"
-    elif "diff.patch" in path_l:
-        if owner == "fixer":
-            role, action, target = "fixer", "fix_patch", "artifacts/diff.patch"
-        else:
-            role, action, target = "patchmaker", "make_patch", "artifacts/diff.patch"
     else:
         return None
     return {

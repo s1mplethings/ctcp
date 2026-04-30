@@ -11,7 +11,7 @@
     },
     {
       "run": {
-        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; art.mkdir(parents=True, exist_ok=True); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 2\\nmax_total_bytes: 64\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_orchestrator_only','selected_version':'1.0','candidates':[{'workflow_id':'wf_orchestrator_only','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-librarian-budget-fail','needs':[{'path':'README.md','mode':'full'}], 'budget':{'max_files':2,'max_total_bytes':64},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
+        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); art=Path(rd)/'artifacts'; art.mkdir(parents=True, exist_ok=True); (art/'guardrails.md').write_text('find_mode: resolver_only\\nmax_files: 2\\nmax_total_bytes: 64\\nmax_iterations: 2\\n', encoding='utf-8'); (art/'analysis.md').write_text('# analysis\\n', encoding='utf-8'); find={'schema_version':'ctcp-find-result-v1','selected_workflow_id':'wf_project_generation_manifest','selected_version':'1.0','candidates':[{'workflow_id':'wf_project_generation_manifest','version':'1.0','score':1.0,'why':'simlab'}]}; (art/'find_result.json').write_text(json.dumps(find, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8'); req={'schema_version':'ctcp-file-request-v1','goal':'simlab-librarian-budget-fail','needs':[{'path':'README.md','mode':'full'}], 'budget':{'max_files':2,'max_total_bytes':64},'reason':'simlab'}; (art/'file_request.json').write_text(json.dumps(req, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
         "expect_exit": 0
       }
     },
@@ -40,3 +40,4 @@
     }
   ]
 }
+

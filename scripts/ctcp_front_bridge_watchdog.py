@@ -414,7 +414,7 @@ def runtime_blocking_reason(
         return str(gate.get("reason", "")).strip() or f"run_status={run_status or 'error'}"
     if gate_state == "blocked":
         return str(gate.get("reason", "")).strip() or str(previous_state.get("blocking_reason", "")).strip() or "blocked"
-    if final_ready or run_status_l in running_statuses or gate_state in {"open", "pass", "ready_apply", "ready_verify", "resolve_find_local"}:
+    if final_ready or run_status_l in running_statuses or gate_state in {"open", "pass", "ready_verify", "resolve_find_local"}:
         return "none"
     previous_reason = str(previous_state.get("blocking_reason", "")).strip()
     if previous_reason and previous_reason.lower() != "none" and run_status_l in {"blocked", "new", "created", "pending", "queued"}:

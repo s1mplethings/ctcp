@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from ctcp_adapters.analysis_md_normalizer import normalize_analysis_md as _normalize_analysis_md
+from ctcp_adapters.project_generation_plan_request import is_project_generation_plan_request
 from llm_core.providers.api_provider import _read_text, _slug, _write_text
 from tools import contrast_rules, contract_guard, local_librarian
 from tools.providers.project_generation_artifacts import (
@@ -20,7 +21,7 @@ from tools.providers.project_generation_artifacts import (
     normalize_source_generation,
     normalize_workflow_generation,
 )
-from tools.formal_api_lock import formal_api_only_enabled, requires_formal_api
+from tools.formal_api_lock import requires_formal_api
 
 _DEFAULT_PLAN_SCOPE_ALLOW = (
     "scripts/",
@@ -32,6 +33,17 @@ _DEFAULT_PLAN_SCOPE_ALLOW = (
 )
 
 _GOAL_SCOPE_FILE_RE = re.compile(r"(?<![:/A-Za-z0-9_.-])([A-Za-z0-9][A-Za-z0-9_./-]*\.[A-Za-z0-9]{1,16})(?![A-Za-z0-9_.-])")
+_API_AGENT_ONLY_JSON_ACTIONS = {
+    ("chair", "file_request"),
+    ("chair", "output_contract_freeze"),
+    ("chair", "source_generation"),
+    ("chair", "docs_generation"),
+    ("chair", "workflow_generation"),
+    ("chair", "artifact_manifest_build"),
+    ("chair", "deliver"),
+    ("librarian", "context_pack"),
+    ("researcher", "find_web"),
+}
 
 
 def _normalize_line_ranges(raw: Any) -> list[list[int]]:
@@ -458,14 +470,14 @@ def _goal_scope_allow_hints(goal: str) -> list[str]:
     return out
 
 
-def _normalize_plan_md(raw_text: str, *, signed: bool, goal: str) -> str:
+def _normalize_plan_md(raw_text: str, *, signed: bool, goal: str, force_project_generation: bool = False) -> str:
     status = "SIGNED" if signed else "DRAFT"
     scope_allow: list[str] = []
     for candidate in [*_DEFAULT_PLAN_SCOPE_ALLOW, *_parse_plan_scope_allow(raw_text), *_goal_scope_allow_hints(goal)]:
         if candidate and candidate not in scope_allow:
             scope_allow.append(candidate)
     project_generation_lines: list[str] = []
-    if is_project_generation_goal(goal):
+    if force_project_generation or is_project_generation_goal(goal):
         project_generation_lines = [
             "Project-Generation: true",
             "Deliverables: runnable_app,README,startup_steps,verify_report,final_screenshot,final_package",
@@ -495,17 +507,11 @@ def _normalize_json_artifact(*, repo_root: Path, run_dir: Path, request: dict[st
     goal = str(request.get("goal", "")).strip()
     doc = _extract_json_dict(raw_text)
 
-    if formal_api_only_enabled() and requires_formal_api(role, action) and action in {
-        "output_contract_freeze",
-        "source_generation",
-        "docs_generation",
-        "workflow_generation",
-        "artifact_manifest_build",
-        "deliver",
-    }:
+    if requires_formal_api(role, action) and (role, action) in _API_AGENT_ONLY_JSON_ACTIONS:
         if doc is None:
-            return "", f"formal_api_only forbids local normalizer synthesis for role={role} action={action}: agent output is not valid JSON object"
-        return _to_json_text(doc), ""
+            return "", f"formal_api_only forbids local normalizer synthesis; api_agent-only JSON flow for role={role} action={action}: agent output is not valid JSON object"
+        # Keep formal API-only strictness for non-JSON output, but normalize
+        # valid JSON payloads into deterministic CTCP schemas below.
 
     if role == "chair" and action == "file_request":
         return _to_json_text(_normalize_file_request(doc, goal=goal)), ""
@@ -528,6 +534,16 @@ def _normalize_json_artifact(*, repo_root: Path, run_dir: Path, request: dict[st
     if doc is None:
         return "", "agent output is not valid JSON object"
     return _to_json_text(doc), ""
+
+
+def _normalize_plan_target(*, raw_text: str, signed: bool, run_dir: Path, request: dict[str, Any]) -> str:
+    goal = str(request.get("goal", "")).strip()
+    return _normalize_plan_md(
+        raw_text,
+        signed=signed,
+        goal=goal,
+        force_project_generation=is_project_generation_plan_request(run_dir=run_dir, request=request, goal=goal),
+    )
 
 
 def _record_failure_review(run_dir: Path, reason: str) -> Path:
@@ -859,6 +875,7 @@ def _render_prompt(
         f"Action: {action}",
         "Provider: api_agent",
         f"Target-Path: {target_path}",
+        f"write to: {target_path}",
         f"Reason: {reason}",
         "",
         "Missing-Artifact-Paths:",
@@ -929,9 +946,9 @@ def normalize_target_payload(*, repo_root: Path, run_dir: Path, request: dict[st
     if target_rel.lower().endswith("analysis.md"):
         return _normalize_analysis_md(raw_text, goal=str(request.get("goal", "")).strip()), ""
     if target_rel.lower().endswith("artifacts/plan.md"):
-        return _normalize_plan_md(raw_text, signed=True, goal=str(request.get("goal", "")).strip()), ""
+        return _normalize_plan_target(raw_text=raw_text, signed=True, run_dir=run_dir, request=request), ""
     if target_rel.lower().endswith("artifacts/plan_draft.md"):
-        return _normalize_plan_md(raw_text, signed=False, goal=str(request.get("goal", "")).strip()), ""
+        return _normalize_plan_target(raw_text=raw_text, signed=False, run_dir=run_dir, request=request), ""
     if target_rel.lower().endswith("reviews/review_contract.md"):
         return _normalize_review_md(raw_text, title="Contract Review"), ""
     if target_rel.lower().endswith("reviews/review_cost.md"):

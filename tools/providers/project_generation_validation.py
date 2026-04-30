@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -101,6 +102,10 @@ _INDIE_STUDIO_HUB_RULES: dict[str, tuple[str, ...]] = {
     "build_release": ("build_release_center", "release_summary", "build_records", "current_version_status", "release_checklist"),
     "docs_delivery": ("docs_center", "feature matrix", "page map", "startup guide", "replay guide"),
 }
+_TODO_PLACEHOLDER_LINE_RE = re.compile(
+    r"^\s*(?:[-*]\s*)?(?:\[\s\]\s*)?todo(?:\s*[:：-].*|\s*)$",
+    re.IGNORECASE,
+)
 
 
 def read_frontend_request(run_dir: Path | None) -> dict[str, Any]:
@@ -162,15 +167,14 @@ def pipeline_contract(*, project_root: str, startup_entrypoint: str, startup_rea
     core_feature_files = sorted(set(business_files))
     return {
         "schema_version": "ctcp-project-generation-pipeline-v1",
+        "source_contract": "docs/02_workflow.md",
         "stages": [
-            {"name": "project_intent", "artifact": "project_intent", "status": "ready"},
+            {"name": "goal", "artifact": "goal_text", "status": "ready"},
+            {"name": "intent", "artifact": "project_intent", "status": "ready"},
             {"name": "spec", "artifact": "artifacts/project_spec.json", "status": "ready"},
-            {"name": "capability_plan", "artifact": "artifacts/capability_plan.json", "status": "ready"},
-            {"name": "sample_generation_plan", "artifact": "artifacts/sample_generation", "status": "ready"},
             {"name": "scaffold", "artifact": "project_root", "status": "planned", "project_root": project_root},
-            {"name": "core_feature_implementation", "artifact": "core_feature_files", "status": "planned", "core_feature_files": core_feature_files},
-            {"name": "refinement", "artifact": "artifacts/generation_quality_report.json", "status": "planned"},
-            {"name": "smoke_run", "artifact": "startup_entrypoint", "status": "planned", "startup_entrypoint": startup_entrypoint},
+            {"name": "core_feature", "artifact": "core_feature_files", "status": "planned", "core_feature_files": core_feature_files},
+            {"name": "smoke_verify", "artifact": "startup_entrypoint", "status": "planned", "startup_entrypoint": startup_entrypoint},
             {"name": "demo_evidence", "artifact": "demo_evidence", "status": "planned"},
             {"name": "delivery_package", "artifact": "acceptance_files", "status": "planned", "acceptance_files": list(acceptance_files), "startup_readme": startup_readme},
         ],
@@ -310,7 +314,9 @@ def readme_quality_validation(
     text = readme_path.read_text(encoding="utf-8", errors="replace")
     text_lower = text.lower()
     escaped_literal_hits = [token for token in ("\\n", "\\t", "\\r") if token in text]
-    placeholder_hits = [token for token in ("todo", "coming soon", "not implemented yet", "lorem ipsum") if token in text_lower]
+    placeholder_hits = [token for token in ("coming soon", "not implemented yet", "lorem ipsum") if token in text_lower]
+    if any(_TODO_PLACEHOLDER_LINE_RE.match(line) for line in text.splitlines()):
+        placeholder_hits.append("todo")
     present_sections: list[str] = []
     missing_sections: list[str] = []
     for section in required_sections:

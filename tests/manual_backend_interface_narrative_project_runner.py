@@ -153,7 +153,6 @@ def _build_checks(
         "deliver_index_not_scaffold_only": any("/src/narrative_copilot/" in rel for rel in deliverables),
         "manifest_execution_mode_is_benchmark": str(manifest_file.get("execution_mode", "")).strip() == "benchmark_regression",
         "manifest_delivery_shape_present": bool(str(manifest_file.get("delivery_shape", "")).strip()),
-        "fell_back_to_ready_apply": str((status_final.get("gate", {}) or {}).get("state", "")).strip().lower() == "ready_apply",
         "has_manual_injected_story_tree_project": any(path.startswith("artifacts/story_tree_project/") for path in output_paths),
         "output_count": len(output_paths),
     }
@@ -214,9 +213,6 @@ def run_narrative_project_e2e() -> dict[str, Any]:
         run_status = str(status.get("run_status", "")).strip().lower()
         gate_state = str(gate.get("state", "")).strip().lower()
         if run_status in {"pass", "fail"}:
-            break
-        if gate_state == "ready_apply":
-            # Project-generation request should not default to generic patch apply path.
             break
         if stagnation_count >= 3:
             break
