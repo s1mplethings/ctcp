@@ -41,7 +41,7 @@ class ProviderSelectionTests(unittest.TestCase):
             cfg, msg = ctcp_dispatch.load_dispatch_config(run_dir)
             self.assertIsNotNone(cfg, msg)
             role_providers = cfg.get("role_providers", {})
-            self.assertEqual(role_providers.get("librarian"), "api_agent")
+            self.assertEqual(role_providers.get("librarian"), "local_exec")
             self.assertEqual(role_providers.get("contract_guardian"), "api_agent")
             self.assertEqual(role_providers.get("patchmaker"), "api_agent")
             self.assertEqual(role_providers.get("fixer"), "api_agent")
@@ -84,7 +84,7 @@ class ProviderSelectionTests(unittest.TestCase):
             self.assertIsNotNone(cfg, msg)
             role_providers = cfg.get("role_providers", {})
             self.assertEqual(role_providers.get("patchmaker"), "api_agent")
-            self.assertEqual(role_providers.get("librarian"), "api_agent")
+            self.assertEqual(role_providers.get("librarian"), "local_exec")
             self.assertEqual(role_providers.get("contract_guardian"), "api_agent")
 
     def test_non_librarian_local_exec_provider_falls_back_to_api(self) -> None:
@@ -110,9 +110,10 @@ class ProviderSelectionTests(unittest.TestCase):
             )
             cfg, msg = ctcp_dispatch.load_dispatch_config(run_dir)
             self.assertIsNotNone(cfg, msg)
+            self.assertEqual(cfg["role_providers"].get("contract_guardian"), "api_agent")
             provider, note = ctcp_dispatch._resolve_provider(cfg, "contract_guardian", "review_contract")
             self.assertEqual(provider, "api_agent")
-            self.assertIn("hard-locked role=contract_guardian", note)
+            self.assertIn(note, {"", "forced provider matches hard-locked role=contract_guardian"})
 
     def test_formal_api_only_non_librarian_local_exec_fails_fast(self) -> None:
         cfg = {
@@ -152,7 +153,7 @@ class ProviderSelectionTests(unittest.TestCase):
             cfg, msg = ctcp_dispatch.load_dispatch_config(run_dir)
             self.assertIsNotNone(cfg, msg)
             role_providers = cfg.get("role_providers", {})
-            self.assertEqual(role_providers.get("librarian"), "api_agent")
+            self.assertEqual(role_providers.get("librarian"), "local_exec")
             self.assertEqual(role_providers.get("patchmaker"), "api_agent")
 
     def test_mock_agent_mode_allows_mock_librarian_context_pack_provider(self) -> None:
@@ -163,9 +164,10 @@ class ProviderSelectionTests(unittest.TestCase):
                 "librarian": "mock_agent",
             },
         }
-        provider, note = ctcp_dispatch._resolve_provider(cfg, "librarian", "context_pack")
-        self.assertEqual(provider, "api_agent")
-        self.assertIn("hard-locked role=librarian", note)
+        with mock.patch.dict(os.environ, {"CTCP_FORCE_PROVIDER": ""}, clear=False):
+            provider, note = ctcp_dispatch._resolve_provider(cfg, "librarian", "context_pack")
+        self.assertEqual(provider, "mock_agent")
+        self.assertEqual(note, "")
 
     def test_api_agent_preview_disabled_without_env_or_cmd(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -252,8 +254,8 @@ class ProviderSelectionTests(unittest.TestCase):
                 },
                 clear=False,
             ):
-                def _fake_execute(*, repo_root: Path, run_dir: Path, request: dict[str, object], config: dict[str, object], guardrails_budgets: dict[str, str]) -> dict[str, object]:
-                    del repo_root, config, guardrails_budgets
+                def _fake_execute(*, repo_root: Path, run_dir: Path, request: dict[str, object], **_: object) -> dict[str, object]:
+                    del repo_root
                     (run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
                     (run_dir / "artifacts" / "context_pack.json").write_text(
                         json.dumps({"schema_version": "ctcp-context-pack-v1", "files": [], "omitted": [], "summary": "ok"}, ensure_ascii=False),
@@ -263,27 +265,66 @@ class ProviderSelectionTests(unittest.TestCase):
                     return {
                         "status": "executed",
                         "target_path": "artifacts/context_pack.json",
-                        "provider_mode": "remote",
-                        "model_name": "api-test-model",
-                        "request_id": "req-test-1",
+                        "provider_mode": "local",
+                        "model_name": "local-librarian",
                     }
 
-                with mock.patch.object(ctcp_dispatch.api_agent, "execute", side_effect=_fake_execute) as api_execute, mock.patch.object(
+                with mock.patch.object(ctcp_dispatch.local_exec, "execute", side_effect=_fake_execute) as local_exec_execute, mock.patch.object(
                     ctcp_dispatch.ollama_agent, "execute"
                 ) as ollama_execute:
                     result = ctcp_dispatch.dispatch_once(run_dir, run_doc, gate, ROOT)
 
             self.assertEqual(result.get("status"), "executed", msg=str(result))
-            self.assertEqual(result.get("provider"), "api_agent")
-            self.assertEqual(result.get("chosen_provider"), "api_agent")
+            self.assertEqual(result.get("provider"), "local_exec")
+            self.assertEqual(result.get("chosen_provider"), "local_exec")
             self.assertTrue(str(result.get("provider_mode", "")).strip())
-            self.assertEqual(result.get("model_name"), "api-test-model")
+            self.assertEqual(result.get("model_name"), "local-librarian")
             self.assertIn("ignored CTCP_FORCE_PROVIDER=ollama_agent", str(result.get("note", "")))
-            api_execute.assert_called_once()
+            local_exec_execute.assert_called_once()
             ollama_execute.assert_not_called()
             self.assertTrue((run_dir / "artifacts" / "context_pack.json").exists())
 
-    def test_librarian_api_failure_does_not_fallback_to_local(self) -> None:
+    def test_local_only_override_can_force_ollama_for_mainline_role(self) -> None:
+        cfg = {
+            "schema_version": "ctcp-dispatch-config-v1",
+            "mode": "api_agent",
+            "role_providers": {"chair": "api_agent"},
+        }
+        with mock.patch.dict(
+            os.environ,
+            {
+                "CTCP_FORMAL_API_ONLY": "",
+                "CTCP_ALLOW_LOCAL_MAINLINE_PROVIDER": "1",
+                "CTCP_FORCE_PROVIDER": "ollama_agent",
+            },
+            clear=False,
+        ):
+            provider, note = ctcp_dispatch._resolve_provider(cfg, "chair", "source_generation")
+
+        self.assertEqual(provider, "ollama_agent")
+        self.assertIn("local-only override", note)
+
+    def test_local_only_override_does_not_bypass_formal_api_only(self) -> None:
+        cfg = {
+            "schema_version": "ctcp-dispatch-config-v1",
+            "mode": "api_agent",
+            "role_providers": {"chair": "api_agent"},
+        }
+        with mock.patch.dict(
+            os.environ,
+            {
+                "CTCP_FORMAL_API_ONLY": "1",
+                "CTCP_ALLOW_LOCAL_MAINLINE_PROVIDER": "1",
+                "CTCP_FORCE_PROVIDER": "ollama_agent",
+            },
+            clear=False,
+        ):
+            provider, note = ctcp_dispatch._resolve_provider(cfg, "chair", "source_generation")
+
+        self.assertEqual(provider, "api_agent")
+        self.assertIn("hard-locked role=chair", note)
+
+    def test_librarian_local_exec_failure_does_not_fallback_to_other_providers(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             run_dir = Path(td)
             (run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
@@ -295,27 +336,27 @@ class ProviderSelectionTests(unittest.TestCase):
                 "reason": "waiting for context_pack.json",
             }
             with mock.patch.object(
-                ctcp_dispatch.api_agent,
+                ctcp_dispatch.local_exec,
                 "execute",
                 return_value={
                     "status": "exec_failed",
-                    "reason": "OpenAI API request failed: timeout",
-                    "provider_mode": "remote",
-                    "model_name": "api-test-model",
+                    "reason": "local librarian failed: timeout",
+                    "provider_mode": "local",
+                    "model_name": "local-librarian",
                 },
-            ) as api_execute, mock.patch.object(ctcp_dispatch.ollama_agent, "execute") as ollama_execute, mock.patch.object(
-                ctcp_dispatch.local_exec, "execute"
-            ) as local_exec_execute:
+            ) as local_exec_execute, mock.patch.object(ctcp_dispatch.ollama_agent, "execute") as ollama_execute, mock.patch.object(
+                ctcp_dispatch.api_agent, "execute"
+            ) as api_execute:
                 result = ctcp_dispatch.dispatch_once(run_dir, run_doc, gate, ROOT)
 
             self.assertEqual(result.get("status"), "exec_failed", msg=str(result))
-            self.assertEqual(result.get("provider"), "api_agent")
+            self.assertEqual(result.get("provider"), "local_exec")
             self.assertTrue(str(result.get("provider_mode", "")).strip())
-            self.assertEqual(result.get("model_name"), "api-test-model")
+            self.assertEqual(result.get("model_name"), "local-librarian")
             self.assertIn("timeout", str(result.get("reason", "")))
-            api_execute.assert_called_once()
+            local_exec_execute.assert_called_once()
             ollama_execute.assert_not_called()
-            local_exec_execute.assert_not_called()
+            api_execute.assert_not_called()
 
     def test_formal_api_only_dispatch_writes_provider_mismatch_ledger(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -574,7 +615,7 @@ class ProviderSelectionTests(unittest.TestCase):
             )
             cfg, msg = ctcp_dispatch.load_dispatch_config(run_dir)
             self.assertIsNotNone(cfg, msg)
-            self.assertEqual(cfg.get("role_providers", {}).get("librarian"), "api_agent")
+            self.assertEqual(cfg.get("role_providers", {}).get("librarian"), "local_exec")
 
             run_doc = {"goal": "manual outbox shared whiteboard"}
             gate = {

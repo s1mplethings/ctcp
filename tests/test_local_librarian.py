@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from tools import local_librarian
+from tools.librarian_context_pack import build_context_pack
 import scripts.ctcp_librarian as ctcp_librarian
 
 
@@ -152,6 +153,37 @@ class LocalLibrarianTests(unittest.TestCase):
 
             self.assertEqual(str(doc.get("schema_version", "")), "ctcp-context-pack-v1")
             self.assertTrue(any(str(row.get("path", "")) == "workspace/fixture.txt" for row in list(doc.get("files", []))))
+
+    def test_build_context_pack_infers_relevant_repo_context_from_sparse_request(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_librarian_repo_") as repo_td:
+            repo = Path(repo_td)
+            _make_minimal_librarian_repo(repo)
+            (repo / "docs" / "local_librarian_smart_context.md").write_text(
+                "overview\nSMART_CONTEXT_TOKEN selects this local context file\nimplementation note\n",
+                encoding="utf-8",
+            )
+            file_request = {
+                "schema_version": "ctcp-file-request-v1",
+                "goal": "Need SMART_CONTEXT_TOKEN context for a sparse request",
+                "needs": [],
+                "budget": {"max_files": 8, "max_total_bytes": 20000},
+                "reason": "planner omitted the exact file path",
+            }
+
+            doc = build_context_pack(file_request, repo_root=repo, get_repo_slug_fn=lambda _root: "fixture")
+
+            files = list(doc.get("files", []))
+            inferred = [
+                row
+                for row in files
+                if str(row.get("path", "")) == "docs/local_librarian_smart_context.md"
+            ]
+            self.assertEqual(len(inferred), 1)
+            self.assertIn("SMART_CONTEXT_TOKEN", str(inferred[0].get("content", "")))
+            self.assertIn("inferred_context", str(inferred[0].get("why", "")))
+            strategy = dict(doc.get("selection_strategy", {}))
+            self.assertIn("SMART_CONTEXT_TOKEN", list(strategy.get("queries", [])))
+            self.assertIn("docs/local_librarian_smart_context.md", list(strategy.get("selected", [])))
 
     def test_ctcp_librarian_records_structured_failure_for_invalid_request_contract(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_librarian_repo_") as repo_td, tempfile.TemporaryDirectory(

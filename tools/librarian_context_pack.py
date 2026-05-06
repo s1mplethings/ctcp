@@ -22,6 +22,37 @@ DENY_PREFIXES = (
     "node_modules/",
     "__pycache__/",
 )
+QUERY_STOPWORDS = {
+    "about",
+    "action",
+    "agent",
+    "api",
+    "code",
+    "context",
+    "current",
+    "file",
+    "files",
+    "for",
+    "from",
+    "generate",
+    "generation",
+    "goal",
+    "local",
+    "need",
+    "needs",
+    "project",
+    "reason",
+    "request",
+    "source",
+    "stage",
+    "task",
+    "that",
+    "this",
+    "with",
+}
+MAX_INFERRED_QUERIES = 8
+MAX_INFERRED_FILES = 4
+INFERRED_SNIPPET_CONTEXT_LINES = 12
 
 
 class LibrarianContractError(RuntimeError):
@@ -195,6 +226,125 @@ def _prepend_mandatory_needs(needs: list[Any], mandatory_paths: list[str]) -> tu
     return merged, {p.replace("\\", "/").lstrip("./") for p in mandatory_paths}
 
 
+def _request_text_for_inference(file_request: dict[str, Any]) -> str:
+    chunks: list[str] = [
+        str(file_request.get("goal", "")),
+        str(file_request.get("reason", "")),
+    ]
+    for need in file_request.get("needs", []):
+        if not isinstance(need, dict):
+            continue
+        chunks.append(str(need.get("path", "")))
+        chunks.append(str(need.get("why", "")))
+    return "\n".join(chunks)
+
+
+def _split_query_terms(text: str) -> list[str]:
+    terms: list[str] = []
+    seen: set[str] = set()
+    for raw in re.findall(r"[A-Za-z][A-Za-z0-9_./-]{2,}", text):
+        cleaned = raw.strip("._/-").replace("\\", "/")
+        if not cleaned:
+            continue
+        candidates = [cleaned]
+        if "/" in cleaned:
+            stem = Path(cleaned).stem
+            if stem:
+                candidates.append(stem)
+        for item in candidates:
+            token = item.strip("._/-")
+            if not token:
+                continue
+            lowered = token.lower()
+            if lowered in QUERY_STOPWORDS or len(lowered) < 4:
+                continue
+            if "." in lowered and not lowered.endswith((".py", ".md", ".json", ".yaml", ".yml", ".txt")):
+                continue
+            if lowered in seen:
+                continue
+            seen.add(lowered)
+            terms.append(token)
+            if len(terms) >= MAX_INFERRED_QUERIES:
+                return terms
+    return terms
+
+
+def _known_need_paths(needs: list[dict[str, Any]], mandatory_paths: list[str]) -> set[str]:
+    out = {p.replace("\\", "/").lstrip("./") for p in mandatory_paths}
+    for need in needs:
+        raw = str(need.get("path", ""))
+        rel, rel_err = _normalize_need_path(raw)
+        if rel and not rel_err:
+            out.add(rel)
+    return out
+
+
+def _infer_context_needs(
+    *,
+    file_request: dict[str, Any],
+    repo_root: Path,
+    existing_paths: set[str],
+    max_files: int,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    if max_files <= 0:
+        return [], {"strategy": "request_keyword_repo_search", "queries": [], "candidates": [], "selected": []}
+    queries = _split_query_terms(_request_text_for_inference(file_request))
+    selected: list[dict[str, Any]] = []
+    candidates: list[dict[str, Any]] = []
+    selected_paths: set[str] = set()
+    try:
+        from tools import local_librarian
+    except Exception as exc:
+        return [], {
+            "strategy": "request_keyword_repo_search",
+            "queries": queries,
+            "candidates": [],
+            "selected": [],
+            "error": f"search_unavailable:{exc}",
+        }
+
+    for query in queries:
+        try:
+            rows = local_librarian.search(repo_root=repo_root, query=query, k=4)
+        except Exception as exc:
+            candidates.append({"query": query, "path": "", "reason": f"search_failed:{exc}"})
+            continue
+        for row in rows:
+            rel = str(row.get("path", "")).strip().replace("\\", "/").lstrip("./")
+            if not rel:
+                continue
+            if rel in existing_paths or rel in selected_paths:
+                candidates.append({"query": query, "path": rel, "reason": "duplicate"})
+                continue
+            if _is_denied_prefix(rel):
+                candidates.append({"query": query, "path": rel, "reason": "denied"})
+                continue
+            start = max(1, int(row.get("start_line", 1)) - INFERRED_SNIPPET_CONTEXT_LINES)
+            end = max(start, int(row.get("end_line", start)) + INFERRED_SNIPPET_CONTEXT_LINES)
+            need = {
+                "path": rel,
+                "mode": "snippets",
+                "line_ranges": [[start, end]],
+                "why": f"inferred_context: query={query}",
+            }
+            selected.append(need)
+            selected_paths.add(rel)
+            candidates.append({"query": query, "path": rel, "reason": "selected", "line_ranges": [[start, end]]})
+            if len(selected) >= max_files:
+                return selected, {
+                    "strategy": "request_keyword_repo_search",
+                    "queries": queries,
+                    "candidates": candidates,
+                    "selected": [str(item.get("path", "")) for item in selected],
+                }
+    return selected, {
+        "strategy": "request_keyword_repo_search",
+        "queries": queries,
+        "candidates": candidates,
+        "selected": [str(item.get("path", "")) for item in selected],
+    }
+
+
 def _increase_budget_error(mandatory_paths: list[str], mandatory_total_bytes: int) -> str:
     return (
         "[ctcp_librarian] budget too small for mandatory contract files; "
@@ -300,7 +450,8 @@ def _append_need_content(
 
     mode = str(need.get("mode", "")).strip().lower()
     remaining_bytes = max_total_bytes - used_bytes
-    why = "mandatory_contract" if is_mandatory else f"requested:{request_reason}"
+    explicit_why = str(need.get("why", "")).strip()
+    why = "mandatory_contract" if is_mandatory else (explicit_why or f"requested:{request_reason}")
     if mode == "full":
         full_bytes = _utf8_bytes(raw)
         if is_mandatory and full_bytes > remaining_bytes:
@@ -384,6 +535,7 @@ def build_context_pack(
 
     mandatory_paths = _resolve_mandatory_paths(repo_root)
     needs, mandatory_need_keys = _prepend_mandatory_needs(needs, mandatory_paths)
+    explicit_need_count = max(0, len(needs) - len(mandatory_paths))
     mandatory_total_bytes = 0
     for rel in mandatory_paths:
         candidate = (repo_root / rel).resolve()
@@ -394,6 +546,13 @@ def build_context_pack(
 
     goal = str(file_request.get("goal", ""))
     request_reason = str(file_request.get("reason", "")).strip() or "request"
+    inferred_needs, selection_strategy = _infer_context_needs(
+        file_request=file_request,
+        repo_root=repo_root,
+        existing_paths=_known_need_paths(needs, mandatory_paths),
+        max_files=max(0, min(MAX_INFERRED_FILES, max_files - len(needs))),
+    )
+    needs = [*needs, *inferred_needs]
     files: list[dict[str, Any]] = []
     omitted: list[dict[str, str]] = []
     used_files = 0
@@ -430,8 +589,16 @@ def build_context_pack(
         "summary": (
             f"included={len(files)} omitted={len(omitted)} "
             f"used_files={used_files}/{max_files} used_bytes={used_bytes}/{max_total_bytes}; "
+            f"inferred_selected={len(selection_strategy.get('selected', []))}; "
             f"omitted_by_reason={reason_summary or 'none'}"
         ),
+        "selection_strategy": {
+            **selection_strategy,
+            "mandatory_file_count": len(mandatory_paths),
+            "explicit_need_count": explicit_need_count,
+            "budget_max_files": max_files,
+            "budget_max_total_bytes": max_total_bytes,
+        },
         "files": files,
         "omitted": omitted,
     }

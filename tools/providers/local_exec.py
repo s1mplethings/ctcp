@@ -25,6 +25,33 @@ def _read_json(path: Path) -> dict[str, Any]:
     return raw if isinstance(raw, dict) else {}
 
 
+def _write_librarian_prompt_evidence(run_dir: Path, target_path: str, cmd: list[str]) -> str:
+    prompt_path = run_dir / "outbox" / "AGENT_PROMPT_librarian_context_pack.md"
+    prompt_path.parent.mkdir(parents=True, exist_ok=True)
+    prompt_path.write_text(
+        "\n".join(
+            [
+                "# Agent Prompt Evidence",
+                "",
+                "Role: librarian",
+                "Action: context_pack",
+                f"Target-Path: {target_path}",
+                "Provider: local_exec",
+                "",
+                "This local deterministic librarian execution generated `artifacts/context_pack.json`.",
+                "",
+                "Command:",
+                "```",
+                " ".join(cmd),
+                "```",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return prompt_path.relative_to(run_dir).as_posix()
+
+
 def _run_librarian(repo_root: Path, run_dir: Path, target_path: str) -> dict[str, Any]:
     # BEHAVIOR_ID: B029
     logs_dir = run_dir / "logs"
@@ -33,6 +60,7 @@ def _run_librarian(repo_root: Path, run_dir: Path, target_path: str) -> dict[str
     stderr_log = logs_dir / "dispatch_local_exec_librarian.stderr.log"
 
     cmd = [sys.executable, str(repo_root / "scripts" / "ctcp_librarian.py"), "--run-dir", str(run_dir)]
+    prompt_rel = _write_librarian_prompt_evidence(run_dir, target_path, cmd)
     proc = subprocess.run(
         cmd,
         cwd=str(repo_root),
@@ -51,6 +79,7 @@ def _run_librarian(repo_root: Path, run_dir: Path, target_path: str) -> dict[str
             "status": "executed",
             "target_path": target_path,
             "cmd": " ".join(cmd),
+            "prompt_path": prompt_rel,
             "rc": proc.returncode,
             "stdout_log": stdout_log.relative_to(run_dir).as_posix(),
             "stderr_log": stderr_log.relative_to(run_dir).as_posix(),
@@ -61,6 +90,7 @@ def _run_librarian(repo_root: Path, run_dir: Path, target_path: str) -> dict[str
         "reason": str(failure_doc.get("message", "")).strip() or f"local_exec command failed rc={proc.returncode}",
         "target_path": target_path,
         "cmd": " ".join(cmd),
+        "prompt_path": prompt_rel,
         "rc": proc.returncode,
         "stdout_log": stdout_log.relative_to(run_dir).as_posix(),
         "stderr_log": stderr_log.relative_to(run_dir).as_posix(),

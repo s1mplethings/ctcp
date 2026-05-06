@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Callable
 
@@ -14,6 +15,10 @@ def normalize_provider(value: str) -> str:
     if text in KNOWN_PROVIDERS:
         return text
     return "manual_outbox"
+
+
+def _local_mainline_override_allowed() -> bool:
+    return str(os.environ.get("CTCP_ALLOW_LOCAL_MAINLINE_PROVIDER", "")).strip().lower() in {"1", "true", "yes", "on"}
 
 
 def resolve_provider(
@@ -32,6 +37,8 @@ def resolve_provider(
     hard_provider = locked_roles.get(role_name, "")
     mode_norm = str(config.get("mode", "")).strip().lower()
     if forced:
+        if forced == "ollama_agent" and _local_mainline_override_allowed() and not formal_api_only:
+            return forced, f"local-only override forced provider={forced} for role={role_name}"
         if hard_provider:
             if forced != hard_provider:
                 return (
@@ -59,6 +66,8 @@ def resolve_provider(
     if formal_api_only and not is_local_exception(role_name, action_name) and provider != "api_agent":
         return provider, f"formal_api_only requires api_agent for role={role_name} action={action_name}; got provider={provider}"
     if provider == "local_exec":
+        if (role_name, action_name) == ("librarian", "context_pack"):
+            return "local_exec", ""
         return "api_agent", "local_exec not allowed in api-only mainline; fallback to api_agent"
     if provider == "ollama_agent":
         return "api_agent", "ollama_agent not allowed in api-only mainline; fallback to api_agent"
