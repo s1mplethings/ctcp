@@ -123,6 +123,27 @@ class LlmCoreOpenAiCompatibleTests(unittest.TestCase):
         self.assertEqual(text, "notes-ok")
         self.assertIs(old_client.call_openai_responses, new_client.call_openai_responses)
 
+    def test_gptsapi_base_url_normalizes_v1_and_defaults_to_chat(self) -> None:
+        calls: list[str] = []
+
+        def _urlopen(req, timeout=0):
+            calls.append(str(req.full_url))
+            return _MockHttpResponse({"id": "chat_gptsapi", "choices": [{"message": {"content": "ok"}}]})
+
+        env = {
+            "OPENAI_API_KEY": "sk-test",
+            "OPENAI_BASE_URL": "https://api.gptsapi.net/v1",
+            "SDDAI_OPENAI_ENDPOINT_MODE": "auto",
+            "SDDAI_OPENAI_MAX_ATTEMPTS": "1",
+        }
+        with mock.patch.dict(os.environ, env, clear=False):
+            with mock.patch.object(new_client.urllib.request, "urlopen", side_effect=_urlopen):
+                text, err = new_client.call_openai_compatible(prompt="hello", model="gpt-4o", timeout_sec=5)
+
+        self.assertEqual(err, "")
+        self.assertEqual(text, "ok")
+        self.assertEqual(calls, ["https://api.gptsapi.net/chat/completions"])
+
 
 if __name__ == "__main__":
     unittest.main()

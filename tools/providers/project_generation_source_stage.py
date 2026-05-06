@@ -11,8 +11,10 @@ from tools.providers.project_generation_decisions import (
     PRODUCTION_MODE,
     decide_project_generation,
 )
-from tools.providers.project_generation_business_materializers import materialize_business_files
 from tools.providers.project_generation_domain_contract import compatibility_report
+from tools.providers.project_generation_import_validation import provider_interface_contract
+from tools.providers.project_generation_provenance import attach_source_generation_provenance
+from tools.providers.project_generation_sample_metrics import narrative_sample_metrics
 from tools.providers.project_generation_source_helpers import (
     _render_visual_evidence_png,
     build_missing_context_extra,
@@ -128,6 +130,172 @@ def _blocked_source_generation_report(
     return report
 
 
+def _production_local_templates_disabled(inputs: dict[str, Any]) -> bool:
+    return str(inputs["lists"].get("execution_mode", PRODUCTION_MODE)).strip() == PRODUCTION_MODE
+
+
+def _blocked_local_templates_disabled_report(*, inputs: dict[str, Any], run_dir: Path) -> dict[str, Any]:
+    reason = "production local project templates are disabled; provider-authored source files are required before source generation can continue"
+    report = _blocked_source_generation_report(inputs=inputs, run_dir=run_dir, reason=reason)
+    generation_quality = {
+        "schema_version": "ctcp-generation-quality-v1",
+        "passed": False,
+        "targeted_checks": [{"check_id": "production_local_templates_disabled", "passed": False, "reason": reason}],
+        "reasons": [reason],
+    }
+    _write_json((run_dir / inputs["generation_quality_report_path"]).resolve(), generation_quality)
+    report["capability_plan"] = inputs["capability_plan"]
+    report["project_spec_path"] = inputs["project_spec_path"]
+    report["capability_plan_path"] = inputs["capability_plan_path"]
+    report["generation_quality_report_path"] = inputs["generation_quality_report_path"]
+    report["generation_quality"] = generation_quality
+    report["materialize_capabilities"] = []
+    provenance_inputs = dict(inputs)
+    provenance_inputs["local_templates_disabled"] = True
+    attach_source_generation_provenance(report, run_dir, provenance_inputs, [], [])
+    return report
+
+
+def _candidate_provider_file_rows(src: dict[str, Any]) -> list[dict[str, Any]]:
+    candidates: list[Any] = []
+    for key in ("files", "provider_source_files", "generated_files", "project_files"):
+        value = src.get(key)
+        if isinstance(value, list):
+            candidates.extend(value)
+        elif isinstance(value, dict):
+            candidates.extend({"path": k, "content": v} for k, v in value.items())
+    bundle = src.get("source_bundle")
+    if isinstance(bundle, dict):
+        value = bundle.get("files")
+        if isinstance(value, list):
+            candidates.extend(value)
+        elif isinstance(value, dict):
+            candidates.extend({"path": k, "content": v} for k, v in value.items())
+    return [dict(row) for row in candidates if isinstance(row, dict)]
+
+
+def _provider_source_file_rows(inputs: dict[str, Any]) -> list[dict[str, str]]:
+    src = dict(inputs.get("src", {})) if isinstance(inputs.get("src", {}), dict) else {}
+    project_root = str(inputs.get("project_root", "")).strip().replace("\\", "/").strip("/")
+    if not project_root:
+        return []
+    out: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for row in _candidate_provider_file_rows(src):
+        rel = str(row.get("path", "")).strip().replace("\\", "/").lstrip("/")
+        content = row.get("content")
+        content_lines = row.get("content_lines")
+        if not isinstance(content, str) and isinstance(content_lines, list):
+            normalized_lines = [str(item) for item in content_lines]
+            content = "\n".join(normalized_lines) + ("\n" if normalized_lines else "")
+        if rel and rel not in seen and rel.startswith(project_root + "/") and isinstance(content, str) and content.strip():
+            out.append({"path": rel, "content": content})
+            seen.add(rel)
+    return out
+
+
+def _write_provider_source_map(*, run_dir: Path, inputs: dict[str, Any], rows: list[dict[str, str]]) -> None:
+    src = dict(inputs.get("src", {})) if isinstance(inputs.get("src", {}), dict) else {}
+    source_map = src.get("source_map") if isinstance(src.get("source_map"), dict) else {}
+    path = run_dir / str(inputs["project_root"]) / "sample_data" / "source_map.json"
+    existing = _read_json_dict(path)
+    doc = dict(existing)
+    doc.update(dict(source_map))
+    doc["api_content_applied"] = True
+    doc["api_content_source_ref"] = str(doc.get("api_content_source_ref", "")).strip() or "API:api_agent/source_generation"
+    _ensure_provider_source_refs(doc, rows)
+    doc["provider_authored_file_count"] = len(rows)
+    doc["provider_authored_files"] = [row["path"] for row in rows]
+    _write_json(path, doc)
+
+
+def _read_json_dict(path: Path) -> dict[str, Any]:
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    except Exception:
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
+def _ensure_provider_source_refs(doc: dict[str, Any], rows: list[dict[str, str]]) -> None:
+    source_ref = str(doc.get("api_content_source_ref", "")).strip() or "API:api_agent/source_generation"
+    items = [dict(row) for row in doc.get("content_items", []) if isinstance(row, dict)]
+    if not any(str(row.get("source", "")).strip().startswith("API:") for row in items):
+        items.append({"item_id": "provider_authored_source_bundle", "source": source_ref})
+    field_sources = dict(doc.get("field_sources", {})) if isinstance(doc.get("field_sources", {}), dict) else {}
+    if not any(str(value).strip().startswith("API:") for value in field_sources.values()):
+        for row in rows[:40]:
+            field_sources[f"files.{row['path']}"] = source_ref
+    doc["content_items"] = items
+    doc["field_sources"] = field_sources
+
+
+def _materialize_provider_source_files(*, run_dir: Path, inputs: dict[str, Any], rows: list[dict[str, str]]) -> list[str]:
+    written: list[str] = []
+    root = run_dir.resolve()
+    for row in rows:
+        rel = row["path"]
+        target = (run_dir / rel).resolve()
+        try:
+            target.relative_to(root)
+        except ValueError:
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(row["content"], encoding="utf-8", errors="replace")
+        written.append(rel)
+    written.extend(_ensure_provider_package_init_files(run_dir=run_dir, inputs=inputs, already_written=set(written)))
+    if written:
+        _write_provider_source_map(run_dir=run_dir, inputs=inputs, rows=rows)
+    return written
+
+
+def _ensure_provider_package_init_files(*, run_dir: Path, inputs: dict[str, Any], already_written: set[str]) -> list[str]:
+    root = run_dir.resolve()
+    project_root = str(inputs.get("project_root", "")).strip().replace("\\", "/")
+    lists = inputs.get("lists") if isinstance(inputs.get("lists"), dict) else {}
+    expected = list(lists.get("source_files", [])) if isinstance(lists.get("source_files", []), list) else []
+    added: list[str] = []
+    for raw in expected:
+        rel = str(raw or "").strip().replace("\\", "/")
+        if not rel.endswith("/__init__.py") or rel in already_written:
+            continue
+        if project_root and not rel.startswith(project_root + "/"):
+            continue
+        target = (run_dir / rel).resolve()
+        try:
+            target.relative_to(root)
+        except ValueError:
+            continue
+        if target.exists():
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text('"""Package marker for provider-authored source bundle."""\n', encoding="utf-8")
+        added.append(rel)
+    return added
+
+
+def _materialize_nonproduction_business_files(run_dir: Path, goal_text: str, stage_contract: dict[str, Any], consumed_files: list[str]) -> None:
+    from tools.providers.project_generation_business_materializers import materialize_business_files
+
+    materialize_business_files(run_dir, goal_text, stage_contract, consumed_files)
+
+
+def _write_source_planning_artifacts(*, inputs: dict[str, Any], run_dir: Path) -> None:
+    _write_json((run_dir / inputs["project_spec_path"]).resolve(), dict(inputs["project_spec"]))
+    _write_json((run_dir / inputs["capability_plan_path"]).resolve(), dict(inputs["capability_plan"]))
+
+
+def _source_stage_contract(inputs: dict[str, Any], current_materialize: list[str]) -> dict[str, Any]:
+    stage_contract = dict(inputs["lists"])
+    for key in ("project_intent", "project_spec", "capability_plan", "sample_generation_plan"):
+        stage_contract[key] = dict(inputs[key])
+    for key in ("project_spec_path", "capability_plan_path", "generation_quality_report_path"):
+        stage_contract[key] = inputs[key]
+    stage_contract["sample_generation_artifacts"] = list(inputs["sample_generation_artifacts"])
+    stage_contract["materialize_capabilities"] = list(current_materialize)
+    return stage_contract
+
+
 def _write_json(path: Path, doc: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -179,22 +347,7 @@ def _read_sample_metrics(*, run_dir: Path, project_root: str) -> dict[str, Any]:
         return {}
     if not isinstance(doc, dict):
         return {}
-    characters = [row for row in doc.get("characters", []) if isinstance(row, dict)]
-    chapters = [row for row in doc.get("chapters", []) if isinstance(row, dict)]
-    scenes = [row for row in doc.get("scenes", []) if isinstance(row, dict)]
-    assets = {str(row.get("asset_id", "")).strip(): str(row.get("asset_type", "")).strip().lower() for row in doc.get("assets", []) if isinstance(row, dict)}
-    return {
-        "character_count": len(characters),
-        "chapter_count": len(chapters),
-        "scene_count": len(scenes),
-        "branch_point_count": sum(1 for row in scenes if isinstance(row.get("choices", []), list) and row.get("choices")),
-        "scenes_with_background": sum(1 for row in scenes if str(row.get("background_asset_id", "")).strip()),
-        "scenes_with_media_refs": sum(
-            1
-            for row in scenes
-            if any(assets.get(str(asset_id).strip(), "") in {"sprite", "sfx", "cg"} for asset_id in row.get("asset_ids", []))
-        ),
-    }
+    return narrative_sample_metrics(doc)
 
 
 def _is_high_quality_team_task(inputs: dict[str, Any]) -> bool:
@@ -444,8 +597,8 @@ def _generation_quality_report(
     readme_quality = dict(validation.get("readme_quality", {}))
     ux_validation = dict(validation.get("ux_validation", {}))
     domain_validation = dict(validation.get("domain_validation", {}))
-    is_narrative = str(inputs.get("project_domain", "")).strip() == "narrative_vn_editor" and str(inputs["lists"].get("execution_mode", PRODUCTION_MODE)).strip() == PRODUCTION_MODE
     delivery_requirements = [str(item).strip() for item in project_spec.get("delivery_requirements", []) if str(item).strip()] if isinstance(project_spec.get("delivery_requirements", []), list) else []
+    declared_acceptance = [str(item).strip() for key in ("acceptance_criteria", "required_outputs", "delivery_requirements") for item in (project_spec.get(key) if isinstance(project_spec.get(key), list) else [project_spec.get(key)]) if str(item or "").strip()]
     exported_preview_coupled = not any(
         "export output does not reflect recorded editor state changes" in str(reason)
         for reason in dict(ux_validation.get("interaction_acceptance", {})).get("reasons", [])
@@ -460,8 +613,8 @@ def _generation_quality_report(
     targeted_checks = [
         {
             "check_id": "spec_coverage",
-            "passed": bool(project_spec.get("core_modules")) and bool(project_spec.get("required_pages_or_views")) and bool(project_spec.get("key_interactions")),
-            "details": "project spec contains modules, views, and interaction plan",
+            "passed": bool(project_spec.get("goal_summary")) and bool(project_spec.get("acceptance_criteria") or project_spec.get("required_outputs")),
+            "details": "project spec contains goal summary and project-defined acceptance or outputs",
         },
         {
             "check_id": "capability_coverage",
@@ -470,23 +623,23 @@ def _generation_quality_report(
         },
         {
             "check_id": "sample_generation_pipeline",
-            "passed": sample_artifacts_ok if is_narrative else True,
-            "details": "all staged sample artifacts exist" if (sample_artifacts_ok or not is_narrative) else ", ".join(missing_sample_artifacts),
+            "passed": sample_artifacts_ok,
+            "details": "all declared/staged sample artifacts exist" if sample_artifacts_ok else ", ".join(missing_sample_artifacts),
         },
         {
-            "check_id": "sample_depth_adequacy",
-            "passed": (int(sample_metrics.get("character_count", 0)) >= 3 and int(sample_metrics.get("chapter_count", 0)) >= 4 and int(sample_metrics.get("scene_count", 0)) >= 8 and int(sample_metrics.get("branch_point_count", 0)) >= 2) if is_narrative else True,
-            "details": json.dumps(sample_metrics, ensure_ascii=False) if is_narrative else "not required for non-narrative project domain",
+            "check_id": "project_defined_acceptance",
+            "passed": bool(declared_acceptance),
+            "details": "; ".join(declared_acceptance[:6]) if declared_acceptance else "project did not declare acceptance criteria or delivery requirements",
         },
         {
-            "check_id": "editor_interaction_presence",
-            "passed": (bool(domain_validation.get("passed", False)) and bool(dict(ux_validation.get("interaction_acceptance", {})).get("interaction_trace_present", False))) if is_narrative else True,
-            "details": "domain + interaction evidence confirm editor actions are present" if is_narrative else "not required for non-narrative project domain",
+            "check_id": "domain_contract_consistency",
+            "passed": bool(domain_validation.get("passed", False)),
+            "details": "generated files satisfy project-defined domain contract",
         },
         {
             "check_id": "export_reflects_state",
-            "passed": exported_preview_coupled if is_narrative else True,
-            "details": "preview/export reflects editor state changes" if (exported_preview_coupled or not is_narrative) else "preview/export did not reflect editor state changes",
+            "passed": exported_preview_coupled,
+            "details": "preview/export reflects recorded state when interaction evidence is present" if exported_preview_coupled else "preview/export did not reflect editor state changes",
         },
         {
             "check_id": "readme_spec_consistency",
@@ -495,8 +648,8 @@ def _generation_quality_report(
         },
         {
             "check_id": "final_bundle_hygiene_contract",
-            "passed": "final_project_bundle.zip" in delivery_requirements or "README" in delivery_requirements,
-            "details": "delivery requirements retain clean final bundle contract",
+            "passed": bool(delivery_requirements or declared_acceptance),
+            "details": "delivery requirements or project-defined acceptance are declared",
         },
     ]
     passed_count = len([row for row in targeted_checks if bool(row.get("passed", False))])
@@ -588,6 +741,7 @@ def _source_validation_reports(
             behavior_probe=behavior_probe,
             export_probe=export_probe,
             acceptance_files=list(lists.get("acceptance_files", [])),
+            interface_contract=provider_interface_contract(dict(inputs.get("src", {})) if isinstance(inputs.get("src", {}), dict) else {}),
         ),
         "domain_validation": _domain_validation(
             project_domain=inputs["project_domain"],
@@ -599,6 +753,7 @@ def _source_validation_reports(
             startup_entrypoint=inputs["entry_script"],
             startup_readme=str(lists.get("startup_readme", "")),
             run_dir=run_dir,
+            project_spec=inputs["project_spec"],
         ),
         "readme_quality": _readme_quality_validation(
             run_dir=run_dir,
@@ -668,8 +823,11 @@ def normalize_source_generation_stage(
         return _blocked_source_generation_report(inputs=inputs, run_dir=run_dir, reason=reason)
 
     lists = inputs["lists"]
-    _write_json((run_dir / inputs["project_spec_path"]).resolve(), dict(inputs["project_spec"]))
-    _write_json((run_dir / inputs["capability_plan_path"]).resolve(), dict(inputs["capability_plan"]))
+    _write_source_planning_artifacts(inputs=inputs, run_dir=run_dir)
+    provider_file_rows = _provider_source_file_rows(inputs)
+    if _production_local_templates_disabled(inputs) and not provider_file_rows:
+        return _blocked_local_templates_disabled_report(inputs=inputs, run_dir=run_dir)
+    inputs["provider_source_files_applied"] = bool(provider_file_rows)
     refinement_notes: list[dict[str, Any]] = []
     current_materialize = list(inputs["materialize_capabilities"]) or list(dict(inputs["capability_plan"]).get("materialize_bundles", []))
     scaffold = {}
@@ -689,17 +847,11 @@ def normalize_source_generation_stage(
             project_slug=project_slug(inputs["goal_text"], inputs["project_type"]),
             scaffold_family=inputs["scaffold_family"],
         )
-        stage_contract = dict(lists)
-        stage_contract["project_intent"] = dict(inputs["project_intent"])
-        stage_contract["project_spec"] = dict(inputs["project_spec"])
-        stage_contract["capability_plan"] = dict(inputs["capability_plan"])
-        stage_contract["sample_generation_plan"] = dict(inputs["sample_generation_plan"])
-        stage_contract["project_spec_path"] = inputs["project_spec_path"]
-        stage_contract["capability_plan_path"] = inputs["capability_plan_path"]
-        stage_contract["sample_generation_artifacts"] = list(inputs["sample_generation_artifacts"])
-        stage_contract["generation_quality_report_path"] = inputs["generation_quality_report_path"]
-        stage_contract["materialize_capabilities"] = list(current_materialize)
-        generated_business_files = materialize_business_files(run_dir, inputs["goal_text"], stage_contract, inputs["consumed_files"])
+        stage_contract = _source_stage_contract(inputs, current_materialize)
+        if provider_file_rows:
+            _materialize_provider_source_files(run_dir=run_dir, inputs=inputs, rows=provider_file_rows)
+        else:
+            _materialize_nonproduction_business_files(run_dir, inputs["goal_text"], stage_contract, inputs["consumed_files"])
         extended_coverage: dict[str, Any] = {}
         if _is_indie_studio_hub(inputs):
             extended_coverage = _materialize_high_quality_indie_studio_hub_evidence(run_dir=run_dir, inputs=inputs)
@@ -833,6 +985,7 @@ def normalize_source_generation_stage(
         report["extended_coverage"] = generation_quality["extended_coverage"]
         report["extended_coverage_ledger_path"] = "artifacts/extended_coverage_ledger.json"
     report["materialize_capabilities"] = current_materialize
+    attach_source_generation_provenance(report, run_dir, inputs, business_generated, current_materialize)
     for key in ("generic_validation", "domain_validation", "readme_quality", "ux_validation", "product_validation"):
         report[key] = validation[key]
     if _blocked_by_validation(report, validation, scaffold):

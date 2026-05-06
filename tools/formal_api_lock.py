@@ -8,7 +8,9 @@ from typing import Any
 FORMAL_API_ONLY_ENV = "CTCP_FORMAL_API_ONLY"
 PROVIDER_LEDGER_REL = Path("artifacts") / "provider_ledger.jsonl"
 PROVIDER_LEDGER_SUMMARY_REL = Path("artifacts") / "provider_ledger_summary.json"
-LOCAL_EXCEPTION_ROLE_ACTIONS: set[tuple[str, str]] = set()
+LOCAL_EXCEPTION_ROLE_ACTIONS: set[tuple[str, str]] = {
+    ("librarian", "context_pack"),
+}
 
 
 def _truthy(raw: str) -> bool:

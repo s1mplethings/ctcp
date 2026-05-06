@@ -13,10 +13,137 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from llm_core.providers import api_provider as core_api
 from tools.providers import api_agent
 
 
 class ApiAgentTemplateTests(unittest.TestCase):
+    def test_source_generation_api_retry_policy_handles_gateway_timeout(self) -> None:
+        request = {
+            "role": "chair",
+            "action": "source_generation",
+            "target_path": "artifacts/source_generation_report.json",
+        }
+        stderr = "OpenAI API HTTP 504: origin_gateway_timeout retryable true retry_after 120"
+        with mock.patch.dict(
+            os.environ,
+            {
+                "CTCP_SOURCE_GENERATION_API_MAX_ATTEMPTS": "3",
+                "CTCP_SOURCE_GENERATION_API_RETRY_BASE_DELAY_SEC": "0",
+            },
+            clear=False,
+        ):
+            attempts, delay = core_api._agent_retry_policy(request)
+
+        self.assertEqual(attempts, 3)
+        self.assertEqual(delay, 0.0)
+        self.assertTrue(core_api._is_transient_transport_error(stderr))
+
+    def test_output_contract_freeze_api_retry_policy_handles_gateway_timeout(self) -> None:
+        request = {
+            "role": "chair",
+            "action": "output_contract_freeze",
+            "target_path": "artifacts/output_contract_freeze.json",
+        }
+        stderr = "OpenAI API HTTP 504: origin_gateway_timeout retryable true retry_after 120"
+        with mock.patch.dict(
+            os.environ,
+            {
+                "CTCP_OUTPUT_CONTRACT_API_MAX_ATTEMPTS": "3",
+                "CTCP_OUTPUT_CONTRACT_API_RETRY_BASE_DELAY_SEC": "0",
+            },
+            clear=False,
+        ):
+            attempts, delay = core_api._agent_retry_policy(request)
+
+        self.assertEqual(attempts, 3)
+        self.assertEqual(delay, 0.0)
+        self.assertTrue(core_api._is_transient_transport_error(stderr))
+
+    def test_agent_phase_retries_empty_payload_when_stderr_is_transient(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            repo_root = Path(td) / "repo"
+            run_dir = Path(td) / "run"
+            logs_dir = run_dir / "logs"
+            repo_root.mkdir(parents=True, exist_ok=True)
+            logs_dir.mkdir(parents=True, exist_ok=True)
+            counter_path = run_dir / "counter.txt"
+            agent_script = repo_root / "agent_empty_then_json.py"
+            agent_script.write_text(
+                "\n".join(
+                    [
+                        "from pathlib import Path",
+                        "import sys",
+                        f"counter = Path(r'{counter_path}')",
+                        "value = int(counter.read_text() or '0') if counter.exists() else 0",
+                        "counter.write_text(str(value + 1))",
+                        "if value == 0:",
+                        "    print('OpenAI API request failed: tlsv1 alert protocol version', file=sys.stderr)",
+                        "else:",
+                        "    print('{\"schema_version\":\"ctcp-provider-source-files-v1\",\"files\":[]}')",
+                        "",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            def normalize_target_payload(**kwargs: object) -> tuple[str, str]:
+                raw = str(kwargs.get("raw_text", "")).strip()
+                try:
+                    doc = json.loads(raw)
+                except Exception:
+                    return "", "agent output is not valid JSON object"
+                return json.dumps(doc), ""
+
+            hooks = core_api.ApiProviderHooks(
+                resolve_templates=lambda repo_root, config: ({}, ""),
+                build_evidence_pack=lambda **kwargs: {},
+                render_prompt=lambda **kwargs: "",
+                record_failure_review=lambda run_dir, reason: Path(run_dir) / "reviews" / "failure.md",
+                needs_patch=lambda request: False,
+                normalize_patch_payload=lambda text: (text, ""),
+                normalize_target_payload=normalize_target_payload,
+            )
+
+            with mock.patch.dict(
+                os.environ,
+                {
+                    "CTCP_SOURCE_GENERATION_API_MAX_ATTEMPTS": "3",
+                    "CTCP_SOURCE_GENERATION_API_RETRY_BASE_DELAY_SEC": "0",
+                },
+                clear=False,
+            ):
+                result = core_api._run_agent_phase(
+                    template=f'"{sys.executable}" "{agent_script}"',
+                    placeholders={},
+                    repo_root=repo_root,
+                    run_dir=run_dir,
+                    logs_dir=logs_dir,
+                    prompt_text="prompt",
+                    api_call_env={},
+                    hooks=hooks,
+                    request={"role": "chair", "action": "source_generation", "target_path": "artifacts/source_generation_report.json"},
+                    target_path=run_dir / "artifacts" / "source_generation_report.json",
+                    target_rel="artifacts/source_generation_report.json",
+                    prompt_path=run_dir / "outbox" / "prompt.md",
+                )
+
+            self.assertEqual(result.get("status"), "executed", msg=str(result))
+            self.assertEqual(counter_path.read_text(encoding="utf-8"), "2")
+            self.assertTrue((run_dir / "artifacts" / "source_generation_report.json").exists())
+            retry_log = (logs_dir / "agent_retry.jsonl").read_text(encoding="utf-8")
+            self.assertIn("transient_transport_error_after_empty_payload", retry_log)
+
+    def test_json_target_requests_json_object_response_format(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            run_dir = Path(td)
+            env = core_api._build_api_call_env(
+                run_dir=run_dir,
+                request={"role": "chair", "action": "source_generation", "target_path": "artifacts/source_generation_report.json"},
+            )
+
+        self.assertEqual(env.get("SDDAI_OPENAI_RESPONSE_FORMAT"), "json_object")
+
     def test_ollama_placeholder_key_requires_base_url_for_api_mode(self) -> None:
         request = {
             "role": "chair",
@@ -68,6 +195,26 @@ class ApiAgentTemplateTests(unittest.TestCase):
 
         self.assertEqual(reason, "")
         self.assertIn("agent", templates)
+
+    def test_gptsapi_notes_base_url_normalizes_without_v1(self) -> None:
+        with mock.patch.dict(
+            os.environ,
+            {
+                "OPENAI_API_KEY": "",
+                "CTCP_OPENAI_API_KEY": "",
+                "OPENAI_BASE_URL": "",
+                "CTCP_OPENAI_BASE_URL": "",
+            },
+            clear=False,
+        ), mock.patch.object(
+            api_agent,
+            "_load_local_notes_defaults",
+            return_value={"api_key": "sk-notes", "base_url": "https://api.gptsapi.net/v1"},
+        ):
+            key, base_url = api_agent._resolved_external_api_credentials()
+
+        self.assertEqual(key, "sk-notes")
+        self.assertEqual(base_url, "https://api.gptsapi.net")
 
     def test_resolve_templates_plan_only_includes_agent_key(self) -> None:
         request = {
@@ -452,10 +599,12 @@ class ApiAgentTemplateTests(unittest.TestCase):
                     guardrails_budgets={},
                 )
 
-            self.assertEqual(result.get("status"), "exec_failed", msg=str(result))
-            self.assertIn("formal_api_only", str(result.get("reason", "")))
+            self.assertEqual(result.get("status"), "executed", msg=str(result))
             target = run_dir / "artifacts" / "context_pack.json"
-            self.assertFalse(target.exists())
+            self.assertTrue(target.exists())
+            doc = json.loads(target.read_text(encoding="utf-8"))
+            self.assertEqual(doc.get("schema_version"), "ctcp-context-pack-v1")
+            self.assertTrue([row for row in doc.get("files", []) if isinstance(row, dict)])
 
     def test_execute_guardrails_normalizes_required_keys(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -718,6 +867,126 @@ class ApiAgentTemplateTests(unittest.TestCase):
             self.assertIn("docs/10_team_mode.md", prompt)
             self.assertIn("[support_lead/dispatch_request]", prompt)
 
+    def test_render_prompt_for_source_generation_requests_file_content_bundle(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            run_dir = Path(td) / "run"
+            repo_root = Path(td) / "repo"
+            (run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+            repo_root.mkdir(parents=True, exist_ok=True)
+            (run_dir / "artifacts" / "output_contract_freeze.json").write_text(
+                json.dumps(
+                    {
+                        "project_root": "project_output/vn",
+                        "startup_entrypoint": "project_output/vn/scripts/run_project_gui.py",
+                        "startup_readme": "project_output/vn/README.md",
+                        "source_files": [
+                            "project_output/vn/pyproject.toml",
+                            "project_output/vn/src/vn/__init__.py",
+                        ],
+                        "business_files": ["project_output/vn/src/vn/service.py"],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            evidence: dict[str, Path] = {}
+            for key in ("context", "constraints", "fix_brief", "externals"):
+                p = run_dir / f"{key.upper()}.md"
+                p.write_text(f"# {key}\n- sample\n", encoding="utf-8")
+                evidence[key] = p
+
+            prompt = api_agent._render_prompt(
+                run_dir=run_dir,
+                repo_root=repo_root,
+                request={
+                    "role": "chair",
+                    "action": "source_generation",
+                    "goal": "VN assistant",
+                    "target_path": "artifacts/source_generation_report.json",
+                },
+                evidence=evidence,
+            )
+
+            self.assertIn("ctcp-provider-source-files-v1", prompt)
+            self.assertIn('"files"', prompt)
+            self.assertIn('"path"', prompt)
+            self.assertIn('"content_lines"', prompt)
+            self.assertIn("project_output/vn/scripts/run_project_gui.py", prompt)
+            self.assertIn("project_output/vn/src/vn/service.py", prompt)
+            self.assertIn("project_output/vn/pyproject.toml", prompt)
+            self.assertIn("project_output/vn/src/vn/__init__.py", prompt)
+            for token in (
+                "tkinter", "do not import PyQt5", "from vn.service", "cross-file import/export checklist",
+                "interfaces", "public `defines`, `imports`, and `exports`", "target file must define that exact helper",
+                "every imported symbol resolves", "startup entrypoint constructs a service/controller",
+                "launcher compatibility table", "*args`/`**kwargs", "Do not ship TODO, placeholder, stub, pass-only",
+                "never put literal line breaks inside a JSON string", "--headless", "--goal --project-name --out --headless",
+                "workspace_preview.html", "interaction_trace.json", "do not write f-strings or quoted strings split across physical lines",
+                "join(lines)", "content_items", "project must declare its own concrete acceptance criteria",
+            ):
+                self.assertIn(token, prompt)
+
+    def test_render_prompt_for_source_generation_includes_previous_failure_feedback(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            run_dir = Path(td) / "run"
+            repo_root = Path(td) / "repo"
+            (run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+            repo_root.mkdir(parents=True, exist_ok=True)
+            (run_dir / "artifacts" / "output_contract_freeze.json").write_text(
+                json.dumps({"project_root": "project_output/vn", "startup_entrypoint": "project_output/vn/scripts/run_project_gui.py"}, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            (run_dir / "artifacts" / "source_generation_report.json").write_text(
+                json.dumps(
+                    {
+                        "status": "blocked",
+                        "generic_validation": {
+                            "smoke_run": {
+                                "startup_probe": {"stderr_tail": "SyntaxError: unterminated f-string literal"},
+                                "export_probe": {"stdout_tail": "ImportError: cannot import name 'export_project_assets' from 'vn.exporters.deliver'"},
+                            },
+                            "python_import_consistency": {
+                                "missing_symbols": [
+                                    {
+                                        "from_path": "project_output/vn/src/vn/story/__init__.py",
+                                        "target_path": "project_output/vn/src/vn/story/outline.py",
+                                        "symbol": "StoryOutline",
+                                    }
+                                ]
+                            },
+                        },
+                        "domain_validation": {"missing": ["project-defined acceptance criteria missing"]},
+                        "ux_validation": {"reasons": ["visual evidence files missing"]},
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            evidence: dict[str, Path] = {}
+            for key in ("context", "constraints", "fix_brief", "externals"):
+                p = run_dir / f"{key.upper()}.md"
+                p.write_text(f"# {key}\n- sample\n", encoding="utf-8")
+                evidence[key] = p
+
+            prompt = api_agent._render_prompt(
+                run_dir=run_dir,
+                repo_root=repo_root,
+                request={
+                    "role": "chair",
+                    "action": "source_generation",
+                    "goal": "VN assistant",
+                    "target_path": "artifacts/source_generation_report.json",
+                },
+                evidence=evidence,
+            )
+
+            self.assertIn("Previous source_generation failed", prompt)
+            self.assertIn("unterminated f-string", prompt)
+            self.assertIn("export_project_assets", prompt)
+            self.assertIn("StoryOutline", prompt)
+            self.assertIn("project-defined acceptance criteria missing", prompt)
+            self.assertIn("cross-file import/export checklist", prompt)
 
 if __name__ == "__main__":
     unittest.main()

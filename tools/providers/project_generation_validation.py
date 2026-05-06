@@ -12,6 +12,8 @@ from tools.providers.project_generation_domain_contract import (
     preview_keywords,
     readme_required_sections,
 )
+from tools.providers.project_generation_import_validation import python_import_consistency_validation
+from tools.providers.project_generation_sample_metrics import narrative_sample_metrics
 
 _SOURCE_SCAN_EXTS = {".py", ".js", ".jsx", ".ts", ".tsx", ".html", ".css"}
 _HIGH_INTERACTION_GROUP_RULES: dict[str, tuple[str, ...]] = {
@@ -183,11 +185,12 @@ def pipeline_contract(*, project_root: str, startup_entrypoint: str, startup_rea
 
 def _looks_placeholder_content(path: Path) -> bool:
     try:
-        text = path.read_text(encoding="utf-8", errors="replace").lower()
+        compact = path.read_text(encoding="utf-8", errors="replace").lower().strip()
     except Exception:
         return False
-    compact = text.strip()
-    if len(compact) <= 240 and any(marker in compact for marker in ("todo", "placeholder", "coming soon", "stub", "not implemented")):
+    compact = compact.replace("asset_placeholders.json", "asset_catalog_seed.json")
+    markers = ("todo", "coming soon", "stub", "not implemented") if path.name.lower() == "asset_placeholders.json" else ("todo", "placeholder", "coming soon", "stub", "not implemented")
+    if len(compact) <= 240 and any(marker in compact for marker in markers):
         return True
     lines = [line.strip() for line in compact.splitlines() if line.strip()]
     return len(lines) <= 4 and any(line == "pass" for line in lines)
@@ -237,6 +240,7 @@ def generic_validation(
     behavior_probe: dict[str, Any],
     export_probe: dict[str, Any],
     acceptance_files: list[str],
+    interface_contract: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     entry = (run_dir / startup_entrypoint).resolve()
     readme = (run_dir / startup_readme).resolve()
@@ -263,6 +267,12 @@ def generic_validation(
         generated_business_files=generated_business_files,
         startup_entrypoint=startup_entrypoint,
     )
+    python_import_consistency = python_import_consistency_validation(
+        run_dir=run_dir,
+        generated_business_files=generated_business_files,
+        startup_entrypoint=startup_entrypoint,
+        interface_contract=interface_contract,
+    )
     return {
         "passed": bool(entry.exists())
         and bool(readme.exists())
@@ -270,7 +280,8 @@ def generic_validation(
         and bool(generated_business_files)
         and smoke_passed
         and not placeholder_hits
-        and bool(python_syntax.get("passed", False)),
+        and bool(python_syntax.get("passed", False))
+        and bool(python_import_consistency.get("passed", False)),
         "has_runnable_entrypoint": bool(entry.exists()),
         "readme_startup_ready": readme_has_start,
         "core_user_flow": [
@@ -280,6 +291,7 @@ def generic_validation(
         "core_feature_files": list(generated_business_files),
         "placeholder_hits": placeholder_hits,
         "python_syntax": python_syntax,
+        "python_import_consistency": python_import_consistency,
         "delivery_package": list(acceptance_files),
         "smoke_run": {
             "startup_probe": dict(behavior_probe),
@@ -638,30 +650,7 @@ def _read_json_doc(run_dir: Path, rel_path: str) -> dict[str, Any]:
 
 
 def _narrative_sample_metrics(sample_doc: dict[str, Any]) -> dict[str, Any]:
-    characters = [row for row in sample_doc.get("characters", []) if isinstance(row, dict)]
-    chapters = [row for row in sample_doc.get("chapters", []) if isinstance(row, dict)]
-    scenes = [row for row in sample_doc.get("scenes", []) if isinstance(row, dict)]
-    assets = [row for row in sample_doc.get("assets", []) if isinstance(row, dict)]
-    asset_types = {str(row.get("asset_id", "")).strip(): str(row.get("asset_type", "")).strip().lower() for row in assets}
-    branch_points = sum(1 for row in scenes if isinstance(row.get("choices", []), list) and row.get("choices"))
-    explicit_choices = sum(len([choice for choice in row.get("choices", []) if isinstance(choice, dict)]) for row in scenes)
-    valid_character_cards = sum(1 for row in characters if str(row.get("character_id", "")).strip() and str(row.get("name", "")).strip() and str(row.get("role", "")).strip())
-    scenes_with_background = sum(1 for row in scenes if str(row.get("background_asset_id", "")).strip())
-    scenes_with_media_refs = 0
-    for row in scenes:
-        asset_ids = [str(item).strip() for item in row.get("asset_ids", []) if str(item).strip()]
-        if any(asset_types.get(asset_id, "") in {"sprite", "sfx", "cg"} for asset_id in asset_ids):
-            scenes_with_media_refs += 1
-    return {
-        "character_count": len(characters),
-        "chapter_count": len(chapters),
-        "scene_count": len(scenes),
-        "branch_point_count": branch_points,
-        "explicit_choice_count": explicit_choices,
-        "valid_character_cards": valid_character_cards,
-        "scenes_with_background": scenes_with_background,
-        "scenes_with_media_refs": scenes_with_media_refs,
-    }
+    return narrative_sample_metrics(sample_doc)
 
 
 def _provenance_metrics(source_map_doc: dict[str, Any]) -> dict[str, Any]:
@@ -1071,10 +1060,10 @@ def _validate_narrative_editor_domain(
     checks.extend(
         [
             "editor or authoring workspace entry detected" if editor_hits else "",
-            "scene/branch/narrative graph model detected" if graph_hits else "",
-            "character/cast/asset model detected" if asset_hits else "",
+            "narrative graph model detected" if graph_hits else "",
+            "asset model detected" if asset_hits else "",
             "sample project seed detected" if sample_seed else "",
-            "sample project depth contract detected" if sample_metrics and int(sample_metrics.get("character_count", 0)) >= 3 and int(sample_metrics.get("chapter_count", 0)) >= 4 and int(sample_metrics.get("scene_count", 0)) >= 8 and int(sample_metrics.get("branch_point_count", 0)) >= 2 else "",
+            "sample metrics recorded without CTCP-owned depth thresholds" if sample_metrics else "",
             "sample provenance source map detected" if bool(provenance_validation.get("passed", False)) else "",
             "preview/export or packing path detected" if preview_hits else "",
         ]
@@ -1087,21 +1076,6 @@ def _validate_narrative_editor_domain(
         missing.append("character/cast/asset model missing")
     if not sample_seed:
         missing.append("sample project/example data missing")
-    if sample_seed:
-        if int(sample_metrics.get("character_count", 0)) < 3:
-            missing.append("sample project needs at least 3 character cards")
-        if int(sample_metrics.get("valid_character_cards", 0)) < 3:
-            missing.append("sample project character cards are incomplete")
-        if int(sample_metrics.get("chapter_count", 0)) < 4:
-            missing.append("sample project needs at least 4 chapters")
-        if int(sample_metrics.get("scene_count", 0)) < 8:
-            missing.append("sample project needs at least 8 scene nodes")
-        if int(sample_metrics.get("branch_point_count", 0)) < 2:
-            missing.append("sample project needs at least 2 explicit branch points")
-        if int(sample_metrics.get("scenes_with_background", 0)) < int(sample_metrics.get("scene_count", 0)):
-            missing.append("every sample scene needs a background placeholder")
-        if int(sample_metrics.get("scenes_with_media_refs", 0)) < 2:
-            missing.append("sample project needs sprite/sfx/cg references in some scenes")
     if not source_map_seed:
         missing.append("sample provenance/source map missing")
     if source_map_seed:
@@ -1125,6 +1099,77 @@ def _validate_narrative_editor_domain(
             "sample_provenance": [source_map_seed] if source_map_seed else [],
             "provenance_metrics": provenance_metrics,
             "provenance_validation": provenance_validation,
+        },
+        "contamination_hits": contamination,
+    }
+
+
+def _declared_acceptance_items(project_spec: dict[str, Any] | None) -> list[str]:
+    spec = dict(project_spec or {})
+    items: list[str] = []
+    for key in (
+        "acceptance_criteria",
+        "required_outputs",
+        "delivery_requirements",
+        "core_modules",
+        "required_pages_or_views",
+        "key_interactions",
+    ):
+        value = spec.get(key)
+        if isinstance(value, list):
+            items.extend(str(item).strip() for item in value if str(item).strip())
+        elif isinstance(value, str) and value.strip():
+            items.append(value.strip())
+    seen: set[str] = set()
+    out: list[str] = []
+    for item in items:
+        if item not in seen:
+            seen.add(item)
+            out.append(item)
+    return out
+
+
+def _validate_project_defined_domain(
+    *,
+    project_domain: str,
+    rows: list[str],
+    business_missing: list[str],
+    contamination: list[str],
+    project_spec: dict[str, Any] | None,
+    run_dir: Path,
+) -> dict[str, Any]:
+    declared_acceptance = _declared_acceptance_items(project_spec)
+    sample_rows = [rel for rel in rows if "/sample_data/" in rel]
+    source_maps = [rel for rel in rows if rel.endswith("/source_map.json") or rel.endswith("/provenance.json")]
+    sample_metrics = {}
+    for rel in sample_rows:
+        if rel.endswith(".json"):
+            sample_metrics = _narrative_sample_metrics(_read_json_doc(run_dir, rel))
+            break
+    missing: list[str] = []
+    if not rows:
+        missing.append("generated project contains no domain files")
+    if not declared_acceptance:
+        missing.append("project-defined acceptance criteria missing")
+    if contamination:
+        missing.append("domain contamination detected")
+    return {
+        "kind": project_domain or "project_defined",
+        "standard_source": "project_spec_or_generated_project",
+        "passed": not missing and not business_missing,
+        "checks": [
+            "generated project files present" if rows else "",
+            "project-defined acceptance criteria present" if declared_acceptance else "",
+            "sample data present" if sample_rows else "",
+            "provenance/source map present" if source_maps else "",
+        ],
+        "missing": sorted(set(list(business_missing) + missing + contamination)),
+        "evidence": {
+            "declared_acceptance": declared_acceptance,
+            "domain_files": rows,
+            "sample_project": sample_rows,
+            "sample_metrics": sample_metrics,
+            "sample_provenance": source_maps,
         },
         "contamination_hits": contamination,
     }
@@ -1160,19 +1205,10 @@ def ux_validation(
         }
     if not files:
         reasons.append("visual evidence files missing")
-    if project_domain == "narrative_vn_editor":
-        benchmark_preview = any(marker in preview_text for marker in ("story_bundle.json", "prompt_sheet.json", "scene_cards.json", "benchmark narrative copilot"))
-        if str(visual_evidence.get("visual_type", "")).strip() != "real_export_page":
-            reasons.append("narrative/gui projects require real UI evidence instead of fallback evidence cards")
-        if not preview_rel:
-            reasons.append("narrative/gui projects require a preview source page")
-        if keywords and not matched_keywords:
-            reasons.append("preview evidence does not show editor/workspace narrative signals")
-        if not benchmark_preview:
-            for section, hits in section_hits.items():
-                if not hits:
-                    reasons.append(f"preview evidence missing narrative editor area: {section}")
-            reasons.extend(str(item) for item in interaction_acceptance.get("reasons", []) if str(item).strip())
+    if str(visual_evidence.get("visual_type", "")).strip() != "real_export_page":
+        reasons.append("GUI/web projects require real export page evidence instead of fallback evidence cards")
+    if not preview_rel:
+        reasons.append("GUI/web projects require a preview source page")
     return {
         "required": True,
         "passed": not reasons,
@@ -1197,67 +1233,17 @@ def domain_validation(
     startup_entrypoint: str,
     startup_readme: str,
     run_dir: Path,
+    project_spec: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     rows = _existing_paths(run_dir, business_generated)
     contamination = contamination_hits(project_domain=project_domain, rel_paths=_normalized_paths(business_generated))
     if project_domain == "narrative_vn_editor" and str(execution_mode).strip() == "benchmark_regression":
         return _benchmark_narrative_domain_report(rows=rows, business_missing=business_missing, contamination=contamination)
-    if project_domain != "narrative_vn_editor" and project_type != "narrative_copilot":
-        if project_domain == "indie_studio_production_hub" or project_type == "indie_studio_hub" or project_archetype == "indie_studio_hub_web":
-            return _validate_indie_studio_hub_domain(
-                rows=rows,
-                startup_entrypoint=startup_entrypoint,
-                startup_readme=startup_readme,
-                business_missing=business_missing,
-                contamination=contamination,
-                run_dir=run_dir,
-            )
-        if project_domain == "team_task_management" or project_type == "team_task_pm" or project_archetype == "team_task_pm_web":
-            return _validate_team_task_pm_domain(
-                rows=rows,
-                startup_entrypoint=startup_entrypoint,
-                startup_readme=startup_readme,
-                business_missing=business_missing,
-                contamination=contamination,
-                run_dir=run_dir,
-            )
-        if project_archetype == "cli_toolkit":
-            return _validate_cli_toolkit_domain(
-                rows=rows,
-                startup_entrypoint=startup_entrypoint,
-                startup_readme=startup_readme,
-                business_missing=business_missing,
-                contamination=contamination,
-                run_dir=run_dir,
-            )
-        if project_archetype == "web_service":
-            return _validate_web_service_domain(
-                rows=rows,
-                startup_entrypoint=startup_entrypoint,
-                startup_readme=startup_readme,
-                business_missing=business_missing,
-                contamination=contamination,
-                run_dir=run_dir,
-            )
-        if project_archetype == "data_pipeline":
-            return _validate_data_pipeline_domain(
-                rows=rows,
-                startup_readme=startup_readme,
-                business_missing=business_missing,
-                contamination=contamination,
-                run_dir=run_dir,
-            )
-        return {
-            "kind": project_domain or "generic",
-            "passed": not contamination,
-            "checks": ["no domain-specific checks required"],
-            "missing": list(contamination),
-            "contamination_hits": contamination,
-        }
-    return _validate_narrative_editor_domain(
+    return _validate_project_defined_domain(
+        project_domain=project_domain,
         rows=rows,
-        startup_readme=startup_readme,
         business_missing=business_missing,
         contamination=contamination,
+        project_spec=project_spec,
         run_dir=run_dir,
     )

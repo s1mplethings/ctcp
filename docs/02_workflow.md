@@ -85,13 +85,13 @@ Rules:
 ### Hard gate rule for `context_pack`
 
 - Orchestrator/dispatcher MUST block plan signing and execution until `artifacts/context_pack.json` exists.
-- If context_pack is missing, dispatcher MUST route to `librarian/context_pack` through `api_agent` on the mainline.
-- `librarian/context_pack` is hard-locked to `api_agent` on the mainline (`mock_agent` mode remains test-only).
-- Manual outbox, local providers, and `CTCP_FORCE_PROVIDER` MUST NOT bypass that hard lock.
+- If context_pack is missing, dispatcher MUST route to `librarian/context_pack` through `local_exec` on the mainline.
+- `librarian/context_pack` is hard-locked to `local_exec` on the mainline (`mock_agent` mode remains test-only).
+- Manual outbox, `ollama_agent`, and `CTCP_FORCE_PROVIDER` MUST NOT bypass that hard lock.
 
 ### Formal API-only Rule (`CTCP_FORMAL_API_ONLY=1`)
 
-- For formal runs, every critical stage (including `librarian/context_pack`) must resolve to `api_agent`.
+- For formal runs, critical API stages must resolve to `api_agent`; `librarian/context_pack` is a documented local exception.
 - Local fallback or local function execution on critical stages cannot be counted as formal PASS.
 
 ## Standard Artifact Paths

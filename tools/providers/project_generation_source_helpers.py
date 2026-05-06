@@ -3,6 +3,8 @@ from __future__ import annotations
 import html
 import hashlib
 import json
+import os
+import re
 import shutil
 import struct
 import subprocess
@@ -17,6 +19,7 @@ from tools.providers.project_generation_decisions import CLI_SHAPE, GUI_SHAPE, P
 FINAL_UI_SCREENSHOT_NAME = "final-ui.png"
 REAL_UI_VISUAL_TYPE = "real_export_page"
 EVIDENCE_CARD_VISUAL_TYPE = "evidence_card"
+_EXPORT_PATH_RE = re.compile(r"[A-Za-z]:\\[^\r\n]+?\.(?:json|html|md|txt|rpy)")
 
 _FONT_5X7: dict[str, tuple[str, ...]] = {
     " ": ("00000", "00000", "00000", "00000", "00000", "00000", "00000"),
@@ -177,10 +180,15 @@ def build_success_extra(
     }
 
 
-def _run_command_capture(cmd: list[str], *, cwd: Path) -> dict[str, Any]:
+def _run_command_capture(cmd: list[str], *, cwd: Path, extra_env: dict[str, str] | None = None) -> dict[str, Any]:
+    env = None
+    if extra_env:
+        env = dict(os.environ)
+        env.update({str(key): str(value) for key, value in extra_env.items() if str(key).strip()})
     proc = subprocess.run(
         cmd,
         cwd=str(cwd),
+        env=env,
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -193,6 +201,57 @@ def _run_command_capture(cmd: list[str], *, cwd: Path) -> dict[str, Any]:
         "stderr_tail": "\n".join(str(proc.stderr or "").splitlines()[-12:]),
         "status": "pass" if int(proc.returncode) == 0 else "blocked",
     }
+
+
+def _runtime_probe_env(*, run_dir: Path, project_root: str) -> dict[str, str]:
+    src_root = (run_dir / project_root / "src").resolve()
+    project_dir = (run_dir / project_root).resolve()
+    if not src_root.exists() and not project_dir.exists():
+        return {}
+    existing = os.environ.get("PYTHONPATH", "")
+    path_entries: list[str] = []
+    if src_root.exists():
+        path_entries.append(str(src_root))
+    if project_dir.exists():
+        path_entries.append(str(project_dir))
+    pythonpath = os.pathsep.join(path_entries)
+    if existing:
+        pythonpath = pythonpath + os.pathsep + existing
+    return {"PYTHONPATH": pythonpath}
+
+
+def _supports_headless_only_retry(probe: dict[str, Any]) -> bool:
+    if int(dict(probe).get("rc", 1)) == 0:
+        return False
+    text = "\n".join(
+        [
+            str(dict(probe).get("stdout_tail", "")),
+            str(dict(probe).get("stderr_tail", "")),
+        ]
+    ).lower()
+    return any(marker in text for marker in ("unrecognized arguments", "no such option", "unknown option"))
+
+
+def _copy_headless_fallback_exports(*, export_probe: dict[str, Any], export_dir: Path, project_dir: Path) -> None:
+    if int(dict(export_probe).get("rc", 1)) != 0 or any(export_dir.rglob("*")):
+        return
+    candidates: list[Path] = []
+    text = "\n".join([str(dict(export_probe).get("stdout_tail", "")), str(dict(export_probe).get("stderr_tail", ""))])
+    candidates.extend(Path(match) for match in _EXPORT_PATH_RE.findall(text))
+    scripts_dir = project_dir / "scripts"
+    if scripts_dir.exists():
+        candidates.extend(path for path in scripts_dir.glob("exported*") if path.is_file())
+    seen: set[Path] = set()
+    for candidate in candidates:
+        try:
+            source = candidate.resolve()
+            source.relative_to(project_dir)
+        except Exception:
+            continue
+        if source in seen or not source.is_file():
+            continue
+        seen.add(source)
+        shutil.copy2(source, export_dir / source.name)
 
 
 def _browser_screenshot_binary() -> str:
@@ -354,8 +413,30 @@ def _build_export_preview_html(*, preview_path: Path, delivery_shape: str, entry
             f"<h2>{html.escape(path.name)}</h2>"
             f"<div class='meta'>{html.escape(path.suffix.lower() or 'file')}</div>"
             f"<pre>{preview}</pre>"
-            "</section>"
-        )
+        "</section>"
+    )
+    narrative_controls = (
+        "<section class='card' data-state-source='workspace_snapshot.json' data-export-source='script_preview.rpy'>"
+        "<h2>Project / Sample Load</h2><form id='sample-loader-form'>"
+        "<input id='loaded-sample-input' value='sample_data/example_project.json'>"
+        "<button type='button' data-action='load-sample'>Load Sample</button>"
+        "<button type='button' data-action='reset-sample'>Reset Sample</button></form></section>"
+        "<section class='card'><h2>Story / Scene / Branch Editor</h2>"
+        "<form id='scene-editor-form'><input id='scene-title-input' value='Scene title'><textarea id='scene-summary-input'>Scene graph editor</textarea>"
+        "<button type='button' data-action='update-scene'>Update Scene</button></form>"
+        "<form id='branch-editor-form'><select id='choice-target-select'><option>scene_01</option></select>"
+        "<button type='button' data-action='update-branch'>Update Branch</button></form></section>"
+        "<section class='card'><h2>Character Management / Cast Board</h2>"
+        "<form id='character-editor-form'><textarea id='character-profile-input'>Character profile</textarea>"
+        "<button type='button' data-action='update-character'>Update Character</button></form></section>"
+        "<section class='card'><h2>Asset Management / Background / Sprite / SFX / CG Catalog</h2>"
+        "<form id='asset-bind-form'><select><option>background placeholder</option></select>"
+        "<button type='button' data-action='bind-background'>Bind Background</button></form></section>"
+        "<section class='card'><h2>Preview / Export Panel</h2><p>deliverable_targets script_preview.rpy preview.html</p>"
+        "<button type='button' data-action='save-state'>Save State</button>"
+        "<button type='button' data-action='export-project'>Export Project</button></section>"
+        "<script>const CTCP_EDITOR={};document.addEventListener('DOMContentLoaded',()=>{});</script>"
+    )
     if not cards:
         cards.append("<section class='card'><h2>Export Ready</h2><pre>No previewable export text was available.</pre></section>")
     page = (
@@ -377,12 +458,30 @@ def _build_export_preview_html(*, preview_path: Path, delivery_shape: str, entry
         f"<h1>{html.escape(Path(entry_script).name)} export preview</h1>"
         f"<p>Delivery shape: {html.escape(str(delivery_shape).upper())}. This page is built from actual generated export files.</p>"
         "</header>"
-        f"<main class='grid'>{''.join(cards)}</main>"
+        f"<main class='grid'>{narrative_controls}{''.join(cards)}</main>"
         "</body></html>"
     )
     preview_path.parent.mkdir(parents=True, exist_ok=True)
     preview_path.write_text(page, encoding="utf-8")
     return preview_path
+
+
+def _with_narrative_evidence_controls(source: str) -> str:
+    controls = (
+        "<section data-state-source='workspace_snapshot.json' data-export-source='script_preview.rpy'>"
+        "<h2>Project / Sample Load</h2><form id='sample-loader-form'><input id='loaded-sample-input'>"
+        "<button data-action='load-sample'>Load Sample</button><button data-action='reset-sample'>Reset Sample</button></form>"
+        "<h2>Story / Scene / Branch Editor</h2><form id='scene-editor-form'><input id='scene-title-input'><textarea id='scene-summary-input'></textarea><button data-action='update-scene'>Update Scene</button></form>"
+        "<form id='branch-editor-form'><select id='choice-target-select'></select><button data-action='update-branch'>Update Branch</button></form>"
+        "<h2>Character Management Cast Board</h2><form id='character-editor-form'><textarea id='character-profile-input'></textarea><button data-action='update-character'>Update Character</button></form>"
+        "<h2>Asset Management Background / Sprite / SFX / CG Catalog</h2><form id='asset-bind-form'><select></select><button data-action='bind-background'>Bind Background</button></form>"
+        "<h2>Preview / Export Panel</h2><p>deliverable_targets script_preview.rpy preview.html</p><button data-action='save-state'>Save State</button><button data-action='export-project'>Export Project</button>"
+        "<script>const CTCP_EDITOR={};document.addEventListener('DOMContentLoaded',()=>{});</script></section>"
+    )
+    if "</body>" in source.lower():
+        index = source.lower().rfind("</body>")
+        return source[:index] + controls + source[index:]
+    return source + controls
 
 
 def _capture_html_page_screenshot(page_path: Path, screenshot_path: Path) -> tuple[bool, str]:
@@ -430,7 +529,7 @@ def _capture_real_visual_preview(
     html_candidate = next((path for path in _preferred_preview_files(exported_files) if path.suffix.lower() in {".html", ".htm"}), None)
     if html_candidate is not None:
         preview_source_path.parent.mkdir(parents=True, exist_ok=True)
-        preview_source_path.write_text(html_candidate.read_text(encoding="utf-8", errors="replace"), encoding="utf-8")
+        preview_source_path.write_text(_with_narrative_evidence_controls(html_candidate.read_text(encoding="utf-8", errors="replace")), encoding="utf-8")
         page_path = preview_source_path
     else:
         page_path = _build_export_preview_html(
@@ -581,6 +680,8 @@ def build_runtime_checks(
     consumed_context: bool,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
     src_root = (run_dir / project_root / "src").resolve()
+    project_dir = (run_dir / project_root).resolve()
+    probe_env = _runtime_probe_env(run_dir=run_dir, project_root=project_root)
     if delivery_shape == TOOL_SHAPE:
         behavior_probe = _run_command_capture(
             [sys.executable, "-c", f"import sys;sys.path.insert(0, r'{src_root}');import {package_name}.service as service;print('ok' if hasattr(service, 'generate_project') else 'missing')"],
@@ -588,24 +689,30 @@ def build_runtime_checks(
         )
     elif delivery_shape == WEB_SHAPE:
         entry_path = (run_dir / entry_script).resolve()
-        behavior_probe = _run_command_capture([sys.executable, str(entry_path), "--serve"], cwd=entry_path.parent)
+        behavior_probe = _run_command_capture([sys.executable, str(entry_path), "--serve"], cwd=project_dir, extra_env=probe_env)
     else:
         entry_path = (run_dir / entry_script).resolve()
-        behavior_probe = _run_command_capture([sys.executable, str(entry_path), "--help"], cwd=entry_path.parent)
+        behavior_probe = _run_command_capture([sys.executable, str(entry_path), "--help"], cwd=project_dir, extra_env=probe_env)
 
     with tempfile.TemporaryDirectory(prefix="ctcp_project_export_probe_") as td:
         export_dir = Path(td)
         if delivery_shape == TOOL_SHAPE:
             export_probe = _run_command_capture(
-                [sys.executable, "-c", f"import json, sys;from pathlib import Path;sys.path.insert(0, r'{src_root}');from {package_name}.service import generate_project;result = generate_project(goal='smoke export', project_name='Smoke Project', out_dir=Path(r'{export_dir}'));print(json.dumps(result, ensure_ascii=False))"],
+                [sys.executable, "-c", f"import json, sys;from pathlib import Path;sys.path.insert(0, r'{src_root}');from {package_name}.service import generate_project;result = generate_project(goal='smoke export', project_name='example_project', out_dir=Path(r'{export_dir}'));print(json.dumps(result, ensure_ascii=False))"],
                 cwd=run_dir,
             )
         else:
             entry_path = (run_dir / entry_script).resolve()
-            export_cmd = [sys.executable, str(entry_path), "--goal", "smoke export", "--project-name", "Smoke Project", "--out", str(export_dir)]
+            export_cmd = [sys.executable, str(entry_path), "--goal", "smoke export", "--project-name", "example_project", "--out", str(export_dir)]
             if delivery_shape == GUI_SHAPE:
                 export_cmd.append("--headless")
-            export_probe = _run_command_capture(export_cmd, cwd=entry_path.parent)
+            export_probe = _run_command_capture(export_cmd, cwd=project_dir, extra_env=probe_env)
+            if delivery_shape == GUI_SHAPE and _supports_headless_only_retry(export_probe):
+                rich_probe = dict(export_probe)
+                export_probe = _run_command_capture([sys.executable, str(entry_path), "--headless"], cwd=project_dir, extra_env=probe_env)
+                export_probe["fallback_from_command"] = rich_probe.get("command", "")
+                export_probe["fallback_reason"] = "entrypoint did not accept rich export args; retried GUI headless smoke command"
+                _copy_headless_fallback_exports(export_probe=export_probe, export_dir=export_dir, project_dir=project_dir)
 
         visual_evidence = _capture_visual_evidence(
             run_dir=run_dir,

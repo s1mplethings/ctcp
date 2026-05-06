@@ -8,6 +8,7 @@ from typing import Any
 
 from ctcp_adapters.analysis_md_normalizer import normalize_analysis_md as _normalize_analysis_md
 from ctcp_adapters.project_generation_plan_request import is_project_generation_plan_request
+from ctcp_adapters.source_generation_prompt import render_source_generation_payload_requirements
 from llm_core.providers.api_provider import _read_text, _slug, _write_text
 from tools import contrast_rules, contract_guard, local_librarian
 from tools.providers.project_generation_artifacts import (
@@ -888,6 +889,8 @@ def _render_prompt(
         "4. Keep changes minimal and policy compliant.",
         "",
     ]
+    if role.lower() == "chair" and action.lower() == "source_generation":
+        lines += render_source_generation_payload_requirements(run_dir=run_dir)
     if role.lower() == "patchmaker":
         lines += [
             "## Patch Format Requirements",

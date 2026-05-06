@@ -7,11 +7,16 @@ import os
 import re
 import subprocess
 import sys
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
+from llm_core.providers.api_source_chunking import run_chunked_source_generation_phase, should_chunk_source_generation
+from llm_core.providers.api_retry_helpers import (
+    append_agent_retry_succeeded,
+    handle_failed_agent_attempt,
+    handle_successful_agent_attempt,
+)
 from tools.formal_api_lock import formal_api_only_enabled, requires_formal_api
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -307,11 +312,15 @@ def _build_placeholders(
 
 
 def _build_api_call_env(*, run_dir: Path, request: dict[str, Any]) -> dict[str, str]:
-    return {
+    env = {
         "CTCP_API_CALLS_PATH": str(run_dir / "api_calls.jsonl"),
         "CTCP_API_ROLE": str(request.get("role", "")),
         "CTCP_API_ACTION": str(request.get("action", "")),
     }
+    target_path = str(request.get("target_path", "")).strip().lower()
+    if target_path.endswith(".json"):
+        env["SDDAI_OPENAI_RESPONSE_FORMAT"] = os.environ.get("SDDAI_OPENAI_RESPONSE_FORMAT", "json_object")
+    return env
 
 
 def _safe_int_env(name: str, default: int, *, minimum: int, maximum: int) -> int:
@@ -356,6 +365,13 @@ _TRANSIENT_TRANSPORT_MARKERS = (
     "temporarily unavailable",
     "timed out",
     "timeout",
+    "504",
+    "gateway time-out",
+    "gateway timeout",
+    "origin_gateway_timeout",
+    "retryable",
+    "retry_after",
+    "cloudflare",
     "read operation timed out",
     "connection timed out",
     "urlerror",
@@ -370,11 +386,21 @@ def _is_transient_transport_error(*texts: str) -> bool:
 
 
 def _agent_retry_policy(request: dict[str, Any]) -> tuple[int, float]:
-    if not _is_chair_deliver_request(request):
-        return 1, 0.0
-    attempts = _safe_int_env("CTCP_DELIVER_API_MAX_ATTEMPTS", 4, minimum=1, maximum=8)
-    base_delay = _safe_float_env("CTCP_DELIVER_API_RETRY_BASE_DELAY_SEC", 1.5, minimum=0.0, maximum=30.0)
-    return attempts, base_delay
+    role = str(request.get("role", "")).strip().lower()
+    action = str(request.get("action", "")).strip().lower()
+    if _is_chair_deliver_request(request):
+        attempts = _safe_int_env("CTCP_DELIVER_API_MAX_ATTEMPTS", 4, minimum=1, maximum=8)
+        base_delay = _safe_float_env("CTCP_DELIVER_API_RETRY_BASE_DELAY_SEC", 1.5, minimum=0.0, maximum=30.0)
+        return attempts, base_delay
+    if role == "chair" and action == "source_generation":
+        attempts = _safe_int_env("CTCP_SOURCE_GENERATION_API_MAX_ATTEMPTS", 3, minimum=1, maximum=6)
+        base_delay = _safe_float_env("CTCP_SOURCE_GENERATION_API_RETRY_BASE_DELAY_SEC", 10.0, minimum=0.0, maximum=120.0)
+        return attempts, base_delay
+    if role == "chair" and action == "output_contract_freeze":
+        attempts = _safe_int_env("CTCP_OUTPUT_CONTRACT_API_MAX_ATTEMPTS", 3, minimum=1, maximum=6)
+        base_delay = _safe_float_env("CTCP_OUTPUT_CONTRACT_API_RETRY_BASE_DELAY_SEC", 10.0, minimum=0.0, maximum=120.0)
+        return attempts, base_delay
+    return 1, 0.0
 
 
 def _write_agent_attempt_logs(logs_dir: Path, attempt: int, stdout: str, stderr: str) -> tuple[Path, Path]:
@@ -383,13 +409,6 @@ def _write_agent_attempt_logs(logs_dir: Path, attempt: int, stdout: str, stderr:
     _write_text(stdout_path, stdout)
     _write_text(stderr_path, stderr)
     return stdout_path, stderr_path
-
-
-def _append_agent_retry_log(logs_dir: Path, row: dict[str, Any]) -> None:
-    path = logs_dir / "agent_retry.jsonl"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as fh:
-        fh.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
 def _fallback_plan_payload(*, hooks: ApiProviderHooks, repo_root: Path, run_dir: Path, request: dict[str, Any]) -> str:
@@ -621,10 +640,9 @@ def _run_patch_phase(
     }
 
 
-def _run_agent_phase(
+def _run_agent_attempts(
     *,
-    template: str,
-    placeholders: dict[str, str],
+    cmd: str,
     repo_root: Path,
     run_dir: Path,
     logs_dir: Path,
@@ -632,75 +650,85 @@ def _run_agent_phase(
     api_call_env: dict[str, str],
     hooks: ApiProviderHooks,
     request: dict[str, Any],
-    target_path: Path,
-    target_rel: str,
-    prompt_path: Path,
-) -> dict[str, Any]:
-    cmd, fmt_err = _format_cmd_template(template, placeholders)
-    if fmt_err:
-        review = hooks.record_failure_review(run_dir, fmt_err)
-        return _failure_result(run_dir=run_dir, review_path=review, reason=fmt_err)
-
+) -> tuple[subprocess.CompletedProcess[str], str, str, list[dict[str, Any]], int, Path, Path]:
     agent_stdout = logs_dir / "agent.stdout"
     agent_stderr = logs_dir / "agent.stderr"
     max_attempts, base_delay = _agent_retry_policy(request)
     retry_errors: list[dict[str, Any]] = []
-
     proc: subprocess.CompletedProcess[str] | None = None
+    target_payload = ""
+    norm_err = ""
     for attempt in range(1, max_attempts + 1):
         proc = _run_command(cmd, cwd=repo_root, stdin_text=prompt_text, extra_env=api_call_env)
         attempt_stdout, attempt_stderr = _write_agent_attempt_logs(logs_dir, attempt, proc.stdout, proc.stderr)
         _write_text(agent_stdout, proc.stdout)
         _write_text(agent_stderr, proc.stderr)
         if proc.returncode == 0:
+            target_payload, norm_err, retry_after_success = handle_successful_agent_attempt(
+                hooks=hooks,
+                repo_root=repo_root,
+                run_dir=run_dir,
+                request=request,
+                proc=proc,
+                attempt=attempt,
+                max_attempts=max_attempts,
+                base_delay=base_delay,
+                logs_dir=logs_dir,
+                attempt_stdout=attempt_stdout,
+                attempt_stderr=attempt_stderr,
+                retry_errors=retry_errors,
+                is_transient_transport_error=_is_transient_transport_error,
+            )
+            if retry_after_success:
+                continue
             if attempt > 1:
-                _append_agent_retry_log(
-                    logs_dir,
-                    {
-                        "event": "agent_retry_succeeded",
-                        "role": str(request.get("role", "")),
-                        "action": str(request.get("action", "")),
-                        "attempt": attempt,
-                        "max_attempts": max_attempts,
-                        "stdout_log": attempt_stdout.relative_to(run_dir).as_posix(),
-                        "stderr_log": attempt_stderr.relative_to(run_dir).as_posix(),
-                    },
+                append_agent_retry_succeeded(
+                    logs_dir=logs_dir,
+                    run_dir=run_dir,
+                    request=request,
+                    attempt=attempt,
+                    max_attempts=max_attempts,
+                    attempt_stdout=attempt_stdout,
+                    attempt_stderr=attempt_stderr,
                 )
             break
-
-        transient = _is_transient_transport_error(proc.stdout, proc.stderr)
-        retry_errors.append(
-            {
-                "attempt": attempt,
-                "rc": proc.returncode,
-                "transient_transport_error": transient,
-                "stdout_log": attempt_stdout.relative_to(run_dir).as_posix(),
-                "stderr_log": attempt_stderr.relative_to(run_dir).as_posix(),
-            }
-        )
-        if not transient or attempt >= max_attempts:
+        if not handle_failed_agent_attempt(
+            proc=proc,
+            attempt=attempt,
+            max_attempts=max_attempts,
+            base_delay=base_delay,
+            logs_dir=logs_dir,
+            run_dir=run_dir,
+            request=request,
+            attempt_stdout=attempt_stdout,
+            attempt_stderr=attempt_stderr,
+            retry_errors=retry_errors,
+            is_transient_transport_error=_is_transient_transport_error,
+        ):
             break
-        _append_agent_retry_log(
-            logs_dir,
-            {
-                "event": "agent_retry_scheduled",
-                "role": str(request.get("role", "")),
-                "action": str(request.get("action", "")),
-                "attempt": attempt,
-                "next_attempt": attempt + 1,
-                "max_attempts": max_attempts,
-                "reason": "transient_transport_error",
-                "delay_sec": base_delay * float(attempt),
-                "stdout_log": attempt_stdout.relative_to(run_dir).as_posix(),
-                "stderr_log": attempt_stderr.relative_to(run_dir).as_posix(),
-            },
-        )
-        if base_delay > 0:
-            time.sleep(base_delay * float(attempt))
-
     if proc is None:
         proc = subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="agent command was not executed")
+    return proc, target_payload, norm_err, retry_errors, max_attempts, agent_stdout, agent_stderr
 
+
+def _finalize_agent_phase(
+    *,
+    proc: subprocess.CompletedProcess[str],
+    target_payload: str,
+    norm_err: str,
+    retry_errors: list[dict[str, Any]],
+    max_attempts: int,
+    hooks: ApiProviderHooks,
+    repo_root: Path,
+    run_dir: Path,
+    request: dict[str, Any],
+    target_path: Path,
+    target_rel: str,
+    prompt_path: Path,
+    logs_dir: Path,
+    agent_stdout: Path,
+    agent_stderr: Path,
+) -> dict[str, Any]:
     if proc.returncode != 0:
         result = _fallback_target_result(
             hooks=hooks,
@@ -720,12 +748,13 @@ def _run_agent_phase(
             result["api_retry_log"] = (logs_dir / "agent_retry.jsonl").relative_to(run_dir).as_posix()
         return result
 
-    target_payload, norm_err = hooks.normalize_target_payload(
-        repo_root=repo_root,
-        run_dir=run_dir,
-        request=request,
-        raw_text=(proc.stdout or "").rstrip(),
-    )
+    if not target_payload and not norm_err:
+        target_payload, norm_err = hooks.normalize_target_payload(
+            repo_root=repo_root,
+            run_dir=run_dir,
+            request=request,
+            raw_text=(proc.stdout or "").rstrip(),
+        )
     if norm_err:
         result = _fallback_target_result(
             hooks=hooks,
@@ -759,6 +788,77 @@ def _run_agent_phase(
         result["api_retry_errors"] = retry_errors
         result["api_retry_log"] = (logs_dir / "agent_retry.jsonl").relative_to(run_dir).as_posix()
     return result
+
+
+def _run_agent_phase(
+    *,
+    template: str,
+    placeholders: dict[str, str],
+    repo_root: Path,
+    run_dir: Path,
+    logs_dir: Path,
+    prompt_text: str,
+    api_call_env: dict[str, str],
+    hooks: ApiProviderHooks,
+    request: dict[str, Any],
+    target_path: Path,
+    target_rel: str,
+    prompt_path: Path,
+) -> dict[str, Any]:
+    if should_chunk_source_generation(run_dir=run_dir, request=request):
+        return run_chunked_source_generation_phase(
+            template=template,
+            placeholders=placeholders,
+            repo_root=repo_root,
+            run_dir=run_dir,
+            logs_dir=logs_dir,
+            prompt_text=prompt_text,
+            api_call_env=api_call_env,
+            hooks=hooks,
+            request=request,
+            target_path=target_path,
+            target_rel=target_rel,
+            prompt_path=prompt_path,
+            format_cmd_template=_format_cmd_template,
+            failure_result=_failure_result,
+            fallback_target_result=_fallback_target_result,
+            run_command=_run_command,
+            write_text=_write_text,
+            agent_retry_policy=_agent_retry_policy,
+            is_transient_transport_error=_is_transient_transport_error,
+            safe_int_env=_safe_int_env,
+        )
+    cmd, fmt_err = _format_cmd_template(template, placeholders)
+    if fmt_err:
+        review = hooks.record_failure_review(run_dir, fmt_err)
+        return _failure_result(run_dir=run_dir, review_path=review, reason=fmt_err)
+    proc, target_payload, norm_err, retry_errors, max_attempts, agent_stdout, agent_stderr = _run_agent_attempts(
+        cmd=cmd,
+        repo_root=repo_root,
+        run_dir=run_dir,
+        logs_dir=logs_dir,
+        prompt_text=prompt_text,
+        api_call_env=api_call_env,
+        hooks=hooks,
+        request=request,
+    )
+    return _finalize_agent_phase(
+        proc=proc,
+        target_payload=target_payload,
+        norm_err=norm_err,
+        retry_errors=retry_errors,
+        max_attempts=max_attempts,
+        hooks=hooks,
+        repo_root=repo_root,
+        run_dir=run_dir,
+        request=request,
+        target_path=target_path,
+        target_rel=target_rel,
+        prompt_path=prompt_path,
+        logs_dir=logs_dir,
+        agent_stdout=agent_stdout,
+        agent_stderr=agent_stderr,
+    )
 
 
 def execute(

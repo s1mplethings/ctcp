@@ -12,7 +12,7 @@ DISPATCH_CONFIG_PATH = Path("artifacts") / "dispatch_config.json"
 FIND_RESULT_PATH = Path("artifacts") / "find_result.json"
 WORKFLOW_INDEX_PATH = ROOT / "workflow_registry" / "index.json"
 HARD_ROLE_PROVIDERS = {
-    "librarian": "api_agent",
+    "librarian": "local_exec",
     "chair": "api_agent",
     "contract_guardian": "api_agent",
     "cost_controller": "api_agent",

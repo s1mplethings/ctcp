@@ -24,6 +24,7 @@ from tools.providers.project_generation_decisions import (
     shape_contract,
 )
 from tools.providers.project_generation_queue_stage import normalize_project_queue_source_generation_stage
+from tools.providers.project_generation_provenance import manifest_provenance_fields
 from tools.providers.project_generation_source_stage import normalize_source_generation_stage
 from tools.providers.project_generation_validation import (
     pipeline_contract as _pipeline_contract,
@@ -39,12 +40,10 @@ from tools.providers.project_generation_runtime_support import (
 )
 from tools.providers.project_generation_goal_detection import is_project_generation_goal_text
 
-
 def _slug(text: str) -> str:
     value = re.sub(r"[^a-z0-9_-]+", "-", (text or "").strip().lower())
     value = re.sub(r"-+", "-", value).strip("-")
     return value or "goal"
-
 
 def _read_json_file(path: Path) -> dict[str, Any]:
     try:
@@ -53,12 +52,10 @@ def _read_json_file(path: Path) -> dict[str, Any]:
         return {}
     return raw if isinstance(raw, dict) else {}
 
-
 def _load_frontend_request_doc(run_dir: Path | None) -> dict[str, Any]:
     if run_dir is None:
         return {}
     return _read_json_file(run_dir / "artifacts" / "frontend_request.json")
-
 
 def _normalize_project_queue_items(rows: list[Any]) -> list[dict[str, Any]]:
     normalized: list[dict[str, Any]] = []
@@ -98,7 +95,6 @@ def _normalize_project_queue_items(rows: list[Any]) -> list[dict[str, Any]]:
         )
     return normalized
 
-
 def _parse_project_queue_from_goal(goal: str) -> list[dict[str, Any]]:
     rows: list[str] = []
     for line in str(goal or "").splitlines():
@@ -106,7 +102,6 @@ def _parse_project_queue_from_goal(goal: str) -> list[dict[str, Any]]:
         if cleaned and len(cleaned) >= 12:
             rows.append(cleaned)
     return _normalize_project_queue_items(rows) if len(rows) >= 2 else []
-
 
 def _extract_project_queue(
     doc: dict[str, Any] | None,
@@ -134,7 +129,6 @@ def _extract_project_queue(
     if normalized:
         return normalized
     return _parse_project_queue_from_goal(goal)
-
 
 def _portfolio_output_contract(goal_text: str, *, src: dict[str, Any], run_dir: Path | None, project_queue: list[dict[str, Any]]) -> dict[str, Any]:
     project_id = default_project_id(f"portfolio-{_slug(goal_text)[:48]}", "generic_copilot", PRODUCTION_MODE)
@@ -350,7 +344,6 @@ def _portfolio_output_contract(goal_text: str, *, src: dict[str, Any], run_dir: 
 def is_project_generation_goal(goal: str) -> bool:
     return is_project_generation_goal_text(goal)
 
-
 def build_default_context_request(goal: str) -> dict[str, Any]:
     if not is_project_generation_goal(goal):
         return {
@@ -383,7 +376,6 @@ def build_default_context_request(goal: str) -> dict[str, Any]:
 
 def _project_slug(goal: str, project_type: str = "generic_copilot") -> str:
     return default_project_id(_slug(goal), project_type, PRODUCTION_MODE)
-
 
 def _normalize_rel_list(rows: list[str]) -> list[str]:
     out: list[str] = []
@@ -1522,6 +1514,7 @@ def normalize_project_manifest(doc: dict[str, Any] | None, *, goal: str, run_dir
         "reference_project_mode": source_stage_doc.get("reference_project_mode") if isinstance(source_stage_doc.get("reference_project_mode"), dict) else lists.get("reference_project_mode", {"enabled": False, "mode": "structure_workflow_docs"}),
         "reference_style_applied": _normalize_rel_list([str(x) for x in source_stage_doc.get("reference_style_applied", [])]) if isinstance(source_stage_doc.get("reference_style_applied"), list) else list(lists.get("reference_style_applied", [])),
         "business_codegen_used": bool(source_stage_doc.get("business_codegen_used", False)),
+        **manifest_provenance_fields(source_stage_doc),
         "consumed_context_pack": bool(source_stage_doc.get("consumed_context_pack", False)),
         "consumed_context_files": _normalize_rel_list([str(x) for x in source_stage_doc.get("consumed_context_files", [])]) if isinstance(source_stage_doc.get("consumed_context_files"), list) else [],
         "context_influence_summary": _normalize_rel_list([str(x) for x in source_stage_doc.get("context_influence_summary", [])]) if isinstance(source_stage_doc.get("context_influence_summary"), list) else [],
@@ -1570,7 +1563,11 @@ def normalize_deliverable_index(doc: dict[str, Any] | None, *, goal: str, run_di
         value = manifest_doc.get(field)
         if isinstance(value, list):
             deliverables.extend(str(row).strip() for row in value if str(row).strip())
-    final_package_path = _build_final_project_bundle(run_dir, str(manifest_doc.get("project_root", "")).strip())
+    completion_src = manifest_doc.get("source_customization_completion", {})
+    source_customization_completion = dict(completion_src) if isinstance(completion_src, dict) else {}
+    final_delivery_allowed = bool(source_customization_completion.get("final_delivery_allowed", True))
+    delivery_blocked_reason = "" if final_delivery_allowed else str(source_customization_completion.get("blocking_reason", "")).strip()
+    final_package_path = _build_final_project_bundle(run_dir, str(manifest_doc.get("project_root", "")).strip()) if final_delivery_allowed else ""
     if final_package_path:
         deliverables.append(final_package_path)
     evidence_bundle_path = build_intermediate_evidence_bundle(run_dir)
@@ -1633,6 +1630,9 @@ def normalize_deliverable_index(doc: dict[str, Any] | None, *, goal: str, run_di
         "required_screenshots": int(manifest_doc.get("required_screenshots", 0) or 0),
         "extended_coverage": manifest_doc.get("extended_coverage", {}) if isinstance(manifest_doc.get("extended_coverage", {}), dict) else {},
         "extended_coverage_ledger_path": str(manifest_doc.get("extended_coverage_ledger_path", "")).strip(),
+        "source_customization_completion": source_customization_completion,
+        "final_delivery_allowed": final_delivery_allowed,
+        "delivery_blocked_reason": delivery_blocked_reason,
         "final_package_path": final_package_path,
         "evidence_bundle_path": evidence_bundle_path,
         "generic_validation": manifest_doc.get("generic_validation", {}) if isinstance(manifest_doc.get("generic_validation"), dict) else {},

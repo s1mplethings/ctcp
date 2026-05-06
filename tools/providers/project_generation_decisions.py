@@ -234,86 +234,9 @@ def enrich_project_spec(
     spec["delivery_shape"] = str(delivery_shape).strip()
 
     if project_domain == "narrative_vn_editor":
-        spec["core_modules"] = [
-            "seed_loader",
-            "editor_workspace",
-            "editor_actions",
-            "scene_graph",
-            "cast_schema",
-            "asset_catalog",
-            "prompt_pipeline",
-            "export_delivery",
-        ]
-        spec["required_pages_or_views"] = [
-            "project_loader",
-            "story_scene_branch_editor",
-            "character_asset_manager",
-            "preview_export_panel",
-        ]
-        spec["data_models"] = [
-            "project_doc",
-            "chapter_plan",
-            "scene_node",
-            "choice_link",
-            "character_card",
-            "asset_placeholder",
-            "source_map",
-        ]
-        spec["key_interactions"] = [
-            "load_sample",
-            "reset_sample",
-            "add_scene",
-            "update_scene",
-            "update_branch",
-            "update_character",
-            "bind_background",
-            "save_state",
-            "export_project",
-        ]
-        spec["sample_content_plan"] = {
-            "pipeline_id": "narrative_sample_generation",
-            "minimum_depth": {
-                "characters": 3,
-                "chapters": 4,
-                "scenes": 8,
-                "branch_points": 2,
-            },
-            "steps": [
-                "theme_brief",
-                "cast_cards",
-                "chapter_plan",
-                "scene_graph",
-                "choice_map",
-                "asset_placeholders",
-                "source_map",
-            ],
-            "api_merge_targets": [
-                "character_profiles",
-                "chapter_summaries",
-                "scene_summaries",
-                "choice_labels",
-                "asset_notes",
-                "runtime_snippets",
-            ],
-        }
-        spec["export_targets"] = [
-            "preview.html",
-            "script_preview.rpy",
-            "scene_graph.json",
-            "asset_catalog.json",
-            "narrative_editor_project.json",
-        ]
-        spec["delivery_requirements"] = [
-            "final_project_bundle.zip",
-            "README",
-            "screenshots",
-            "verify_summary",
-        ]
-        spec["explicit_non_goals"] = [
-            "full game engine",
-            "commercial-grade save database",
-            "binary asset production pipeline",
-        ]
+        spec.setdefault("acceptance_criteria", list(project_intent.get("acceptance_criteria", [])) or ["the generated project declares and satisfies its own domain-specific acceptance criteria"])
+        spec.setdefault("delivery_requirements", ["runnable project package", "startup instructions", "validation evidence"])
+        spec["project_specific_standards_source"] = "generated_project"
         return spec
 
     if project_domain == "indie_studio_production_hub" or is_indie_studio_hub_signal(

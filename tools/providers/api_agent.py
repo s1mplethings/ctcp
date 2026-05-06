@@ -9,7 +9,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_LOCAL_NOTES_PATH = ROOT / ".agent_private" / "NOTES.md"
-EMBEDDED_BASE_URL = "https://api.gptsapi.net/v1"
+EMBEDDED_BASE_URL = "https://api.gptsapi.net"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -77,6 +77,13 @@ def _load_local_notes_defaults() -> dict[str, str]:
     return out
 
 
+def _normalize_base_url(value: str) -> str:
+    root = str(value or "").strip().rstrip("/")
+    if root.lower() in {"https://api.gptsapi.net/v1", "http://api.gptsapi.net/v1"}:
+        return root[:-3].rstrip("/")
+    return root
+
+
 def _resolved_external_api_credentials() -> tuple[str, str]:
     defaults = _load_local_notes_defaults()
     env_key = str(os.environ.get("OPENAI_API_KEY", "")).strip()
@@ -89,11 +96,11 @@ def _resolved_external_api_credentials() -> tuple[str, str]:
     if key.lower() == "ollama" and not env_base_url:
         replacement_key = ctcp_key or notes_key
         if replacement_key:
-            return replacement_key, env_base_url or ctcp_base_url or notes_base_url
-        return key, env_base_url or ctcp_base_url
+            return replacement_key, _normalize_base_url(env_base_url or ctcp_base_url or notes_base_url)
+        return key, _normalize_base_url(env_base_url or ctcp_base_url)
     if not key:
         key = ctcp_key or notes_key
-    base_url = env_base_url or ctcp_base_url or notes_base_url or EMBEDDED_BASE_URL
+    base_url = _normalize_base_url(env_base_url or ctcp_base_url or notes_base_url or EMBEDDED_BASE_URL)
     return key, base_url
 
 

@@ -58,6 +58,39 @@ class OpenAiResponsesClientResilienceTests(unittest.TestCase):
         self.assertEqual(text, "ok")
         self.assertEqual(calls, ["https://example.test/v1/responses", "https://example.test/v1/responses"])
 
+    def test_retry_delay_respects_cloudflare_retry_after(self) -> None:
+        calls: list[str] = []
+        sleeps: list[float] = []
+
+        def _urlopen(req, timeout=0):
+            calls.append(str(req.full_url))
+            if len(calls) == 1:
+                raise urllib.error.HTTPError(
+                    str(req.full_url),
+                    520,
+                    "origin error",
+                    hdrs=None,
+                    fp=io.BytesIO(b'{"cloudflare_error":true,"retryable":true,"retry_after":60}'),
+                )
+            return _MockHttpResponse({"id": "resp_retry", "output_text": "ok"})
+
+        env = {
+            "OPENAI_API_KEY": "sk-test",
+            "OPENAI_BASE_URL": "https://example.test/v1",
+            "SDDAI_OPENAI_ENDPOINT_MODE": "responses",
+            "SDDAI_OPENAI_MAX_ATTEMPTS": "2",
+            "SDDAI_OPENAI_RETRY_BASE_DELAY_SEC": "1",
+            "SDDAI_OPENAI_RETRY_MAX_DELAY_SEC": "120",
+        }
+        with mock.patch.dict(os.environ, env, clear=False):
+            with mock.patch("openai_responses_client.urllib.request.urlopen", side_effect=_urlopen):
+                with mock.patch("openai_responses_client.time.sleep", side_effect=lambda sec: sleeps.append(sec)):
+                    text, err = client.call_openai_responses(prompt="hello", model="gpt-4.1-mini", timeout_sec=5)
+
+        self.assertEqual(err, "")
+        self.assertEqual(text, "ok")
+        self.assertEqual(sleeps, [60.0])
+
     def test_auto_falls_back_to_chat_completions(self) -> None:
         calls: list[str] = []
 
@@ -115,6 +148,33 @@ class OpenAiResponsesClientResilienceTests(unittest.TestCase):
         self.assertEqual(err, "")
         self.assertEqual(text, "chat-only")
         self.assertEqual(calls, ["https://example.test/v1/chat/completions"])
+
+    def test_chat_mode_can_request_json_object_response_format(self) -> None:
+        payloads: list[dict[str, object]] = []
+
+        def _urlopen(req, timeout=0):
+            payloads.append(json.loads(req.data.decode("utf-8")))
+            return _MockHttpResponse(
+                {
+                    "id": "chat_json",
+                    "choices": [{"message": {"content": "{\"ok\":true}"}}],
+                }
+            )
+
+        env = {
+            "OPENAI_API_KEY": "sk-test",
+            "OPENAI_BASE_URL": "https://example.test/v1",
+            "SDDAI_OPENAI_ENDPOINT_MODE": "chat",
+            "SDDAI_OPENAI_MAX_ATTEMPTS": "1",
+            "SDDAI_OPENAI_RESPONSE_FORMAT": "json_object",
+        }
+        with mock.patch.dict(os.environ, env, clear=False):
+            with mock.patch("openai_responses_client.urllib.request.urlopen", side_effect=_urlopen):
+                text, err = client.call_openai_responses(prompt="hello", model="gpt-4.1-mini", timeout_sec=5)
+
+        self.assertEqual(err, "")
+        self.assertEqual(text, "{\"ok\":true}")
+        self.assertEqual(payloads[0].get("response_format"), {"type": "json_object"})
 
     def test_loads_api_defaults_from_local_notes(self) -> None:
         calls: list[str] = []

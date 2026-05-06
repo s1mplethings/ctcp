@@ -60,7 +60,7 @@ cost_hints:
 
 roles:
   librarian:
-    provider: api_agent
+    provider: local_exec
   contract_guardian:
     provider: api_agent
   chair:

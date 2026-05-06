@@ -226,10 +226,10 @@ Rules:
 1. Local Orchestrator
    - MUST: create run_dir, emit events, gate on artifacts, run verify gate, trigger failure bundle flow.
    - MUST NOT: decide workflow strategy, write patch content, sign plan.
-2. Librarian (API-locked on mainline)
-   - MUST: transform `artifacts/file_request.json` -> `artifacts/context_pack.json` through `api_agent` on the mainline.
-   - MUST: fail fast when API execution fails, returns empty output, or cannot be normalized into the context-pack contract.
-   - MUST NOT: silently fall back to `local_exec`/`ollama_agent` or report fake `context_pack` success.
+2. Librarian (local-locked on mainline)
+   - MUST: transform `artifacts/file_request.json` -> `artifacts/context_pack.json` through `local_exec` on the mainline.
+   - MUST: fail fast when local execution fails, returns empty output, or cannot be normalized into the context-pack contract.
+   - MUST NOT: silently fall back to `api_agent`/`ollama_agent` or report fake `context_pack` success.
    - MUST: keep evidence in run artifacts (`step_meta.jsonl`, logs, target artifact) and surface the chosen provider/model in that evidence.
 3. Local Verifier
    - MUST: execute gates and emit verify evidence.

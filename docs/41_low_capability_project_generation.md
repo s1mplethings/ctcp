@@ -83,6 +83,20 @@ Rules:
 - CLI is not a default downgrade path.
 - Benchmark samples are validation inputs only, not production defaults.
 
+### 1.3) Project-Defined Standards Boundary
+
+CTCP MUST NOT own concrete product standards for production generation.
+
+Rules:
+- CTCP MAY classify the project type and choose a compatible workflow, shape, and evidence path.
+- CTCP MUST NOT hard-code project-specific content thresholds such as a fixed number of roles, chapters, scenes, tasks, pages, screenshots, assets, or domain records for production requests.
+- CTCP MUST NOT treat a benchmark sample, historical generated project, local materializer, or test fixture as the default standard for a real user project.
+- The generated project MUST declare its own concrete acceptance criteria, sample-data adequacy criteria, delivery evidence expectations, and known limits in its project spec, README, metadata, or acceptance artifacts.
+- CTCP validation SHOULD check whether those project-defined standards exist, whether the project starts, whether the declared main flow/export works, and whether evidence supports the declared standards.
+- CTCP MAY record domain metrics such as counts, files, detected keywords, source maps, screenshots, and trace artifacts as evidence, but those metrics are not pass/fail thresholds unless the generated project itself declares them.
+- If generated project standards are missing, vague, contradictory, or unsupported by runtime evidence, the run remains blocked for missing project-defined acceptance, not for failing a CTCP-owned domain template.
+- Benchmark / regression mode MAY keep fixed samples and fixed expected metrics, but those rules are scoped to benchmark mode only and MUST NOT leak into production generation.
+
 ## 2) Low-Capability Fixed Stage Workflow
 
 Project generation MUST follow one fixed stage path:
@@ -153,7 +167,7 @@ Before completion, the run MUST emit all of the following stage artifacts:
 Rules:
 - The support/output stage may summarize results to the user, but it MUST NOT invent missing product/design/technical work.
 - Generic fallback material such as a generic workflow plan, generic acceptance report, or generic project bundle MUST NOT satisfy any of the required stage artifacts.
-- Narrative / VN / GUI editor completion MUST prove editor/authoring capability, narrative structure, asset/cast structure, sample project data, and preview/export evidence; export-only shells are insufficient.
+- Completion MUST prove the concrete capabilities declared by the generated project's own spec and acceptance artifacts; export-only shells are insufficient when the project declares an interactive/editor workflow.
 - Incompatible family contamination (for example pointcloud / v2p scripts or tests inside narrative/editor output) is a blocking failure, not a warning.
 - `docs/12_virtual_team_contract.md` is the authority for what those artifacts must contain.
 

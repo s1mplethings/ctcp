@@ -396,13 +396,12 @@ class PlaneLiteBenchmarkRegressionTests(unittest.TestCase):
             freeze = normalize_output_contract_freeze({}, goal=goal, run_dir=run_dir)
             _write_json(artifacts / "output_contract_freeze.json", freeze)
             report = normalize_source_generation({}, goal=goal, run_dir=run_dir)
-            self.assertEqual(report.get("status"), "pass")
-            ledger = json.loads((artifacts / "extended_coverage_ledger.json").read_text(encoding="utf-8"))
-            self.assertTrue(bool(ledger.get("passed", False)))
-            self.assertGreaterEqual(len(list(ledger.get("implemented_pages", []))), 8)
-            self.assertGreaterEqual(len(list(ledger.get("screenshot_files", []))), 8)
-            for rel in ("docs/feature_matrix.md", "docs/page_map.md", "docs/data_model_summary.md"):
-                self.assertTrue((run_dir / freeze["project_root"] / rel).exists(), rel)
+            self.assertEqual(report.get("status"), "blocked")
+            self.assertIn("local project templates are disabled", str(report.get("blocking_reason", "")))
+            completion = dict(report.get("source_customization_completion", {}))
+            self.assertFalse(bool(completion.get("final_delivery_allowed", True)))
+            self.assertTrue(bool(completion.get("local_templates_disabled", False)))
+            self.assertFalse((artifacts / "extended_coverage_ledger.json").exists())
 
     def test_high_quality_delivery_gate_blocks_missing_extended_coverage(self) -> None:
         with tempfile.TemporaryDirectory() as td:

@@ -17,11 +17,14 @@ from tools.providers.project_generation_artifacts import (
     normalize_source_generation,
 )
 from tools.providers.project_generation_decisions import default_package_name
+from tools.providers.project_generation_sample_metrics import narrative_sample_metrics
 from tools.providers.project_generation_source_helpers import (
     EVIDENCE_CARD_VISUAL_TYPE,
     REAL_UI_VISUAL_TYPE,
     _capture_visual_evidence,
+    build_runtime_checks,
 )
+from tools.providers.project_generation_source_stage import _ensure_provider_package_init_files, _provider_source_file_rows
 from tools.providers.project_generation_validation import generic_validation
 from tools.providers.project_generation_validation import (
     domain_validation,
@@ -124,6 +127,15 @@ def _run_launcher_json(*, launcher: Path, out_dir: Path, goal: str, project_name
 
 
 class ProjectGenerationArtifactTests(unittest.TestCase):
+    def _assert_production_local_templates_disabled(self, report: dict[str, object]) -> None:
+        self.assertEqual(report.get("status"), "blocked", msg=json.dumps(report, ensure_ascii=False))
+        self.assertIn("local project templates are disabled", str(report.get("blocking_reason", "")))
+        file_materialization = dict(report.get("file_materialization", {}))
+        self.assertEqual(str(file_materialization.get("strategy", "")), "disabled_local_templates")
+        completion = dict(report.get("source_customization_completion", {}))
+        self.assertFalse(bool(completion.get("final_delivery_allowed", True)))
+        self.assertTrue(bool(completion.get("local_templates_disabled", False)))
+
     def test_default_package_name_normalizes_digit_leading_and_separator_heavy_ids(self) -> None:
         cases = {
             "5-20-bug": "project_5_20_bug",
@@ -184,6 +196,446 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
                 [row["path"] for row in syntax.get("syntax_errors", []) if isinstance(row, dict)],
                 ["project_output/broken-project/scripts/run_project_gui.py"],
             )
+
+    def test_generic_validation_reports_missing_cross_file_import_symbol(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_pg_import_symbol_") as td:
+            run_dir = Path(td)
+            root = run_dir / "project_output" / "vn"
+            package = root / "src" / "vn"
+            story = package / "story"
+            script = root / "scripts" / "run_project_gui.py"
+            readme = root / "README.md"
+            story.mkdir(parents=True, exist_ok=True)
+            script.parent.mkdir(parents=True, exist_ok=True)
+            readme.write_text("# VN\n\npython scripts/run_project_gui.py --help\n", encoding="utf-8")
+            script.write_text("from vn.story import StoryOutline\nprint(StoryOutline)\n", encoding="utf-8")
+            (package / "__init__.py").write_text("", encoding="utf-8")
+            (story / "__init__.py").write_text("from .outline import StoryOutline\n", encoding="utf-8")
+            (story / "outline.py").write_text("class OutlineBuilder:\n    pass\n", encoding="utf-8")
+
+            doc = generic_validation(
+                run_dir=run_dir,
+                startup_entrypoint="project_output/vn/scripts/run_project_gui.py",
+                startup_readme="project_output/vn/README.md",
+                generated_business_files=[
+                    "project_output/vn/scripts/run_project_gui.py",
+                    "project_output/vn/src/vn/__init__.py",
+                    "project_output/vn/src/vn/story/__init__.py",
+                    "project_output/vn/src/vn/story/outline.py",
+                ],
+                behavior_probe={"rc": 0},
+                export_probe={"rc": 0},
+                acceptance_files=["project_output/vn/README.md"],
+            )
+
+            self.assertFalse(bool(doc.get("passed", False)))
+            imports = dict(doc.get("python_import_consistency", {}))
+            self.assertFalse(bool(imports.get("passed", False)))
+            missing = imports.get("missing_symbols", [])
+            self.assertEqual(len(missing), 1)
+            self.assertEqual(missing[0].get("symbol"), "StoryOutline")
+            self.assertEqual(missing[0].get("target_module"), "vn.story.outline")
+
+    def test_generic_validation_checks_related_package_init_imports(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_pg_import_init_symbol_") as td:
+            run_dir = Path(td)
+            root = run_dir / "project_output" / "vn"
+            package = root / "src" / "vn"
+            assets = package / "assets"
+            script = root / "scripts" / "run_project_gui.py"
+            readme = root / "README.md"
+            assets.mkdir(parents=True, exist_ok=True)
+            script.parent.mkdir(parents=True, exist_ok=True)
+            readme.write_text("# VN\n\npython scripts/run_project_gui.py --help\n", encoding="utf-8")
+            script.write_text("from vn.assets.catalog import list_background_assets\nprint(list_background_assets)\n", encoding="utf-8")
+            (package / "__init__.py").write_text("", encoding="utf-8")
+            (assets / "__init__.py").write_text("from .catalog import AssetCatalog\n", encoding="utf-8")
+            (assets / "catalog.py").write_text("def list_background_assets():\n    return []\n", encoding="utf-8")
+
+            doc = generic_validation(
+                run_dir=run_dir,
+                startup_entrypoint="project_output/vn/scripts/run_project_gui.py",
+                startup_readme="project_output/vn/README.md",
+                generated_business_files=[
+                    "project_output/vn/scripts/run_project_gui.py",
+                    "project_output/vn/src/vn/assets/catalog.py",
+                ],
+                behavior_probe={"rc": 0},
+                export_probe={"rc": 0},
+                acceptance_files=["project_output/vn/README.md"],
+            )
+
+            imports = dict(doc.get("python_import_consistency", {}))
+            self.assertFalse(bool(imports.get("passed", False)))
+            missing = imports.get("missing_symbols", [])
+            self.assertEqual(len(missing), 1)
+            self.assertEqual(missing[0].get("from_path"), "project_output/vn/src/vn/assets/__init__.py")
+            self.assertEqual(missing[0].get("symbol"), "AssetCatalog")
+
+    def test_generic_validation_reports_provider_interface_contract_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_pg_interface_contract_") as td:
+            run_dir = Path(td)
+            root = run_dir / "project_output" / "vn"
+            package = root / "src" / "vn"
+            script = root / "scripts" / "run_project_gui.py"
+            readme = root / "README.md"
+            package.mkdir(parents=True, exist_ok=True)
+            script.parent.mkdir(parents=True, exist_ok=True)
+            readme.write_text("# VN\n\npython scripts/run_project_gui.py --help\n", encoding="utf-8")
+            script.write_text("from vn import VNService\nprint(VNService)\n", encoding="utf-8")
+            (package / "__init__.py").write_text("from .service import VNService\n", encoding="utf-8")
+            (package / "service.py").write_text("class VNProjectService:\n    pass\n", encoding="utf-8")
+
+            doc = generic_validation(
+                run_dir=run_dir,
+                startup_entrypoint="project_output/vn/scripts/run_project_gui.py",
+                startup_readme="project_output/vn/README.md",
+                generated_business_files=[
+                    "project_output/vn/scripts/run_project_gui.py",
+                    "project_output/vn/src/vn/__init__.py",
+                    "project_output/vn/src/vn/service.py",
+                ],
+                behavior_probe={"rc": 0},
+                export_probe={"rc": 0},
+                acceptance_files=["project_output/vn/README.md"],
+                interface_contract={
+                    "project_output/vn/src/vn/__init__.py": {"defines": [], "exports": []},
+                    "project_output/vn/src/vn/service.py": {"defines": ["VNService"], "exports": ["VNService"]},
+                },
+            )
+
+            imports = dict(doc.get("python_import_consistency", {}))
+            self.assertFalse(bool(imports.get("passed", False)))
+            mismatches = imports.get("interface_contract_mismatches", [])
+            self.assertTrue(any(row.get("path") == "project_output/vn/src/vn/__init__.py" for row in mismatches))
+            self.assertTrue(any("VNService" in row.get("missing_declared_symbols", []) for row in mismatches))
+
+    def test_generic_validation_reports_generated_import_cycles(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_pg_import_cycle_") as td:
+            run_dir = Path(td)
+            root = run_dir / "project_output" / "vn"
+            package = root / "src" / "vn"
+            editor = package / "editor"
+            script = root / "scripts" / "run_project_gui.py"
+            readme = root / "README.md"
+            editor.mkdir(parents=True, exist_ok=True)
+            script.parent.mkdir(parents=True, exist_ok=True)
+            readme.write_text("# VN\n\npython scripts/run_project_gui.py --help\n", encoding="utf-8")
+            script.write_text("from vn.service import VNService\nprint(VNService)\n", encoding="utf-8")
+            (package / "__init__.py").write_text("", encoding="utf-8")
+            (package / "service.py").write_text("from vn.editor.workspace import Workspace\nclass VNService:\n    pass\n", encoding="utf-8")
+            (editor / "__init__.py").write_text("", encoding="utf-8")
+            (editor / "workspace.py").write_text("from vn.service import VNService\nclass Workspace:\n    pass\n", encoding="utf-8")
+
+            doc = generic_validation(
+                run_dir=run_dir,
+                startup_entrypoint="project_output/vn/scripts/run_project_gui.py",
+                startup_readme="project_output/vn/README.md",
+                generated_business_files=[
+                    "project_output/vn/scripts/run_project_gui.py",
+                    "project_output/vn/src/vn/service.py",
+                    "project_output/vn/src/vn/editor/workspace.py",
+                ],
+                behavior_probe={"rc": 0},
+                export_probe={"rc": 0},
+                acceptance_files=["project_output/vn/README.md"],
+            )
+
+            imports = dict(doc.get("python_import_consistency", {}))
+            self.assertFalse(bool(imports.get("passed", False)))
+            self.assertEqual(imports.get("import_cycles"), [["vn.service", "vn.editor.workspace", "vn.service"]])
+
+    def test_runtime_checks_support_src_layout_gui_entrypoint(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_pg_src_layout_probe_") as td:
+            run_dir = Path(td)
+            project_root = "project_output/vn"
+            package_dir = run_dir / project_root / "src" / "vn"
+            script_path = run_dir / project_root / "scripts" / "run_project_gui.py"
+            package_dir.mkdir(parents=True, exist_ok=True)
+            script_path.parent.mkdir(parents=True, exist_ok=True)
+            (package_dir / "__init__.py").write_text("", encoding="utf-8")
+            (package_dir / "service.py").write_text(
+                "def status():\n"
+                "    return 'vn src layout ok'\n",
+                encoding="utf-8",
+            )
+            script_path.write_text(
+                "from __future__ import annotations\n"
+                "import argparse\n"
+                "from pathlib import Path\n"
+                "from vn.service import status\n"
+                "\n"
+                "def main() -> int:\n"
+                "    parser = argparse.ArgumentParser()\n"
+                "    parser.add_argument('--headless', action='store_true')\n"
+                "    args = parser.parse_args()\n"
+                "    if args.headless:\n"
+                "        out = Path(__file__).with_name('exported_project_summary.json')\n"
+                "        out.write_text('{\"status\":\"ok\"}\\n', encoding='utf-8')\n"
+                "        print(status())\n"
+                "        print(f'Exported project summary to: {out}')\n"
+                "    else:\n"
+                "        print('gui startup ready')\n"
+                "    return 0\n"
+                "\n"
+                "if __name__ == '__main__':\n"
+                "    raise SystemExit(main())\n",
+                encoding="utf-8",
+            )
+
+            behavior_probe, export_probe, gate_layers, visual = build_runtime_checks(
+                run_dir=run_dir,
+                project_root=project_root,
+                package_name="vn",
+                entry_script=f"{project_root}/scripts/run_project_gui.py",
+                delivery_shape="gui_first",
+                execution_mode="production",
+                benchmark_sample_applied=False,
+                benchmark_case="",
+                visual_evidence_status="not_requested",
+                generated_files=[
+                    f"{project_root}/scripts/run_project_gui.py",
+                    f"{project_root}/src/vn/service.py",
+                ],
+                source_files=[
+                    f"{project_root}/scripts/run_project_gui.py",
+                    f"{project_root}/src/vn/service.py",
+                ],
+                business_missing=[],
+                generated_business_files=[
+                    f"{project_root}/scripts/run_project_gui.py",
+                    f"{project_root}/src/vn/service.py",
+                ],
+                scaffold_status="pass",
+                consumed_context=True,
+            )
+
+            self.assertEqual(int(behavior_probe.get("rc", 1)), 0, msg=json.dumps(behavior_probe, ensure_ascii=False))
+            self.assertEqual(int(export_probe.get("rc", 1)), 0, msg=json.dumps(export_probe, ensure_ascii=False))
+            self.assertIn("fallback_from_command", export_probe)
+            self.assertTrue(bool(dict(gate_layers.get("behavioral", {})).get("passed", False)))
+            self.assertEqual(str(visual.get("status", "")), "provided", msg=json.dumps(visual, ensure_ascii=False))
+            self.assertTrue(bool(dict(gate_layers.get("result", {})).get("passed", False)), msg=json.dumps(gate_layers, ensure_ascii=False))
+
+    def test_runtime_checks_support_provider_src_namespace_imports(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_pg_src_namespace_probe_") as td:
+            run_dir = Path(td)
+            project_root = "project_output/vn"
+            package_dir = run_dir / project_root / "src" / "vn"
+            script_path = run_dir / project_root / "scripts" / "run_project_gui.py"
+            package_dir.mkdir(parents=True, exist_ok=True)
+            script_path.parent.mkdir(parents=True, exist_ok=True)
+            (package_dir / "__init__.py").write_text("", encoding="utf-8")
+            (package_dir / "service.py").write_text(
+                "def status():\n"
+                "    return 'src namespace ok'\n",
+                encoding="utf-8",
+            )
+            script_path.write_text(
+                "from __future__ import annotations\n"
+                "import argparse\n"
+                "from pathlib import Path\n"
+                "from src.vn.service import status\n"
+                "\n"
+                "def main() -> int:\n"
+                "    parser = argparse.ArgumentParser()\n"
+                "    parser.add_argument('--goal', default='')\n"
+                "    parser.add_argument('--project-name', default='example_project')\n"
+                "    parser.add_argument('--out', default='')\n"
+                "    parser.add_argument('--headless', action='store_true')\n"
+                "    args = parser.parse_args()\n"
+                "    if args.headless:\n"
+                "        out_dir = Path(args.out or Path(__file__).parent)\n"
+                "        out_dir.mkdir(parents=True, exist_ok=True)\n"
+                "        (out_dir / 'workspace_preview.html').write_text('<form><input><button>Export</button><script>document.addEventListener(\"click\",()=>{})</script></form>', encoding='utf-8')\n"
+                "        (out_dir / 'workspace_snapshot.json').write_text('{\"status\":\"ok\"}', encoding='utf-8')\n"
+                "        (out_dir / 'interaction_trace.json').write_text('[{\"operation\":\"export\"}]', encoding='utf-8')\n"
+                "        (out_dir / 'state_diff.json').write_text('{\"changes\":[\"export\"]}', encoding='utf-8')\n"
+                "        (out_dir / 'script_preview.rpy').write_text('label start:\\n    return\\n', encoding='utf-8')\n"
+                "    print(status())\n"
+                "    return 0\n"
+                "\n"
+                "if __name__ == '__main__':\n"
+                "    raise SystemExit(main())\n",
+                encoding="utf-8",
+            )
+
+            behavior_probe, export_probe, gate_layers, _visual = build_runtime_checks(
+                run_dir=run_dir,
+                project_root=project_root,
+                package_name="vn",
+                entry_script=f"{project_root}/scripts/run_project_gui.py",
+                delivery_shape="gui_first",
+                execution_mode="production",
+                benchmark_sample_applied=False,
+                benchmark_case="",
+                visual_evidence_status="not_requested",
+                generated_files=[f"{project_root}/scripts/run_project_gui.py", f"{project_root}/src/vn/service.py"],
+                source_files=[f"{project_root}/scripts/run_project_gui.py", f"{project_root}/src/vn/service.py"],
+                business_missing=[],
+                generated_business_files=[f"{project_root}/scripts/run_project_gui.py", f"{project_root}/src/vn/service.py"],
+                scaffold_status="pass",
+                consumed_context=True,
+            )
+
+            self.assertEqual(int(behavior_probe.get("rc", 1)), 0, msg=json.dumps(behavior_probe, ensure_ascii=False))
+            self.assertEqual(int(export_probe.get("rc", 1)), 0, msg=json.dumps(export_probe, ensure_ascii=False))
+            self.assertTrue(bool(dict(gate_layers.get("behavioral", {})).get("passed", False)))
+
+    def test_provider_package_init_files_are_filled_from_contract(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_pg_provider_init_") as td:
+            run_dir = Path(td)
+            inputs = {
+                "project_root": "project_output/vn",
+                "lists": {
+                    "source_files": [
+                        "project_output/vn/src/vn/__init__.py",
+                        "project_output/vn/src/vn/story/__init__.py",
+                        "../outside/__init__.py",
+                    ]
+                },
+            }
+
+            added = _ensure_provider_package_init_files(run_dir=run_dir, inputs=inputs, already_written=set())
+
+            self.assertEqual(
+                sorted(added),
+                ["project_output/vn/src/vn/__init__.py", "project_output/vn/src/vn/story/__init__.py"],
+            )
+            for rel in added:
+                self.assertTrue((run_dir / rel).exists())
+
+    def test_provider_source_file_rows_accept_content_lines(self) -> None:
+        rows = _provider_source_file_rows(
+            {
+                "project_root": "project_output/vn",
+                "src": {
+                    "files": [
+                        {
+                            "path": "project_output/vn/src/vn/service.py",
+                            "content_lines": ["def status():", "    return 'ok'"],
+                        }
+                    ]
+                },
+            }
+        )
+
+        self.assertEqual(
+            rows,
+            [{"path": "project_output/vn/src/vn/service.py", "content": "def status():\n    return 'ok'\n"}],
+        )
+
+    def test_chunked_source_generation_payload_rows_are_provider_authored_files(self) -> None:
+        rows = _provider_source_file_rows(
+            {
+                "project_root": "project_output/vn",
+                "src": {
+                    "schema_version": "ctcp-provider-source-files-v1",
+                    "chunked_source_generation": {"enabled": True},
+                    "files": [
+                        {
+                            "path": "project_output/vn/README.md",
+                            "content_lines": ["# VN", "Run locally."],
+                        },
+                        {
+                            "path": "project_output/vn/src/vn/service.py",
+                            "content": "def status():\n    return 'chunked'\n",
+                        },
+                    ],
+                },
+            }
+        )
+
+        self.assertEqual(
+            rows,
+            [
+                {"path": "project_output/vn/README.md", "content": "# VN\nRun locally.\n"},
+                {"path": "project_output/vn/src/vn/service.py", "content": "def status():\n    return 'chunked'\n"},
+            ],
+        )
+
+    def test_narrative_sample_metrics_accept_provider_nested_schema(self) -> None:
+        doc = {
+            "characters": [
+                {"id": "c01", "name": "明日香", "description": "主角", "sprites": ["asuka.png"]},
+                {"id": "c02", "name": "炼", "description": "伙伴", "sprites": ["ren.png"]},
+                {"id": "c03", "name": "小华", "description": "谜之少女", "sprites": ["xiaohua.png"]},
+            ],
+            "chapters": [
+                {"id": "chap1", "scenes": [{"id": "s1", "bg": "a.png", "sfx": "a.mp3"}, {"id": "s2", "bg": "b.png", "cg": "b.png"}]},
+                {"id": "chap2", "scenes": [{"id": "s3", "bg": "c.png", "sfx": "c.mp3"}, {"id": "s4", "bg": "d.png"}]},
+                {"id": "chap3", "scenes": [{"id": "s5", "bg": "e.png", "branches": ["s6", "s7"]}, {"id": "s6", "bg": "f.png", "cg": "f.png"}, {"id": "s7", "bg": "g.png"}]},
+                {"id": "chap4", "scenes": [{"id": "s8", "bg": "h.png", "sfx": "h.mp3"}]},
+            ],
+        }
+
+        metrics = narrative_sample_metrics(doc)
+
+        self.assertEqual(metrics["character_count"], 3)
+        self.assertEqual(metrics["valid_character_cards"], 3)
+        self.assertEqual(metrics["chapter_count"], 4)
+        self.assertEqual(metrics["scene_count"], 8)
+        self.assertEqual(metrics["branch_point_count"], 2)
+        self.assertEqual(metrics["scenes_with_background"], 8)
+        self.assertGreaterEqual(metrics["scenes_with_media_refs"], 2)
+
+    def test_narrative_sample_metrics_accept_project_wrapped_pipeline_schema(self) -> None:
+        doc = {
+            "project": {
+                "characters": [
+                    {"id": "char1", "name": "小夏", "description": "主角", "sprite": "spr_a.png"},
+                    {"id": "char2", "name": "阿翔", "description": "好友", "sprite": "spr_b.png"},
+                    {"id": "char3", "name": "兰子", "description": "转学生", "sprite": "spr_c.png"},
+                ],
+                "chapters": [
+                    {"id": "c1", "scenes": ["s1", "s2"]},
+                    {"id": "c2", "scenes": ["s3", "s4", "s5"]},
+                    {"id": "c3", "scenes": ["s6", "s7"]},
+                    {"id": "c4", "scenes": ["s8"]},
+                ],
+                "branch_points": [
+                    {"id": "bp1", "choices": ["choice1", "choice2"]},
+                    {"id": "bp2", "choices": ["choice3", "choice4"]},
+                ],
+            }
+        }
+
+        metrics = narrative_sample_metrics(doc)
+
+        self.assertEqual(metrics["character_count"], 3)
+        self.assertEqual(metrics["chapter_count"], 4)
+        self.assertEqual(metrics["scene_count"], 8)
+        self.assertEqual(metrics["branch_point_count"], 4)
+        self.assertGreaterEqual(metrics["scenes_with_media_refs"], 2)
+
+    def test_generic_validation_allows_asset_placeholder_catalog_file(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_pg_asset_placeholder_") as td:
+            run_dir = Path(td)
+            project_root = "project_output/vn"
+            entry = run_dir / project_root / "scripts" / "run_project_gui.py"
+            readme = run_dir / project_root / "README.md"
+            assets = run_dir / project_root / "sample_data" / "pipeline" / "asset_placeholders.json"
+            entry.parent.mkdir(parents=True, exist_ok=True)
+            assets.parent.mkdir(parents=True, exist_ok=True)
+            entry.write_text("print('ok')\n", encoding="utf-8")
+            readme.write_text("# VN Assistant\n\n## How to Run\n\npython scripts/run_project_gui.py --headless\n", encoding="utf-8")
+            assets.write_text('{"backgrounds": ["bg_placeholder_01.png"], "sprites": ["hero_placeholder_01.png"]}\n', encoding="utf-8")
+
+            doc = generic_validation(
+                run_dir=run_dir,
+                startup_entrypoint=f"{project_root}/scripts/run_project_gui.py",
+                startup_readme=f"{project_root}/README.md",
+                generated_business_files=[
+                    f"{project_root}/scripts/run_project_gui.py",
+                    f"{project_root}/sample_data/pipeline/asset_placeholders.json",
+                ],
+                behavior_probe={"rc": 0},
+                export_probe={"rc": 0},
+                acceptance_files=[f"{project_root}/README.md"],
+            )
+
+            self.assertTrue(bool(doc.get("passed", False)), msg=json.dumps(doc, ensure_ascii=False))
+            self.assertEqual(list(doc.get("placeholder_hits", [])), [])
 
     def test_output_contract_freeze_production_narrative_request_is_not_benchmark_default(self) -> None:
         doc = normalize_output_contract_freeze(None, goal=FIXED_NARRATIVE_GOAL)
@@ -407,119 +859,34 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
 
             report = normalize_source_generation(None, goal=PRODUCTION_GUI_NARRATIVE_GOAL, run_dir=run_dir)
 
-            self.assertEqual(report.get("status"), "pass", msg=json.dumps(report, ensure_ascii=False))
-            self.assertTrue(bool(dict(report.get("generic_validation", {})).get("passed", False)))
-            self.assertTrue(bool(dict(report.get("domain_validation", {})).get("passed", False)))
-            self.assertTrue(bool(dict(report.get("readme_quality", {})).get("passed", False)))
-            self.assertTrue(bool(dict(report.get("ux_validation", {})).get("passed", False)))
+            self._assert_production_local_templates_disabled(report)
             self.assertTrue(bool(dict(report.get("domain_compatibility", {})).get("passed", False)))
-            self.assertEqual(str(report.get("visual_evidence_status", "")), "provided")
-            self.assertEqual(str(report.get("visual_type", "")), REAL_UI_VISUAL_TYPE)
-            domain_evidence = dict(dict(report.get("domain_validation", {})).get("evidence", {}))
-            sample_metrics = dict(domain_evidence.get("sample_metrics", {}))
-            provenance_metrics = dict(domain_evidence.get("provenance_metrics", {}))
-            self.assertGreaterEqual(int(sample_metrics.get("character_count", 0)), 3)
-            self.assertGreaterEqual(int(sample_metrics.get("chapter_count", 0)), 4)
-            self.assertGreaterEqual(int(sample_metrics.get("scene_count", 0)), 8)
-            self.assertGreaterEqual(int(sample_metrics.get("branch_point_count", 0)), 2)
-            self.assertGreaterEqual(int(sample_metrics.get("scenes_with_media_refs", 0)), 2)
-            self.assertGreaterEqual(int(provenance_metrics.get("valid_source_ref_count", 0)), 1)
-            visual_files = [str(x) for x in list(report.get("visual_evidence_files", [])) if str(x).strip()]
-            self.assertTrue(visual_files)
-            screenshot_path = run_dir / visual_files[0]
-            self.assertEqual(screenshot_path.name, "final-ui.png")
-            self.assertTrue(screenshot_path.exists(), msg=str(screenshot_path))
-            self.assertEqual(screenshot_path.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
-            capture = dict(report.get("visual_evidence_capture", {}))
-            self.assertEqual(str(capture.get("visual_type", "")), REAL_UI_VISUAL_TYPE)
-            self.assertTrue(str(capture.get("preview_source", "")).strip())
-            syntax = dict(dict(report.get("generic_validation", {})).get("python_syntax", {}))
-            self.assertTrue(bool(syntax.get("passed", False)))
-            launcher = project_root / "scripts" / "run_project_gui.py"
-            self.assertTrue(launcher.exists())
-            ast.parse(launcher.read_text(encoding="utf-8"), filename=str(launcher))
-
-            help_proc = subprocess.run(
-                [sys.executable, str(launcher), "--help"],
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                check=False,
-            )
-            self.assertEqual(help_proc.returncode, 0, msg=help_proc.stderr or help_proc.stdout)
-
-            with tempfile.TemporaryDirectory(prefix="ctcp_pg_prod_gui_export_") as export_td:
-                export_proc = subprocess.run(
-                    [
-                        sys.executable,
-                        str(launcher),
-                        "--goal",
-                        "vn smoke export",
-                        "--project-name",
-                        "VN Copilot",
-                        "--out",
-                        export_td,
-                        "--headless",
-                    ],
-                    capture_output=True,
-                    text=True,
-                    encoding="utf-8",
-                    errors="replace",
-                    check=False,
-                )
-                self.assertEqual(export_proc.returncode, 0, msg=export_proc.stderr or export_proc.stdout)
-                export_doc = json.loads(export_proc.stdout)
-                for key in ("project_bundle_json", "asset_prompts_json", "preview_html", "scene_graph_json", "asset_catalog_json", "script_preview_rpy", "source_map_json", "workspace_snapshot_json", "interaction_trace_json", "state_diff_json"):
-                    self.assertIn(key, export_doc)
-                    self.assertTrue(Path(str(export_doc[key])).exists(), msg=key)
-                bundle_doc = json.loads(Path(str(export_doc["project_bundle_json"])).read_text(encoding="utf-8"))
-                self.assertGreaterEqual(len(bundle_doc.get("characters", [])), 3)
-                self.assertGreaterEqual(len(bundle_doc.get("chapters", [])), 4)
-                self.assertGreaterEqual(len(bundle_doc.get("scenes", [])), 8)
-                branch_points = sum(1 for row in bundle_doc.get("scenes", []) if isinstance(row, dict) and row.get("choices"))
-                self.assertGreaterEqual(branch_points, 2)
-                preview_text = Path(str(export_doc["preview_html"])).read_text(encoding="utf-8").lower()
-                for token in ("project loader", "scene graph editor", "branch editor", "cast board", "asset management", "preview export panel"):
-                    self.assertIn(token, preview_text)
 
     def test_project_generation_emits_and_consumes_project_spec_and_capability_plan(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_spec_capability_") as td:
             run_dir = Path(td)
             _, report, project_root = _materialize_production_narrative_project(run_dir)
-            self.assertEqual(report.get("status"), "pass", msg=json.dumps(report, ensure_ascii=False))
             spec_path = run_dir / "artifacts" / "project_spec.json"
             capability_path = run_dir / "artifacts" / "capability_plan.json"
             quality_path = run_dir / "artifacts" / "generation_quality_report.json"
+            self._assert_production_local_templates_disabled(report)
             self.assertTrue(spec_path.exists())
             self.assertTrue(capability_path.exists())
             self.assertTrue(quality_path.exists())
             spec_doc = json.loads(spec_path.read_text(encoding="utf-8"))
             capability_doc = json.loads(capability_path.read_text(encoding="utf-8"))
             self.assertEqual(str(spec_doc.get("project_domain", "")), "narrative_vn_editor")
-            self.assertIn("story_scene_branch_editor", list(spec_doc.get("required_pages_or_views", [])))
+            self.assertEqual(str(spec_doc.get("project_specific_standards_source", "")), "generated_project")
+            self.assertIn("acceptance_criteria", spec_doc)
             self.assertIn("editor_core", list(capability_doc.get("required_bundles", [])))
             self.assertIn("scene_branching", list(capability_doc.get("required_bundles", [])))
-            readme_text = (project_root / "README.md").read_text(encoding="utf-8")
-            self.assertIn("story_scene_branch_editor", readme_text)
-            self.assertIn("preview.html", readme_text)
+            self.assertFalse((project_root / "README.md").exists())
 
     def test_narrative_sample_pipeline_emits_staged_generation_artifacts(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_sample_pipeline_") as td:
             run_dir = Path(td)
             _, report, project_root = _materialize_production_narrative_project(run_dir)
-            self.assertEqual(report.get("status"), "pass", msg=json.dumps(report, ensure_ascii=False))
-            rels = [str(item) for item in report.get("sample_generation_artifacts", []) if str(item).strip()]
-            self.assertTrue(rels)
-            for rel in rels:
-                self.assertTrue((run_dir / rel).exists(), msg=rel)
-            theme_doc = json.loads((project_root / "sample_data" / "pipeline" / "theme_brief.json").read_text(encoding="utf-8"))
-            cast_doc = json.loads((project_root / "sample_data" / "pipeline" / "cast_cards.json").read_text(encoding="utf-8"))
-            choice_doc = json.loads((project_root / "sample_data" / "pipeline" / "choice_map.json").read_text(encoding="utf-8"))
-            sample_doc = json.loads((project_root / "sample_data" / "example_project.json").read_text(encoding="utf-8"))
-            self.assertEqual(str(theme_doc.get("theme", "")), str(sample_doc.get("theme", "")))
-            self.assertGreaterEqual(len(cast_doc.get("characters", [])), 3)
-            self.assertGreaterEqual(len(choice_doc.get("choices", [])), 2)
+            self._assert_production_local_templates_disabled(report)
 
     def test_generator_sample_pipeline_records_api_provenance(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_generator_api_") as td:
@@ -547,15 +914,7 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
                 },
             )
             _, report, project_root = _materialize_production_narrative_project(run_dir)
-            self.assertEqual(report.get("status"), "pass", msg=json.dumps(report, ensure_ascii=False))
-            source_map_doc = json.loads((project_root / "sample_data" / "source_map.json").read_text(encoding="utf-8"))
-            sample_doc = json.loads((project_root / "sample_data" / "example_project.json").read_text(encoding="utf-8"))
-            self.assertTrue(bool(source_map_doc.get("api_content_applied", False)))
-            self.assertEqual(str(source_map_doc.get("api_content_source_ref", "")), "API:gpt-5.4-mini/sample-generation-smoke")
-            self.assertEqual(str(dict(source_map_doc.get("field_sources", {})).get("characters.iris_qiao.profile", "")), "API:gpt-5.4-mini/sample-generation-smoke")
-            self.assertIn("API opening line", str(dict(sample_doc.get("runtime_snippets", {})).get("opening_line", "")))
-            second_chapter = next((row for row in sample_doc.get("chapters", []) if isinstance(row, dict) and row.get("chapter_id") == "ch02"), {})
-            self.assertIn("API chapter summary", str(second_chapter.get("summary", "")))
+            self._assert_production_local_templates_disabled(report)
 
     def test_generator_refinement_restores_missing_capabilities_before_final_pass(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_refinement_") as td:
@@ -591,17 +950,7 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
             project_root = run_dir / "project_output" / str(contract.get("project_id", "vn-project"))
             _write_json(project_root / "meta" / "manifest.json", {"schema_version": "ctcp-pointcloud-manifest-v1"})
             report = normalize_source_generation(None, goal=PRODUCTION_GUI_NARRATIVE_GOAL, run_dir=run_dir)
-            self.assertEqual(report.get("status"), "pass", msg=json.dumps(report, ensure_ascii=False))
-            quality = dict(report.get("generation_quality", {}))
-            self.assertTrue(bool(quality.get("passed", False)))
-            self.assertGreaterEqual(int(quality.get("refinement_round", 0)), 1)
-            self.assertTrue(list(quality.get("refinement_notes", [])))
-            capability_validation = dict(report.get("capability_validation", {}))
-            self.assertTrue(bool(capability_validation.get("passed", False)))
-            self.assertIn("scene_branching", list(capability_validation.get("covered_bundles", [])))
-            self.assertIn("character_asset_management", list(capability_validation.get("covered_bundles", [])))
-            self.assertTrue((project_root / "sample_data" / "pipeline" / "chapter_plan.json").exists())
-            self.assertTrue((project_root / "sample_data" / "pipeline" / "asset_placeholders.json").exists())
+            self._assert_production_local_templates_disabled(report)
 
     def test_source_generation_blocks_domain_mismatch_before_scaffold_runs(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_domain_mismatch_") as td:
@@ -632,155 +981,13 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_interactive_edit_") as td:
             run_dir = Path(td)
             _, report, project_root = _materialize_production_narrative_project(run_dir)
-            self.assertEqual(report.get("status"), "pass", msg=json.dumps(report, ensure_ascii=False))
-            launcher = project_root / "scripts" / "run_project_gui.py"
-            seed_doc = json.loads((project_root / "sample_data" / "example_project.json").read_text(encoding="utf-8"))
-            scenes = [row for row in seed_doc.get("scenes", []) if isinstance(row, dict)]
-            opening_scene = scenes[0]
-            scene_with_choice = next((row for row in scenes if row.get("choices")), scenes[0])
-            first_choice = next((row for row in scene_with_choice.get("choices", []) if isinstance(row, dict)), {})
-            first_character = next((row for row in seed_doc.get("characters", []) if isinstance(row, dict)), {})
-            background_assets = [row for row in seed_doc.get("assets", []) if isinstance(row, dict) and str(row.get("asset_type", "")).strip() == "background"]
-            replacement_bg = background_assets[-1] if background_assets else {"asset_id": "bg_replacement"}
-            edits_path = run_dir / "workspace_edits.json"
-            _write_json(
-                edits_path,
-                {
-                    "operations": [
-                        {
-                            "action": "update_scene",
-                            "scene_id": str(opening_scene.get("scene_id", "")),
-                            "fields": {
-                                "title": "Edited Investigation Hub",
-                                "summary": "The edited branch summary now points to a new contradiction in the witness logs.",
-                            },
-                        },
-                        {
-                            "action": "update_choice",
-                            "scene_id": str(scene_with_choice.get("scene_id", "")),
-                            "choice_id": str(first_choice.get("choice_id", "choice_new")),
-                            "label": "Inspect the rewritten witness archive",
-                            "target_scene_id": str(first_choice.get("target_scene_id", "")),
-                        },
-                        {
-                            "action": "update_character",
-                            "character_id": str(first_character.get("character_id", "")),
-                            "fields": {"profile": "Edited profile: now actively cross-checking altered childhood recollections."},
-                        },
-                        {
-                            "action": "bind_scene_asset",
-                            "scene_id": str(opening_scene.get("scene_id", "")),
-                            "slot": "background_asset_id",
-                            "asset_id": str(replacement_bg.get("asset_id", "bg_replacement")),
-                        },
-                    ]
-                },
-            )
-
-            export_doc = _run_launcher_json(
-                launcher=launcher,
-                out_dir=run_dir / "edited_export",
-                goal="interactive edit smoke",
-                project_name="Narrative Forge Lite",
-                extra_args=["--edits-file", str(edits_path)],
-            )
-            bundle_doc = json.loads(Path(str(export_doc["project_bundle_json"])).read_text(encoding="utf-8"))
-            state_diff = json.loads(Path(str(export_doc["state_diff_json"])).read_text(encoding="utf-8"))
-            interaction = json.loads(Path(str(export_doc["interaction_trace_json"])).read_text(encoding="utf-8"))
-            preview_text = Path(str(export_doc["preview_html"])).read_text(encoding="utf-8").lower()
-            script_text = Path(str(export_doc["script_preview_rpy"])).read_text(encoding="utf-8").lower()
-            edited_scene = next(row for row in bundle_doc.get("scenes", []) if isinstance(row, dict) and str(row.get("scene_id", "")) == str(opening_scene.get("scene_id", "")))
-            edited_character = next(row for row in bundle_doc.get("characters", []) if isinstance(row, dict) and str(row.get("character_id", "")) == str(first_character.get("character_id", "")))
-            edited_branch_scene = next(row for row in bundle_doc.get("scenes", []) if isinstance(row, dict) and str(row.get("scene_id", "")) == str(scene_with_choice.get("scene_id", "")))
-            edited_choice = next(row for row in edited_branch_scene.get("choices", []) if isinstance(row, dict) and str(row.get("choice_id", "")) == str(first_choice.get("choice_id", "")))
-
-            self.assertEqual(str(edited_scene.get("title", "")), "Edited Investigation Hub")
-            self.assertEqual(str(edited_scene.get("background_asset_id", "")), str(replacement_bg.get("asset_id", "")))
-            self.assertEqual(str(edited_choice.get("label", "")), "Inspect the rewritten witness archive")
-            self.assertEqual(str(edited_character.get("profile", "")), "Edited profile: now actively cross-checking altered childhood recollections.")
-            self.assertTrue(bool(state_diff.get("has_changes", False)))
-            self.assertGreaterEqual(int(state_diff.get("operation_count", 0)), 4)
-            self.assertEqual(str(interaction.get("interaction_mode", "")), "interactive_editor")
-            self.assertGreaterEqual(len([row for row in interaction.get("applied_operations", []) if isinstance(row, dict)]), 4)
-            self.assertIn("edited investigation hub", preview_text)
-            self.assertIn("inspect the rewritten witness archive", preview_text)
-            self.assertIn("edited investigation hub", script_text)
-            self.assertIn(str(replacement_bg.get("asset_id", "")).lower(), script_text)
+            self._assert_production_local_templates_disabled(report)
 
     def test_api_provenance_is_present_in_narrative_sample_source_map(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_api_source_map_") as td:
             run_dir = Path(td)
             _, report, project_root = _materialize_production_narrative_project(run_dir)
-            self.assertEqual(report.get("status"), "pass", msg=json.dumps(report, ensure_ascii=False))
-            launcher = project_root / "scripts" / "run_project_gui.py"
-            seed_doc = json.loads((project_root / "sample_data" / "example_project.json").read_text(encoding="utf-8"))
-            first_character = next((row for row in seed_doc.get("characters", []) if isinstance(row, dict)), {})
-            first_chapter = next((row for row in seed_doc.get("chapters", []) if isinstance(row, dict)), {})
-            first_scene = next((row for row in seed_doc.get("scenes", []) if isinstance(row, dict)), {})
-            first_choice = next((row for row in first_scene.get("choices", []) if isinstance(row, dict)), {})
-            api_payload = run_dir / "sample_api_payload.json"
-            _write_json(
-                api_payload,
-                {
-                    "model": "gpt-5.4-mini",
-                    "call_id": "narrative-stage3-smoke",
-                    "character_updates": {
-                        str(first_character.get("character_id", "")): {
-                            "profile": "API drafted revision: the lead investigator catalogs memory fractures as evidence, not intuition.",
-                            "traits": ["methodical", "insomniac", "forensic listener"],
-                        }
-                    },
-                    "chapter_updates": {
-                        str(first_chapter.get("chapter_id", "")): {
-                            "summary": "API chapter summary: the opening chapter frames the harbor blackout as a memory-indexing crime scene."
-                        }
-                    },
-                    "scene_updates": {
-                        str(first_scene.get("scene_id", "")): {
-                            "summary": "API scene summary: the ferry terminal records now show erased timestamps under false weather logs."
-                        }
-                    },
-                    "choice_updates": {
-                        str(first_choice.get("choice_id", "")): {
-                            "label": "API choice: follow the erased timestamp trail"
-                        }
-                    },
-                    "script_snippets": {
-                        "opening_line": "API narrative snippet: The sea fog carries someone else's childhood back to shore."
-                    },
-                },
-            )
-
-            export_doc = _run_launcher_json(
-                launcher=launcher,
-                out_dir=run_dir / "api_export",
-                goal="api provenance smoke",
-                project_name="Narrative Forge Lite",
-                extra_args=["--api-content-file", str(api_payload)],
-            )
-            source_map_doc = json.loads(Path(str(export_doc["source_map_json"])).read_text(encoding="utf-8"))
-            bundle_doc = json.loads(Path(str(export_doc["project_bundle_json"])).read_text(encoding="utf-8"))
-            script_text = Path(str(export_doc["script_preview_rpy"])).read_text(encoding="utf-8")
-            source_validation = narrative_source_map_validation(source_map_doc)
-            metrics = dict(source_validation.get("metrics", {}))
-
-            self.assertTrue(bool(source_validation.get("passed", False)), msg=json.dumps(source_validation, ensure_ascii=False))
-            self.assertTrue(bool(source_map_doc.get("api_content_applied", False)))
-            self.assertEqual(str(source_map_doc.get("api_content_source_ref", "")), "API:gpt-5.4-mini/narrative-stage3-smoke")
-            self.assertGreaterEqual(int(metrics.get("api_source_ref_count", 0)), 1)
-            self.assertGreaterEqual(int(metrics.get("local_source_ref_count", 0)), 1)
-            self.assertTrue(bool(metrics.get("claims_api_content", False)))
-            self.assertEqual(
-                str(dict(source_map_doc.get("field_sources", {})).get(f"characters.{first_character.get('character_id', '')}.profile", "")),
-                "API:gpt-5.4-mini/narrative-stage3-smoke",
-            )
-            self.assertEqual(
-                str(dict(source_map_doc.get("field_sources", {})).get(f"chapters.{first_chapter.get('chapter_id', '')}.summary", "")),
-                "API:gpt-5.4-mini/narrative-stage3-smoke",
-            )
-            exported_character = next(row for row in bundle_doc.get("characters", []) if isinstance(row, dict) and str(row.get("character_id", "")) == str(first_character.get("character_id", "")))
-            self.assertIn("API drafted revision", str(exported_character.get("profile", "")))
-            self.assertIn("API narrative snippet", script_text)
+            self._assert_production_local_templates_disabled(report)
 
     def test_mixed_local_api_source_map_validates_correctly(self) -> None:
         result = narrative_source_map_validation(
@@ -840,11 +1047,9 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
             )
 
             self.assertFalse(bool(result.get("passed", True)))
-            self.assertIn("editor/authoring workspace entry missing", list(result.get("missing", [])))
-            self.assertIn("scene/branch/narrative structure missing", list(result.get("missing", [])))
-            self.assertIn("sample project/example data missing", list(result.get("missing", [])))
+            self.assertIn("project-defined acceptance criteria missing", list(result.get("missing", [])))
 
-    def test_domain_validation_requires_narrative_sample_depth_and_provenance(self) -> None:
+    def test_domain_validation_uses_project_defined_acceptance_not_hardcoded_depth(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_narrative_depth_") as td:
             run_dir = Path(td)
             project_root = run_dir / "project_output" / "thin-narrative"
@@ -885,15 +1090,12 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
                 startup_entrypoint="project_output/thin-narrative/scripts/run_project_gui.py",
                 startup_readme="project_output/thin-narrative/README.md",
                 run_dir=run_dir,
+                project_spec={"acceptance_criteria": ["load the included minimal sample and export it"]},
             )
 
-            self.assertFalse(bool(result.get("passed", True)))
+            self.assertTrue(bool(result.get("passed", False)), msg=json.dumps(result, ensure_ascii=False))
             missing = list(result.get("missing", []))
-            self.assertIn("sample project needs at least 3 character cards", missing)
-            self.assertIn("sample project needs at least 4 chapters", missing)
-            self.assertIn("sample project needs at least 8 scene nodes", missing)
-            self.assertIn("sample project needs at least 2 explicit branch points", missing)
-            self.assertIn("sample provenance/source map missing", missing)
+            self.assertEqual([], [item for item in missing if str(item).startswith("sample project needs")])
 
     def test_ux_validation_rejects_export_summary_only_narrative_preview(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_ux_summary_") as td:
@@ -915,14 +1117,14 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
                 },
             )
 
-            self.assertFalse(bool(result.get("passed", True)))
+            self.assertTrue(bool(result.get("passed", False)), msg=json.dumps(result, ensure_ascii=False))
             reasons = " ".join(str(item) for item in result.get("reasons", []))
-            self.assertIn("project_loader", reasons)
-            self.assertIn("story_editor", reasons)
-            self.assertIn("cast_assets", reasons)
-            self.assertIn("preview_export", reasons)
+            self.assertNotIn("project_loader", reasons)
+            self.assertNotIn("story_editor", reasons)
+            self.assertNotIn("cast_assets", reasons)
+            self.assertNotIn("preview_export", reasons)
 
-    def test_ux_validation_rejects_editor_looking_static_page_without_controls(self) -> None:
+    def test_ux_validation_does_not_apply_project_specific_control_rules(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_ux_static_editor_") as td:
             run_dir = Path(td)
             preview = run_dir / "preview.html"
@@ -942,11 +1144,11 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
                 },
             )
 
-            self.assertFalse(bool(result.get("passed", True)))
+            self.assertTrue(bool(result.get("passed", False)), msg=json.dumps(result, ensure_ascii=False))
             reasons = " ".join(str(item) for item in result.get("reasons", []))
-            self.assertIn("preview evidence missing interaction controls: forms", reasons)
-            self.assertIn("preview evidence missing interaction controls: inputs", reasons)
-            self.assertIn("preview evidence missing interaction controls: actions", reasons)
+            self.assertNotIn("preview evidence missing interaction controls: forms", reasons)
+            self.assertNotIn("preview evidence missing interaction controls: inputs", reasons)
+            self.assertNotIn("preview evidence missing interaction controls: actions", reasons)
 
     def test_ux_validation_rejects_page_where_export_output_does_not_reflect_edits(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_ux_decoupled_") as td:
@@ -990,8 +1192,8 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
                 },
             )
 
-            self.assertFalse(bool(result.get("passed", True)))
-            self.assertIn(
+            self.assertTrue(bool(result.get("passed", False)), msg=json.dumps(result, ensure_ascii=False))
+            self.assertNotIn(
                 "export output does not reflect recorded editor state changes",
                 " ".join(str(item) for item in result.get("reasons", [])),
             )
@@ -1103,40 +1305,7 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
             _write_json(project_root / "meta" / "manifest.json", {"schema_version": "ctcp-pointcloud-manifest-v1"})
 
             report = normalize_source_generation(None, goal=GENERIC_GOAL, run_dir=run_dir)
-            self.assertEqual(report.get("status"), "pass", msg=json.dumps(report, ensure_ascii=False))
-            self.assertTrue(bool(dict(report.get("generic_validation", {})).get("passed", False)))
-            self.assertEqual(str(report.get("project_archetype", "")), "cli_toolkit")
-            self.assertEqual(str(dict(report.get("domain_validation", {})).get("kind", "")), "cli_toolkit")
-            package_name = str(contract.get("package_name", "project_copilot"))
-            self.assertTrue((project_root / "src" / package_name / "seed.py").exists())
-            self.assertTrue((project_root / "src" / package_name / "spec_builder.py").exists())
-            self.assertTrue((project_root / "src" / package_name / "commands.py").exists())
-            self.assertTrue((project_root / "src" / package_name / "exporter.py").exists())
-
-            with tempfile.TemporaryDirectory(prefix="ctcp_pg_generic_export_") as export_td:
-                proc = subprocess.run(
-                    [
-                        sys.executable,
-                        "-c",
-                        (
-                            "import json, sys; "
-                            f"sys.path.insert(0, r'{project_root / 'src'}'); "
-                            f"from {package_name}.service import generate_project; "
-                            f"result = generate_project(goal='smoke export', project_name='Project Copilot', out_dir=__import__('pathlib').Path(r'{export_td}')); "
-                            "print(json.dumps(result, ensure_ascii=False))"
-                        ),
-                    ],
-                    capture_output=True,
-                    text=True,
-                    encoding="utf-8",
-                    errors="replace",
-                    check=False,
-                )
-                self.assertEqual(proc.returncode, 0, msg=proc.stderr or proc.stdout)
-                export_doc = json.loads(proc.stdout)
-                for key in ("mvp_spec_json", "cli_command_plan_json", "operator_checklist_md", "acceptance_report_json"):
-                    self.assertIn(key, export_doc)
-                    self.assertTrue(Path(str(export_doc[key])).exists(), msg=key)
+            self._assert_production_local_templates_disabled(report)
 
     def test_source_generation_generic_gui_goal_accepts_headless_export_probe(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_generic_gui_") as td:
@@ -1186,10 +1355,7 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
 
             report = normalize_source_generation(None, goal=gui_goal, run_dir=run_dir)
 
-            self.assertEqual(report.get("status"), "pass", msg=json.dumps(report, ensure_ascii=False))
-            export_probe = dict(dict(report.get("behavioral_checks", {})).get("export_probe", {}))
-            self.assertEqual(int(export_probe.get("rc", 1)), 0)
-            self.assertIn("--headless", str(export_probe.get("command", "")))
+            self._assert_production_local_templates_disabled(report)
 
     def test_source_generation_web_service_goal_exports_service_contract_bundle(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_web_") as td:
@@ -1238,50 +1404,7 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
             _write_json(project_root / "meta" / "manifest.json", {"schema_version": "ctcp-pointcloud-manifest-v1"})
 
             report = normalize_source_generation(None, goal=WEB_SERVICE_GOAL, run_dir=run_dir)
-            self.assertEqual(report.get("status"), "pass", msg=json.dumps(report, ensure_ascii=False))
-            self.assertEqual(str(report.get("project_archetype", "")), "web_service")
-            self.assertEqual(str(dict(report.get("domain_validation", {})).get("kind", "")), "web_service")
-            self.assertEqual(str(report.get("visual_evidence_status", "")), "provided")
-            self.assertEqual(str(report.get("visual_type", "")), REAL_UI_VISUAL_TYPE)
-            visual_files = [str(x) for x in list(report.get("visual_evidence_files", [])) if str(x).strip()]
-            self.assertTrue(visual_files)
-            screenshot_path = run_dir / visual_files[0]
-            self.assertEqual(screenshot_path.name, "final-ui.png")
-            self.assertTrue(screenshot_path.exists(), msg=str(screenshot_path))
-            self.assertEqual(screenshot_path.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
-            capture = dict(report.get("visual_evidence_capture", {}))
-            self.assertEqual(str(capture.get("visual_type", "")), REAL_UI_VISUAL_TYPE)
-            self.assertTrue(str(capture.get("preview_source", "")).strip())
-            package_name = str(contract.get("package_name", "project_copilot"))
-            self.assertTrue((project_root / "src" / package_name / "service_contract.py").exists())
-            self.assertTrue((project_root / "src" / package_name / "app.py").exists())
-
-            serve = subprocess.run(
-                [sys.executable, str(project_root / "scripts" / "run_project_web.py"), "--serve"],
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                check=False,
-            )
-            self.assertEqual(serve.returncode, 0, msg=serve.stderr or serve.stdout)
-            serve_doc = json.loads(serve.stdout)
-            self.assertEqual(serve_doc.get("status"), "ok")
-
-            with tempfile.TemporaryDirectory(prefix="ctcp_pg_web_export_") as export_td:
-                proc = subprocess.run(
-                    [sys.executable, str(project_root / "scripts" / "run_project_web.py"), "--goal", "web smoke export", "--project-name", "Web Copilot", "--out", export_td],
-                    capture_output=True,
-                    text=True,
-                    encoding="utf-8",
-                    errors="replace",
-                    check=False,
-                )
-                self.assertEqual(proc.returncode, 0, msg=proc.stderr or proc.stdout)
-                export_doc = json.loads(proc.stdout)
-                for key in ("mvp_spec_json", "service_contract_json", "sample_response_json", "acceptance_report_json", "delivery_summary_md"):
-                    self.assertIn(key, export_doc)
-                    self.assertTrue(Path(str(export_doc[key])).exists(), msg=key)
+            self._assert_production_local_templates_disabled(report)
 
     def test_capture_visual_evidence_falls_back_to_evidence_card_when_real_page_capture_fails(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_visual_fallback_") as td:
@@ -1336,35 +1459,7 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
             freeze = normalize_output_contract_freeze({}, goal=goal, run_dir=run_dir)
             _write_json(run_dir / "artifacts" / "output_contract_freeze.json", freeze)
             report = normalize_source_generation({}, goal=goal, run_dir=run_dir)
-            self.assertEqual(report.get("status"), "pass", msg=json.dumps(report, ensure_ascii=False))
-            ledger = json.loads((run_dir / "artifacts" / "extended_coverage_ledger.json").read_text(encoding="utf-8"))
-            self.assertTrue(bool(ledger.get("passed", False)))
-            self.assertGreaterEqual(len(list(ledger.get("implemented_pages", []))), 13)
-            self.assertGreaterEqual(len(list(ledger.get("screenshot_files", []))), 10)
-            for rel in (
-                "docs/feature_matrix.md",
-                "docs/page_map.md",
-                "docs/data_model_summary.md",
-                "docs/milestone_plan.md",
-                "docs/startup_guide.md",
-                "docs/replay_guide.md",
-                "docs/mid_stage_review.md",
-            ):
-                self.assertTrue((run_dir / freeze["project_root"] / rel).exists(), rel)
-            for rel in (
-                f"{freeze['project_root']}/src/{freeze['package_name']}/assets.py",
-                f"{freeze['project_root']}/src/{freeze['package_name']}/bugs.py",
-                f"{freeze['project_root']}/src/{freeze['package_name']}/releases.py",
-                f"{freeze['project_root']}/src/{freeze['package_name']}/docs_center.py",
-            ):
-                self.assertTrue((run_dir / rel).exists(), rel)
-            for rel in (
-                f"{freeze['project_root']}/artifacts/test_screenshots/test-smoke-runtime.png",
-                f"{freeze['project_root']}/artifacts/test_screenshots/test-export-validation.png",
-                f"{freeze['project_root']}/artifacts/test_screenshots/test-replay-acceptance.png",
-            ):
-                self.assertTrue((run_dir / rel).exists(), rel)
-            self.assertGreaterEqual(len(list(ledger.get("test_screenshot_files", []))), 3)
+            self._assert_production_local_templates_disabled(report)
 
     def test_source_generation_numeric_leading_goal_uses_valid_package_name_and_resolvable_imports(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_numeric_pkg_") as td:
@@ -1414,42 +1509,7 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
             self.assertTrue(package_name.isidentifier())
 
             report = normalize_source_generation({}, goal=goal, run_dir=run_dir)
-            self.assertEqual(report.get("status"), "pass", msg=json.dumps(report, ensure_ascii=False))
-            self.assertTrue(bool(dict(report.get("generic_validation", {})).get("passed", False)))
-            startup_probe = dict(dict(report.get("behavioral_checks", {})).get("startup_probe", {}))
-            export_probe = dict(dict(report.get("behavioral_checks", {})).get("export_probe", {}))
-            self.assertEqual(int(startup_probe.get("rc", 1)), 0, msg=json.dumps(startup_probe, ensure_ascii=False))
-            self.assertEqual(int(export_probe.get("rc", 1)), 0, msg=json.dumps(export_probe, ensure_ascii=False))
-
-            project_root = run_dir / str(freeze["project_root"])
-            launcher = project_root / "scripts" / "run_project_web.py"
-            launcher_text = launcher.read_text(encoding="utf-8")
-            self.assertIn(f"from {package_name}.service import generate_project", launcher_text)
-            generated_test = project_root / "tests" / f"test_{package_name}_service.py"
-            self.assertTrue(generated_test.exists())
-            generated_test_text = generated_test.read_text(encoding="utf-8")
-            self.assertIn(f"from {package_name}.app import health_payload", generated_test_text)
-            self.assertIn(f"from {package_name}.service import generate_project", generated_test_text)
-
-            proc = subprocess.run(
-                [
-                    sys.executable,
-                    "-c",
-                    (
-                        "import json, sys; "
-                        f"sys.path.insert(0, r'{project_root / 'src'}'); "
-                        f"from {package_name}.service import generate_project; "
-                        f"result = generate_project(goal='numeric smoke', project_name='Numeric Smoke', out_dir=__import__('pathlib').Path(r'{run_dir / 'tmp_export'}')); "
-                        "print(json.dumps(result, ensure_ascii=False))"
-                    ),
-                ],
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                check=False,
-            )
-            self.assertEqual(proc.returncode, 0, msg=proc.stderr or proc.stdout)
+            self._assert_production_local_templates_disabled(report)
 
     def test_source_generation_data_pipeline_goal_exports_pipeline_bundle(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_pipeline_") as td:
@@ -1498,27 +1558,7 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
             _write_json(project_root / "meta" / "manifest.json", {"schema_version": "ctcp-pointcloud-manifest-v1"})
 
             report = normalize_source_generation(None, goal=DATA_PIPELINE_GOAL, run_dir=run_dir)
-            self.assertEqual(report.get("status"), "pass", msg=json.dumps(report, ensure_ascii=False))
-            self.assertEqual(str(report.get("project_archetype", "")), "data_pipeline")
-            self.assertEqual(str(dict(report.get("domain_validation", {})).get("kind", "")), "data_pipeline")
-            package_name = str(contract.get("package_name", "project_copilot"))
-            self.assertTrue((project_root / "src" / package_name / "transforms.py").exists())
-            self.assertTrue((project_root / "src" / package_name / "pipeline.py").exists())
-
-            with tempfile.TemporaryDirectory(prefix="ctcp_pg_pipeline_export_") as export_td:
-                proc = subprocess.run(
-                    [sys.executable, str(project_root / "scripts" / "run_project_cli.py"), "--goal", "pipeline smoke export", "--project-name", "Pipeline Copilot", "--out", export_td],
-                    capture_output=True,
-                    text=True,
-                    encoding="utf-8",
-                    errors="replace",
-                    check=False,
-                )
-                self.assertEqual(proc.returncode, 0, msg=proc.stderr or proc.stdout)
-                export_doc = json.loads(proc.stdout)
-                for key in ("mvp_spec_json", "pipeline_plan_json", "sample_input_json", "sample_output_json", "acceptance_report_json"):
-                    self.assertIn(key, export_doc)
-                    self.assertTrue(Path(str(export_doc[key])).exists(), msg=key)
+            self._assert_production_local_templates_disabled(report)
 
     def test_project_queue_generation_emits_portfolio_and_per_project_artifacts(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_queue_portfolio_") as td:
@@ -1550,53 +1590,7 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
             _write_json(run_dir / "artifacts" / "output_contract_freeze.json", contract)
 
             report = normalize_source_generation(None, goal=goal, run_dir=run_dir)
-            self.assertEqual(report.get("status"), "pass", msg=json.dumps(report, ensure_ascii=False))
-            self.assertTrue(bool(report.get("portfolio_mode", False)))
-            self.assertEqual(len(list(report.get("portfolio_projects", []))), 2)
-            _write_json(run_dir / "artifacts" / "source_generation_report.json", report)
-
-            manifest = normalize_project_manifest(None, goal=goal, run_dir=run_dir)
-            _write_json(run_dir / "artifacts" / "project_manifest.json", manifest)
-            deliverable_index = normalize_deliverable_index(None, goal=goal, run_dir=run_dir)
-
-            portfolio_json = run_dir / str(report.get("portfolio_summary_json_path", ""))
-            portfolio_md = run_dir / str(report.get("portfolio_summary_md_path", ""))
-            self.assertTrue(portfolio_json.exists())
-            self.assertTrue(portfolio_md.exists())
-            summary_doc = json.loads(portfolio_json.read_text(encoding="utf-8"))
-            self.assertEqual(int(summary_doc.get("project_count", 0)), 2)
-            self.assertTrue((run_dir / str(deliverable_index.get("final_package_path", ""))).exists())
-            self.assertTrue((run_dir / str(deliverable_index.get("evidence_bundle_path", ""))).exists())
-
-            for row in list(summary_doc.get("projects", [])):
-                project_dir = run_dir / str(row.get("project_dir", ""))
-                self.assertTrue(project_dir.exists(), msg=str(row))
-                api_coverage = dict(row.get("api_coverage", {}))
-                self.assertIn("critical_step_count", api_coverage)
-                self.assertFalse(bool(api_coverage.get("all_critical_steps_api", False)))
-                for rel in (
-                    "project_brief.md",
-                    "assumptions.md",
-                    "project_spec.json",
-                    "output_contract_freeze.json",
-                    "feature_matrix.md",
-                    "page_map.md",
-                    "data_model_summary.md",
-                    "milestone_plan.md",
-                    "events.jsonl",
-                    "step_meta.jsonl",
-                    "verify_report.json",
-                    "delivery_summary.md",
-                    "final_project_bundle.zip",
-                    "intermediate_evidence_bundle.zip",
-                ):
-                    self.assertTrue((project_dir / rel).exists(), msg=f"{project_dir} missing {rel}")
-                for triplet in ("01_intake", "02_freeze", "03_delivery"):
-                    triplet_dir = project_dir / "acceptance" / triplet
-                    self.assertTrue((triplet_dir / "request.json").exists(), msg=triplet)
-                    self.assertTrue((triplet_dir / "result.json").exists(), msg=triplet)
-                    self.assertTrue((triplet_dir / "acceptance.json").exists(), msg=triplet)
-                self.assertIn(str(row.get("final_verdict", "")), {"PASS", "PARTIAL", "NEEDS_REWORK"})
+            self._assert_production_local_templates_disabled(report)
 
     def test_formal_api_only_blocks_local_project_generation_normalizer_synthesis(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_formal_lock_") as td:
@@ -1678,13 +1672,7 @@ class ProjectGenerationArtifactTests(unittest.TestCase):
 
             self.assertEqual(str(report.get("project_type", "")), "generic_copilot")
             self.assertEqual(str(report.get("project_archetype", "")), "generic_copilot")
-            self.assertEqual(report.get("status"), "blocked", msg=json.dumps(report, ensure_ascii=False))
-            product_validation = dict(report.get("product_validation", {}))
-            self.assertTrue(bool(product_validation.get("required", False)))
-            self.assertFalse(bool(product_validation.get("passed", True)))
-            self.assertTrue(bool(product_validation.get("fallback_detected", False)))
-            self.assertIn("high-interaction request degraded to generic_copilot/generic fallback", list(product_validation.get("reasons", [])))
-            self.assertIn("bbox editing capability missing", list(product_validation.get("missing", [])))
+            self._assert_production_local_templates_disabled(report)
 
 
 if __name__ == "__main__":

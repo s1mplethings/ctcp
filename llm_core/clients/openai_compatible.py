@@ -14,7 +14,18 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_LOCAL_NOTES_PATH = ROOT / ".agent_private" / "NOTES.md"
-EMBEDDED_BASE_URL = "https://api.gptsapi.net/v1"
+EMBEDDED_BASE_URL = "https://api.gptsapi.net"
+
+
+def _normalize_base_url(value: str) -> str:
+    root = str(value or "").strip().rstrip("/")
+    if root.lower() in {"https://api.gptsapi.net/v1", "http://api.gptsapi.net/v1"}:
+        return root[:-3].rstrip("/")
+    return root
+
+
+def _is_gptsapi_base_url(value: str) -> bool:
+    return _normalize_base_url(value).lower() in {"https://api.gptsapi.net", "http://api.gptsapi.net"}
 
 
 def _collect_text_from_output(doc: dict[str, Any]) -> str:
@@ -136,7 +147,7 @@ def _resolve_api_credentials(*, api_key: str | None = None, base_url: str | None
     notes_key = str(defaults.get("api_key", "")).strip()
     notes_base_url = str(defaults.get("base_url", "")).strip()
 
-    root = explicit_base_url or env_base_url or ctcp_base_url or notes_base_url or EMBEDDED_BASE_URL
+    root = _normalize_base_url(explicit_base_url or env_base_url or ctcp_base_url or notes_base_url or EMBEDDED_BASE_URL)
     if explicit_key:
         return explicit_key, root
 
@@ -145,7 +156,7 @@ def _resolve_api_credentials(*, api_key: str | None = None, base_url: str | None
         replacement_key = ctcp_key or notes_key
         if replacement_key:
             return replacement_key, root
-        return key, explicit_base_url or env_base_url or ctcp_base_url or EMBEDDED_BASE_URL
+        return key, _normalize_base_url(explicit_base_url or env_base_url or ctcp_base_url or EMBEDDED_BASE_URL)
     if not key:
         key = ctcp_key or notes_key
     return key, root
@@ -216,7 +227,9 @@ def _post_json(
         detail = exc.read().decode("utf-8", errors="replace")
         detail = detail.strip()[:2000]
         reason = f"OpenAI API HTTP {exc.code}: {detail}"
-        retryable = int(exc.code) in {408, 409, 425, 429, 500, 502, 503, 504}
+        retryable = int(exc.code) in {408, 409, 425, 429, 500, 502, 503, 504, 520, 522, 524}
+        if not retryable and re.search(r'"retryable"\s*:\s*true|\bretryable\b\s*true', detail, flags=re.IGNORECASE):
+            retryable = True
         return None, reason, retryable
     except (urllib.error.URLError, TimeoutError, ConnectionError, ConnectionResetError, ssl.SSLError) as exc:
         reason = f"OpenAI API request failed: {exc}"
@@ -233,6 +246,21 @@ def _post_json(
     if not isinstance(doc, dict):
         return None, "OpenAI API response is not a JSON object", False
     return doc, "", False
+
+
+def _retry_delay_from_reason(reason: str, fallback_sec: float) -> float:
+    delay = float(fallback_sec)
+    for pattern in (r'"retry_after"\s*:\s*(\d+(?:\.\d+)?)', r"\bretry_after\b[^\d]*(\d+(?:\.\d+)?)"):
+        match = re.search(pattern, str(reason or ""), flags=re.IGNORECASE)
+        if not match:
+            continue
+        try:
+            delay = max(delay, float(match.group(1)))
+        except Exception:
+            pass
+        break
+    max_delay = _safe_float_env("SDDAI_OPENAI_RETRY_MAX_DELAY_SEC", 180.0, minimum=0.0, maximum=600.0)
+    return min(delay, max_delay)
 
 
 def _call_with_retry(
@@ -257,7 +285,8 @@ def _call_with_retry(
         last_reason = reason
         if not retryable or attempt >= max_attempts:
             break
-        time.sleep(base_delay_sec * float(attempt))
+        delay_sec = _retry_delay_from_reason(last_reason, base_delay_sec * float(attempt))
+        time.sleep(delay_sec)
     return None, (last_reason or "OpenAI API request failed")
 
 
@@ -284,15 +313,20 @@ def call_openai_responses(
         return "", reason
 
     endpoint_mode = str(os.environ.get("SDDAI_OPENAI_ENDPOINT_MODE", "auto")).strip().lower() or "auto"
+    if endpoint_mode == "auto" and _is_gptsapi_base_url(root):
+        endpoint_mode = "chat"
     max_attempts = _safe_int_env("SDDAI_OPENAI_MAX_ATTEMPTS", 3, minimum=1, maximum=6)
     base_delay_sec = _safe_float_env("SDDAI_OPENAI_RETRY_BASE_DELAY_SEC", 0.75, minimum=0.0, maximum=10.0)
 
     safe_prompt = _sanitize_text_for_json(prompt)
+    response_format = str(os.environ.get("SDDAI_OPENAI_RESPONSE_FORMAT", "")).strip().lower()
     responses_endpoint = root.rstrip("/") + "/responses"
     responses_payload = {
         "model": model,
         "input": safe_prompt,
     }
+    if response_format == "json_object":
+        responses_payload["text"] = {"format": {"type": "json_object"}}
     doc: dict[str, Any] | None = None
     reason = ""
 
@@ -320,6 +354,8 @@ def call_openai_responses(
             "model": model,
             "messages": [{"role": "user", "content": safe_prompt}],
         }
+        if response_format == "json_object":
+            chat_payload["response_format"] = {"type": "json_object"}
         chat_doc, chat_reason = _call_with_retry(
             endpoint=chat_endpoint,
             payload=chat_payload,

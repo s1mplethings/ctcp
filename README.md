@@ -103,7 +103,7 @@ bash scripts/verify_repo.sh
 - 唯一产品主线 workflow id：`wf_project_generation_manifest`
 - 唯一 freeze 真相面：`docs/architecture/contracts/default_mainline_freeze_contract.md` 与 `artifacts/mainline_freeze_manifest.json`
 - 唯一责任账本面（run_dir）：`artifacts/run_responsibility_manifest.json`
-- formal API-only：`CTCP_FORMAL_API_ONLY=1` 时，所有关键阶段（含 `librarian/context_pack`）必须由 `api_agent` 执行
+- formal API-only：`CTCP_FORMAL_API_ONLY=1` 时，关键 API 阶段必须由 `api_agent` 执行；`librarian/context_pack` 为本地固定例外（`local_exec`）
 
 ---
 

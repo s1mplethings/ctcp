@@ -96,7 +96,7 @@ The following rule classes are part of contract acceptance and MUST be owned by 
    - Blocking when a patch changes task-progress dialogue, support reply style, or style-regression acceptance but does not update persona-lab rubrics/cases or explicitly record `persona_lab_impact: none`.
 7. Project output completeness lint (project-generation tasks)
    - Authority: `docs/41_low_capability_project_generation.md`, `docs/30_artifact_contracts.md`, `docs/backend_interface_contract.md`
-   - Blocking when project generation claims completion without explicit product/design/technical/implementation/qa/delivery stage artifacts, runnable scaffold/core-feature/smoke/delivery evidence, all three layers (source/doc/workflow), explicit `target/generated/missing/acceptance` file lists, or formal artifact interface readability (`list_output_artifacts`, `get_output_artifact_meta`, `read_output_artifact`, `get_project_manifest`).
+   - Blocking when project generation claims completion without explicit product/design/technical/implementation/qa/delivery stage artifacts, runnable scaffold/core-feature/smoke/delivery evidence, all three layers (source/doc/workflow), explicit `target/generated/missing/acceptance` file lists, formal artifact interface readability (`list_output_artifacts`, `get_output_artifact_meta`, `read_output_artifact`, `get_project_manifest`), or `source_customization_completion.final_delivery_allowed=true` for final project packages. Production project generation must not fall back to local deterministic business templates/materializers when provider-authored source files are absent.
 8. Team-stage artifact lint (project-generation tasks)
    - Authority: `docs/12_virtual_team_contract.md`, `docs/41_low_capability_project_generation.md`, `docs/30_artifact_contracts.md`
    - Blocking when product shaping, interaction design, technical planning, QA, delivery, or support-output stages are represented only by generic fallback placeholders such as a generic workflow plan, generic acceptance report, or generic project bundle.
@@ -117,6 +117,8 @@ The following rule classes are part of contract acceptance and MUST be owned by 
    - Blocking when `PLAN_draft` normalization decides project-generation requirements from goal keywords only and ignores routed workflow evidence (`artifacts/find_result.json` / gate reason), because this can cause repeated `PLAN_draft` loop failures.
 16. Support export isolation lint (support delivery tasks)
    - Blocking when screenshot/package discovery mixes historical `artifacts/support_exports/*` projects into the active session instead of filtering to the active project export directory.
+17. Telegram support restart history lint (support delivery tasks)
+   - Blocking when Telegram support bot startup preserves local support session history or pending Telegram updates by default, because stale turns can be treated as the current task.
 
 ## 5) Failure Attribution for New Contract Lints
 
@@ -151,5 +153,5 @@ If a failure class is not covered by current gates:
 ## 8) Formal API-only Lock
 
 - `CTCP_FORMAL_API_ONLY=1` is the formal execution lock.
-- In this mode, all critical stages (including `librarian/context_pack`) must be `api_agent`.
+- In this mode, critical API stages must be `api_agent`; `librarian/context_pack` is a local fixed exception (`local_exec`).
 - Formal PASS evidence must include API accountability in `artifacts/run_responsibility_manifest.json`.

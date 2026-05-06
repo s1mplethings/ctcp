@@ -49,7 +49,9 @@ def _materialize_production_narrative_project(run_dir: Path, *, goal: str) -> Pa
     project_root = run_dir / "project_output" / str(contract.get("project_id", "vn-project"))
     _write_json(project_root / "meta" / "manifest.json", {"schema_version": "ctcp-pointcloud-manifest-v1"})
     report = normalize_source_generation(None, goal=goal, run_dir=run_dir)
-    if str(report.get("status", "")) != "pass":
+    if str(report.get("status", "")) != "blocked":
+        raise AssertionError(json.dumps(report, ensure_ascii=False))
+    if str(dict(report.get("file_materialization", {})).get("strategy", "")) != "disabled_local_templates":
         raise AssertionError(json.dumps(report, ensure_ascii=False))
     return project_root
 
@@ -59,17 +61,10 @@ class ProjectGenerationVariantContentTests(unittest.TestCase):
         goal = PRODUCTION_GUI_NARRATIVE_GOAL
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_sample_variant_a_") as td_a:
             project_root_a = _materialize_production_narrative_project(Path(td_a), goal=goal)
-            sample_a = json.loads((project_root_a / "sample_data" / "example_project.json").read_text(encoding="utf-8"))
-            source_map_a = json.loads((project_root_a / "sample_data" / "source_map.json").read_text(encoding="utf-8"))
         with tempfile.TemporaryDirectory(prefix="ctcp_pg_sample_variant_b_") as td_b:
             project_root_b = _materialize_production_narrative_project(Path(td_b), goal=goal)
-            sample_b = json.loads((project_root_b / "sample_data" / "example_project.json").read_text(encoding="utf-8"))
-            source_map_b = json.loads((project_root_b / "sample_data" / "source_map.json").read_text(encoding="utf-8"))
-
-        self.assertNotEqual(str(dict(sample_a.get("runtime_snippets", {})).get("opening_line", "")), str(dict(sample_b.get("runtime_snippets", {})).get("opening_line", "")))
-        self.assertNotEqual(str(sample_a.get("project_name", "")), str(sample_b.get("project_name", "")))
-        self.assertTrue(bool(dict(source_map_a.get("goal_adaptation", {})).get("applied", False)))
-        self.assertTrue(bool(dict(source_map_b.get("goal_adaptation", {})).get("applied", False)))
+        self.assertFalse((project_root_a / "sample_data" / "example_project.json").exists())
+        self.assertFalse((project_root_b / "sample_data" / "example_project.json").exists())
 
 
 if __name__ == "__main__":

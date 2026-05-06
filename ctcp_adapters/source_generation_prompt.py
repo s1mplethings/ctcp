@@ -1,0 +1,146 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+
+def _contract_snapshot(run_dir: Path) -> dict[str, Any]:
+    path = run_dir / "artifacts" / "output_contract_freeze.json"
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    except Exception:
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
+def render_source_generation_payload_requirements(*, run_dir: Path) -> list[str]:
+    contract = _contract_snapshot(run_dir)
+    project_root = str(contract.get("project_root", "project_output/app")).strip() or "project_output/app"
+    required_paths = _expected_paths(contract=contract, project_root=project_root)
+    required_lines = [f"- {item}" for item in required_paths[:80]] or [f"- {project_root}/README.md"]
+    previous_failure_lines = _previous_failure_lines(run_dir)
+    schema = '{"schema_version":"ctcp-provider-source-files-v1","files":[{"path":"project_output/<project_id>/README.md","content_lines":["# Project","startup text"]}],"source_map":{"api_content_applied":true,"api_content_source_ref":"API:api_agent/source_generation"}}'
+    return [
+        "## Source Generation Output Requirements",
+        "Return one JSON object only. Do not return a generic project description.",
+        "The JSON must include concrete project source files that can be written under the run directory and run locally.",
+        "Required schema:",
+        "```json",
+        schema,
+        "```",
+        "File requirements:",
+        f"- Every path must stay under `{project_root}`.",
+        "- Treat this as a one-shot complete delivery bundle, not a partial draft. The first source_generation answer must include all runnable code, sample data, startup docs, UI/export evidence paths, and tests needed for validation.",
+        "- Keep the MVP compact but complete: split responsibilities across the expected small files, avoid monolithic source files, and keep README/docs practical instead of long process essays.",
+        "- Include every expected path listed below, including package __init__.py files, pyproject.toml, README, startup entrypoint, sample data, and tests.",
+        "- Prefer `content_lines` as an array of complete source lines for every file; the system will join them with newline characters.",
+        "- If you use `content` instead, it must be a complete file string with escaped `\\n`; never put literal line breaks inside a JSON string.",
+        "- The startup entrypoint must support `--help` and `--goal --project-name --out --headless`; the rich export command must exit 0.",
+        "- Do not add a custom argparse `--help` option; argparse already provides it. Only define real options such as `--goal`, `--project-name`, `--out`, and `--headless`.",
+        "- Prefer normal src-layout imports like `from vn.service import ...`; do not import `src.vn...` unless you also make it runnable with the project root on PYTHONPATH.",
+        "- Before returning, build a cross-file import/export checklist: for every `from package.module import Symbol`, the target module must define `Symbol` or re-export it through its `__init__.py`.",
+        "- Include an `interfaces` object in the JSON response, keyed by Python file path, listing each file's public `defines`, `imports`, and `exports`; this must match the actual file contents exactly.",
+        "- Package `__init__.py` files count as public code too: every `from .module import Symbol` or wildcard re-export in `__init__.py` must point to a real class/function/value in that module.",
+        "- Do not import helper names that are not implemented. If one file imports a helper, the target file must define that exact helper or the importing file must call the actual implemented API.",
+        "- Keep public function names consistent across service, entrypoint, exporter, pipeline, workspace, and tests; rename imports and definitions together instead of inventing new names in only one file.",
+        "- Keep call signatures consistent across files. If the startup entrypoint constructs a service/controller with arguments, that constructor must accept them; otherwise change the launcher call to match the actual constructor.",
+        "- Add a launcher compatibility table before finalizing: every service/controller constructor and public method called by `run_project_gui.py` must accept exactly those positional/keyword arguments, or accept optional `*args`/`**kwargs` and normalize them safely.",
+        "- The `--headless --goal --project-name --out` export path must execute the same service method signatures that the service class actually defines.",
+        "- If the launcher calls a service method such as `export_project_assets(...)`, that exact method must exist on the service class or the launcher must call the actual implemented method.",
+        "- Do not ship TODO, placeholder, stub, pass-only, empty-dict, or not-implemented business modules. Every listed business file must contain real working logic for this user's project goal.",
+        "- In `--headless` mode, write real export evidence files into the `--out` directory: at least `workspace_preview.html`, `workspace_snapshot.json`, `interaction_trace.json`, `state_diff.json`, and one script/export file.",
+        "- `workspace_preview.html` must visibly include project/sample loader, story/scene/branch editor, character/asset management, and preview/export sections with forms, inputs, buttons/actions, and JavaScript hooks.",
+        "- In Python content, do not write f-strings or quoted strings split across physical lines. For multi-line output, append complete one-line strings to a list and use `'\\n'.join(lines)`.",
+        "- `run_project_gui.py` must not contain unterminated string literals; avoid code like `f\"...` followed by a raw newline before the closing quote.",
+        "- Use Python standard library first. For a local desktop GUI prefer `tkinter`; do not import PyQt5, PySide, wxPython, Electron, or other undeclared external GUI packages.",
+        "- README must include sections: Project Overview, Implemented, Not Implemented, How To Run, Sample Data, Directory Map, Limitations.",
+        "- `sample_data/source_map.json` must include `content_items` with `source` values starting `API:` and `field_sources` with API refs.",
+        "- The project must declare its own concrete acceptance criteria, sample-data adequacy criteria, and delivery evidence expectations in generated docs or metadata; do not rely on CTCP to provide project-specific numbers or content rules.",
+        "- Sample data must be deep enough to satisfy the generated project's own declared acceptance criteria, with provenance/source metadata when the project claims API-authored content.",
+        "- Never repair one failure by emptying sample JSON or dropping README sections; preserve or improve previously passing sample depth, startup docs, import consistency, and export evidence.",
+        "- Before returning, mentally validate that every Python file parses with `ast.parse`, every imported symbol resolves, `--help` exits 0, and `--headless` can find sample data relative to the project root.",
+        "- Do not use deterministic local templates; author the implementation from the user goal and available context.",
+        "- If the runtime asks for a manifest-only or file-content batch phase, follow that narrower phase exactly; the local runtime will merge the provider-authored text files.",
+        *previous_failure_lines,
+        "Expected file paths from output_contract_freeze:",
+        *required_lines,
+        "",
+    ]
+
+
+def _previous_failure_lines(run_dir: Path) -> list[str]:
+    path = run_dir / "artifacts" / "source_generation_report.json"
+    try:
+        report = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    except Exception:
+        return []
+    if not isinstance(report, dict) or str(report.get("status", "")).lower() != "blocked":
+        return []
+    lines = ["Previous source_generation failed; fix these exact issues:"]
+    generic = report.get("generic_validation") if isinstance(report.get("generic_validation"), dict) else {}
+    smoke = generic.get("smoke_run") if isinstance(generic.get("smoke_run"), dict) else {}
+    for name in ("startup_probe", "export_probe"):
+        probe = smoke.get(name) if isinstance(smoke.get(name), dict) else {}
+        stderr = str(probe.get("stderr_tail", "") or probe.get("stdout_tail", "")).strip()
+        if stderr:
+            lines.append(f"- {name}: {stderr[:500]}")
+    imports = generic.get("python_import_consistency") if isinstance(generic.get("python_import_consistency"), dict) else {}
+    missing_symbols = imports.get("missing_symbols") if isinstance(imports.get("missing_symbols"), list) else []
+    for row in missing_symbols[:12]:
+        if not isinstance(row, dict):
+            continue
+        symbol = str(row.get("symbol", "")).strip()
+        target = str(row.get("target_path", "") or row.get("target_module", "")).strip()
+        source = str(row.get("from_path", "")).strip()
+        if symbol and target:
+            lines.append(f"- import_consistency: `{symbol}` imported by `{source}` must be defined or re-exported by `{target}`")
+    mismatches = imports.get("interface_contract_mismatches") if isinstance(imports.get("interface_contract_mismatches"), list) else []
+    for row in mismatches[:8]:
+        if not isinstance(row, dict):
+            continue
+        path = str(row.get("path", "")).strip()
+        reason = str(row.get("reason", "")).strip()
+        missing = ", ".join(str(item) for item in row.get("missing_declared_symbols", [])[:8]) if isinstance(row.get("missing_declared_symbols"), list) else ""
+        undeclared = ", ".join(str(item) for item in row.get("undeclared_actual_symbols", [])[:8]) if isinstance(row.get("undeclared_actual_symbols"), list) else ""
+        details = "; ".join(part for part in (f"missing declared: {missing}" if missing else "", f"undeclared actual: {undeclared}" if undeclared else "") if part)
+        if path and reason:
+            lines.append(f"- interface_contract: `{path}` {reason}" + (f" ({details})" if details else ""))
+    cycles = imports.get("import_cycles") if isinstance(imports.get("import_cycles"), list) else []
+    for cycle in cycles[:6]:
+        if isinstance(cycle, list) and cycle:
+            lines.append("- import_cycle: break this generated Python circular import: " + " -> ".join(str(item) for item in cycle))
+    domain = report.get("domain_validation") if isinstance(report.get("domain_validation"), dict) else {}
+    missing = [str(item).strip() for item in domain.get("missing", []) if str(item).strip()] if isinstance(domain.get("missing", []), list) else []
+    for item in missing[:8]:
+        lines.append(f"- domain: {item}")
+    ux = report.get("ux_validation") if isinstance(report.get("ux_validation"), dict) else {}
+    reasons = [str(item).strip() for item in ux.get("reasons", []) if str(item).strip()] if isinstance(ux.get("reasons", []), list) else []
+    for item in reasons[:6]:
+        lines.append(f"- ux: {item}")
+    return lines if len(lines) > 1 else []
+
+
+def _expected_paths(*, contract: dict[str, Any], project_root: str) -> list[str]:
+    keys = (
+        "startup_entrypoint",
+        "startup_readme",
+        "target_files",
+        "source_files",
+        "doc_files",
+        "workflow_files",
+        "business_files",
+        "acceptance_files",
+    )
+    out: list[str] = []
+    seen: set[str] = set()
+    for key in keys:
+        value = contract.get(key)
+        rows = value if isinstance(value, list) else [value]
+        for item in rows:
+            path = str(item or "").strip().replace("\\", "/")
+            if not path or path in seen or not path.startswith(project_root + "/"):
+                continue
+            seen.add(path)
+            out.append(path)
+    return out

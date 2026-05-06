@@ -1,7 +1,7 @@
 # Root Plan Artifact
 
 Status: SIGNED
-Scope-Allow: AGENTS.md, README.md, agents, artifacts, ctcp_adapters, docs, frontend, llm_core, meta, scripts, simlab, tests, tools, web, workflow_registry
+Scope-Allow: AGENTS.md, README.md, agents, ai, artifacts, ctcp_adapters, docs, frontend, llm_core, meta, scripts, simlab, tests, tools, web, workflow_registry
 Scope-Deny: src, include, CMakeLists.txt
 Gates: workflow_gate, plan_check, patch_check, behavior_catalog_check, lite
 Budgets: max_iterations=8, max_files=220, max_total_bytes=2500000
