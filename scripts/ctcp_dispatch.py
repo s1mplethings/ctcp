@@ -40,7 +40,7 @@ except ModuleNotFoundError:
 KNOWN_PROVIDERS = {"manual_outbox", "ollama_agent", "api_agent", "codex_agent", "mock_agent", "local_exec"}
 STEP_META_PATH = Path("step_meta.jsonl")
 HARD_ROLE_PROVIDERS = {
-    "librarian": "api_agent",
+    "librarian": "local_exec",
     "chair": "api_agent",
     "contract_guardian": "api_agent",
     "cost_controller": "api_agent",
