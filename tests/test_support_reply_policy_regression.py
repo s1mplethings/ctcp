@@ -69,6 +69,54 @@ class SupportReplyPolicyRegressionTests(unittest.TestCase):
         self.assertEqual(infer_reply_intent(conversation_mode="PROJECT_DETAIL", project_context=decision_ctx), "ask_decision")
         self.assertEqual(infer_reply_intent(conversation_mode="STATUS_QUERY", project_context=done_ctx), "deliver_result")
 
+    def test_long_project_reply_is_compacted_test(self) -> None:
+        ctx = _project_context(visible_state="EXECUTING", progress_summary="生成业务文件")
+        long_text = " ".join(["当前正在生成，我会继续推进并同步很多细节。"] * 30)
+        out = enforce_reply_policy(
+            reply_text=long_text,
+            next_question="",
+            conversation_mode="STATUS_QUERY",
+            lang_hint="zh",
+            project_context=ctx,
+            provider_status="executed",
+            reply_memory=default_reply_dedupe_memory(),
+        )
+        self.assertLessEqual(len(str(out.get("reply_text", ""))), 220)
+        self.assertIn("reply_too_long", list(out.get("reasons", [])))
+        self.assertIn("reply_compacted", list(out.get("reasons", [])))
+
+    def test_proactive_duplicate_delivery_is_suppressed_test(self) -> None:
+        ctx = _project_context(
+            visible_state="DONE",
+            run_status="completed",
+            artifacts=["artifacts/final_project_bundle.zip", "artifacts/screenshot.png"],
+        )
+        first = enforce_reply_policy(
+            reply_text="项目已经整理好了，你先看截图，再打开 zip。",
+            next_question="",
+            conversation_mode="STATUS_QUERY",
+            lang_hint="zh",
+            project_context=ctx,
+            provider_status="executed",
+            reply_memory=default_reply_dedupe_memory(),
+            allow_suppress=False,
+        )
+        second = enforce_reply_policy(
+            reply_text="项目已经整理好了，你先看截图，再打开 zip。",
+            next_question="",
+            conversation_mode="STATUS_QUERY",
+            lang_hint="zh",
+            project_context=ctx,
+            provider_status="executed",
+            reply_memory=first["reply_memory"],
+            previous_reply_text=str(first.get("reply_text", "")),
+            allow_suppress=True,
+            source_kind="proactive",
+        )
+        self.assertTrue(bool(second.get("suppressed", False)))
+        self.assertEqual(str(second.get("dedupe_action", "")), "suppress")
+        self.assertEqual(str(second.get("reply_text", "")), "")
+
     def test_template_id_dedupe_test(self) -> None:
         mem = default_reply_dedupe_memory()
         ctx = _project_context(visible_state="EXECUTING", progress_summary="编排目录结构")
@@ -381,6 +429,30 @@ class SupportReplyPolicyRegressionTests(unittest.TestCase):
         self.assertIn("PLAN_draft.md", str(out.get("reply_text", "")))
         self.assertIn("retry planner", str(out.get("reply_text", "")))
         self.assertEqual(str(out.get("next_question", "")), "")
+
+    def test_degraded_greeting_keeps_customer_ready_provider_reply_test(self) -> None:
+        ctx = _project_context(visible_state="DONE", run_status="completed", artifacts=["artifacts/result.zip"])
+        ctx["support_reply_truth"] = {
+            "reply_truth_status": "low_confidence_fallback",
+            "reply_truth_reason": "api_agent output was not valid JSON object",
+            "reply_source_confidence": "low",
+        }
+        out = enforce_reply_policy(
+            reply_text="你好！欢迎回来。有什么想继续推进的地方，直接告诉我。",
+            next_question="",
+            conversation_mode="GREETING",
+            lang_hint="zh",
+            project_context=ctx,
+            provider_status="executed",
+            reply_memory=default_reply_dedupe_memory(),
+            allow_suppress=False,
+            source_kind="provider",
+            provider_mode="ollama_agent",
+        )
+        self.assertEqual(str(out.get("intent", "")), "acknowledge_user")
+        self.assertFalse(bool(out.get("fallback_used", False)))
+        self.assertNotIn("低置信度兜底", str(out.get("reply_text", "")))
+        self.assertIn("欢迎回来", str(out.get("reply_text", "")))
 
 
 if __name__ == "__main__":

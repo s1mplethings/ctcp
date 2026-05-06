@@ -844,7 +844,7 @@ class RuntimeWiringContractTests(unittest.TestCase):
                 },
             ):
                 with self.assertRaises(KeyboardInterrupt):
-                    support_bot.run_telegram_mode(token="fake", poll_seconds=1, allowlist_raw="")
+                    support_bot.run_telegram_mode(token="fake", poll_seconds=1, allowlist_raw="", clear_history_on_start=False)
 
             fake = fake_holder["tg"]
             self.assertEqual(fake.sent_messages, [(123, "项目包我直接发到当前对话。")])
@@ -953,7 +953,7 @@ class RuntimeWiringContractTests(unittest.TestCase):
                 return_value={"reply_text": "合同评审有新进展，我已经同步到当前阶段。", "provider_status": "executed", "actions": []},
             ):
                 with self.assertRaises(KeyboardInterrupt):
-                    support_bot.run_telegram_mode(token="fake", poll_seconds=1, allowlist_raw="123")
+                    support_bot.run_telegram_mode(token="fake", poll_seconds=1, allowlist_raw="123", clear_history_on_start=False)
 
             fake = fake_holder["tg"]
             self.assertEqual(fake.sent_messages, [])

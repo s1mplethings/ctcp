@@ -35,6 +35,18 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _available_delivery_path(path: Path) -> Path:
+    if not path.exists():
+        return path
+    stem = path.stem
+    suffix = path.suffix
+    for index in range(2, 1000):
+        candidate = path.with_name(f"{stem}-{index}{suffix}")
+        if not candidate.exists():
+            return candidate
+    return path.with_name(f"{stem}-copy{suffix}")
+
+
 class VirtualDeliveryTransport:
     def __init__(self, *, run_dir: Path, mode: str = VIRTUAL_PUBLIC_DELIVERY_MODE) -> None:
         self.run_dir = Path(run_dir).resolve()
@@ -50,7 +62,7 @@ class VirtualDeliveryTransport:
             rel_dir = "photos"
         target_dir = self.run_dir / VIRTUAL_SENT_REL_DIR / rel_dir
         target_dir.mkdir(parents=True, exist_ok=True)
-        target_path = (target_dir / source.name).resolve()
+        target_path = _available_delivery_path((target_dir / source.name).resolve())
         shutil.copy2(source, target_path)
         return {
             "transport": "virtual_delivery",

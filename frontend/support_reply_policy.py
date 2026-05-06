@@ -71,6 +71,7 @@ _INTENT_ORDER: tuple[ReplyIntent, ...] = (
     "guide_recovery",
     "acknowledge_user",
 )
+_VALID_FORCED_INTENTS = set(_INTENT_ORDER)
 _INTENT_DEDUPE_THRESHOLD: dict[ReplyIntent, float] = {
     "progress_update": 0.72,
     "ask_decision": 0.9,
@@ -88,6 +89,15 @@ _INTENT_WINDOW: dict[ReplyIntent, int] = {
     "explain_error": 4,
     "guide_recovery": 4,
     "acknowledge_user": 3,
+}
+_INTENT_REPLY_CHAR_LIMIT: dict[ReplyIntent, int] = {
+    "progress_update": 220,
+    "ask_decision": 260,
+    "ask_missing_input": 260,
+    "deliver_result": 320,
+    "explain_error": 240,
+    "guide_recovery": 260,
+    "acknowledge_user": 180,
 }
 _PROGRESS_SYNONYM_REPLACEMENTS_ZH: tuple[tuple[str, str], ...] = (
     (r"(继续推进|继续处理|继续往下|继续跟进|往下推进|持续推进)", "推进中"),
@@ -161,6 +171,10 @@ def infer_reply_intent(
     reply_truth = context_reply_truth_details(project_context)
     internal_recovery_truth = bool(recovery_details.get("has_internal_recovery", False))
 
+    if mode in {"GREETING", "SMALLTALK"}:
+        if provider_low in {"exec_failed", "failed", "error"} or error_truth:
+            return "explain_error"
+        return "acknowledge_user"
     if visible_state == "WAITING_FOR_DECISION" or authoritative_stage == "WAIT_USER_DECISION" or pending_prompt:
         return "ask_decision"
     if result_truth and not error_truth:
@@ -539,6 +553,82 @@ def _downgrade_text(
     return "收到。目前还没有新的确认状态。", ""
 
 
+def _compact_reply_text(
+    *,
+    text: str,
+    intent: ReplyIntent,
+    lang_hint: str,
+    project_context: Mapping[str, Any] | None,
+    next_question: str,
+    previous_reply_text: str,
+) -> tuple[str, str]:
+    downgraded_text, downgraded_q = _downgrade_text(
+        intent=intent,
+        lang_hint=lang_hint,
+        project_context=project_context,
+        next_question=next_question,
+        previous_reply_text=previous_reply_text,
+    )
+    compact = _norm(downgraded_text)
+    question = _norm(downgraded_q)
+    limit = _INTENT_REPLY_CHAR_LIMIT[intent]
+    if compact and len(compact) <= limit:
+        return compact, question
+    clipped = _norm(text)
+    if len(clipped) <= limit:
+        return clipped, _norm(next_question)
+    return clipped[: max(1, limit - 1)].rstrip(" ，,。.") + "。", _norm(next_question)
+
+
+def _apply_reply_length_limit(
+    *,
+    text: str,
+    question: str,
+    intent: ReplyIntent,
+    lang_hint: str,
+    project_context: Mapping[str, Any] | None,
+    previous_reply_text: str,
+) -> tuple[str, str, list[str]]:
+    if intent in {"explain_error", "guide_recovery"}:
+        return text, question, []
+    if len(text) <= _INTENT_REPLY_CHAR_LIMIT[intent]:
+        return text, question, []
+    compact_text, compact_question = _compact_reply_text(
+        text=text,
+        intent=intent,
+        lang_hint=lang_hint,
+        project_context=project_context,
+        next_question=question,
+        previous_reply_text=previous_reply_text,
+    )
+    return compact_text or text, compact_question, ["reply_too_long", "reply_compacted"]
+
+
+def _avoid_repeated_semantics(
+    *,
+    text: str,
+    question: str,
+    intent: ReplyIntent,
+    lang_hint: str,
+    project_context: Mapping[str, Any] | None,
+    previous_reply_text: str,
+) -> tuple[str, str, bool]:
+    if not previous_reply_text:
+        return text, question, False
+    prev_fp = _semantic_fingerprint(previous_reply_text)
+    current_fp = _semantic_fingerprint(text)
+    if not (prev_fp and current_fp and prev_fp == current_fp):
+        return text, question, False
+    fallback = render_fallback_reply(
+        intent=intent,
+        lang_hint=lang_hint,
+        project_context=project_context,
+        next_question=question,
+        previous_reply_text=previous_reply_text,
+    )
+    return _norm(fallback.get("reply_text", "")) or text, _norm(fallback.get("next_question", "")) or question, True
+
+
 def _select_context_signature(intent: ReplyIntent, project_context: Mapping[str, Any] | None, question: str) -> str:
     if intent == "progress_update":
         return _progress_context_signature(project_context)
@@ -648,15 +738,7 @@ def enforce_reply_policy(
     allow_suppress: bool = False,
 ) -> dict[str, Any]:
     intent: ReplyIntent
-    if forced_intent in {
-        "progress_update",
-        "ask_decision",
-        "ask_missing_input",
-        "deliver_result",
-        "explain_error",
-        "guide_recovery",
-        "acknowledge_user",
-    }:
+    if forced_intent in _VALID_FORCED_INTENTS:
         intent = forced_intent  # type: ignore[assignment]
     else:
         intent = infer_reply_intent(
@@ -731,21 +813,27 @@ def enforce_reply_policy(
             fallback_used = True
             reasons.append("error_humanized")
 
-    if previous_reply_text:
-        prev_fp = _semantic_fingerprint(previous_reply_text)
-        current_fp = _semantic_fingerprint(text)
-        if prev_fp and current_fp and prev_fp == current_fp:
-            fallback = render_fallback_reply(
-                intent=intent,
-                lang_hint=lang_hint,
-                project_context=project_context,
-                next_question=question,
-                previous_reply_text=previous_reply_text,
-            )
-            text = _norm(fallback.get("reply_text", "")) or text
-            question = _norm(fallback.get("next_question", "")) or question
-            fallback_used = True
-            reasons.append("repeated_semantics")
+    text, question, length_reasons = _apply_reply_length_limit(
+        text=text,
+        question=question,
+        intent=intent,
+        lang_hint=lang_hint,
+        project_context=project_context,
+        previous_reply_text=previous_reply_text,
+    )
+    reasons.extend(length_reasons)
+
+    text, question, repeated_semantics = _avoid_repeated_semantics(
+        text=text,
+        question=question,
+        intent=intent,
+        lang_hint=lang_hint,
+        project_context=project_context,
+        previous_reply_text=previous_reply_text,
+    )
+    if repeated_semantics:
+        fallback_used = True
+        reasons.append("repeated_semantics")
 
     template_id = _template_id_for(intent=intent, project_context=project_context, text=text, question=question)
     normalized_semantic = _semantic_normalize(f"{text} {question}".strip(), intent=intent)
@@ -808,7 +896,7 @@ def enforce_reply_policy(
                 dedupe_action = "downgrade"
     elif is_near_duplicate:
         reasons.append("near_duplicate")
-        if allow_suppress and intent in {"acknowledge_user"}:
+        if allow_suppress and intent in {"acknowledge_user", "deliver_result"}:
             suppress = True
             dedupe_action = "suppress"
         else:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import sys
 import zipfile
@@ -19,9 +20,15 @@ def _write_json(path: Path, doc: dict[str, Any]) -> None:
 def _run_capture(cmd: list[str], *, cwd: Path) -> dict[str, Any]:
     import subprocess
 
+    env = os.environ.copy()
+    src_root = (cwd / "src").resolve()
+    if src_root.exists():
+        existing = str(env.get("PYTHONPATH", "")).strip()
+        env["PYTHONPATH"] = str(src_root) + (os.pathsep + existing if existing else "")
     proc = subprocess.run(
         cmd,
         cwd=str(cwd),
+        env=env,
         capture_output=True,
         text=True,
         encoding="utf-8",

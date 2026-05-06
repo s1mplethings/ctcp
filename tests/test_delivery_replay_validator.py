@@ -104,6 +104,54 @@ class DeliveryReplayValidatorTests(unittest.TestCase):
         self.assertTrue(bool(saved.get("overall_pass", False)), msg=json.dumps(saved, ensure_ascii=False))
         self.assertEqual(str(report.get("entrypoint_detected", "")), "scripts/run_project_cli.py")
 
+    def test_gui_src_layout_package_replay_uses_src_pythonpath(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_replay_gui_src_ok_") as td:
+            root = Path(td)
+            project = root / "project"
+            scripts_dir = project / "scripts"
+            package_dir = project / "src" / "demo_app"
+            scripts_dir.mkdir(parents=True, exist_ok=True)
+            package_dir.mkdir(parents=True, exist_ok=True)
+            (project / "README.md").write_text("# replay demo\n", encoding="utf-8")
+            (package_dir / "__init__.py").write_text("", encoding="utf-8")
+            (package_dir / "service.py").write_text("def export(out_dir):\n    return {'ok': True}\n", encoding="utf-8")
+            (scripts_dir / "run_project_gui.py").write_text(
+                "\n".join(
+                    [
+                        "from __future__ import annotations",
+                        "import argparse",
+                        "import json",
+                        "from pathlib import Path",
+                        "from demo_app.service import export",
+                        "",
+                        "def main() -> int:",
+                        "    ap = argparse.ArgumentParser()",
+                        "    ap.add_argument('--goal', default='')",
+                        "    ap.add_argument('--project-name', default='')",
+                        "    ap.add_argument('--out', default='')",
+                        "    ap.add_argument('--headless', action='store_true')",
+                        "    args = ap.parse_args()",
+                        "    if args.out:",
+                        "        out = Path(args.out)",
+                        "        out.mkdir(parents=True, exist_ok=True)",
+                        "        (out / 'workspace_snapshot.json').write_text(json.dumps(export(out)), encoding='utf-8')",
+                        "    return 0",
+                        "",
+                        "if __name__ == '__main__':",
+                        "    raise SystemExit(main())",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            package_path = root / "package.zip"
+            _zip_tree(project, package_path)
+
+            report = run_delivery_replay_check(package_path=package_path, output_root=root / "replay")
+
+        self.assertTrue(bool(report.get("overall_pass", False)), msg=json.dumps(report, ensure_ascii=False))
+        self.assertEqual(str(report.get("entrypoint_detected", "")), "scripts/run_project_gui.py")
+
 
 if __name__ == "__main__":
     unittest.main()
