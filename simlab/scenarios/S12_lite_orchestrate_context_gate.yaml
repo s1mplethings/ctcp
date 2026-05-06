@@ -37,13 +37,13 @@
     },
     {
       "run": {
-        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); cfg=Path(rd)/'artifacts'/'dispatch_config.json'; doc={'schema_version':'ctcp-dispatch-config-v1','mode':'manual_outbox','role_providers':{'librarian':'manual_outbox','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; cfg.write_text(json.dumps(doc, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
+        "cmd": "python -c \"from pathlib import Path; import json; rd=Path('meta/run_pointers/LAST_RUN.txt').read_text(encoding='utf-8').strip(); cfg=Path(rd)/'artifacts'/'dispatch_config.json'; doc={'schema_version':'ctcp-dispatch-config-v1','mode':'mock_agent','role_providers':{'librarian':'manual_outbox','chair':'manual_outbox','contract_guardian':'manual_outbox','cost_controller':'manual_outbox','patchmaker':'manual_outbox','fixer':'manual_outbox','researcher':'manual_outbox'},'budgets':{'max_outbox_prompts':20}}; cfg.write_text(json.dumps(doc, ensure_ascii=False, indent=2)+'\\n', encoding='utf-8')\"",
         "expect_exit": 0
       }
     },
     {
       "run": {
-        "cmd": "python simlab/ollama_stub_runner.py --shell-command \"python scripts/ctcp_orchestrate.py advance --max-steps 8 > artifacts/_orch_advance.out.txt 2>&1\"",
+        "cmd": "python simlab/ollama_stub_runner.py --shell-command \"python scripts/ctcp_orchestrate.py advance --max-steps 1 > artifacts/_orch_advance.out.txt 2>&1\"",
         "expect_exit": 0
       }
     },

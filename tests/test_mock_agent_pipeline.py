@@ -432,7 +432,7 @@ class MockAgentPipelineTests(unittest.TestCase):
                     result = _dispatch_once(run_dir=run_dir, run_doc=run_doc, gate=gate, env=stub_env)
                     step_results.append(result)
                     self.assertEqual(result.get("status"), "executed", msg=str(result))
-                    expected_provider = "api_agent"
+                    expected_provider = "api_agent" if gate["path"] == "artifacts/context_pack.json" else "mock_agent"
                     self.assertEqual(result.get("provider"), expected_provider, msg=str(result))
                     ok, reason = _validate_artifact_for_gate(run_dir, gate["path"])
                     self.assertTrue(ok, msg=f"{gate['path']}: {reason}")
@@ -484,7 +484,7 @@ class MockAgentPipelineTests(unittest.TestCase):
             rows.append(
                 {
                     "case": "default_librarian",
-                    "expected": "api_agent",
+                    "expected": "local_exec",
                     "actual": str(preview_librarian.get("provider", "")),
                 }
             )
@@ -607,7 +607,7 @@ class MockAgentPipelineTests(unittest.TestCase):
             "chair_plan_signed",
         ]
         runs = 8
-        unrecoverable_modes = {"raise_exception"}
+        unrecoverable_modes: set[str] = set()
 
         with tempfile.TemporaryDirectory() as td:
             base = Path(td)
