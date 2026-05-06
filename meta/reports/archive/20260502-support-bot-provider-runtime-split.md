@@ -1,0 +1,64 @@
+# Report Archive - Support Bot Provider Runtime Split
+
+- Date: `2026-05-02`
+- Topic: `Support bot provider runtime split`
+- Queue Item: `ADHOC-20260502-support-bot-provider-runtime-split`
+
+## Readlist
+
+- `AGENTS.md`
+- `.agents/skills/ctcp-workflow/SKILL.md`
+- `.agents/skills/ctcp-patch-guard/SKILL.md`
+- `.agents/skills/ctcp-verify/SKILL.md`
+- `meta/tasks/CURRENT.md`
+- `meta/backlog/execution_queue.json`
+- `scripts/ctcp_support_bot.py`
+- `scripts/ctcp_support_bot_provider_runtime.py`
+
+## Plan
+
+1. Bind a tenth narrow support-bot slimming task.
+2. Extract provider execution/log/json helpers into a small Python module.
+3. Preserve mock seams for `support_bot.execute_provider` and `support_bot.provider_runtime.execute_provider`.
+4. Run targeted provider/runtime regressions, workflow checks, module protection, code health, and verify entrypoint.
+
+## Changes
+
+- Added `scripts/ctcp_support_bot_provider_runtime.py`.
+- Moved support provider execution wrapper, provider stdout/stderr tail logging, provider result logging, and provider JSON doc reader out of `scripts/ctcp_support_bot.py`.
+- Kept Markdown limited to task/report metadata.
+
+## Verify
+
+- first failure point evidence:
+  - no failing gate after extraction.
+- minimal fix strategy evidence:
+  - no repair was needed after extraction; new module dynamically reads the host `provider_runtime` facade so existing tests and patches still apply.
+- `scripts/ctcp_support_bot.py`: `3264` -> `3154` lines.
+- `scripts/ctcp_support_bot_provider_runtime.py`: `144` lines.
+- py_compile passed for support bot and extracted modules.
+- `test_runtime_rehook_integration.py` passed (`3` tests).
+- `test_support_bot_humanization.py` passed (`66` tests).
+- `test_runtime_wiring_contract.py` passed (`25` tests).
+- `test_issue_memory_accumulation_contract.py` passed (`3` tests).
+- `test_skill_consumption_contract.py` passed (`3` tests).
+- `python scripts\workflow_checks.py` passed.
+- `python scripts\module_protection_check.py` passed.
+- `python scripts\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task` passed.
+- `powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1 -Profile contract` passed.
+- `git diff --check` reported CRLF normalization warnings only.
+
+## Questions
+
+- None.
+
+## Demo
+
+- Provider runtime behavior now lives in a small Python module.
+- Main support bot file is smaller with no intended behavior change.
+
+## Integration Proof
+
+- connected: `scripts/ctcp_support_bot.py` imports helper names from `scripts/ctcp_support_bot_provider_runtime.py`.
+- accumulated: provider execution/log/json helpers are grouped in a runtime module.
+- consumed: targeted support/runtime regressions, workflow, module protection, code health, and contract verify consumed the new module surface.

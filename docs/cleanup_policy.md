@@ -44,6 +44,43 @@ Any cleanup action MUST satisfy at least one of:
 3. **Generated during current run**: the artifact is a transient run output, not a knowledge asset.
 4. **Not in protected paths**: the target is not under a protected knowledge-asset path.
 
+## Daily Worktree Cleanliness
+
+Every task should end with an explicit dirty-state decision. A dirty worktree is
+allowed only when it is intentional, scoped, and recorded in `meta/reports/LAST.md`.
+
+Before starting a new task:
+
+1. Run `git status --short --untracked-files=all`.
+2. If available, run `python scripts/worktree_cleanliness_report.py`.
+3. Treat existing dirty files as inherited state; do not revert them unless the
+   user explicitly asks for that exact file or change.
+
+Before claiming a task is closed:
+
+1. Runtime outputs must be outside the repo, normally under `CTCP_RUNS_ROOT`.
+2. Generated run/build outputs inside the repo must be removed only when they
+   match the hard-delete scope in this policy.
+3. Source, tests, docs, and task/report archives must be grouped by queue item
+   before commit, stash, or handoff.
+4. `meta/reports/LAST.md` must record whether `git status --short` is clean. If
+   it is not clean, record the dirty count and the next non-destructive cleanup
+   action.
+
+Recommended cleanup order:
+
+1. Move or delete runtime/generated outputs that match the hard-delete scope.
+2. Review untracked source/test files and either add them to the intended patch
+   or move them out of the repo.
+3. Group modified tracked source/docs by task topic before commit or stash.
+4. Commit task/report archives together with the task that produced them.
+5. Re-run verify with `CTCP_RUNS_ROOT` outside the repo and local smoke-test
+   provider overrides cleared unless the active task requires them.
+
+Do not use `git reset --hard`, `git checkout --`, or broad recursive deletes as
+routine cleanup. Those commands can destroy user work and are outside this
+policy unless the user explicitly requests them.
+
 ## Protected Paths
 
 The following paths are protected knowledge assets and MUST NOT be hard-deleted:

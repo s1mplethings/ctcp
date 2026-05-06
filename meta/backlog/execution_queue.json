@@ -5982,6 +5982,1322 @@
       },
       "status": "done",
       "notes": "Completed on 2026-04-29: first-turn quality payload (`constraints/project_intent/project_spec`) is wired through `ctcp_sync_support_project_turn` into `frontend_request`, support first-turn advance depth and downstream quality-lift behaviors are covered by updated runtime/support regressions, API-only mainline assertions were aligned, full `python -m unittest discover -s tests -p \"test_*.py\" -v` passed (473 tests), and canonical verify passed with writable runs root (`$env:CTCP_RUNS_ROOT = Join-Path $env:TEMP 'ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1`)."
+    },
+    {
+      "id": "ADHOC-20260501-generation-provenance-ledger",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Expose project-generation provenance separately from provider execution",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260426-first-turn-quality-uplift"
+      ],
+      "dod": [
+        "source_generation reports distinguish remote provider execution from local file materialization",
+        "generated project files include auditable per-file provenance records consumed by project_manifest",
+        "regressions prove source_generation no longer implies API authored final source files when local materializers write them"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "tools/providers/project_generation_source_stage.py",
+          "tools/providers/project_generation_artifacts.py",
+          "tools/providers/project_generation_provenance.py",
+          "tools/providers/local_exec.py",
+          "docs/03_quality_gates.md",
+          "artifacts/PLAN.md",
+          "ai/MEMORY/ISSUE_MEMORY.md",
+          "tests/test_project_generation_artifacts.py",
+          "tests/test_project_generation_provenance.py",
+          "tests/test_local_exec_librarian_evidence.py",
+          "tests/test_api_agent_templates.py",
+          "tests/test_mock_agent_pipeline.py"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_project_generation_artifacts.py\" -v",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-01: source_generation and project_manifest now separate provider execution from local file materialization with per-file provenance; local_exec librarian writes prompt evidence; focused regressions, simlab lite, and verify_repo -Profile code passed."
+    },
+    {
+      "id": "ADHOC-20260502-support-bot-slimming",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Shrink support bot runtime file by extracting constants and keeping docs minimal",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260501-generation-provenance-ledger"
+      ],
+      "dod": [
+        "scripts/ctcp_support_bot.py no longer owns the large support pattern and path constant table",
+        "extracted support constants live in a narrow Python module instead of Markdown or runtime flow code",
+        "targeted support-bot regressions and workflow checks pass"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "meta/tasks/archive/20260502-support-bot-slimming.md",
+          "meta/reports/archive/20260502-support-bot-slimming.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_support_bot_constants.py",
+          "scripts/ctcp_support_bot_text_patterns.py",
+          "docs/03_quality_gates.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py scripts/ctcp_support_bot_constants.py scripts/ctcp_support_bot_text_patterns.py",
+          "python -m unittest discover -s tests -p \"test_support_chain_breakpoints.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python scripts/workflow_checks.py"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed first slimming slice on 2026-05-02: support bot constants/patterns moved into narrow Python modules and targeted support regressions passed; canonical verify reached full Python tests and then hit unrelated/flaky project-generation variant-content failure."
+    },
+    {
+      "id": "ADHOC-20260502-support-bot-io-split",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Split support bot runtime IO and lock primitives into a small Python module",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260502-support-bot-slimming"
+      ],
+      "dod": [
+        "scripts/ctcp_support_bot.py no longer owns generic time/json/log/session-dir/telegram-lock helpers",
+        "support IO primitives live in scripts/ctcp_support_bot_io.py and remain Python runtime code, not Markdown",
+        "targeted support-bot regressions, workflow checks, and py_compile pass or first failure is recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "meta/tasks/archive/20260502-support-bot-io-split.md",
+          "meta/reports/archive/20260502-support-bot-io-split.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_support_bot_io.py",
+          "scripts/ctcp_support_bot_constants.py",
+          "scripts/ctcp_support_bot_text_patterns.py",
+          "docs/03_quality_gates.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py scripts/ctcp_support_bot_io.py scripts/ctcp_support_bot_constants.py scripts/ctcp_support_bot_text_patterns.py",
+          "python -m unittest discover -s tests -p \"test_support_chain_breakpoints.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed second slimming slice on 2026-05-02: support bot IO/session/telegram-lock primitives moved into scripts/ctcp_support_bot_io.py; targeted support regressions, workflow checks, module protection, code health, and verify_repo contract profile passed; verify_repo code profile timed out after 900s with no first failing gate returned."
+    },
+    {
+      "id": "ADHOC-20260502-support-bot-session-state-split",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Split support bot session state schema and normalizer into small Python modules",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260502-support-bot-io-split"
+      ],
+      "dod": [
+        "scripts/ctcp_support_bot.py no longer owns the large support session-state default schema and normalization block",
+        "session state helpers and normalizer live in small Python modules instead of Markdown",
+        "targeted support-bot regressions, workflow checks, module protection, and py_compile pass or first failure is recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260502-support-bot-session-state-split.md",
+          "meta/reports/archive/20260502-support-bot-session-state-split.md",
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_support_bot_session_state.py",
+          "scripts/ctcp_support_bot_session_normalize.py",
+          "scripts/ctcp_support_bot_io.py",
+          "scripts/ctcp_support_bot_constants.py",
+          "scripts/ctcp_support_bot_text_patterns.py",
+          "docs/03_quality_gates.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py scripts/ctcp_support_bot_session_state.py scripts/ctcp_support_bot_session_normalize.py scripts/ctcp_support_bot_io.py scripts/ctcp_support_bot_constants.py scripts/ctcp_support_bot_text_patterns.py",
+          "python -m unittest discover -s tests -p \"test_support_chain_breakpoints.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "python scripts/module_protection_check.py"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed third slimming slice on 2026-05-02: support session default/accessor/normalize logic moved into scripts/ctcp_support_bot_session_state.py and scripts/ctcp_support_bot_session_normalize.py; new modules stay under 450 lines and long-function growth guard passes; targeted support regressions, module protection, code health, workflow checks, and verify_repo contract profile passed."
+    },
+    {
+      "id": "ADHOC-20260502-support-bot-progress-evidence-split",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Split support bot progress evidence binding into a small Python module",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260502-support-bot-session-state-split"
+      ],
+      "dod": [
+        "scripts/ctcp_support_bot.py no longer owns progress binding/digest/notification evidence helpers",
+        "progress evidence helpers live in a small Python module instead of Markdown and avoid oversized functions",
+        "targeted support-bot regressions, workflow checks, module protection, code health, and py_compile pass or first failure is recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260502-support-bot-progress-evidence-split.md",
+          "meta/reports/archive/20260502-support-bot-progress-evidence-split.md",
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_support_bot_progress.py",
+          "scripts/ctcp_support_bot_session_state.py",
+          "scripts/ctcp_support_bot_session_normalize.py",
+          "scripts/ctcp_support_bot_io.py",
+          "scripts/ctcp_support_bot_constants.py",
+          "scripts/ctcp_support_bot_text_patterns.py",
+          "docs/03_quality_gates.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py scripts/ctcp_support_bot_progress.py scripts/ctcp_support_bot_session_state.py scripts/ctcp_support_bot_session_normalize.py scripts/ctcp_support_bot_io.py scripts/ctcp_support_bot_constants.py scripts/ctcp_support_bot_text_patterns.py",
+          "python -m unittest discover -s tests -p \"test_support_chain_breakpoints.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "python scripts/module_protection_check.py",
+          "python scripts/code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed fourth slimming slice on 2026-05-02: progress evidence binding/digest/notification helpers moved into scripts/ctcp_support_bot_progress.py; the old long binding logic was split into small helpers; targeted support regressions, module protection, code health, workflow checks, and verify_repo contract profile passed."
+    },
+    {
+      "id": "ADHOC-20260502-support-bot-provider-router-split",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Split support bot provider config and mode router into small Python modules",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260502-support-bot-progress-evidence-split"
+      ],
+      "dod": [
+        "scripts/ctcp_support_bot.py no longer owns support provider dispatch config and model mode-router helpers",
+        "provider/router helpers live in small Python modules instead of Markdown and preserve existing runtime seams",
+        "targeted support-bot regressions, workflow checks, module protection, code health, and py_compile pass or first failure is recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260502-support-bot-provider-router-split.md",
+          "meta/reports/archive/20260502-support-bot-provider-router-split.md",
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_support_bot_provider.py",
+          "scripts/ctcp_support_bot_mode_router.py",
+          "scripts/ctcp_support_bot_progress.py",
+          "scripts/ctcp_support_bot_session_state.py",
+          "scripts/ctcp_support_bot_session_normalize.py",
+          "scripts/ctcp_support_bot_io.py",
+          "scripts/ctcp_support_bot_constants.py",
+          "scripts/ctcp_support_bot_text_patterns.py",
+          "docs/03_quality_gates.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py scripts/ctcp_support_bot_provider.py scripts/ctcp_support_bot_mode_router.py scripts/ctcp_support_bot_progress.py scripts/ctcp_support_bot_session_state.py scripts/ctcp_support_bot_session_normalize.py scripts/ctcp_support_bot_io.py scripts/ctcp_support_bot_constants.py scripts/ctcp_support_bot_text_patterns.py",
+          "python -m unittest discover -s tests -p \"test_support_chain_breakpoints.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "python scripts/module_protection_check.py",
+          "python scripts/code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed fifth slimming slice on 2026-05-02: provider dispatch config/candidates moved into scripts/ctcp_support_bot_provider.py and mode-router arbitration moved into scripts/ctcp_support_bot_mode_router.py; both new modules stay below the small-module guard; targeted support regressions, module protection, code health, workflow checks, and verify_repo contract profile passed."
+    },
+    {
+      "id": "ADHOC-20260502-support-bot-delivery-actions-split",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Split support bot delivery intent and action helpers into a small Python module",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260502-support-bot-provider-router-split"
+      ],
+      "dod": [
+        "scripts/ctcp_support_bot.py no longer owns package/screenshot/video user-intent helpers",
+        "delivery action normalization and synthesis live in a small Python module instead of Markdown",
+        "targeted support-bot regressions, workflow checks, module protection, code health, and py_compile pass or first failure is recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260502-support-bot-delivery-actions-split.md",
+          "meta/reports/archive/20260502-support-bot-delivery-actions-split.md",
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_support_bot_delivery_actions.py",
+          "scripts/ctcp_support_bot_provider.py",
+          "scripts/ctcp_support_bot_mode_router.py",
+          "scripts/ctcp_support_bot_progress.py",
+          "scripts/ctcp_support_bot_session_state.py",
+          "scripts/ctcp_support_bot_session_normalize.py",
+          "scripts/ctcp_support_bot_io.py",
+          "scripts/ctcp_support_bot_constants.py",
+          "scripts/ctcp_support_bot_text_patterns.py",
+          "docs/03_quality_gates.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py scripts/ctcp_support_bot_delivery_actions.py scripts/ctcp_support_bot_provider.py scripts/ctcp_support_bot_mode_router.py scripts/ctcp_support_bot_progress.py scripts/ctcp_support_bot_session_state.py scripts/ctcp_support_bot_session_normalize.py scripts/ctcp_support_bot_io.py scripts/ctcp_support_bot_constants.py scripts/ctcp_support_bot_text_patterns.py",
+          "python -m unittest discover -s tests -p \"test_support_chain_breakpoints.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "python scripts/module_protection_check.py",
+          "python scripts/code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed sixth slimming slice on 2026-05-02: package/screenshot/video intent helpers and delivery action normalization/synthesis moved into scripts/ctcp_support_bot_delivery_actions.py; initial humanization regression found two missing helper exports, both fixed; targeted support regressions, humanization suite, module protection, code health, workflow checks, and verify_repo contract profile passed."
+    },
+    {
+      "id": "ADHOC-20260502-support-bot-public-delivery-split",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Split support bot public delivery state and transport helpers into small Python modules",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260502-support-bot-delivery-actions-split"
+      ],
+      "dod": [
+        "scripts/ctcp_support_bot.py no longer owns public delivery file discovery, package quality scoring, prompt context, delivery plan, or delivery emit helpers",
+        "public delivery helpers live in small Python modules instead of Markdown and preserve existing runtime behavior",
+        "targeted support-bot delivery regressions, workflow checks, module protection, code health, and py_compile pass or first failure is recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260502-support-bot-public-delivery-split.md",
+          "meta/reports/archive/20260502-support-bot-public-delivery-split.md",
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_support_bot_public_delivery_core.py",
+          "scripts/ctcp_support_bot_public_delivery_state.py",
+          "scripts/ctcp_support_bot_public_delivery_transport.py",
+          "scripts/ctcp_support_bot_public_delivery_telegram.py",
+          "scripts/ctcp_support_bot_delivery_actions.py",
+          "scripts/ctcp_support_bot_provider.py",
+          "scripts/ctcp_support_bot_mode_router.py",
+          "scripts/ctcp_support_bot_progress.py",
+          "scripts/ctcp_support_bot_session_state.py",
+          "scripts/ctcp_support_bot_session_normalize.py",
+          "scripts/ctcp_support_bot_io.py",
+          "scripts/ctcp_support_bot_constants.py",
+          "scripts/ctcp_support_bot_text_patterns.py",
+          "docs/03_quality_gates.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py scripts/ctcp_support_bot_public_delivery_core.py scripts/ctcp_support_bot_public_delivery_state.py scripts/ctcp_support_bot_public_delivery_transport.py scripts/ctcp_support_bot_public_delivery_telegram.py scripts/ctcp_support_bot_delivery_actions.py scripts/ctcp_support_bot_provider.py scripts/ctcp_support_bot_mode_router.py scripts/ctcp_support_bot_progress.py scripts/ctcp_support_bot_session_state.py scripts/ctcp_support_bot_session_normalize.py scripts/ctcp_support_bot_io.py scripts/ctcp_support_bot_constants.py scripts/ctcp_support_bot_text_patterns.py",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "python scripts/module_protection_check.py",
+          "python scripts/code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed seventh slimming slice on 2026-05-02: public delivery file discovery/scoring/state/plan/emit helpers moved into core/state/transport/telegram Python modules; initial failures for import path, ROOT seam, materializer mock seam, and new-module size/function-size guard were fixed; targeted delivery regressions, module protection, code health, workflow checks, and verify_repo contract profile passed."
+    },
+    {
+      "id": "ADHOC-20260502-support-bot-reply-utils-split",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Split support bot reply text utilities and provider reply validation into a small Python module",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260502-support-bot-public-delivery-split"
+      ],
+      "dod": [
+        "scripts/ctcp_support_bot.py no longer owns reply text sanitization, language hints, code-dump detection, provider-doc sanitation, and provider reply validation helpers",
+        "reply utility helpers live in a small Python module instead of Markdown and preserve existing runtime behavior",
+        "targeted support-bot reply regressions, workflow checks, module protection, code health, and py_compile pass or first failure is recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260502-support-bot-reply-utils-split.md",
+          "meta/reports/archive/20260502-support-bot-reply-utils-split.md",
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_support_bot_reply_utils.py",
+          "scripts/ctcp_support_bot_public_delivery_core.py",
+          "scripts/ctcp_support_bot_public_delivery_state.py",
+          "scripts/ctcp_support_bot_public_delivery_transport.py",
+          "scripts/ctcp_support_bot_public_delivery_telegram.py",
+          "scripts/ctcp_support_bot_delivery_actions.py",
+          "scripts/ctcp_support_bot_provider.py",
+          "scripts/ctcp_support_bot_mode_router.py",
+          "scripts/ctcp_support_bot_progress.py",
+          "scripts/ctcp_support_bot_session_state.py",
+          "scripts/ctcp_support_bot_session_normalize.py",
+          "scripts/ctcp_support_bot_io.py",
+          "scripts/ctcp_support_bot_constants.py",
+          "scripts/ctcp_support_bot_text_patterns.py",
+          "docs/03_quality_gates.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py scripts/ctcp_support_bot_reply_utils.py scripts/ctcp_support_bot_public_delivery_core.py scripts/ctcp_support_bot_public_delivery_state.py scripts/ctcp_support_bot_public_delivery_transport.py scripts/ctcp_support_bot_public_delivery_telegram.py scripts/ctcp_support_bot_delivery_actions.py scripts/ctcp_support_bot_provider.py scripts/ctcp_support_bot_mode_router.py scripts/ctcp_support_bot_progress.py scripts/ctcp_support_bot_session_state.py scripts/ctcp_support_bot_session_normalize.py scripts/ctcp_support_bot_io.py scripts/ctcp_support_bot_constants.py scripts/ctcp_support_bot_text_patterns.py",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_chain_breakpoints.py\" -v",
+          "python scripts/workflow_checks.py",
+          "python scripts/module_protection_check.py",
+          "python scripts/code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed eighth slimming slice on 2026-05-02: reply text sanitization, language hints, code-dump detection, provider-doc sanitation, and provider reply validation helpers moved into scripts/ctcp_support_bot_reply_utils.py; scripts/ctcp_support_bot.py reduced from 4226 to 3582 lines; targeted support regressions, module protection, code health, workflow checks, and verify_repo contract profile passed."
+    },
+    {
+      "id": "ADHOC-20260502-support-bot-prompt-request-split",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Split support bot prompt and provider request construction into a small Python module",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260502-support-bot-reply-utils-split"
+      ],
+      "dod": [
+        "scripts/ctcp_support_bot.py no longer owns support prompt template, prompt context assembly, failover/repair prompt assembly, or support request payload construction",
+        "prompt/request helpers live in a small Python module instead of Markdown and preserve existing runtime behavior",
+        "targeted support-bot prompt/reply regressions, workflow checks, module protection, code health, and py_compile pass or first failure is recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260502-support-bot-prompt-request-split.md",
+          "meta/reports/archive/20260502-support-bot-prompt-request-split.md",
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_support_bot_prompting.py",
+          "scripts/ctcp_support_bot_reply_utils.py",
+          "scripts/ctcp_support_bot_public_delivery_state.py",
+          "scripts/ctcp_support_bot_delivery_actions.py",
+          "scripts/ctcp_support_bot_provider.py",
+          "scripts/ctcp_support_bot_mode_router.py",
+          "scripts/ctcp_support_bot_progress.py",
+          "scripts/ctcp_support_bot_session_state.py",
+          "scripts/ctcp_support_bot_session_normalize.py",
+          "scripts/ctcp_support_bot_io.py",
+          "scripts/ctcp_support_bot_constants.py",
+          "scripts/ctcp_support_bot_text_patterns.py",
+          "docs/03_quality_gates.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py scripts/ctcp_support_bot_prompting.py scripts/ctcp_support_bot_reply_utils.py scripts/ctcp_support_bot_public_delivery_state.py scripts/ctcp_support_bot_delivery_actions.py scripts/ctcp_support_bot_provider.py scripts/ctcp_support_bot_mode_router.py scripts/ctcp_support_bot_progress.py scripts/ctcp_support_bot_session_state.py scripts/ctcp_support_bot_session_normalize.py scripts/ctcp_support_bot_io.py scripts/ctcp_support_bot_constants.py scripts/ctcp_support_bot_text_patterns.py",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "python scripts/module_protection_check.py",
+          "python scripts/code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed ninth slimming slice on 2026-05-02: support prompt template/context assembly, failover/repair prompt assembly, and support request payload construction moved into scripts/ctcp_support_bot_prompting.py; scripts/ctcp_support_bot.py reduced from 3582 to 3264 lines; targeted support regressions, module protection, code health, workflow checks, and verify_repo contract profile passed."
+    },
+    {
+      "id": "ADHOC-20260502-support-bot-provider-runtime-split",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Split support bot provider execution and provider-log helpers into a small Python module",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260502-support-bot-prompt-request-split"
+      ],
+      "dod": [
+        "scripts/ctcp_support_bot.py no longer owns support provider execution wrapper, provider output tailing/logging, or local provider JSON doc reading helpers",
+        "provider runtime helpers live in a small Python module instead of Markdown and preserve existing patch/mock seams",
+        "targeted provider/runtime support regressions, workflow checks, module protection, code health, and py_compile pass or first failure is recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260502-support-bot-provider-runtime-split.md",
+          "meta/reports/archive/20260502-support-bot-provider-runtime-split.md",
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_support_bot_provider_runtime.py",
+          "scripts/ctcp_support_bot_prompting.py",
+          "scripts/ctcp_support_bot_provider.py",
+          "scripts/ctcp_support_bot_reply_utils.py",
+          "scripts/ctcp_support_bot_io.py",
+          "scripts/ctcp_support_bot_constants.py",
+          "docs/03_quality_gates.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py scripts/ctcp_support_bot_provider_runtime.py scripts/ctcp_support_bot_prompting.py scripts/ctcp_support_bot_provider.py scripts/ctcp_support_bot_reply_utils.py scripts/ctcp_support_bot_io.py scripts/ctcp_support_bot_constants.py",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_rehook_integration.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "python scripts/module_protection_check.py",
+          "python scripts/code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed tenth slimming slice on 2026-05-02: support provider execution wrapper, provider stdout/stderr tail logging, and provider JSON doc reader moved into scripts/ctcp_support_bot_provider_runtime.py; scripts/ctcp_support_bot.py reduced from 3264 to 3154 lines; runtime patch seams were preserved; targeted support regressions, module protection, code health, workflow checks, and verify_repo contract profile passed."
+    },
+    {
+      "id": "ADHOC-20260502-support-bot-t2p-state-split",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Split support bot T2P state-machine reporting helpers into a small Python module",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260502-support-bot-provider-runtime-split"
+      ],
+      "dod": [
+        "scripts/ctcp_support_bot.py no longer owns support-side T2P state-machine payload, artifact verification, state recording, or report writing helpers",
+        "T2P state-machine helpers live in a small Python module instead of Markdown and preserve existing disabled fast-path behavior",
+        "targeted support-bot state-machine/support regressions, workflow checks, module protection, code health, and py_compile pass or first failure is recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260502-support-bot-t2p-state-split.md",
+          "meta/reports/archive/20260502-support-bot-t2p-state-split.md",
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_support_bot_t2p_state.py",
+          "scripts/ctcp_support_bot_provider_runtime.py",
+          "scripts/ctcp_support_bot_public_delivery_core.py",
+          "scripts/ctcp_support_bot_public_delivery_transport.py",
+          "scripts/ctcp_support_bot_session_state.py",
+          "scripts/ctcp_support_bot_io.py",
+          "scripts/ctcp_support_bot_constants.py",
+          "docs/03_quality_gates.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py scripts/ctcp_support_bot_t2p_state.py scripts/ctcp_support_bot_provider_runtime.py scripts/ctcp_support_bot_public_delivery_core.py scripts/ctcp_support_bot_public_delivery_transport.py scripts/ctcp_support_bot_session_state.py scripts/ctcp_support_bot_io.py scripts/ctcp_support_bot_constants.py",
+          "python -m unittest discover -s tests -p \"test_support_chain_breakpoints.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "python scripts/module_protection_check.py",
+          "python scripts/code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed eleventh slimming slice on 2026-05-02: support-side T2P state-machine payload, state recording, artifact verification, and report writing helpers moved into scripts/ctcp_support_bot_t2p_state.py; scripts/ctcp_support_bot.py reduced from 3154 to 2891 lines; disabled fast-path behavior was preserved; targeted support regressions, module protection, code health, workflow checks, and verify_repo contract profile passed."
+    },
+    {
+      "id": "ADHOC-20260502-support-bot-state-sync-split",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Split support bot active task and shared-state synchronization into a small Python module",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260502-support-bot-t2p-state-split"
+      ],
+      "dod": [
+        "scripts/ctcp_support_bot.py no longer owns active-task truth synchronization, raw turn memory append, stage derivation, or shared-state workspace sync helpers",
+        "state sync helpers live in a small Python module instead of Markdown and preserve existing support memory/shared-state behavior",
+        "targeted state-sync/support regressions, workflow checks, module protection, code health, and py_compile pass or first failure is recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260502-support-bot-state-sync-split.md",
+          "meta/reports/archive/20260502-support-bot-state-sync-split.md",
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_support_bot_state_sync.py",
+          "scripts/ctcp_support_bot_shared_state.py",
+          "scripts/ctcp_support_bot_progress.py",
+          "scripts/ctcp_support_bot_reply_utils.py",
+          "scripts/ctcp_support_bot_session_state.py",
+          "scripts/ctcp_support_bot_io.py",
+          "scripts/ctcp_support_bot_constants.py",
+          "docs/03_quality_gates.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py scripts/ctcp_support_bot_state_sync.py scripts/ctcp_support_bot_shared_state.py scripts/ctcp_support_bot_progress.py scripts/ctcp_support_bot_reply_utils.py scripts/ctcp_support_bot_session_state.py scripts/ctcp_support_bot_io.py scripts/ctcp_support_bot_constants.py",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_chain_breakpoints.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "python scripts/module_protection_check.py",
+          "python scripts/code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed twelfth slimming slice on 2026-05-02: active-task truth, raw-turn memory, stage derivation, and shared-state workspace helpers moved into scripts/ctcp_support_bot_state_sync.py and scripts/ctcp_support_bot_shared_state.py; scripts/ctcp_support_bot.py reduced from 2891 to 2404 lines; targeted support regressions, module protection, code health, workflow checks, and verify_repo contract profile passed."
+    },
+    {
+      "id": "ADHOC-20260502-support-bot-greeting-low-confidence-fix",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Fix support bot greeting replies downgraded to low-confidence fallback text",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260502-support-bot-state-sync-split"
+      ],
+      "dod": [
+        "GREETING/SMALLTALK turns with a customer-ready provider reply are not rewritten into low-confidence backend fallback text because of stale project context or degraded provider metadata",
+        "Regression coverage proves degraded-provider greeting replies keep the provider's user-facing greeting while non-greeting task/result/error intents remain policy-owned",
+        "Targeted support reply policy tests, workflow checks, module protection, code health, and py_compile pass or first failure is recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "frontend/support_reply_policy.py",
+          "tests/test_support_reply_policy_regression.py",
+          "ai/MEMORY/ISSUE_MEMORY.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260502-support-bot-greeting-low-confidence-fix.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260502-support-bot-greeting-low-confidence-fix.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_support_reply_policy_regression.py\" -v",
+          "python -m py_compile frontend\\support_reply_policy.py",
+          "python scripts/workflow_checks.py",
+          "python scripts/module_protection_check.py",
+          "python scripts/code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-02: GREETING/SMALLTALK intent inference now preserves customer-ready provider greetings even when degraded-provider metadata marks the fallback as low confidence; a regression locks the stale-result/degraded greeting case; targeted policy, support humanization, support-chain, runtime-wiring, workflow, module-protection, code-health, and simlab lite checks passed. Canonical code-profile verify rerun timed out after 900s after simlab lite had passed, with no new failing gate returned."
+    },
+    {
+      "id": "ADHOC-20260502-support-bot-new-request-stale-result-fix",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Prevent fresh support project requests from reusing stale completed delivery context",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260502-support-bot-greeting-low-confidence-fix"
+      ],
+      "dod": [
+        "Fresh task-like project requests such as `你帮我做一个...` are routed as new project intake/detail turns even when a previous similar run is DONE",
+        "Explicit result/status/zip follow-up queries can still use the active completed run context",
+        "Regression coverage proves a new project request with stale DONE context does not emit `项目已经整理好了` or reuse stale delivery text"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "scripts/ctcp_support_bot_mode_router.py",
+          "scripts/ctcp_support_bot_state_sync.py",
+          "scripts/ctcp_support_bot_prompting.py",
+          "frontend/support_reply_policy.py",
+          "tests/test_support_bot_humanization.py",
+          "tests/test_support_bot_stale_delivery_context.py",
+          "tests/test_runtime_wiring_contract.py",
+          "docs/03_quality_gates.md",
+          "ai/MEMORY/ISSUE_MEMORY.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260502-support-bot-new-request-stale-result-fix.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260502-support-bot-new-request-stale-result-fix.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py scripts/ctcp_support_bot_mode_router.py scripts/ctcp_support_bot_state_sync.py scripts/ctcp_support_bot_prompting.py frontend\\support_reply_policy.py",
+          "python -m unittest discover -s tests -p \"test_support_bot_stale_delivery_context.py\" -v",
+          "python -m unittest discover -s tests -p \"test_support_bot_humanization.py\" -v",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "python scripts/module_protection_check.py",
+          "python scripts/code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-02: fresh project-create turns now supersede stale completed/PASS bound runs before support bridge sync records the turn; explicit result/status/package requests still reuse completed runs. Targeted support regressions, workflow checks, module protection, code health, and verify_repo code profile with CTCP_SKIP_LITE_REPLAY=1 passed; full code profile without the skip timed out during lite replay after progressing to S28 without a summary."
+    },
+    {
+      "id": "ADHOC-20260502-generation-quality-repeat-template-closure",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Close support reply repetition and template-like project generation gaps",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260502-support-bot-new-request-stale-result-fix"
+      ],
+      "dod": [
+        "Support replies for project intake/status/delivery are capped and deduped so the user does not receive long repeated blocks for the same turn",
+        "Project source generation no longer presents deterministic template/materializer output as the final customized implementation when provider-authored source content is absent",
+        "Regression coverage proves repeat-prone support replies are compacted and template-only source generation is blocked or clearly marked incomplete instead of delivered as complete"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "frontend/support_reply_policy.py",
+          "tools/providers/project_generation_source_stage.py",
+          "tools/providers/project_generation_provenance.py",
+          "tools/providers/project_generation_artifacts.py",
+          "tests/test_support_reply_policy_regression.py",
+          "tests/test_project_generation_provenance.py",
+          "ai/MEMORY/ISSUE_MEMORY.md",
+          "docs/03_quality_gates.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260502-generation-quality-repeat-template-closure.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260502-generation-quality-repeat-template-closure.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts/ctcp_support_bot.py frontend\\support_reply_policy.py tools\\providers\\project_generation_source_stage.py tools\\providers\\project_generation_provenance.py tools\\providers\\project_generation_artifacts.py",
+          "python -m unittest discover -s tests -p \"test_support_reply_policy_regression.py\" -v",
+          "python -m unittest discover -s tests -p \"test_project_generation_provenance.py\" -v",
+          "python scripts/workflow_checks.py",
+          "python scripts/module_protection_check.py",
+          "python scripts/code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-02: support reply policy now compacts long progress/delivery replies, suppresses duplicate proactive delivery, and support bot clears suppressed reply text before Telegram send. Project provenance now emits source_customization_completion; deliverable index refuses final_project_bundle.zip when production business files are only deterministic local materializer output with no API/provider content. Targeted regressions, project-generation artifact regression, and verify_repo code profile with CTCP_SKIP_LITE_REPLAY=1 passed. Telegram bot restarted as PID pair 20400/34512 under the temp runs root."
+    },
+    {
+      "id": "ADHOC-20260503-remove-production-local-project-templates",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Remove production local project template materialization",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260502-generation-quality-repeat-template-closure"
+      ],
+      "dod": [
+        "Production project source generation no longer calls local deterministic business materializers/templates",
+        "When provider-authored source files are absent, source generation blocks before local template files are produced",
+        "Regression coverage proves materializer-only source generation is disabled rather than merely marked non-final"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/providers/project_generation_source_stage.py",
+          "tools/providers/project_generation_provenance.py",
+          "tests/test_project_generation_provenance.py",
+          "tests/test_project_generation_artifacts.py",
+          "tests/test_plane_lite_benchmark_regression.py",
+          "tests/test_project_generation_variant_content.py",
+          "docs/03_quality_gates.md",
+          "ai/MEMORY/ISSUE_MEMORY.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260503-remove-production-local-project-templates.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260503-remove-production-local-project-templates.md"
+        ],
+        "tests": [
+          "python -m py_compile tools\\providers\\project_generation_source_stage.py tools\\providers\\project_generation_provenance.py",
+          "python tests/test_project_generation_provenance.py",
+          "$env:PYTHONPATH=(Get-Location).Path; python tests/test_project_generation_artifacts.py",
+          "$env:PYTHONPATH=(Get-Location).Path; python tests/test_project_generation_variant_content.py",
+          "python tests/test_plane_lite_benchmark_regression.py -k test_high_quality_source_generation_writes_extended_coverage",
+          "python scripts/workflow_checks.py",
+          "python scripts/module_protection_check.py",
+          "python scripts/code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-03: production project source generation no longer calls local deterministic business materializers/templates; missing provider-authored source now blocks before local template files are written with disabled_local_templates provenance. Targeted regressions, module protection, workflow checks, code health, and verify_repo code profile with CTCP_SKIP_LITE_REPLAY=1 passed."
+    },
+    {
+      "id": "ADHOC-20260503-telegram-restart-clear-history",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Clear Telegram support history on bot restart",
+      "owner_role": "Support Lead",
+      "deps": [
+        "ADHOC-20260502-support-bot-state-sync-split"
+      ],
+      "dod": [
+        "Telegram support bot startup clears local support session history by default",
+        "Telegram startup drops pending updates when restart-history clearing is enabled",
+        "Regression coverage proves stale session state is removed before polling begins"
+      ],
+      "artifacts": {
+        "produces": [
+          "scripts/ctcp_support_bot.py",
+          "tests/test_runtime_wiring_contract.py",
+          "tests/test_support_bot_telegram_restart.py",
+          "docs/03_quality_gates.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260503-telegram-restart-clear-history.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260503-telegram-restart-clear-history.md"
+        ],
+        "tests": [
+          "python -m py_compile scripts\\ctcp_support_bot.py tests\\test_runtime_wiring_contract.py tests\\test_support_bot_telegram_restart.py",
+          "python tests\\test_support_bot_telegram_restart.py",
+          "python -m unittest discover -s tests -p \"test_runtime_wiring_contract.py\" -v",
+          "python scripts/workflow_checks.py",
+          "python scripts/module_protection_check.py",
+          "python scripts/code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-03: Telegram support bot startup clears local support session history by default, calls deleteWebhook with drop_pending_updates=true, and keeps --keep-history only as an explicit diagnostic bypass. Targeted tests, module protection, workflow checks, code health, and verify_repo code profile with CTCP_SKIP_LITE_REPLAY=1 passed. Bot restarted as PID pair 540/7956 with CTCP_RUNS_ROOT under the user temp directory."
+    },
+    {
+      "id": "ADHOC-20260503-api-source-bundle-consumption",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Consume API-authored source bundles in production project generation",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260503-remove-production-local-project-templates"
+      ],
+      "dod": [
+        "API source_generation prompts request concrete file path/content payloads instead of generic project descriptions",
+        "Production source generation writes provider-authored source files before deciding whether local templates are absent",
+        "Regression coverage proves provider-authored source files bypass disabled-local-template blocking without restoring local templates"
+      ],
+      "artifacts": {
+        "produces": [
+          "ctcp_adapters/ctcp_artifact_normalizers.py",
+          "ctcp_adapters/source_generation_prompt.py",
+          "tools/providers/project_generation_source_stage.py",
+          "tools/providers/project_generation_provenance.py",
+          "tests/test_project_generation_provenance.py",
+          "tests/test_api_agent_templates.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260503-api-source-bundle-consumption.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260503-api-source-bundle-consumption.md"
+        ],
+        "tests": [
+          "python -m py_compile ctcp_adapters\\ctcp_artifact_normalizers.py ctcp_adapters\\source_generation_prompt.py tools\\providers\\project_generation_source_stage.py tools\\providers\\project_generation_provenance.py tests\\test_project_generation_provenance.py tests\\test_api_agent_templates.py",
+          "python tests\\test_project_generation_provenance.py",
+          "python tests\\test_api_agent_templates.py -k test_render_prompt_for_source_generation_requests_file_content_bundle -v",
+          "python scripts/workflow_checks.py",
+          "python scripts/module_protection_check.py",
+          "python scripts/code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-03: source_generation API prompts now require a concrete ctcp-provider-source-files-v1 file bundle, provider-authored path/content rows are safely written under project_root, and source provenance reports provider_authored_source instead of disabled local templates when API files are present. Focused provenance, prompt, project-generation, workflow, py_compile, and current-task code-health checks passed; verify_repo code profile is blocked by unrelated pre-existing dirty lane files outside this task scope."
+    },
+    {
+      "id": "ADHOC-20260503-api-source-runnability-tightening",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Tighten API-authored source output for local runnability",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260503-api-source-bundle-consumption"
+      ],
+      "dod": [
+        "source_generation prompt requires all contract files, stdlib-runnable entrypoints, README quality sections, and provenance-rich source maps",
+        "provider source materialization preserves and augments API source_map content instead of overwriting it with a sparse map",
+        "regressions cover missing-file/runtime/provenance constraints observed in the live VN run"
+      ],
+      "artifacts": {
+        "produces": [
+          "ctcp_adapters/source_generation_prompt.py",
+          "tools/providers/project_generation_source_stage.py",
+          "tests/test_api_agent_templates.py",
+          "tests/test_project_generation_provenance.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260503-api-source-runnability-tightening.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260503-api-source-runnability-tightening.md"
+        ],
+        "tests": [
+          "python -m py_compile ctcp_adapters\\source_generation_prompt.py tools\\providers\\project_generation_source_stage.py tests\\test_api_agent_templates.py tests\\test_project_generation_provenance.py",
+          "python tests\\test_api_agent_templates.py -k test_render_prompt_for_source_generation_requests_file_content_bundle -v",
+          "python tests\\test_project_generation_provenance.py",
+          "python scripts\\workflow_checks.py",
+          "python scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-03: source_generation prompt now requires all output contract file groups, stdlib-runnable startup/headless behavior, README sections, narrative sample depth, and provenance-rich source maps; provider source_map materialization now preserves API map content and adds API refs when sparse. Focused prompt/provenance/project-generation tests, workflow checks, and current-task code health passed; verify_repo code profile remains blocked by unrelated dirty lane files outside this task scope."
+    },
+    {
+      "id": "ADHOC-20260503-source-generation-api-retry",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Retry transient source_generation API timeouts",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260503-api-source-runnability-tightening"
+      ],
+      "dod": [
+        "chair/source_generation API calls use transient transport retry policy",
+        "HTTP 504 gateway timeout text is classified as retryable transport failure",
+        "focused regression covers source_generation retry policy"
+      ],
+      "artifacts": {
+        "produces": [
+          "llm_core/providers/api_provider.py",
+          "tests/test_api_agent_templates.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260503-source-generation-api-retry.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260503-source-generation-api-retry.md"
+        ],
+        "tests": [
+          "python -m py_compile llm_core\\providers\\api_provider.py tests\\test_api_agent_templates.py",
+          "python tests\\test_api_agent_templates.py -k test_source_generation_api_retry_policy_handles_gateway_timeout -v",
+          "python scripts\\workflow_checks.py",
+          "python scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-03: chair/source_generation now uses bounded transient API retries, HTTP 504 gateway timeout/origin_gateway_timeout/retry_after text is classified as retryable transport failure, and focused retry-policy regression passed. Workflow checks and current-task code health passed; verify_repo code profile remains blocked by unrelated dirty lane files outside this task scope."
+    },
+    {
+      "id": "ADHOC-20260503-provider-src-layout-runtime-probe",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Make provider-authored src-layout GUI projects pass runtime probes",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260503-source-generation-api-retry"
+      ],
+      "dod": [
+        "GUI runtime probes run provider-authored src-layout projects with project src on PYTHONPATH",
+        "GUI headless export probe can fall back to --headless when a provider entrypoint does not accept richer export args",
+        "asset_placeholders.json is not treated as generic placeholder-only content solely because it contains placeholder asset identifiers"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/providers/project_generation_source_helpers.py",
+          "tools/providers/project_generation_validation.py",
+          "tests/test_project_generation_artifacts.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260503-provider-src-layout-runtime-probe.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260503-provider-src-layout-runtime-probe.md"
+        ],
+        "tests": [
+          "python -m py_compile tools\\providers\\project_generation_source_helpers.py tools\\providers\\project_generation_validation.py tests\\test_project_generation_artifacts.py",
+          "$env:PYTHONPATH=(Get-Location).Path; python tests\\test_project_generation_artifacts.py -k test_runtime_checks_support_src_layout_gui_entrypoint -v",
+          "$env:PYTHONPATH=(Get-Location).Path; python tests\\test_project_generation_artifacts.py -k test_generic_validation_allows_asset_placeholder_catalog_file -v",
+          "python scripts\\workflow_checks.py",
+          "python scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-03: runtime probes now launch provider-authored src-layout GUI/web entrypoints with project src on PYTHONPATH, GUI export retries plain --headless when rich export args are unsupported, and asset_placeholders.json no longer fails generic validation solely for placeholder asset identifiers. Focused regressions, workflow checks, and current-task code health passed."
+    },
+    {
+      "id": "ADHOC-20260503-provider-sample-schema-visual-evidence",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Accept provider nested VN samples and headless fallback visual evidence",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260503-provider-src-layout-runtime-probe"
+      ],
+      "dod": [
+        "Narrative sample metrics count provider-authored nested chapters/scenes, branch lists, and media refs",
+        "Source-stage sample quality uses the same sample metrics as domain validation",
+        "GUI headless fallback export files are collected for visual evidence when the entrypoint lacks --out"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/providers/project_generation_source_helpers.py",
+          "tools/providers/project_generation_sample_metrics.py",
+          "tools/providers/project_generation_source_stage.py",
+          "tools/providers/project_generation_validation.py",
+          "tests/test_project_generation_artifacts.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260503-provider-sample-schema-visual-evidence.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260503-provider-sample-schema-visual-evidence.md"
+        ],
+        "tests": [
+          "python -m py_compile tools\\providers\\project_generation_source_helpers.py tools\\providers\\project_generation_sample_metrics.py tools\\providers\\project_generation_source_stage.py tools\\providers\\project_generation_validation.py tests\\test_project_generation_artifacts.py",
+          "$env:PYTHONPATH=(Get-Location).Path; python tests\\test_project_generation_artifacts.py -k test_narrative_sample_metrics_accept_provider_nested_schema -v",
+          "$env:PYTHONPATH=(Get-Location).Path; python tests\\test_project_generation_artifacts.py -k test_runtime_checks_support_src_layout_gui_entrypoint -v",
+          "python scripts\\workflow_checks.py",
+          "python scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-03: narrative sample metrics now accept provider-authored nested chapters/scenes, branch lists, media refs, and id/name/description character cards; source-stage sample quality reuses the same metrics; successful GUI --headless fallback export files are copied into visual evidence inputs. Focused regressions, live-run recheck, workflow checks, and current-task code health passed; verify_repo code profile remains blocked by unrelated out-of-scope dirty support-lane files."
+    },
+    {
+      "id": "ADHOC-20260503-vn-generation-live-success-test",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Run fresh VN generation until success evidence",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260503-provider-sample-schema-visual-evidence"
+      ],
+      "dod": [
+        "A fresh VN project-generation run is created from the user's recent goal",
+        "The run is advanced until successful delivery or the first hard blocker is recorded",
+        "Generated project smoke/export evidence is inspected and reported"
+      ],
+      "artifacts": {
+        "produces": [
+          "external run_dir",
+          "ai/MEMORY/ISSUE_MEMORY.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260503-vn-generation-live-success-test.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260503-vn-generation-live-success-test.md",
+          "llm_core/providers/api_provider.py",
+          "llm_core/providers/api_retry_helpers.py",
+          "llm_core/clients/openai_compatible.py",
+          "ctcp_adapters/source_generation_prompt.py",
+          "tools/providers/project_generation_source_helpers.py",
+          "tools/providers/project_generation_source_stage.py",
+          "tests/test_api_agent_templates.py",
+          "tests/test_openai_responses_client_resilience.py",
+          "tests/test_project_generation_artifacts.py"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py new-run --goal <VN goal>",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py advance --run-dir <run_dir> --max-steps <n>",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py status --run-dir <run_dir>",
+          "generated project entrypoint smoke/export checks",
+          "python scripts\\workflow_checks.py",
+          "python scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task",
+          "$env:CTCP_SKIP_LITE_REPLAY='1'; powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-04: fresh VN run was advanced to a concrete hard blocker. Repo-side fixes landed for transient API retry, JSON-object response format, content_lines source bundles, package marker fill, and provider import probes. Remote API remained blocked by repeated Cloudflare 504; local Ollama 7B returned malformed/incomplete JSON/source bundles or timed out. Workflow checks and scoped code health passed; canonical code verify is blocked by pre-existing out-of-scope dirty files."
+    },
+    {
+      "id": "ADHOC-20260504-local-only-vn-generation-test",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Local-only VN generation test",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260503-vn-generation-live-success-test"
+      ],
+      "dod": [
+        "Explicit local-only provider mode can force Ollama for mainline roles when formal API-only is disabled",
+        "A fresh VN project-generation run is created and advanced without remote API",
+        "The run records either successful generated project evidence or the first local-only blocker"
+      ],
+      "artifacts": {
+        "produces": [
+          "external run_dir",
+          "llm_core/dispatch/router.py",
+          "tests/test_provider_selection.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260504-local-only-vn-generation-test.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260504-local-only-vn-generation-test.md"
+        ],
+        "tests": [
+          "python tests\\test_provider_selection.py -k local_only -v",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py new-run --goal <VN goal>",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py advance --run-dir <run_dir> --max-steps <n>",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py status --run-dir <run_dir>",
+          "python scripts\\workflow_checks.py",
+          "python scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-04: local-only override regression passed; fresh run 20260504-012310-652618-orchestrate used ollama_agent for all critical steps with external_api_used=false, then blocked at source_generation because the local model produced incomplete source, missing VNService, shallow sample data, and placeholder code."
+    },
+    {
+      "id": "ADHOC-20260504-api-vn-generation-retest",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "API VN generation retest",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260504-local-only-vn-generation-test"
+      ],
+      "dod": [
+        "A fresh VN project-generation run is created in formal API-only mode",
+        "The run is advanced until generated source succeeds or the first API blocker is recorded",
+        "Provider evidence proves mainline critical stages used api_agent rather than local Ollama"
+      ],
+      "artifacts": {
+        "produces": [
+          "external run_dir",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260504-api-vn-generation-retest.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260504-api-vn-generation-retest.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py new-run --goal <VN goal>",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py advance --run-dir <run_dir> --max-steps <n>",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py status --run-dir <run_dir>",
+          "inspect provider ledger and source-generation report",
+          "python scripts\\workflow_checks.py"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-04: fresh formal API-only VN run 20260504-104454-103863-orchestrate proved api_agent executed mainline planning/review/freeze stages and attempted source_generation. A small direct API code-output probe succeeded, but long source_generation calls repeatedly failed at API transport with Cloudflare 520/504 and TLS protocol errors before any source_generation_report was written."
+    },
+    {
+      "id": "ADHOC-20260504-api-local-network-proxy-retest",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "API source generation retest through local network proxy",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260504-api-vn-generation-retest"
+      ],
+      "dod": [
+        "A local network proxy endpoint is detected without exposing credentials",
+        "A small API code-output probe is executed with HTTP_PROXY/HTTPS_PROXY set",
+        "A formal API-only VN generation run is advanced through the local network proxy until source success or first blocker"
+      ],
+      "artifacts": {
+        "produces": [
+          "external run_dir",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260504-api-local-network-proxy-retest.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260504-api-local-network-proxy-retest.md"
+        ],
+        "tests": [
+          "detect local proxy port",
+          "small openai_agent_api.py code-output probe with proxy env",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py new-run --goal <VN goal>",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py advance --run-dir <run_dir> --max-steps <n>",
+          "inspect provider ledger and source-generation report",
+          "python scripts\\workflow_checks.py"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-04: local FlClash proxy on 127.0.0.1:7890 was detected and used via HTTP_PROXY/HTTPS_PROXY. A small proxy-routed API code-output probe succeeded quickly, but formal API-only VN run 20260504-111854-823548-orchestrate blocked at contract_guardian/review_contract after Cloudflare 504 then 520 from api.gptsapi.net; provider ledger showed api_agent execution and fallback_count=0."
+    },
+    {
+      "id": "ADHOC-20260504-chunked-api-source-generation",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Chunk API source generation into manifest and file batches",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260504-api-local-network-proxy-retest"
+      ],
+      "dod": [
+        "source_generation can request a small provider-authored file manifest before file contents",
+        "file contents can be requested in smaller API batches and locally saved into the normal source-generation payload",
+        "regressions prove chunked source_generation writes provider-authored files without restoring local templates"
+      ],
+      "artifacts": {
+        "produces": [
+          "ctcp_adapters/source_generation_prompt.py",
+          "llm_core/providers/api_source_chunking.py",
+          "llm_core/providers/api_provider.py",
+          "tools/providers/project_generation_source_stage.py",
+          "tests/test_api_source_chunking.py",
+          "tests/test_api_agent_templates.py",
+          "tests/test_project_generation_artifacts.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260504-chunked-api-source-generation.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260504-chunked-api-source-generation.md"
+        ],
+        "tests": [
+          "python -m py_compile ctcp_adapters\\source_generation_prompt.py llm_core\\providers\\api_source_chunking.py llm_core\\providers\\api_provider.py tools\\providers\\project_generation_source_stage.py tests\\test_api_source_chunking.py tests\\test_api_agent_templates.py tests\\test_project_generation_artifacts.py",
+          "python tests\\test_api_source_chunking.py -v",
+          "python tests\\test_project_generation_artifacts.py -k chunked_source_generation -v",
+          "python scripts\\workflow_checks.py",
+          "python scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-04: source_generation now defaults to chunked API text flow after output contract freeze: manifest-only request first, then file-content batches merged into a provider-authored ctcp-provider-source-files-v1 payload consumed by existing local materialization/validation. Focused py_compile, chunking, source prompt, source-stage row, workflow, and code-health checks passed; canonical verify remains blocked by unrelated out-of-scope dirty lane files."
+    },
+    {
+      "id": "ADHOC-20260504-chunked-api-vn-live-retest",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Live VN generation retest after chunked API source generation",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260504-chunked-api-source-generation"
+      ],
+      "dod": [
+        "A fresh formal API-only VN run is created after chunked source_generation is available",
+        "The run is advanced with local network proxy and chunking enabled",
+        "Evidence records whether execution reaches chunked source_generation or the first upstream API blocker"
+      ],
+      "artifacts": {
+        "produces": [
+          "external run_dir",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260504-chunked-api-vn-live-retest.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260504-chunked-api-vn-live-retest.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py new-run --goal <VN goal>",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py advance --run-dir <run_dir> --max-steps <n>",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py status --run-dir <run_dir>",
+          "inspect provider ledger, trace, and source-generation chunk logs if reached",
+          "python scripts\\workflow_checks.py"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-04: fresh formal API-only VN run 20260504-124049-309194-orchestrate was created with proxy and CTCP_CHUNKED_SOURCE_GENERATION=1. It reached API planning stages, then blocked before source_generation at contract_guardian/review_contract; first attempt returned Cloudflare 520 and retry returned Cloudflare 504 from api.gptsapi.net. No source_generation_report was written, so the chunked source stage was not reached."
+    },
+    {
+      "id": "ADHOC-20260504-gptsapi-openai-compatible-probe",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Validate gptsapi OpenAI-compatible endpoint settings",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260504-chunked-api-vn-live-retest"
+      ],
+      "dod": [
+        "Compare documented gptsapi Base URL against the repo's OpenAI-compatible URL construction",
+        "Run small API probes without exposing credentials",
+        "Record whether endpoint mode/model settings should change before rerunning full VN generation"
+      ],
+      "artifacts": {
+        "produces": [
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260504-gptsapi-openai-compatible-probe.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260504-gptsapi-openai-compatible-probe.md"
+        ],
+        "tests": [
+          "small openai_agent_api.py probe with OPENAI_BASE_URL=https://api.gptsapi.net/v1 and model gpt-4o",
+          "small openai_agent_api.py probe with chat endpoint mode",
+          "python scripts\\workflow_checks.py"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-04: gptsapi base URL handling now normalizes https://api.gptsapi.net/v1 to https://api.gptsapi.net, auto endpoint mode uses chat/completions for gptsapi, and Cloudflare 520/retry_after is treated as retryable. Small gpt-4o probes passed. A formal VN run reached API-authored chunked source_generation with fallback_count=0, then blocked at generated project validation because service.py imports generate_asset_placeholders but prompt_pipeline.py did not define it; source generation now runs, but generated project repair remains next."
+    },
+    {
+      "id": "ADHOC-20260504-vn-generated-source-consistency-retest",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Continue VN API generation through generated-source consistency repair",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260504-gptsapi-openai-compatible-probe"
+      ],
+      "dod": [
+        "The existing formal VN run is advanced or repaired past the missing generated function blocker",
+        "Generated source cross-file import consistency is improved if the retry loop cannot self-repair",
+        "Evidence records smoke/export pass or the next concrete generated-project blocker"
+      ],
+      "artifacts": {
+        "produces": [
+          "external run_dir",
+          "ctcp_adapters/source_generation_prompt.py",
+          "tools/providers/project_generation_import_validation.py",
+          "tools/providers/project_generation_validation.py",
+          "tests/test_api_agent_templates.py",
+          "tests/test_project_generation_artifacts.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260504-vn-generated-source-consistency-retest.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260504-vn-generated-source-consistency-retest.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py advance --run-dir <existing run_dir>",
+          "focused prompt/source-generation tests if code changes",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-04: continued the existing formal VN API run through multiple source_generation repair attempts. Prompt guidance now requires cross-file import/export and service signature consistency; generated project validation now reports internal Python import missing symbols in one pass. Focused tests and scoped code health passed. The live run improved from missing import to startup pass/import consistency pass, then regressed on another API batch; latest stable blocker remains generated-project validation plus intermittent gptsapi source batch transport failure, not local-template fallback."
+    },
+    {
+      "id": "ADHOC-20260506-worktree-cleanliness-discipline",
+      "layer": "L0",
+      "priority": "P0",
+      "title": "Worktree cleanliness discipline and advisory inventory",
+      "owner_role": "Chair/Planner",
+      "deps": [
+        "ADHOC-20260505-dirty-worktree-verification-closure"
+      ],
+      "dod": [
+        "Repository cleanup policy explains daily worktree cleanliness discipline without authorizing destructive resets",
+        "An advisory command classifies dirty worktree state into source, docs/meta, archive, and runtime-output buckets",
+        "Current dirty state and the first next cleanup actions are recorded without reverting user or previous task changes"
+      ],
+      "artifacts": {
+        "produces": [
+          "docs/cleanup_policy.md",
+          "scripts/worktree_cleanliness_report.py",
+          "tests/test_worktree_cleanliness_report.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260506-worktree-cleanliness-discipline.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260506-worktree-cleanliness-discipline.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe scripts\\worktree_cleanliness_report.py --json",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_worktree_cleanliness_report -v",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          "powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-06: cleanup_policy now defines daily worktree cleanliness discipline; scripts/worktree_cleanliness_report.py classifies dirty state into action buckets; focused tests, lane regressions, and canonical verify code profile passed. Current worktree remains intentionally dirty with 160 files, no runtime/generated-output bucket, and requires commit/stash grouping rather than destructive cleanup."
     }
   ]
 }

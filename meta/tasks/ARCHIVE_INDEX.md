@@ -7,6 +7,40 @@
 
 | Date | Topic | File |
 |------|-------|------|
+| 2026-05-06 | Worktree Cleanliness Discipline | [->](archive/20260506-worktree-cleanliness-discipline.md) |
+| 2026-05-06 | Dirty Worktree Verification Closure | [->](archive/20260505-dirty-worktree-verification-closure.md) |
+| 2026-05-05 | Local Librarian Context Intelligence | [->](archive/20260505-local-librarian-context-intelligence.md) |
+| 2026-05-04 | VN Generated Source Consistency Retest | [->](archive/20260504-vn-generated-source-consistency-retest.md) |
+| 2026-05-04 | GPTSAPI OpenAI-Compatible Probe | [->](archive/20260504-gptsapi-openai-compatible-probe.md) |
+| 2026-05-04 | Chunked API VN Live Retest | [->](archive/20260504-chunked-api-vn-live-retest.md) |
+| 2026-05-04 | Chunked API Source Generation | [->](archive/20260504-chunked-api-source-generation.md) |
+| 2026-05-04 | API Local Network Proxy Retest | [->](archive/20260504-api-local-network-proxy-retest.md) |
+| 2026-05-04 | API VN Generation Retest | [->](archive/20260504-api-vn-generation-retest.md) |
+| 2026-05-04 | Local Only VN Generation Test | [->](archive/20260504-local-only-vn-generation-test.md) |
+| 2026-05-04 | VN Generation Live Success Test | [->](archive/20260503-vn-generation-live-success-test.md) |
+| 2026-05-03 | Provider Sample Schema And Headless Visual Evidence | [->](archive/20260503-provider-sample-schema-visual-evidence.md) |
+| 2026-05-03 | Provider Src Layout Runtime Probe | [->](archive/20260503-provider-src-layout-runtime-probe.md) |
+| 2026-05-03 | Source Generation API Retry | [->](archive/20260503-source-generation-api-retry.md) |
+| 2026-05-03 | API Source Runnability Tightening | [->](archive/20260503-api-source-runnability-tightening.md) |
+| 2026-05-03 | API Source Bundle Consumption | [->](archive/20260503-api-source-bundle-consumption.md) |
+| 2026-05-03 | Telegram Restart Clear History | [->](archive/20260503-telegram-restart-clear-history.md) |
+| 2026-05-03 | Remove Production Local Project Templates | [->](archive/20260503-remove-production-local-project-templates.md) |
+| 2026-05-02 | Generation Quality Repeat Template Closure | [->](archive/20260502-generation-quality-repeat-template-closure.md) |
+| 2026-05-02 | Support Bot New Request Stale Result Fix | [->](archive/20260502-support-bot-new-request-stale-result-fix.md) |
+| 2026-05-02 | Support Bot Greeting Low Confidence Fallback Fix | [->](archive/20260502-support-bot-greeting-low-confidence-fix.md) |
+| 2026-05-02 | Support Bot Slimming | [->](archive/20260502-support-bot-slimming.md) |
+| 2026-05-02 | Support Bot IO Split | [->](archive/20260502-support-bot-io-split.md) |
+| 2026-05-02 | Support Bot Session State Split | [->](archive/20260502-support-bot-session-state-split.md) |
+| 2026-05-02 | Support Bot Progress Evidence Split | [->](archive/20260502-support-bot-progress-evidence-split.md) |
+| 2026-05-02 | Support Bot Provider Router Split | [->](archive/20260502-support-bot-provider-router-split.md) |
+| 2026-05-02 | Support Bot Delivery Actions Split | [->](archive/20260502-support-bot-delivery-actions-split.md) |
+| 2026-05-02 | Support Bot Public Delivery Split | [->](archive/20260502-support-bot-public-delivery-split.md) |
+| 2026-05-02 | Support Bot Reply Utils Split | [->](archive/20260502-support-bot-reply-utils-split.md) |
+| 2026-05-02 | Support Bot Prompt Request Split | [->](archive/20260502-support-bot-prompt-request-split.md) |
+| 2026-05-02 | Support Bot Provider Runtime Split | [->](archive/20260502-support-bot-provider-runtime-split.md) |
+| 2026-05-02 | Support Bot T2P State Split | [->](archive/20260502-support-bot-t2p-state-split.md) |
+| 2026-05-02 | Support Bot State Sync Split | [->](archive/20260502-support-bot-state-sync-split.md) |
+| 2026-05-01 | Generation Provenance Ledger | [->](archive/20260501-generation-provenance-ledger.md) |
 | 2026-04-28 | Template Chain Removal Pivot | [->](archive/20260428-template-chain-removal-pivot.md) |
 | 2026-04-26 | Support Single Project-Generation Interface (Mainline) | [->](archive/20260426-single-support-project-generation-interface.md) |
 | 2026-04-25 | Mainline Reduction Closure (No New Layer) | [->](archive/20260425-mainline-reduction-closure.md) |
