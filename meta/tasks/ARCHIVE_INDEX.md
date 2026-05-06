@@ -7,6 +7,7 @@
 
 | Date | Topic | File |
 |------|-------|------|
+| 2026-05-06 | Source Stage Boundary Refactor | [->](archive/20260506-source-stage-boundary-refactor.md) |
 | 2026-05-06 | Worktree Cleanliness Discipline | [->](archive/20260506-worktree-cleanliness-discipline.md) |
 | 2026-05-06 | Dirty Worktree Verification Closure | [->](archive/20260505-dirty-worktree-verification-closure.md) |
 | 2026-05-05 | Local Librarian Context Intelligence | [->](archive/20260505-local-librarian-context-intelligence.md) |

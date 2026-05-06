@@ -1,10 +1,4 @@
-# Demo Report - LAST
-
-## Latest Report
-
-- File: `meta/reports/archive/20260506-source-stage-boundary-refactor.md`
-- Date: `2026-05-06`
-- Topic: `Source Stage Boundary Refactor`
+# Demo Report - Source Stage Boundary Refactor
 
 ### Readlist
 - `AGENTS.md`

@@ -12,11 +12,21 @@ from tools.providers.project_generation_decisions import (
     decide_project_generation,
 )
 from tools.providers.project_generation_domain_contract import compatibility_report
+from tools.providers.project_generation_extended_evidence import (
+    _is_high_quality_team_task,
+    _is_indie_studio_hub,
+    _materialize_high_quality_indie_studio_hub_evidence,
+    _materialize_high_quality_team_task_evidence,
+)
 from tools.providers.project_generation_import_validation import provider_interface_contract
+from tools.providers.project_generation_provider_source_files import (
+    _ensure_provider_package_init_files,
+    _materialize_provider_source_files,
+    _provider_source_file_rows,
+)
 from tools.providers.project_generation_provenance import attach_source_generation_provenance
 from tools.providers.project_generation_sample_metrics import narrative_sample_metrics
 from tools.providers.project_generation_source_helpers import (
-    _render_visual_evidence_png,
     build_missing_context_extra,
     build_runtime_checks,
     build_success_extra,
@@ -156,124 +166,6 @@ def _blocked_local_templates_disabled_report(*, inputs: dict[str, Any], run_dir:
     return report
 
 
-def _candidate_provider_file_rows(src: dict[str, Any]) -> list[dict[str, Any]]:
-    candidates: list[Any] = []
-    for key in ("files", "provider_source_files", "generated_files", "project_files"):
-        value = src.get(key)
-        if isinstance(value, list):
-            candidates.extend(value)
-        elif isinstance(value, dict):
-            candidates.extend({"path": k, "content": v} for k, v in value.items())
-    bundle = src.get("source_bundle")
-    if isinstance(bundle, dict):
-        value = bundle.get("files")
-        if isinstance(value, list):
-            candidates.extend(value)
-        elif isinstance(value, dict):
-            candidates.extend({"path": k, "content": v} for k, v in value.items())
-    return [dict(row) for row in candidates if isinstance(row, dict)]
-
-
-def _provider_source_file_rows(inputs: dict[str, Any]) -> list[dict[str, str]]:
-    src = dict(inputs.get("src", {})) if isinstance(inputs.get("src", {}), dict) else {}
-    project_root = str(inputs.get("project_root", "")).strip().replace("\\", "/").strip("/")
-    if not project_root:
-        return []
-    out: list[dict[str, str]] = []
-    seen: set[str] = set()
-    for row in _candidate_provider_file_rows(src):
-        rel = str(row.get("path", "")).strip().replace("\\", "/").lstrip("/")
-        content = row.get("content")
-        content_lines = row.get("content_lines")
-        if not isinstance(content, str) and isinstance(content_lines, list):
-            normalized_lines = [str(item) for item in content_lines]
-            content = "\n".join(normalized_lines) + ("\n" if normalized_lines else "")
-        if rel and rel not in seen and rel.startswith(project_root + "/") and isinstance(content, str) and content.strip():
-            out.append({"path": rel, "content": content})
-            seen.add(rel)
-    return out
-
-
-def _write_provider_source_map(*, run_dir: Path, inputs: dict[str, Any], rows: list[dict[str, str]]) -> None:
-    src = dict(inputs.get("src", {})) if isinstance(inputs.get("src", {}), dict) else {}
-    source_map = src.get("source_map") if isinstance(src.get("source_map"), dict) else {}
-    path = run_dir / str(inputs["project_root"]) / "sample_data" / "source_map.json"
-    existing = _read_json_dict(path)
-    doc = dict(existing)
-    doc.update(dict(source_map))
-    doc["api_content_applied"] = True
-    doc["api_content_source_ref"] = str(doc.get("api_content_source_ref", "")).strip() or "API:api_agent/source_generation"
-    _ensure_provider_source_refs(doc, rows)
-    doc["provider_authored_file_count"] = len(rows)
-    doc["provider_authored_files"] = [row["path"] for row in rows]
-    _write_json(path, doc)
-
-
-def _read_json_dict(path: Path) -> dict[str, Any]:
-    try:
-        doc = json.loads(path.read_text(encoding="utf-8", errors="replace"))
-    except Exception:
-        return {}
-    return doc if isinstance(doc, dict) else {}
-
-
-def _ensure_provider_source_refs(doc: dict[str, Any], rows: list[dict[str, str]]) -> None:
-    source_ref = str(doc.get("api_content_source_ref", "")).strip() or "API:api_agent/source_generation"
-    items = [dict(row) for row in doc.get("content_items", []) if isinstance(row, dict)]
-    if not any(str(row.get("source", "")).strip().startswith("API:") for row in items):
-        items.append({"item_id": "provider_authored_source_bundle", "source": source_ref})
-    field_sources = dict(doc.get("field_sources", {})) if isinstance(doc.get("field_sources", {}), dict) else {}
-    if not any(str(value).strip().startswith("API:") for value in field_sources.values()):
-        for row in rows[:40]:
-            field_sources[f"files.{row['path']}"] = source_ref
-    doc["content_items"] = items
-    doc["field_sources"] = field_sources
-
-
-def _materialize_provider_source_files(*, run_dir: Path, inputs: dict[str, Any], rows: list[dict[str, str]]) -> list[str]:
-    written: list[str] = []
-    root = run_dir.resolve()
-    for row in rows:
-        rel = row["path"]
-        target = (run_dir / rel).resolve()
-        try:
-            target.relative_to(root)
-        except ValueError:
-            continue
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(row["content"], encoding="utf-8", errors="replace")
-        written.append(rel)
-    written.extend(_ensure_provider_package_init_files(run_dir=run_dir, inputs=inputs, already_written=set(written)))
-    if written:
-        _write_provider_source_map(run_dir=run_dir, inputs=inputs, rows=rows)
-    return written
-
-
-def _ensure_provider_package_init_files(*, run_dir: Path, inputs: dict[str, Any], already_written: set[str]) -> list[str]:
-    root = run_dir.resolve()
-    project_root = str(inputs.get("project_root", "")).strip().replace("\\", "/")
-    lists = inputs.get("lists") if isinstance(inputs.get("lists"), dict) else {}
-    expected = list(lists.get("source_files", [])) if isinstance(lists.get("source_files", []), list) else []
-    added: list[str] = []
-    for raw in expected:
-        rel = str(raw or "").strip().replace("\\", "/")
-        if not rel.endswith("/__init__.py") or rel in already_written:
-            continue
-        if project_root and not rel.startswith(project_root + "/"):
-            continue
-        target = (run_dir / rel).resolve()
-        try:
-            target.relative_to(root)
-        except ValueError:
-            continue
-        if target.exists():
-            continue
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text('"""Package marker for provider-authored source bundle."""\n', encoding="utf-8")
-        added.append(rel)
-    return added
-
-
 def _materialize_nonproduction_business_files(run_dir: Path, goal_text: str, stage_contract: dict[str, Any], consumed_files: list[str]) -> None:
     from tools.providers.project_generation_business_materializers import materialize_business_files
 
@@ -299,11 +191,6 @@ def _source_stage_contract(inputs: dict[str, Any], current_materialize: list[str
 def _write_json(path: Path, doc: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-
-def _write_text(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
 
 
 def _copy_sample_generation_artifacts(*, run_dir: Path, project_root: str, artifact_paths: list[str]) -> list[str]:
@@ -348,238 +235,6 @@ def _read_sample_metrics(*, run_dir: Path, project_root: str) -> dict[str, Any]:
     if not isinstance(doc, dict):
         return {}
     return narrative_sample_metrics(doc)
-
-
-def _is_high_quality_team_task(inputs: dict[str, Any]) -> bool:
-    return (
-        str(inputs.get("project_type", "")).strip() == "team_task_pm"
-        and str(dict(inputs.get("lists", {})).get("build_profile", "")).strip() == "high_quality_extended"
-    )
-
-
-def _is_indie_studio_hub(inputs: dict[str, Any]) -> bool:
-    return str(inputs.get("project_domain", "")).strip() == "indie_studio_production_hub" or str(inputs.get("project_archetype", "")).strip() == "indie_studio_hub_web"
-
-
-def _materialize_test_evidence_screenshots(
-    *,
-    run_dir: Path,
-    project_dir: Path,
-    project_label: str,
-) -> list[str]:
-    test_screenshots_dir = project_dir / "artifacts" / "test_screenshots"
-    test_screenshots_dir.mkdir(parents=True, exist_ok=True)
-    cases = (
-        ("test-smoke-runtime.png", "smoke runtime check", "cli startup + basic flow"),
-        ("test-export-validation.png", "export validation", "export output consistency"),
-        ("test-replay-acceptance.png", "delivery replay", "replay acceptance gate"),
-    )
-    output: list[str] = []
-    for idx, (name, subtitle, detail) in enumerate(cases, start=1):
-        path = test_screenshots_dir / name
-        _render_visual_evidence_png(
-            path=path,
-            title=f"{project_label} test evidence",
-            subtitle=subtitle,
-            detail_lines=[
-                f"test case {idx}/{len(cases)}",
-                detail,
-                "automated evidence snapshot",
-            ],
-        )
-        output.append(path.relative_to(run_dir.resolve()).as_posix())
-    return output
-
-
-def _materialize_high_quality_team_task_evidence(*, run_dir: Path, inputs: dict[str, Any]) -> dict[str, Any]:
-    project_root = str(inputs["project_root"]).strip()
-    project_dir = (run_dir / project_root).resolve()
-    docs_dir = project_dir / "docs"
-    screenshots_dir = project_dir / "artifacts" / "screenshots"
-    docs_dir.mkdir(parents=True, exist_ok=True)
-    screenshots_dir.mkdir(parents=True, exist_ok=True)
-    pages = [
-        "dashboard",
-        "project_list",
-        "project_overview",
-        "task_list",
-        "kanban_board",
-        "task_detail",
-        "activity_feed",
-        "project_settings",
-    ]
-    capabilities = [
-        "task_crud",
-        "board_list_dual_view",
-        "assignee_priority_due_date_labels",
-        "comments_activity_timeline",
-        "search_filter_sort",
-        "multi_project_switching",
-        "backlog",
-        "import_workspace_json",
-        "export_workspace_json",
-        "dashboard_status_priority_summary",
-    ]
-    docs = {
-        "feature_matrix.md": "# Feature Matrix\n\n| Capability | Status |\n|---|---|\n"
-        + "\n".join(f"| {item} | implemented |" for item in capabilities)
-        + "\n",
-        "page_map.md": "# Page Map / IA\n\n"
-        + "\n".join(f"- {page}: implemented key screen" for page in pages)
-        + "\n",
-        "data_model_summary.md": "# Data Model Summary\n\n"
-        "- Workspace owns users and projects.\n"
-        "- Project owns tasks, backlog/milestone metadata, settings, and import/export scope.\n"
-        "- Task contains title, description, status, priority, assignee, due_date, labels, comments, and activity references.\n"
-        "- ActivityEvent records actor/action/detail for timeline review.\n",
-        "mid_stage_evidence.md": "# Mid-stage Evidence Review\n\n"
-        "- First runnable build exposes dashboard/project switcher/task board/list/detail/activity surfaces.\n"
-        "- Feature completion adds search/filter/sort, backlog, import/export, and project settings evidence.\n",
-    }
-    doc_rels: list[str] = []
-    for name, content in docs.items():
-        path = docs_dir / name
-        path.write_text(content, encoding="utf-8")
-        doc_rels.append(path.relative_to(run_dir.resolve()).as_posix())
-
-    screenshot_rels: list[str] = []
-    for index, page in enumerate(pages, start=1):
-        name = "final-ui.png" if index == 1 else f"{index:02d}-{page}.png"
-        path = screenshots_dir / name
-        _render_visual_evidence_png(
-            path=path,
-            title=f"Plane Lite {page}",
-            subtitle="High Quality Extended",
-            detail_lines=[
-                f"page {index}/8",
-                "search filter sort" if page in {"dashboard", "task_list"} else "team task pm",
-                "import export" if page in {"project_settings", "dashboard"} else "project workflow",
-            ],
-        )
-        screenshot_rels.append(path.relative_to(run_dir.resolve()).as_posix())
-    test_screenshot_rels = _materialize_test_evidence_screenshots(
-        run_dir=run_dir,
-        project_dir=project_dir,
-        project_label="Plane Lite",
-    )
-
-    ledger = {
-        "schema_version": "ctcp-extended-coverage-ledger-v1",
-        "build_profile": "high_quality_extended",
-        "product_depth": "extended",
-        "implemented_pages": pages,
-        "implemented_capabilities": capabilities,
-        "missing_capabilities": [],
-        "screenshot_files": screenshot_rels,
-        "test_screenshot_files": test_screenshot_rels,
-        "documentation_files": doc_rels,
-        "coverage": {
-            "pages": {"required": 8, "actual": len(pages), "passed": len(pages) >= 8},
-            "screenshots": {"required": 8, "actual": len(screenshot_rels), "passed": len(screenshot_rels) >= 8},
-            "feature_matrix": {"passed": any(path.endswith("feature_matrix.md") for path in doc_rels)},
-            "page_map": {"passed": any(path.endswith("page_map.md") for path in doc_rels)},
-            "data_model_summary": {"passed": any(path.endswith("data_model_summary.md") for path in doc_rels)},
-            "search": {"passed": "search_filter_sort" in capabilities},
-            "import_export": {"passed": "import_workspace_json" in capabilities and "export_workspace_json" in capabilities},
-            "dashboard_or_project_overview": {"passed": "dashboard" in pages and "project_overview" in pages},
-        },
-    }
-    ledger["passed"] = all(bool(row.get("passed", False)) for row in dict(ledger["coverage"]).values())
-    ledger_path = run_dir / "artifacts" / "extended_coverage_ledger.json"
-    _write_json(ledger_path, ledger)
-    return ledger
-
-
-def _materialize_high_quality_indie_studio_hub_evidence(*, run_dir: Path, inputs: dict[str, Any]) -> dict[str, Any]:
-    project_root = str(inputs["project_root"]).strip()
-    project_dir = (run_dir / project_root).resolve()
-    docs_dir = project_dir / "docs"
-    screenshots_dir = project_dir / "artifacts" / "screenshots"
-    docs_dir.mkdir(parents=True, exist_ok=True)
-    screenshots_dir.mkdir(parents=True, exist_ok=True)
-    pages = [
-        "dashboard",
-        "project_list",
-        "project_overview",
-        "milestone_backlog",
-        "task_board",
-        "task_list",
-        "task_detail",
-        "asset_library",
-        "asset_detail",
-        "bug_tracker",
-        "build_release_center",
-        "activity_feed",
-        "docs_center",
-        "project_settings",
-    ]
-    docs = {
-        "feature_matrix.md": "# Feature Matrix\n\n- Dashboard\n- Project Overview\n- Milestone Backlog\n- Task Board/List/Detail\n- Asset Library/Detail\n- Bug Tracker\n- Build / Release Center\n- Activity Feed\n- Docs Center\n- Project Settings\n",
-        "page_map.md": "# Page Map\n\n" + "\n".join(f"- {page}" for page in pages) + "\n",
-        "data_model_summary.md": "# Data Model Summary\n\n- Workspace, Project, Milestone, Task, Asset, Bug, BuildRecord, ReleaseSummary, and DocEntry are first-class models.\n",
-        "milestone_plan.md": "# Milestone Plan\n\n- Pre-production\n- Vertical Slice\n- Release Candidate\n- Final Delivery\n",
-        "startup_guide.md": "# Startup Guide\n\n1. Run the launcher.\n2. Use --serve for health payload.\n3. Run export mode for deliverables.\n",
-        "replay_guide.md": "# Replay Guide\n\n1. Export deliverables.\n2. Review preview and JSON exports.\n3. Confirm screenshots and docs bundle.\n",
-        "mid_stage_review.md": "# Mid Stage Review\n\n- Composite production domain is present across tasks, assets, bugs, release, and docs.\n",
-    }
-    doc_rels: list[str] = []
-    for name, content in docs.items():
-        path = docs_dir / name
-        path.write_text(content, encoding="utf-8")
-        doc_rels.append(path.relative_to(run_dir.resolve()).as_posix())
-    screenshot_rels: list[str] = []
-    for index, page in enumerate(pages[:10], start=1):
-        name = "final-ui.png" if index == 1 else f"{index:02d}-{page}.png"
-        path = screenshots_dir / name
-        _render_visual_evidence_png(
-            path=path,
-            title=f"Indie Studio Hub {page}",
-            subtitle="Composite production domain",
-            detail_lines=[
-                f"page {index}/10",
-                page,
-                "tasks assets bugs release docs",
-            ],
-        )
-        screenshot_rels.append(path.relative_to(run_dir.resolve()).as_posix())
-    test_screenshot_rels = _materialize_test_evidence_screenshots(
-        run_dir=run_dir,
-        project_dir=project_dir,
-        project_label="Indie Studio Hub",
-    )
-    coverage = {
-        "pages": {"required": 13, "actual": len(pages), "passed": len(pages) >= 13},
-        "screenshots": {"required": 10, "actual": len(screenshot_rels), "passed": len(screenshot_rels) >= 10},
-        "feature_matrix": {"passed": any(path.endswith("feature_matrix.md") for path in doc_rels)},
-        "page_map": {"passed": any(path.endswith("page_map.md") for path in doc_rels)},
-        "data_model_summary": {"passed": any(path.endswith("data_model_summary.md") for path in doc_rels)},
-        "search": {"passed": True},
-        "import_export": {"passed": True},
-        "dashboard_or_project_overview": {"passed": "dashboard" in pages and "project_overview" in pages},
-        "asset_library": {"passed": "asset_library" in pages},
-        "asset_detail": {"passed": "asset_detail" in pages},
-        "bug_tracker": {"passed": "bug_tracker" in pages},
-        "build_release_center": {"passed": "build_release_center" in pages},
-        "docs_center": {"passed": "docs_center" in pages},
-        "milestone_plan": {"passed": any(path.endswith("milestone_plan.md") for path in doc_rels)},
-        "startup_guide": {"passed": any(path.endswith("startup_guide.md") for path in doc_rels)},
-        "replay_guide": {"passed": any(path.endswith("replay_guide.md") for path in doc_rels)},
-        "mid_stage_review": {"passed": any(path.endswith("mid_stage_review.md") for path in doc_rels)},
-    }
-    ledger = {
-        "schema_version": "ctcp-extended-coverage-ledger-v1",
-        "build_profile": "high_quality_extended",
-        "product_depth": "extended",
-        "implemented_pages": pages,
-        "documentation_files": doc_rels,
-        "screenshot_files": screenshot_rels,
-        "test_screenshot_files": test_screenshot_rels,
-        "coverage": coverage,
-    }
-    ledger["passed"] = all(bool(dict(row).get("passed", False)) for row in coverage.values())
-    ledger_path = run_dir / "artifacts" / "extended_coverage_ledger.json"
-    _write_json(ledger_path, ledger)
-    return ledger
 
 
 def _generation_quality_report(

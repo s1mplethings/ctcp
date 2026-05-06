@@ -7298,6 +7298,44 @@
       },
       "status": "done",
       "notes": "Completed on 2026-05-06: cleanup_policy now defines daily worktree cleanliness discipline; scripts/worktree_cleanliness_report.py classifies dirty state into action buckets; focused tests, lane regressions, and canonical verify code profile passed. Current worktree remains intentionally dirty with 160 files, no runtime/generated-output bucket, and requires commit/stash grouping rather than destructive cleanup."
+    },
+    {
+      "id": "ADHOC-20260506-source-stage-boundary-refactor",
+      "layer": "L1",
+      "priority": "P1",
+      "title": "Source generation stage boundary refactor",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260504-vn-generated-source-consistency-retest"
+      ],
+      "dod": [
+        "Provider-authored source file parsing and materialization are extracted from project_generation_source_stage.py without behavior changes",
+        "High-quality extended evidence materialization is extracted from project_generation_source_stage.py without behavior changes",
+        "Focused source-generation tests and code-health checks pass, with worktree cleanliness recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/providers/project_generation_source_stage.py",
+          "tools/providers/project_generation_provider_source_files.py",
+          "tools/providers/project_generation_extended_evidence.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260506-source-stage-boundary-refactor.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260506-source-stage-boundary-refactor.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe -m py_compile tools\\providers\\project_generation_source_stage.py tools\\providers\\project_generation_provider_source_files.py tools\\providers\\project_generation_extended_evidence.py",
+          ".venv\\Scripts\\python.exe tests\\test_project_generation_artifacts.py -k source_generation -v",
+          ".venv\\Scripts\\python.exe tests\\test_api_agent_templates.py -k source_generation -v",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task",
+          "powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-06: provider source-file parsing/materialization and high-quality extended evidence generation were extracted from project_generation_source_stage.py into focused helper modules. Source stage dropped from 995 to 648 lines, focused source-generation tests passed, code-health passed, and canonical verify code profile passed."
     }
   ]
 }
