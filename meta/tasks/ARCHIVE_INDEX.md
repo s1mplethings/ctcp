@@ -7,6 +7,7 @@
 
 | Date | Topic | File |
 |------|-------|------|
+| 2026-05-08 | Live Generated Project Test After Agent Interaction Source Repair | [->](archive/20260508-agent-interaction-live-generation-test.md) |
 | 2026-05-07 | Agent Interaction Source Repair | [->](archive/20260507-agent-interaction-source-repair.md) |
 | 2026-05-07 | Generated Project Runnable Source Guard | [->](archive/20260507-generated-project-runnable-source-guard.md) |
 | 2026-05-06 | Source Stage Boundary Refactor | [->](archive/20260506-source-stage-boundary-refactor.md) |

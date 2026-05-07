@@ -1,187 +1,192 @@
-# Task - Agent Interaction Source Repair
+# Task - Live Generated Project Test After Agent Interaction Source Repair
 
 ## Queue Binding
 
-- Queue Item: `ADHOC-20260507-agent-interaction-source-repair`
+- Queue Item: `ADHOC-20260508-agent-interaction-live-generation-test`
 - Layer/Priority: `L1 / P0`
 - Source Queue File: `meta/backlog/execution_queue.json`
 - [x] Code changes allowed
 
 ## Context
 
-- Why this item now: a fresh phone-to-PC voice assistant generation run used `api_agent` for source_generation, but the delivered project still failed when tested as a real user project.
+- Why this item now: the previous task strengthened source_generation agent handoff and the user asked to start testing.
 - Lane: Delivery Lane.
-- Scope boundary: strengthen the source_generation retry interaction loop so QA/validator failures become concrete repair instructions for the next API source-generation attempt.
+- Scope boundary: run a fresh generated-project test and record evidence; do not change production source unless the test reveals a concrete repo-owned defect requiring a separate bound task.
 
 ## Task Truth Source
 
 - task_purpose:
-  - Generated project failures must not remain as opaque validation JSON; they must be translated into actionable Builder/Integration QA/Product QA/Delivery QA repair items consumed by the next source_generation prompt.
-  - The live failure classes to cover are bare sibling imports, package `__init__` re-export drift, constructor/API signature mismatches, README section mismatch, and missing runnable web/mobile endpoint evidence.
-  - Provider-authored source remains required; no local deterministic project template or generated-project patch fallback is allowed.
+  - Prove whether the new source-generation handoff improves a real phone-to-PC voice assistant generated project.
+  - Keep runtime/generated output outside the repo.
+  - Minimize API usage while still allowing the formal generation path to reach source_generation or a concrete first blocker.
 - allowed_behavior_change:
-  - Source-generation prompt requirements may define a stricter multi-role repair protocol.
-  - Previous-failure feedback may classify runtime probe errors into actionable inter-agent handoff items.
+  - Metadata/report updates only.
 - forbidden_goal_shift:
-  - Do not install dependencies to mask broken generated projects.
-  - Do not weaken generic/readme/ux/product validation.
-  - Do not edit generated run output as the fix.
-  - Do not change Telegram/support runtime behavior.
+  - Do not edit generated project files as the proof.
+  - Do not add local templates or deterministic project fallback.
+  - Do not expose credentials, proxy details, or Telegram secrets.
+  - Do not change production code in this test task.
 - in_scope_modules:
-  - `ctcp_adapters/source_generation_prompt.py`
-  - `tests/test_api_agent_templates.py`
-  - `issue_memory/modifications.jsonl`
-  - repo task/report metadata
+  - `meta/backlog/execution_queue.json`
+  - `meta/tasks/CURRENT.md`
+  - `meta/tasks/ARCHIVE_INDEX.md`
+  - `meta/tasks/archive/20260508-agent-interaction-live-generation-test.md`
+  - `meta/reports/LAST.md`
+  - `meta/reports/archive/20260508-agent-interaction-live-generation-test.md`
 - out_of_scope_modules:
-  - `scripts/ctcp_orchestrate.py`
-  - Telegram/support bot files
-  - provider credentials and endpoint config
-  - external run directories
+  - `ctcp_adapters/source_generation_prompt.py`
+  - `tools/providers/project_generation_source_stage.py`
+  - Telegram/support bot runtime files
+  - provider credential configuration
+  - generated run directories inside the repo
 - completion_evidence:
-  - focused source-generation prompt tests pass.
-  - source-generation artifact tests still pass.
-  - workflow/code-health/canonical verify pass or first failure is recorded.
+  - fresh run_dir path recorded.
+  - orchestrator command trace and return codes recorded.
+  - source_generation status or first blocker recorded.
+  - generated-project concrete test matrix recorded when project files exist.
 
 ## Write Scope / Protection
 
 - Allowed Write Paths:
-  - `ctcp_adapters/source_generation_prompt.py`
-  - `tests/test_api_agent_templates.py`
-  - `issue_memory/modifications.jsonl`
-  - `artifacts/PLAN.md`
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/CURRENT.md`
   - `meta/tasks/ARCHIVE_INDEX.md`
-  - `meta/tasks/archive/20260507-agent-interaction-source-repair.md`
+  - `meta/tasks/archive/20260508-agent-interaction-live-generation-test.md`
   - `meta/reports/LAST.md`
-  - `meta/reports/archive/20260507-agent-interaction-source-repair.md`
+  - `meta/reports/archive/20260508-agent-interaction-live-generation-test.md`
 - Protected Paths:
   - provider credentials
   - Telegram token/env files
-  - generated run directories
+  - generated run directories under repo
   - local API/proxy secrets
 - Frozen Kernels Touched: `false`
 - Explicit Elevation Required: `false`
 - Explicit Elevation Signal: `none`
 - Forbidden Bypass:
-  - no validation relaxation
-  - no local template fallback
+  - no local project template fallback
   - no generated-run source patching as proof
+  - no validation relaxation
 - Acceptance Checks:
-  - `.venv\Scripts\python.exe -m py_compile ctcp_adapters\source_generation_prompt.py tests\test_api_agent_templates.py`
-  - `$env:PYTHONPATH=(Get-Location).Path; .venv\Scripts\python.exe tests\test_api_agent_templates.py -k source_generation -v`
-  - `$env:PYTHONPATH=(Get-Location).Path; .venv\Scripts\python.exe tests\test_project_generation_artifacts.py -k source_generation -v`
+  - `.venv\Scripts\python.exe scripts\ctcp_orchestrate.py new-run --goal <voice assistant goal>`
+  - `.venv\Scripts\python.exe scripts\ctcp_orchestrate.py advance --run-dir <run_dir> --max-steps <n>`
+  - `.venv\Scripts\python.exe scripts\ctcp_orchestrate.py status --run-dir <run_dir>`
+  - generated project concrete runnable checks if source exists
   - `.venv\Scripts\python.exe scripts\workflow_checks.py`
-  - `.venv\Scripts\python.exe scripts\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task`
-  - `$env:CTCP_FORCE_PROVIDER=$null; $env:CTCP_RUNS_ROOT = Join-Path $env:TEMP 'ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1 -Profile code`
+  - `.venv\Scripts\python.exe scripts\module_protection_check.py --json`
+  - `.venv\Scripts\python.exe scripts\patch_check.py`
 
 ## Analysis / Find
 
-- Live failure evidence: `voice-assistant-phone-pc-smoke-20260507-rerun` produced provider-authored files with `fallback_count=0`, then failed concrete project tests.
-- First failure chain:
-  - `scripts/run_project_web.py --help` failed before argparse because package import reached `src/readme/app.py`.
-  - `app.py` used bare sibling import `import service`, causing `ModuleNotFoundError: No module named 'service'` under src-layout package execution.
-  - After PYTHONPATH workaround, `VoiceAssistantService()` failed because `CommandWhitelist.__init__()` required `commands`.
-  - HTTP endpoint tests timed out because the server thread crashed before serving `/status` or `/`.
-- Current gap:
-  - The prompt already asks for runnable output and previous failure feedback, but it does not frame the validator as a QA agent handing a mandatory repair contract back to the Builder.
-  - Previous failure text does not explicitly classify bare sibling import failures, constructor signature mismatches, or web/mobile endpoint obligations.
+- Skill decision: using `ctcp-orchestrate-loop` because this task drives `scripts/ctcp_orchestrate.py` state.
+- Baseline: commit `db9b70a` passed canonical verify and left worktree clean.
+- Test goal: phone connects to computer over LAN to control a voice assistant; local computer runs the service, phone uses browser/voice input, safe whitelist actions, README/startup/core code/test evidence required.
+- API budget stance: set source-generation/output-contract attempts to 1 and retry delay to 0 to avoid repeated expensive calls; stop at first concrete blocker if API or validation blocks.
 - Repo-local search sufficient: yes.
 - External research artifact: none.
 
 ## Integration Check
 
-- upstream: API source-generation prompt renderer via `ctcp_adapters.ctcp_artifact_normalizers._render_prompt()`.
-- current_module: `ctcp_adapters/source_generation_prompt.py`.
-- downstream: chunked API source generation, provider-authored file materialization, generic/readme/ux validation, and next retry prompt.
-- source_of_truth: `artifacts/source_generation_report.json` plus live concrete generated-project test evidence.
-- fallback: if focused tests fail, keep changes to prompt text and previous-failure classification only.
+- upstream: fresh `new-run` goal intake.
+- current_module: orchestrator run loop and generated-project runtime evidence.
+- downstream: source_generation report and concrete generated-project runnable checks.
+- source_of_truth: external run_dir artifacts and this report.
+- fallback: if source_generation does not produce a project, record first blocker and stop.
 - acceptance_test:
-  - source-generation prompt tests
-  - source-generation artifact tests
-  - canonical verify code profile
+  - orchestrator status/advance trace
+  - generated-project smoke matrix when source exists
 - forbidden_bypass:
-  - no validation relaxation
+  - no generated-project manual patching
   - no local template fallback
-  - no dependency installation workaround
-- user_visible_effect: future retries should give the API agent a clearer QA handoff and reduce repeated broken import/signature/web endpoint outputs.
+  - no dependency installation bypass
+- user_visible_effect: the user gets a concrete pass/fail result for the generated voice-assistant project and a bounded next repair item instead of an ambiguous "still testing" status.
 
 ## DoD Mapping
 
-- [x] DoD-1: Prompt defines explicit Builder/Integration QA/Product QA/Delivery QA interaction duties.
-- [x] DoD-2: Previous failure feedback converts the live failure classes into actionable repair items.
-- [x] DoD-3: Focused tests and canonical verify pass or first failure is recorded.
+- [x] DoD-1: Fresh external run created.
+- [x] DoD-2: Run advanced to source_generation pass or first concrete blocker.
+- [x] DoD-3: Generated project concrete runnable test matrix recorded when source exists.
 
 ## Check/Contrast/Fix Loop Evidence
 
 - check:
-  - Concrete generated-project tests failed even though provider source files existed and syntax compiled.
-  - Startup/import path failed at `ModuleNotFoundError: No module named 'service'`.
-  - Direct service construction failed at `CommandWhitelist.__init__()` missing `commands`.
-  - Web/mobile endpoint probe failed because `/status` and `/` never became reachable.
+  - Fresh run `voice-assistant-phone-pc-live-20260508` reached source_generation with provider-authored API source.
+  - Concrete generated-project matrix failed at CLI help, README serve, headless export, generated unittest, direct service construction, and HTTP endpoint probe.
 - contrast:
-  - The previous dependency-focused hardening improved the run from Flask dependency failure to standard-library HTTP generation, so the next failure class is cross-file integration and agent handoff quality.
-  - Existing previous-failure feedback carried raw stderr but did not turn it into a mandatory Builder/Integration QA/Product QA/Delivery QA repair contract.
+  - Improved from previous run: README quality passed and bare `No module named 'service'` import failure is gone.
+  - Still failing: `VoiceAssistantService.__init__()` requires `whitelist` while app imports construct it without arguments; generated tests import `src.readme` incorrectly; web endpoints never become reachable.
 - fix:
-  - Added source-generation handoff duties for Builder, Integration QA, Product QA, and Delivery QA.
-  - Added targeted runtime-probe repair hints for bare sibling imports, missing re-exports, constructor signature mismatches, and server reachability failures.
-  - Added focused tests that replay the live failure classes in the next source_generation prompt.
+  - This task is test-only; follow-up backlog item `ADHOC-20260508-generated-project-signature-test-validation` records the next repair target.
 
 ## Completion Criteria Evidence
 
 - completion criteria evidence: prove `connected + accumulated + consumed`.
-- connected: `ctcp_adapters.ctcp_artifact_normalizers._render_prompt()` calls the source-generation requirements renderer for `chair/source_generation`.
-- accumulated: `issue_memory/modifications.jsonl` records the recurring generated-project integration failure.
-- consumed: focused prompt tests assert that the inter-agent handoff and exact live failure repair hints appear in the prompt consumed by the API source-generation path.
+- connected: fresh run reached orchestrator source_generation and produced `artifacts/source_generation_report.json`.
+- accumulated: this report captures provider evidence, first blocker, and generated-project test matrix.
+- consumed: follow-up repair item `ADHOC-20260508-generated-project-signature-test-validation` was created for constructor/test-import validation hardening.
+
+## Issue Memory Decision Evidence
+
+- issue_memory_decision: not required at task start because this task is a live regression test, not a repair. If the test exposes a new or repeated user-visible failure class, record it in the report and bind a follow-up repair task that updates issue memory.
 
 ## Plan
 
-1. Bind task and allowed write scope.
-2. Strengthen source-generation prompt with a concrete inter-agent repair protocol.
-3. Add previous-failure classifiers for bare sibling imports, constructor/API signature mismatches, package export drift, and web/mobile endpoint failures.
-4. Add regression assertions for the live failure classes.
-5. Run focused checks and canonical verify.
-6. Archive task/report and record worktree state.
+1. Bind this live generation test task.
+2. Create a fresh external run for the voice-assistant goal.
+3. Advance with minimal API attempts until source_generation passes or blocks.
+4. Inspect provider/source_generation evidence.
+5. If files exist, run concrete generated-project tests.
+6. Update report/archive and leave worktree clean if possible.
 
 ## Acceptance
 
 - [x] DoD written.
-- [x] Code changes allowed.
-- [x] Prompt/runtime repair guidance updated.
-- [x] Focused tests pass.
-- [x] Code-health check passes.
-- [x] Canonical verify pass or first failure recorded.
-- [x] Demo report updated: `meta/reports/LAST.md`.
+- [x] Code changes allowed for metadata only.
+- [x] Fresh run created.
+- [x] Orchestrator evidence recorded.
+- [x] Generated project tested or first blocker recorded.
+- [ ] Workflow/metadata checks pass.
 
 ## Notes / Decisions
 
-- Default choice made: improve the inter-agent feedback contract inside the source-generation prompt path because live evidence shows the API did generate code but did not consume failures with enough specificity.
-- Alternatives considered: adding a local generated-project auto-repairer was rejected because it would hide whether `api_agent` actually produced the working project.
-- Any contract exception reference: none.
-- Issue memory decision: required because this is a recurring user-visible generated-project failure.
-- Skill decision: skillized: no, because this is a local source-generation repair loop enhancement; it can become a skill only after the pattern stabilizes across several domains.
+- Default choice made: use the same phone-to-PC voice assistant goal to make the before/after comparison meaningful.
+- Skill decision: skillized: no, because this is a one-off live regression run using the existing `ctcp-orchestrate-loop` skill.
 - persona_lab_impact: none.
 
 ## Results
 
-- Files changed:
-  - `ctcp_adapters/source_generation_prompt.py`
-  - `tests/test_api_agent_templates.py`
-  - `issue_memory/modifications.jsonl`
-  - `meta/backlog/execution_queue.json`
-  - `meta/tasks/CURRENT.md`
-  - `meta/tasks/ARCHIVE_INDEX.md`
-  - `meta/tasks/archive/20260507-agent-interaction-source-repair.md`
-  - `meta/reports/LAST.md`
-  - `meta/reports/archive/20260507-agent-interaction-source-repair.md`
-- Verification summary:
-  - focused source-generation prompt tests passed.
-  - focused source-generation artifact tests passed.
-  - workflow/module/patch/code-health checks passed.
-  - canonical verify passed with profile `code`, ownership `task-owned`, lite replay `15 passed / 0 failed`, Python tests `517 OK / 4 skipped`.
-- Queue status update: `done`.
+- Run ID: `voice-assistant-phone-pc-live-20260508`
+- Run dir: `%TEMP%\ctcp_runs\ctcp\voice-assistant-phone-pc-live-20260508`
+- Orchestrator result:
+  - `new-run` exit 0.
+  - `advance --max-steps 12` timed out after 20 minutes, but the run had reached source_generation and written reports.
+  - `status` exit 0: blocked at `artifacts/source_generation_report.json`, reason `generic_validation.passed must be true`.
+- Provider evidence:
+  - `fallback_count=0`
+  - `all_critical_steps_api=true`
+  - `critical_api_step_count=10`
+  - source_generation executed by `api_agent` three times.
+- Source_generation report:
+  - `status=blocked`
+  - `project_root=project_output/readme`
+  - `project_id=readme`
+  - `package_name=readme`
+  - `readme_quality.passed=true`
+  - `generic_validation.passed=false`
+  - `ux_validation.passed=false`
+- Concrete generated-project test matrix:
+  - file list: pass
+  - Python syntax compile: pass
+  - CLI `--help`: fail
+  - README `--serve` entry: fail
+  - headless export: fail
+  - generated unittest: fail
+  - direct service construction: fail
+  - HTTP `/` and `/status` probe: fail
+- First generated-project blocker:
+  - `TypeError: VoiceAssistantService.__init__() missing 1 required positional argument: 'whitelist'`
+  - generated test import also fails with `ModuleNotFoundError: No module named 'src.readme'`
 
 ## Closure
 
-- closed_report: `meta/reports/archive/20260507-agent-interaction-source-repair.md`
-- canonical_verify: passed on 2026-05-07 with `CTCP_FORCE_PROVIDER` cleared and `CTCP_RUNS_ROOT` set to `%TEMP%\ctcp_runs`.
+- closed_report: `meta/reports/archive/20260508-agent-interaction-live-generation-test.md`
+- follow_up: `ADHOC-20260508-generated-project-signature-test-validation`
