@@ -1,33 +1,32 @@
-# Task - Generated Project Runnable Source Guard
+# Task - Agent Interaction Source Repair
 
 ## Queue Binding
 
-- Queue Item: `ADHOC-20260507-generated-project-runnable-source-guard`
+- Queue Item: `ADHOC-20260507-agent-interaction-source-repair`
 - Layer/Priority: `L1 / P0`
 - Source Queue File: `meta/backlog/execution_queue.json`
 - [x] Code changes allowed
 
 ## Context
 
-- Why this item now: a live API run for a phone-to-PC voice-assistant project generated provider-authored source, but source-generation validation blocked because the generated project was not runnable in the verifier environment.
-- Dependency check: `ADHOC-20260504-vn-generated-source-consistency-retest = done`; `ADHOC-20260506-source-stage-boundary-refactor = done`.
+- Why this item now: a fresh phone-to-PC voice assistant generation run used `api_agent` for source_generation, but the delivered project still failed when tested as a real user project.
 - Lane: Delivery Lane.
-- Scope boundary: improve source-generation prompt and failure feedback so future API retries repair runnable-project defects instead of repeating undeclared dependency and README/interface mistakes.
+- Scope boundary: strengthen the source_generation retry interaction loop so QA/validator failures become concrete repair instructions for the next API source-generation attempt.
 
 ## Task Truth Source
 
 - task_purpose:
-  - Generated projects must run under the current validation environment without relying on undeclared or uninstalled external packages.
-  - Source-generation retries must receive exact README, runtime-probe, external-dependency, interface, and UX blocker feedback.
-  - Provider-authored source remains required; do not reintroduce local production templates.
+  - Generated project failures must not remain as opaque validation JSON; they must be translated into actionable Builder/Integration QA/Product QA/Delivery QA repair items consumed by the next source_generation prompt.
+  - The live failure classes to cover are bare sibling imports, package `__init__` re-export drift, constructor/API signature mismatches, README section mismatch, and missing runnable web/mobile endpoint evidence.
+  - Provider-authored source remains required; no local deterministic project template or generated-project patch fallback is allowed.
 - allowed_behavior_change:
-  - Source-generation API prompt constraints may become stricter.
-  - Previous-failure prompt feedback may include more blocker details.
+  - Source-generation prompt requirements may define a stricter multi-role repair protocol.
+  - Previous-failure feedback may classify runtime probe errors into actionable inter-agent handoff items.
 - forbidden_goal_shift:
-  - Do not install dependencies as part of CTCP validation to mask broken generated projects.
-  - Do not relax generic_validation/readme/ux gates.
-  - Do not add local deterministic project templates or materializer fallbacks.
-  - Do not change Telegram/support bot runtime behavior in this task.
+  - Do not install dependencies to mask broken generated projects.
+  - Do not weaken generic/readme/ux/product validation.
+  - Do not edit generated run output as the fix.
+  - Do not change Telegram/support runtime behavior.
 - in_scope_modules:
   - `ctcp_adapters/source_generation_prompt.py`
   - `tests/test_api_agent_templates.py`
@@ -35,9 +34,9 @@
   - repo task/report metadata
 - out_of_scope_modules:
   - `scripts/ctcp_orchestrate.py`
-  - `tools/providers/project_generation_source_stage.py` orchestration behavior
-  - generated run output files
-  - provider credentials, API endpoint, model selection
+  - Telegram/support bot files
+  - provider credentials and endpoint config
+  - external run directories
 - completion_evidence:
   - focused source-generation prompt tests pass.
   - source-generation artifact tests still pass.
@@ -53,9 +52,9 @@
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/CURRENT.md`
   - `meta/tasks/ARCHIVE_INDEX.md`
-  - `meta/tasks/archive/20260507-generated-project-runnable-source-guard.md`
+  - `meta/tasks/archive/20260507-agent-interaction-source-repair.md`
   - `meta/reports/LAST.md`
-  - `meta/reports/archive/20260507-generated-project-runnable-source-guard.md`
+  - `meta/reports/archive/20260507-agent-interaction-source-repair.md`
 - Protected Paths:
   - provider credentials
   - Telegram token/env files
@@ -65,36 +64,38 @@
 - Explicit Elevation Required: `false`
 - Explicit Elevation Signal: `none`
 - Forbidden Bypass:
-  - Do not weaken project-generation validation.
-  - Do not mark source generation pass when runtime probes fail.
-  - Do not hide API-generated source defects behind dependency installation.
+  - no validation relaxation
+  - no local template fallback
+  - no generated-run source patching as proof
 - Acceptance Checks:
   - `.venv\Scripts\python.exe -m py_compile ctcp_adapters\source_generation_prompt.py tests\test_api_agent_templates.py`
   - `$env:PYTHONPATH=(Get-Location).Path; .venv\Scripts\python.exe tests\test_api_agent_templates.py -k source_generation -v`
   - `$env:PYTHONPATH=(Get-Location).Path; .venv\Scripts\python.exe tests\test_project_generation_artifacts.py -k source_generation -v`
   - `.venv\Scripts\python.exe scripts\workflow_checks.py`
-  - `.venv\Scripts\python.exe scripts\module_protection_check.py --json`
   - `.venv\Scripts\python.exe scripts\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task`
   - `$env:CTCP_FORCE_PROVIDER=$null; $env:CTCP_RUNS_ROOT = Join-Path $env:TEMP 'ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1 -Profile code`
 
 ## Analysis / Find
 
-- Entrypoint analysis: `ctcp_adapters.ctcp_artifact_normalizers._render_prompt()` appends `render_source_generation_payload_requirements()` for `chair/source_generation`.
-- Downstream consumer analysis: `llm_core.providers.api_source_chunking` reuses the same prompt text for manifest and file-content batches, so prompt changes affect live API source generation without changing materialization logic.
-- Source of truth: live run `voice-assistant-phone-pc-smoke-20260507` showed `api_agent` source generation with `fallback_count=0`, then blocked at `generic_validation.passed=false`.
-- Current break point / missing wiring:
-  - Prompt says "standard library first" but does not state that runtime probes do not install project dependencies.
-  - Previous-failure feedback includes startup/export stderr and interface mismatch but omits README missing sections and external dependency blockers as explicit repair items.
+- Live failure evidence: `voice-assistant-phone-pc-smoke-20260507-rerun` produced provider-authored files with `fallback_count=0`, then failed concrete project tests.
+- First failure chain:
+  - `scripts/run_project_web.py --help` failed before argparse because package import reached `src/readme/app.py`.
+  - `app.py` used bare sibling import `import service`, causing `ModuleNotFoundError: No module named 'service'` under src-layout package execution.
+  - After PYTHONPATH workaround, `VoiceAssistantService()` failed because `CommandWhitelist.__init__()` required `commands`.
+  - HTTP endpoint tests timed out because the server thread crashed before serving `/status` or `/`.
+- Current gap:
+  - The prompt already asks for runnable output and previous failure feedback, but it does not frame the validator as a QA agent handing a mandatory repair contract back to the Builder.
+  - Previous failure text does not explicitly classify bare sibling import failures, constructor signature mismatches, or web/mobile endpoint obligations.
 - Repo-local search sufficient: yes.
 - External research artifact: none.
 
 ## Integration Check
 
-- upstream: API source-generation prompt renderer.
-- current_module: source-generation requirements and previous-failure feedback.
-- downstream: chunked API source generation, provider-authored file payload, local source materialization, generic/readme/ux validation.
-- source_of_truth: generated-project validation report and focused tests.
-- fallback: if prompt tests fail, narrow the wording to the exact assertions without touching validation gates.
+- upstream: API source-generation prompt renderer via `ctcp_adapters.ctcp_artifact_normalizers._render_prompt()`.
+- current_module: `ctcp_adapters/source_generation_prompt.py`.
+- downstream: chunked API source generation, provider-authored file materialization, generic/readme/ux validation, and next retry prompt.
+- source_of_truth: `artifacts/source_generation_report.json` plus live concrete generated-project test evidence.
+- fallback: if focused tests fail, keep changes to prompt text and previous-failure classification only.
 - acceptance_test:
   - source-generation prompt tests
   - source-generation artifact tests
@@ -102,50 +103,45 @@
 - forbidden_bypass:
   - no validation relaxation
   - no local template fallback
-  - no dependency installation bypass
-- user_visible_effect: future generated project attempts should fail less often on undeclared dependencies and incomplete README/UX repair loops.
+  - no dependency installation workaround
+- user_visible_effect: future retries should give the API agent a clearer QA handoff and reduce repeated broken import/signature/web endpoint outputs.
 
 ## DoD Mapping
 
-- [x] DoD-1: Source-generation prompt states generated projects must be runnable by verifier probes without uninstalled external packages.
-- [x] DoD-2: Previous-failure prompt feedback includes external dependency, README quality, and UX blocker details.
+- [x] DoD-1: Prompt defines explicit Builder/Integration QA/Product QA/Delivery QA interaction duties.
+- [x] DoD-2: Previous failure feedback converts the live failure classes into actionable repair items.
 - [x] DoD-3: Focused tests and canonical verify pass or first failure is recorded.
 
 ## Check/Contrast/Fix Loop Evidence
 
 - check:
-  - live run blocked at `generic_validation.passed must be true`.
-  - startup/export probes failed with `ModuleNotFoundError: No module named 'flask'`.
-  - README quality missed required sections.
-  - interface contract mismatch listed undeclared actual symbols.
+  - Concrete generated-project tests failed even though provider source files existed and syntax compiled.
+  - Startup/import path failed at `ModuleNotFoundError: No module named 'service'`.
+  - Direct service construction failed at `CommandWhitelist.__init__()` missing `commands`.
+  - Web/mobile endpoint probe failed because `/status` and `/` never became reachable.
 - contrast:
-  - provider ledger showed API source generation did happen, so this is generated-source quality, not local-template fallback.
-  - current prompt already includes import consistency guidance, but not verifier-environment dependency constraints or README feedback in retry context.
+  - The previous dependency-focused hardening improved the run from Flask dependency failure to standard-library HTTP generation, so the next failure class is cross-file integration and agent handoff quality.
+  - Existing previous-failure feedback carried raw stderr but did not turn it into a mandatory Builder/Integration QA/Product QA/Delivery QA repair contract.
 - fix:
-  - strengthened source-generation prompt requirements for dependency-free verifier paths.
-  - added previous-failure feedback for dependency errors, README missing sections, README reasons, and UX blockers.
-  - kept tests within the 1000-line code-health growth guard.
-
-## Issue Memory Decision Evidence
-
-- issue_memory_decision: capture required because generated-source validation failure has recurred across live API project-generation attempts and is user-visible as "generated but not deliverable".
+  - Added source-generation handoff duties for Builder, Integration QA, Product QA, and Delivery QA.
+  - Added targeted runtime-probe repair hints for bare sibling imports, missing re-exports, constructor signature mismatches, and server reachability failures.
+  - Added focused tests that replay the live failure classes in the next source_generation prompt.
 
 ## Completion Criteria Evidence
 
 - completion criteria evidence: prove `connected + accumulated + consumed`.
-- connected: source-generation prompt renderer is reached from API source-generation dispatch.
-- accumulated: issue memory and report record live failure class and verification commands.
-- consumed: focused prompt tests assert the new constraints are included.
+- connected: `ctcp_adapters.ctcp_artifact_normalizers._render_prompt()` calls the source-generation requirements renderer for `chair/source_generation`.
+- accumulated: `issue_memory/modifications.jsonl` records the recurring generated-project integration failure.
+- consumed: focused prompt tests assert that the inter-agent handoff and exact live failure repair hints appear in the prompt consumed by the API source-generation path.
 
 ## Plan
 
 1. Bind task and allowed write scope.
-2. Strengthen source-generation prompt requirements for verifier-runnable, dependency-light generated projects.
-3. Add previous-failure feedback for README missing sections, dependency errors, and UX blockers.
-4. Add/update focused prompt tests.
-5. Run focused source-generation tests and code-health checks.
-6. Run canonical verify or record first failure.
-7. Archive task/report and leave worktree clean or explicitly report dirty state.
+2. Strengthen source-generation prompt with a concrete inter-agent repair protocol.
+3. Add previous-failure classifiers for bare sibling imports, constructor/API signature mismatches, package export drift, and web/mobile endpoint failures.
+4. Add regression assertions for the live failure classes.
+5. Run focused checks and canonical verify.
+6. Archive task/report and record worktree state.
 
 ## Acceptance
 
@@ -159,11 +155,11 @@
 
 ## Notes / Decisions
 
-- Default choices made: fix the source-generation prompt and feedback loop first, because live evidence shows API source was produced but repeatedly failed validation.
-- Alternatives considered: installing Flask during validation was rejected because it hides generated-project portability defects and does not solve future undeclared dependency drift.
+- Default choice made: improve the inter-agent feedback contract inside the source-generation prompt path because live evidence shows the API did generate code but did not consume failures with enough specificity.
+- Alternatives considered: adding a local generated-project auto-repairer was rejected because it would hide whether `api_agent` actually produced the working project.
 - Any contract exception reference: none.
-- Issue memory decision: required, see above.
-- Skill decision: skillized: no, because this is a bounded source-generation quality repair using existing `ctcp-workflow`.
+- Issue memory decision: required because this is a recurring user-visible generated-project failure.
+- Skill decision: skillized: no, because this is a local source-generation repair loop enhancement; it can become a skill only after the pattern stabilizes across several domains.
 - persona_lab_impact: none.
 
 ## Results
@@ -172,13 +168,12 @@
   - `ctcp_adapters/source_generation_prompt.py`
   - `tests/test_api_agent_templates.py`
   - `issue_memory/modifications.jsonl`
-  - `artifacts/PLAN.md`
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/CURRENT.md`
   - `meta/tasks/ARCHIVE_INDEX.md`
-  - `meta/tasks/archive/20260507-generated-project-runnable-source-guard.md`
+  - `meta/tasks/archive/20260507-agent-interaction-source-repair.md`
   - `meta/reports/LAST.md`
-  - `meta/reports/archive/20260507-generated-project-runnable-source-guard.md`
+  - `meta/reports/archive/20260507-agent-interaction-source-repair.md`
 - Verification summary:
   - focused source-generation prompt tests passed.
   - focused source-generation artifact tests passed.
@@ -188,5 +183,5 @@
 
 ## Closure
 
-- closed_report: `meta/reports/archive/20260507-generated-project-runnable-source-guard.md`
+- closed_report: `meta/reports/archive/20260507-agent-interaction-source-repair.md`
 - canonical_verify: passed on 2026-05-07 with `CTCP_FORCE_PROVIDER` cleared and `CTCP_RUNS_ROOT` set to `%TEMP%\ctcp_runs`.

@@ -7375,6 +7375,45 @@
       },
       "status": "done",
       "notes": "Completed on 2026-05-07: source-generation prompt guidance now requires verifier-runnable validation paths without uninstalled dependency bootstrap, directs web projects toward standard-library/local code, requires --serve/export probes to exit 0, and feeds dependency/README/UX blockers back into API retries. Focused source-generation tests and canonical verify code profile passed."
+    },
+    {
+      "id": "ADHOC-20260507-agent-interaction-source-repair",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Agent interaction repair loop for generated project source",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260507-generated-project-runnable-source-guard"
+      ],
+      "dod": [
+        "Source-generation retry prompts include an explicit cross-agent repair protocol for Builder, Integration QA, Product QA, and Delivery QA",
+        "Previous generated-project failures are converted into actionable integration repair items covering import path, constructor/API signature, README, and web/mobile endpoint blockers",
+        "Regression tests prove live-run failure classes are reflected in the next source_generation prompt without local templates"
+      ],
+      "artifacts": {
+        "produces": [
+          "ctcp_adapters/source_generation_prompt.py",
+          "tests/test_api_agent_templates.py",
+          "issue_memory/modifications.jsonl",
+          "artifacts/PLAN.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260507-agent-interaction-source-repair.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260507-agent-interaction-source-repair.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe -m py_compile ctcp_adapters\\source_generation_prompt.py tests\\test_api_agent_templates.py",
+          "$env:PYTHONPATH=(Get-Location).Path; .venv\\Scripts\\python.exe tests\\test_api_agent_templates.py -k source_generation -v",
+          "$env:PYTHONPATH=(Get-Location).Path; .venv\\Scripts\\python.exe tests\\test_project_generation_artifacts.py -k source_generation -v",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task",
+          "powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-07: source_generation prompt now includes explicit Builder/Integration QA/Product QA/Delivery QA handoff duties, bans bare sibling imports in src-layout packages, requires constructor/method signature matrix checks, and converts live runtime probe failures into targeted retry repair hints. Focused tests, code-health checks, and canonical verify code profile passed."
     }
   ]
 }

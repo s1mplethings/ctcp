@@ -908,15 +908,10 @@ class ApiAgentTemplateTests(unittest.TestCase):
                 evidence=evidence,
             )
 
-            self.assertIn("ctcp-provider-source-files-v1", prompt)
-            self.assertIn('"files"', prompt)
-            self.assertIn('"path"', prompt)
-            self.assertIn('"content_lines"', prompt)
-            self.assertIn("project_output/vn/scripts/run_project_gui.py", prompt)
-            self.assertIn("project_output/vn/src/vn/service.py", prompt)
-            self.assertIn("project_output/vn/pyproject.toml", prompt)
-            self.assertIn("project_output/vn/src/vn/__init__.py", prompt)
             for token in (
+                "ctcp-provider-source-files-v1", '"files"', '"path"', '"content_lines"',
+                "project_output/vn/scripts/run_project_gui.py", "project_output/vn/src/vn/service.py",
+                "project_output/vn/pyproject.toml", "project_output/vn/src/vn/__init__.py",
                 "tkinter", "do not import PyQt5", "from vn.service", "cross-file import/export checklist",
                 "interfaces", "public `defines`, `imports`, and `exports`", "target file must define that exact helper",
                 "every imported symbol resolves", "startup entrypoint constructs a service/controller",
@@ -925,6 +920,9 @@ class ApiAgentTemplateTests(unittest.TestCase):
                 "workspace_preview.html", "interaction_trace.json", "do not write f-strings or quoted strings split across physical lines",
                 "join(lines)", "content_items", "project must declare its own concrete acceptance criteria", "verifier does not run `pip install`",
                 "standard-library `http.server`", "do not import Flask", "`--serve` and the rich export command must exit 0",
+                "virtual-team handoff", "Integration QA checks every import/export and call signature",
+                "do not use bare sibling imports", "`import service`", "API signature matrix",
+                "`## Project Overview`", "real `/` HTML page plus `/status`",
             ):
                 self.assertIn(token, prompt)
 
@@ -944,8 +942,13 @@ class ApiAgentTemplateTests(unittest.TestCase):
                         "status": "blocked",
                         "generic_validation": {
                             "smoke_run": {
-                                "startup_probe": {"stderr_tail": "ModuleNotFoundError: No module named 'flask'"},
-                                "export_probe": {"stdout_tail": "ImportError: cannot import name 'export_project_assets' from 'vn.exporters.deliver'"},
+                                "startup_probe": {"stderr_tail": "ModuleNotFoundError: No module named 'service'"},
+                                "export_probe": {
+                                    "stdout_tail": (
+                                        "TypeError: CommandWhitelist.__init__() missing 1 required positional argument: 'commands'\n"
+                                        "/status URLError <urlopen error timed out>"
+                                    )
+                                },
                             },
                             "python_import_consistency": {
                                 "missing_symbols": [
@@ -983,16 +986,15 @@ class ApiAgentTemplateTests(unittest.TestCase):
                 evidence=evidence,
             )
 
-            self.assertIn("Previous source_generation failed", prompt)
-            self.assertIn("No module named 'flask'", prompt)
-            self.assertIn("validation probes do not install dependencies", prompt)
-            self.assertIn("export_project_assets", prompt)
-            self.assertIn("StoryOutline", prompt)
-            self.assertIn("project-defined acceptance criteria missing", prompt)
-            for token in ("how_to_run", "directory_map", "README missing sections", "visual evidence files missing"):
+            for token in (
+                "Previous source_generation failed", "No module named 'service'",
+                "validation probes do not install dependencies", "bare sibling import inside a src-layout package",
+                "CommandWhitelist.__init__", "constructor or method signature mismatch",
+                "local server did not become reachable", "StoryOutline",
+                "project-defined acceptance criteria missing", "how_to_run", "directory_map",
+                "README missing sections", "visual evidence files missing",
+            ):
                 self.assertIn(token, prompt)
-            self.assertIn("cross-file import/export checklist", prompt)
 
 if __name__ == "__main__":
     unittest.main()
-

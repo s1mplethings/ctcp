@@ -2,9 +2,9 @@
 
 ## Latest Report
 
-- File: `meta/reports/archive/20260507-generated-project-runnable-source-guard.md`
+- File: `meta/reports/archive/20260507-agent-interaction-source-repair.md`
 - Date: `2026-05-07`
-- Topic: `Generated Project Runnable Source Guard`
+- Topic: `Agent Interaction Source Repair`
 
 ### Readlist
 - `AGENTS.md`
@@ -16,32 +16,36 @@
 - `TREE.md`
 - `ai_context/decision_log.md`
 - `ai_context/problem_registry.md`
-- `issue_memory/README.md`
 - `ctcp_adapters/source_generation_prompt.py`
+- `tools/providers/project_generation_source_stage.py`
+- `tools/providers/project_generation_source_helpers.py`
+- `tools/providers/project_generation_validation.py`
 - `tests/test_api_agent_templates.py`
-- live run evidence: `%TEMP%\ctcp_runs\ctcp\voice-assistant-phone-pc-smoke-20260507`
+- `tests/test_project_generation_artifacts.py`
+- live run evidence: `%TEMP%\ctcp_runs\ctcp\voice-assistant-phone-pc-smoke-20260507-rerun`
 
 ### Plan
-1. Bind `ADHOC-20260507-generated-project-runnable-source-guard`.
-2. Strengthen source-generation prompt requirements so generated validation paths run in the current verifier environment without uninstalled external dependencies.
-3. Add previous-failure feedback for dependency, README quality, and UX blockers.
-4. Capture the recurring generated-source failure class in issue memory.
-5. Run focused source-generation tests, code-health checks, and canonical verify.
+1. Bind `ADHOC-20260507-agent-interaction-source-repair`.
+2. Strengthen source_generation prompt interaction so Builder, Integration QA, Product QA, and Delivery QA have explicit duties before returning files.
+3. Translate previous runtime probe failures into actionable repair items for bare sibling imports, missing re-exports, constructor/API signature mismatches, and unreachable web endpoints.
+4. Capture the recurring failure class in issue memory.
+5. Run focused source-generation tests, workflow/code-health gates, and canonical verify.
 
 ### Changes
 - `ctcp_adapters/source_generation_prompt.py`
-  - Clarifies that generated projects are validated without `pip install`, `poetry install`, `npm install`, or dependency bootstrap.
-  - Requires validation paths to use Python standard library or generated local code.
-  - For local HTTP/web projects, directs provider output toward `http.server` / `wsgiref` / generated HTML/JS and away from uninstalled Flask/FastAPI/Django-style dependencies.
-  - Requires `--serve` and rich export probes to exit 0 under verifier probes instead of blocking forever.
-  - Adds retry feedback for `ModuleNotFoundError`, README missing sections/reasons, and UX blockers.
+  - Adds an explicit virtual-team handoff protocol for generated source delivery.
+  - Requires Integration QA style checks for imports, package re-exports, and call signatures before the API returns JSON.
+  - Forbids bare sibling imports such as `import service` / `import models` inside src-layout packages.
+  - Requires entrypoint scripts to import concrete package modules/symbols that actually exist.
+  - Requires an API signature matrix across model constructors, service methods, route handlers, exporter functions, and tests.
+  - Requires detectable English README headings while allowing Chinese content under them.
+  - Requires web/mobile-local projects to provide `/`, `/status`, and a command/action endpoint.
+  - Converts previous runtime errors into targeted repair hints for dependency/import, re-export, constructor signature, and server reachability failures.
 - `tests/test_api_agent_templates.py`
-  - Locks the dependency-free runnable guidance and expanded previous-failure feedback into prompt regressions.
-  - Keeps the file under the 1000-line growth guard after adding the prompt regression.
+  - Locks the inter-agent source-generation handoff wording into prompt regressions.
+  - Replays the live failure classes from the phone-to-PC voice-assistant generated project.
 - `issue_memory/modifications.jsonl`
-  - Records the recurring API-authored generated-source validation failure class.
-- `artifacts/PLAN.md`
-  - Adds `issue_memory` to `Scope-Allow` so the required issue-memory record is inside patch scope.
+  - Records the recurring API-authored generated-project integration failure after the dependency fix.
 - task metadata updated for this task.
 
 ### Verify
@@ -49,11 +53,10 @@
   - `.venv\Scripts\python.exe -m py_compile ctcp_adapters\source_generation_prompt.py tests\test_api_agent_templates.py` -> exit 0.
   - `$env:PYTHONPATH=(Get-Location).Path; .venv\Scripts\python.exe tests\test_api_agent_templates.py -k source_generation -v` -> exit 0, 3 tests OK.
   - `$env:PYTHONPATH=(Get-Location).Path; .venv\Scripts\python.exe tests\test_project_generation_artifacts.py -k source_generation -v` -> exit 0, 11 tests OK.
-  - `.venv\Scripts\python.exe scripts\workflow_checks.py` -> exit 0 after report update.
+  - `.venv\Scripts\python.exe scripts\workflow_checks.py` -> exit 0 after report/current evidence updates.
   - `.venv\Scripts\python.exe scripts\module_protection_check.py --json` -> exit 0, ownership `task-owned`.
-  - `.venv\Scripts\python.exe scripts\patch_check.py` -> exit 0 after `artifacts/PLAN.md` Scope-Allow update.
-  - `.venv\Scripts\python.exe scripts\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task` -> exit 0.
-  - `git diff --check` -> exit 0, CRLF warnings only.
+  - `.venv\Scripts\python.exe scripts\patch_check.py` -> exit 0.
+  - `.venv\Scripts\python.exe scripts\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task` -> exit 0 after keeping `tests/test_api_agent_templates.py` at 1000 lines.
   - `$env:CTCP_FORCE_PROVIDER=$null; $env:CTCP_RUNS_ROOT = Join-Path $env:TEMP 'ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1 -Profile code` -> exit 0.
 - Canonical verify summary:
   - profile: `code`
@@ -63,12 +66,11 @@
   - result: `OK`
 - First failure point evidence:
   - Initial `.venv\Scripts\python.exe scripts\workflow_checks.py` failed because `meta/reports/LAST.md` had not yet been updated for this patch.
-  - Initial code-health check failed because `tests/test_api_agent_templates.py` grew from 993 to 1004 lines, crossing the 1000-line guard.
-  - Initial `.venv\Scripts\python.exe scripts\patch_check.py` failed because `issue_memory/modifications.jsonl` was not in `artifacts/PLAN.md` Scope-Allow.
-- Minimal fix strategy evidence:
-  - Updated this report before rerunning workflow checks.
-  - Compressed the new focused test assertions so `tests/test_api_agent_templates.py` is 998 lines and code-health passes.
-  - Added `issue_memory` to `artifacts/PLAN.md` Scope-Allow because this task required issue-memory capture.
+  - Initial `.venv\Scripts\python.exe scripts\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task` failed because `tests/test_api_agent_templates.py` grew past the 1000-line guard.
+- minimal fix strategy evidence:
+  - Updated `meta/reports/LAST.md` for this task before rerunning workflow checks.
+  - Added mandatory 10-step evidence sections to `meta/tasks/CURRENT.md`.
+  - Compressed prompt-test assertions so `tests/test_api_agent_templates.py` stays at the 1000-line code-health threshold.
 - triplet runtime wiring command evidence:
   - canonical verify executed `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` and passed 25 tests.
 - triplet issue memory command evidence:
@@ -80,17 +82,17 @@
 - None.
 
 ### Demo
-- The phone-to-PC voice-assistant live run proved API source generation was connected, but not yet deliverable:
-  - `fallback_count=0`
-  - `final_code_producer=api_agent`
-  - blocked reason: `generic_validation.passed must be true`
-  - concrete blocker: `ModuleNotFoundError: No module named 'flask'`, README missing sections, interface mismatch, and missing visual/export evidence.
-- The source-generation prompt now gives the next API attempt direct repair instructions for those blocker classes.
+- Concrete generated-project test from the rerun showed:
+  - API source generation was connected and provider-authored.
+  - syntax compilation passed.
+  - CLI help, README serve, headless export, generated unittest, direct service construction, and HTTP/mobile endpoint checks failed.
+  - key failures: `ModuleNotFoundError: No module named 'service'`, `CommandWhitelist.__init__()` missing `commands`, and unreachable `/status` / `/`.
+- The next source_generation prompt now gives the API source agent a stricter QA handoff for those exact failures instead of only a generic validation failure.
 
 ### Integration Proof
-- connected: API source-generation prompt renderer is called for `chair/source_generation`.
-- accumulated: live failure class is recorded in `issue_memory/modifications.jsonl`.
-- consumed: focused prompt tests assert the new dependency/readme/UX feedback is present.
+- connected: `_render_prompt()` appends `render_source_generation_payload_requirements()` for `chair/source_generation`.
+- accumulated: the live failure class is recorded in `issue_memory/modifications.jsonl`.
+- consumed: focused prompt tests assert the new inter-agent protocol and live failure repair hints are present.
 
 ### Skill Decision
-- skillized: no, because this is a bounded source-generation quality repair using existing `ctcp-workflow`.
+- skillized: no, because this is a local source-generation repair loop enhancement; it should become a skill only if the same inter-agent generated-source repair procedure stabilizes across multiple project domains.

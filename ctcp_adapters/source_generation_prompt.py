@@ -36,6 +36,9 @@ def render_source_generation_payload_requirements(*, run_dir: Path) -> list[str]
         "- Include every expected path listed below, including package __init__.py files, pyproject.toml, README, startup entrypoint, sample data, and tests.",
         "- Prefer `content_lines` as an array of complete source lines for every file; the system will join them with newline characters.",
         "- If you use `content` instead, it must be a complete file string with escaped `\\n`; never put literal line breaks inside a JSON string.",
+        "- Treat source_generation as a virtual-team handoff, not a solo dump: Builder writes the files, Integration QA checks every import/export and call signature, Product QA checks the user-goal flow, and Delivery QA checks README commands, evidence files, and package layout before the JSON is returned.",
+        "- If this is a retry, the Validator/QA failure evidence below is mandatory input. Do not repeat the same structure with only names changed; repair the concrete files, imports, constructors, routes, README headings, and tests that caused the failure.",
+        "- The final JSON must reflect the integrated team decision: no file may contradict the package name, startup entrypoint, public interfaces, README commands, or tests chosen by another file.",
         "- The generated project is validated in the current Python environment. The verifier does not run `pip install`, `poetry install`, `npm install`, or any dependency bootstrap before startup/export probes.",
         "- Therefore every generated startup, export, test, and evidence path must run with Python standard library modules only unless the dependency code is included inside the generated project tree and imported locally.",
         "- For local HTTP/web projects, prefer standard-library `http.server`, `wsgiref`, `urllib`, `json`, `html`, and generated HTML/JavaScript assets; do not import Flask, flask_cors, FastAPI, Django, requests, PyQt5, PySide, wxPython, Electron, or other uninstalled packages.",
@@ -43,12 +46,15 @@ def render_source_generation_payload_requirements(*, run_dir: Path) -> list[str]
         "- The startup entrypoint must support `--help`, `--serve`, and `--goal --project-name --out --headless`; `--serve` and the rich export command must exit 0 under the verifier instead of blocking forever on a long-running server loop.",
         "- Do not add a custom argparse `--help` option; argparse already provides it. Only define real options such as `--goal`, `--project-name`, `--out`, and `--headless`.",
         "- Prefer normal src-layout imports like `from vn.service import ...`; do not import `src.vn...` unless you also make it runnable with the project root on PYTHONPATH.",
+        "- Inside a generated `src/<package>/...` package, do not use bare sibling imports such as `import service`, `import models`, or `from exporter import ...`. Use explicit relative imports like `from . import service` / `from .models import CommandWhitelist`, or absolute package imports like `from <package>.service import ...` consistently.",
+        "- Entrypoint scripts under `scripts/` must add the generated `src` directory to `sys.path` when needed, then import the concrete package modules and symbols that actually exist. Do not rely on `__init__.py` re-exporting symbols that are not defined.",
         "- Before returning, build a cross-file import/export checklist: for every `from package.module import Symbol`, the target module must define `Symbol` or re-export it through its `__init__.py`.",
         "- Include an `interfaces` object in the JSON response, keyed by Python file path, listing each file's public `defines`, `imports`, and `exports`; this must match the actual file contents exactly.",
         "- Package `__init__.py` files count as public code too: every `from .module import Symbol` or wildcard re-export in `__init__.py` must point to a real class/function/value in that module.",
         "- Do not import helper names that are not implemented. If one file imports a helper, the target file must define that exact helper or the importing file must call the actual implemented API.",
         "- Keep public function names consistent across service, entrypoint, exporter, pipeline, workspace, and tests; rename imports and definitions together instead of inventing new names in only one file.",
         "- Keep call signatures consistent across files. If the startup entrypoint constructs a service/controller with arguments, that constructor must accept them; otherwise change the launcher call to match the actual constructor.",
+        "- Build an API signature matrix before returning: every model constructor, service constructor, service method, route handler, exporter function, and test call must use the same required/optional arguments. If a dataclass or class requires values, provide defaults or pass real seed data at every construction site.",
         "- Add a launcher compatibility table before finalizing: every service/controller constructor and public method called by `run_project_gui.py` must accept exactly those positional/keyword arguments, or accept optional `*args`/`**kwargs` and normalize them safely.",
         "- The `--headless --goal --project-name --out` export path must execute the same service method signatures that the service class actually defines.",
         "- If the launcher calls a service method such as `export_project_assets(...)`, that exact method must exist on the service class or the launcher must call the actual implemented method.",
@@ -58,7 +64,8 @@ def render_source_generation_payload_requirements(*, run_dir: Path) -> list[str]
         "- In Python content, do not write f-strings or quoted strings split across physical lines. For multi-line output, append complete one-line strings to a list and use `'\\n'.join(lines)`.",
         "- `run_project_gui.py` must not contain unterminated string literals; avoid code like `f\"...` followed by a raw newline before the closing quote.",
         "- Use Python standard library first. For a local desktop GUI prefer `tkinter`; do not import PyQt5, PySide, wxPython, Electron, or other undeclared external GUI packages.",
-        "- README must include sections: Project Overview, Implemented, Not Implemented, How To Run, Sample Data, Directory Map, Limitations.",
+        "- README must include exact English section headings: `## Project Overview`, `## Implemented`, `## Not Implemented`, `## How To Run`, `## Sample Data`, `## Directory Map`, `## Limitations`. You may add Chinese text under those headings, but do not replace the detectable English headings.",
+        "- For web/mobile-local projects, include a real `/` HTML page plus `/status` and one command/action endpoint. The `--serve` verifier probe may start a short self-test server, request `/` and `/status` with `urllib`, print the local LAN URL guidance, and exit 0; the README may document how to run a long-lived server mode if implemented.",
         "- `sample_data/source_map.json` must include `content_items` with `source` values starting `API:` and `field_sources` with API refs.",
         "- The project must declare its own concrete acceptance criteria, sample-data adequacy criteria, and delivery evidence expectations in generated docs or metadata; do not rely on CTCP to provide project-specific numbers or content rules.",
         "- Sample data must be deep enough to satisfy the generated project's own declared acceptance criteria, with provenance/source metadata when the project claims API-authored content.",
@@ -89,11 +96,7 @@ def _previous_failure_lines(run_dir: Path) -> list[str]:
         stderr = str(probe.get("stderr_tail", "") or probe.get("stdout_tail", "")).strip()
         if stderr:
             lines.append(f"- {name}: {stderr[:500]}")
-            lowered = stderr.lower()
-            if "modulenotfounderror" in lowered or "no module named" in lowered:
-                lines.append(
-                    "- dependency: validation probes do not install dependencies; remove the missing external import or replace it with standard-library/local generated code"
-                )
+            lines.extend(_runtime_probe_repair_hints(stderr))
     imports = generic.get("python_import_consistency") if isinstance(generic.get("python_import_consistency"), dict) else {}
     missing_symbols = imports.get("missing_symbols") if isinstance(imports.get("missing_symbols"), list) else []
     for row in missing_symbols[:12]:
@@ -134,7 +137,37 @@ def _previous_failure_lines(run_dir: Path) -> list[str]:
     reasons = [str(item).strip() for item in ux.get("reasons", []) if str(item).strip()] if isinstance(ux.get("reasons", []), list) else []
     for item in reasons[:6]:
         lines.append(f"- ux: {item}")
+        if "gui/web" in item.lower() or "visual evidence" in item.lower() or "preview source page" in item.lower():
+            lines.append(
+                "- delivery_qa: web/mobile projects must expose a real `/` preview page, `/status`, and export/visual evidence that the verifier can observe"
+            )
     return lines if len(lines) > 1 else []
+
+
+def _runtime_probe_repair_hints(stderr: str) -> list[str]:
+    lowered = str(stderr or "").lower()
+    hints: list[str] = []
+    if "modulenotfounderror" in lowered or "no module named" in lowered:
+        hints.append(
+            "- dependency: validation probes do not install dependencies; remove the missing external import or replace it with standard-library/local generated code"
+        )
+        if any(marker in lowered for marker in ("no module named 'service'", 'no module named "service"', "no module named 'models'", 'no module named "models"', "no module named 'exporter'", 'no module named "exporter"')):
+            hints.append(
+                "- integration_qa: this looks like a bare sibling import inside a src-layout package; replace `import service`/`import models` style imports with explicit relative or package imports and update tests/entrypoint PYTHONPATH consistently"
+            )
+    if "cannot import name" in lowered:
+        hints.append(
+            "- integration_qa: imported/re-exported symbol is missing; make package `__init__.py`, entrypoint imports, and provider `interfaces` match the actual definitions"
+        )
+    if "typeerror:" in lowered and "missing" in lowered and "required positional argument" in lowered:
+        hints.append(
+            "- integration_qa: constructor or method signature mismatch; align every service/model/exporter/test call with the actual required arguments, or add safe defaults and seed-data construction"
+        )
+    if "actively refused" in lowered or "timed out" in lowered or "connection refused" in lowered:
+        hints.append(
+            "- delivery_qa: the local server did not become reachable; make `--serve` perform a deterministic startup self-test for `/` and `/status`, and avoid daemon threads that exit before handling requests"
+        )
+    return hints
 
 
 def _expected_paths(*, contract: dict[str, Any], project_root: str) -> list[str]:
