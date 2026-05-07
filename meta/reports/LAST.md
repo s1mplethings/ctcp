@@ -2,93 +2,78 @@
 
 ## Latest Report
 
-- File: `meta/reports/archive/20260508-agent-interaction-live-generation-test.md`
+- File: `meta/reports/archive/20260508-generated-project-signature-test-validation.md`
 - Date: `2026-05-08`
-- Topic: `Live Generated Project Test After Agent Interaction Source Repair`
+- Topic: `Generated Project Signature And Test-Import Validation Hardening`
 
 ### Readlist
 - `AGENTS.md`
-- `.agents/skills/ctcp-orchestrate-loop/SKILL.md`
-- `meta/tasks/CURRENT.md`
-- `meta/backlog/execution_queue.json`
+- `.agents/skills/ctcp-workflow/SKILL.md`
+- `ai_context/00_AI_CONTRACT.md`
 - `docs/00_CORE.md`
 - `docs/03_quality_gates.md`
-- `scripts/ctcp_orchestrate.py`
-- previous run evidence: `%TEMP%\ctcp_runs\ctcp\voice-assistant-phone-pc-smoke-20260507-rerun`
+- `PATCH_README.md`
+- `TREE.md`
+- `ai_context/problem_registry.md`
+- `ai_context/decision_log.md`
+- `meta/tasks/CURRENT.md`
+- `tools/providers/project_generation_validation.py`
+- `ctcp_adapters/source_generation_prompt.py`
+- `tests/test_project_generation_artifacts.py`
+- live run evidence: `%TEMP%\ctcp_runs\ctcp\voice-assistant-phone-pc-live-20260508`
 
 ### Plan
-1. Bind `ADHOC-20260508-agent-interaction-live-generation-test`.
-2. Create a fresh external run for the phone-to-PC voice assistant goal.
-3. Advance with minimal API attempts until source_generation passes or a first concrete blocker appears.
-4. Inspect provider/source_generation evidence.
-5. Test the generated project as a concrete user project if source files exist.
-6. Record command trace, first blocker, and next repair direction.
+1. Bind `ADHOC-20260508-generated-project-signature-test-validation`.
+2. Add generic generated-test validation and import-style checks.
+3. Add retry prompt feedback for generated-test and constructor/signature failures.
+4. Add focused regression tests.
+5. Run focused tests, code-health, workflow checks, and canonical verify.
 
 ### Changes
-- Metadata only:
-  - `meta/backlog/execution_queue.json`
-  - `meta/tasks/CURRENT.md`
-  - `meta/reports/LAST.md`
-  - `meta/tasks/ARCHIVE_INDEX.md`
-  - `meta/tasks/archive/20260508-agent-interaction-live-generation-test.md`
-  - `meta/reports/archive/20260508-agent-interaction-live-generation-test.md`
+- Added `tools/providers/project_generation_generated_tests.py` as a generic generated-project unittest/import-style validator.
+- Wired `generic_validation` to run generated tests with generated `src` on `PYTHONPATH` and to block `src.<package>` imports in generated tests.
+- Extended source-generation retry feedback so `generated_tests` failures and constructor/signature runtime errors are consumed by the next API source_generation prompt.
+- Added regression coverage in `tests/test_generated_project_validation_self_repair.py`.
+- Added issue memory entry `20260508_001` for the repeated user-visible generated-source self-check failure.
 
 ### Verify
-- Orchestrator commands:
-  - `new-run --run-id voice-assistant-phone-pc-live-20260508 --goal <voice assistant goal>` -> exit 0.
-  - `status --run-dir %TEMP%\ctcp_runs\ctcp\voice-assistant-phone-pc-live-20260508` -> exit 0, initially blocked at `analysis.md`.
-  - `advance --run-dir <run_dir> --max-steps 12` -> timed out after 20 minutes, but source_generation reports were written.
-  - follow-up `status --run-dir <run_dir>` -> exit 0, blocked at `artifacts/source_generation_report.json`, reason `generic_validation.passed must be true`.
-- Provider evidence:
-  - `fallback_count=0`
-  - `all_critical_steps_api=true`
-  - `critical_api_step_count=10`
-  - source_generation executed by `api_agent` three times.
-- Generated-project concrete checks:
-  - file list -> pass
-  - Python syntax compile -> pass
-  - CLI `--help` -> fail
-  - README `--serve` entry -> fail
-  - headless export -> fail
-  - generated unittest -> fail
-  - direct service construction -> fail
-  - HTTP `/` and `/status` endpoint probe -> fail
-- First blocker:
-  - `TypeError: VoiceAssistantService.__init__() missing 1 required positional argument: 'whitelist'`
-  - generated test import also fails with `ModuleNotFoundError: No module named 'src.readme'`
-- first failure point evidence:
-  - The orchestrator first blocked at `artifacts/source_generation_report.json` with `generic_validation.passed must be true`.
-  - The concrete generated-project first runtime failure is `VoiceAssistantService.__init__()` missing required `whitelist`.
-- minimal fix strategy evidence:
-  - Do not patch this generated project manually.
-  - Next smallest repo repair is to harden generated-project validation/retry feedback for constructor/API signature mismatches and generated test import mode, tracked as `ADHOC-20260508-generated-project-signature-test-validation`.
-- triplet runtime wiring command evidence:
-  - Not rerun in this metadata-only live test task; previous commit `db9b70a` ran canonical verify and passed `python -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v`.
-- triplet issue memory command evidence:
-  - Not rerun in this metadata-only live test task; previous commit `db9b70a` ran canonical verify and passed `python -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`.
-- triplet skill consumption command evidence:
-  - Not rerun in this metadata-only live test task; previous commit `db9b70a` ran canonical verify and passed `python -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v`.
-- Pending:
-  - workflow/module/patch metadata checks after archive update.
+- PASS: `.venv\Scripts\python.exe -m py_compile ctcp_adapters\source_generation_prompt.py tools\providers\project_generation_validation.py tools\providers\project_generation_generated_tests.py tests\test_generated_project_validation_self_repair.py` returned 0.
+- PASS: `.venv\Scripts\python.exe -m unittest tests.test_generated_project_validation_self_repair -v` returned 0, 2 tests OK.
+- PASS: `$env:PYTHONPATH=(Get-Location).Path; .venv\Scripts\python.exe tests\test_project_generation_artifacts.py -k source_generation -v` returned 0, 11 tests OK.
+- PASS: `.venv\Scripts\python.exe tests\test_api_agent_templates.py -k source_generation -v` returned 0, 3 tests OK.
+- PASS: `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` returned 0, 25 tests OK.
+- PASS: `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` returned 0, 3 tests OK.
+- PASS: `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` returned 0, 3 tests OK.
+- PASS: `.venv\Scripts\python.exe scripts\module_protection_check.py --json` returned 0, ownership `task-owned`, no violations.
+- PASS: `.venv\Scripts\python.exe scripts\patch_check.py` returned 0.
+- PASS: `.venv\Scripts\python.exe scripts\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task` returned 0 after keeping `project_generation_validation.py` at its baseline line count.
+- PASS: `.venv\Scripts\python.exe scripts\workflow_checks.py` returned 0 after report evidence was updated.
+- PASS: `$env:CTCP_FORCE_PROVIDER=$null; $env:CTCP_RUNS_ROOT = Join-Path $env:TEMP 'ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1 -Profile code` returned 0. The canonical run executed lite build/ctest, workflow gate, module protection, prompt/plan/patch/behavior/contract/doc-index/code-health gates, triplet guard, lite replay, and 519 Python unit tests with 4 skipped.
+- FIRST FAILURE POINT: `.venv\Scripts\python.exe scripts\workflow_checks.py` returned 1 before this report update because `LAST.md` lacked mandatory evidence fields; implementation tests had already passed.
+- MINIMAL FIX STRATEGY: record the exact command evidence, triplet evidence, issue memory decision, and first-failure/minimal-fix fields in this report, then rerun workflow and canonical verify.
 
 ### Questions
 - None.
 
 ### Demo
-- Fresh run: `%TEMP%\ctcp_runs\ctcp\voice-assistant-phone-pc-live-20260508`
-- Result: not deliverable yet.
-- Improvement over the previous rerun:
-  - README quality now passes.
-  - previous bare `No module named 'service'` package import failure is gone.
-- Remaining defects:
-  - service constructor signature mismatch blocks startup/export/import.
-  - generated tests use the wrong `src.readme` import style.
-  - web/mobile endpoints cannot become reachable because import-time service construction fails.
+- Target failure classes from live run:
+  - `VoiceAssistantService.__init__()` missing required `whitelist`.
+  - generated tests importing `src.readme`.
 
 ### Integration Proof
-- connected: fresh run reached API source_generation and wrote `artifacts/source_generation_report.json`.
-- accumulated: this report captures provider evidence and the concrete generated-project test matrix.
-- consumed: follow-up backlog item `ADHOC-20260508-generated-project-signature-test-validation` was created for constructor/test-import validation hardening.
+- connected: `generic_validation` calls `generated_tests_validation`, and source_generation already consumes `generic_validation` as its blocking report.
+- accumulated: generated-test import-style violations and unittest stdout/stderr tails are stored under `generic_validation.generated_tests` in `artifacts/source_generation_report.json`.
+- consumed: `render_source_generation_payload_requirements` reads `generic_validation.generated_tests` and injects concrete retry repair instructions into the next source_generation prompt.
+
+### Issue Memory
+- issue memory decision: required, because this was a repeated user-visible generated-project failure after prior source_generation prompt hardening.
+- issue memory command evidence: `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` returned 0.
+
+### First Failure And Repair
+- first failure point evidence: workflow gate initially failed only on missing `LAST.md` mandatory evidence, not on code behavior.
+- minimal fix strategy evidence: update report evidence, keep code patch unchanged, rerun workflow and canonical verify; final canonical verify passed.
 
 ### Skill Decision
-- skillized: no, because this is a one-off live regression run using the existing `ctcp-orchestrate-loop` skill.
+- skillized: no, because this is a focused validation hardening; it can become a reusable skill only after several generated-project domains use the same self-check loop.
+- skill consumption command evidence: `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` returned 0.
+- runtime wiring command evidence: `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` returned 0.

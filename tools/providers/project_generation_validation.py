@@ -12,6 +12,7 @@ from tools.providers.project_generation_domain_contract import (
     preview_keywords,
     readme_required_sections,
 )
+from tools.providers.project_generation_generated_tests import generated_tests_validation
 from tools.providers.project_generation_import_validation import python_import_consistency_validation
 from tools.providers.project_generation_sample_metrics import narrative_sample_metrics
 
@@ -109,7 +110,6 @@ _TODO_PLACEHOLDER_LINE_RE = re.compile(
     re.IGNORECASE,
 )
 
-
 def read_frontend_request(run_dir: Path | None) -> dict[str, Any]:
     if run_dir is None:
         return {}
@@ -182,7 +182,6 @@ def pipeline_contract(*, project_root: str, startup_entrypoint: str, startup_rea
         ],
     }
 
-
 def _looks_placeholder_content(path: Path) -> bool:
     try:
         compact = path.read_text(encoding="utf-8", errors="replace").lower().strip()
@@ -194,7 +193,6 @@ def _looks_placeholder_content(path: Path) -> bool:
         return True
     lines = [line.strip() for line in compact.splitlines() if line.strip()]
     return len(lines) <= 4 and any(line == "pass" for line in lines)
-
 
 def _python_syntax_validation(*, run_dir: Path, generated_business_files: list[str], startup_entrypoint: str) -> dict[str, Any]:
     candidates: list[str] = []
@@ -229,7 +227,6 @@ def _python_syntax_validation(*, run_dir: Path, generated_business_files: list[s
         "syntax_errors": syntax_errors,
         "passed": not syntax_errors,
     }
-
 
 def generic_validation(
     *,
@@ -273,6 +270,7 @@ def generic_validation(
         startup_entrypoint=startup_entrypoint,
         interface_contract=interface_contract,
     )
+    generated_tests = generated_tests_validation(run_dir=run_dir, startup_entrypoint=startup_entrypoint)
     return {
         "passed": bool(entry.exists())
         and bool(readme.exists())
@@ -281,7 +279,8 @@ def generic_validation(
         and smoke_passed
         and not placeholder_hits
         and bool(python_syntax.get("passed", False))
-        and bool(python_import_consistency.get("passed", False)),
+        and bool(python_import_consistency.get("passed", False))
+        and bool(generated_tests.get("passed", False)),
         "has_runnable_entrypoint": bool(entry.exists()),
         "readme_startup_ready": readme_has_start,
         "core_user_flow": [
@@ -292,6 +291,7 @@ def generic_validation(
         "placeholder_hits": placeholder_hits,
         "python_syntax": python_syntax,
         "python_import_consistency": python_import_consistency,
+        "generated_tests": generated_tests,
         "delivery_package": list(acceptance_files),
         "smoke_run": {
             "startup_probe": dict(behavior_probe),

@@ -48,6 +48,7 @@ def render_source_generation_payload_requirements(*, run_dir: Path) -> list[str]
         "- Prefer normal src-layout imports like `from vn.service import ...`; do not import `src.vn...` unless you also make it runnable with the project root on PYTHONPATH.",
         "- Inside a generated `src/<package>/...` package, do not use bare sibling imports such as `import service`, `import models`, or `from exporter import ...`. Use explicit relative imports like `from . import service` / `from .models import CommandWhitelist`, or absolute package imports like `from <package>.service import ...` consistently.",
         "- Entrypoint scripts under `scripts/` must add the generated `src` directory to `sys.path` when needed, then import the concrete package modules and symbols that actually exist. Do not rely on `__init__.py` re-exporting symbols that are not defined.",
+        "- Generated tests must run with `python -m unittest discover -s tests -v` using the generated `src` directory on PYTHONPATH. Tests must import the package directly, for example `from readme import service` or `from readme.service import VoiceAssistantService`; do not import `src.readme`, `src.<package>`, or repo-local paths.",
         "- Before returning, build a cross-file import/export checklist: for every `from package.module import Symbol`, the target module must define `Symbol` or re-export it through its `__init__.py`.",
         "- Include an `interfaces` object in the JSON response, keyed by Python file path, listing each file's public `defines`, `imports`, and `exports`; this must match the actual file contents exactly.",
         "- Package `__init__.py` files count as public code too: every `from .module import Symbol` or wildcard re-export in `__init__.py` must point to a real class/function/value in that module.",
@@ -122,6 +123,25 @@ def _previous_failure_lines(run_dir: Path) -> list[str]:
     for cycle in cycles[:6]:
         if isinstance(cycle, list) and cycle:
             lines.append("- import_cycle: break this generated Python circular import: " + " -> ".join(str(item) for item in cycle))
+    generated_tests = generic.get("generated_tests") if isinstance(generic.get("generated_tests"), dict) else {}
+    test_violations = generated_tests.get("import_style_violations") if isinstance(generated_tests.get("import_style_violations"), list) else []
+    for row in test_violations[:8]:
+        if not isinstance(row, dict):
+            continue
+        path = str(row.get("path", "")).strip()
+        imported = str(row.get("import", "")).strip()
+        reason = str(row.get("reason", "")).strip()
+        if path and imported:
+            lines.append(f"- generated_tests: `{path}` uses `{imported}`; {reason or 'import the generated package directly, not src.<package>'}")
+    if generated_tests and not bool(generated_tests.get("passed", False)):
+        test_text = "\n".join(
+            str(generated_tests.get(key, "")).strip()
+            for key in ("stdout_tail", "stderr_tail", "reason")
+            if str(generated_tests.get(key, "")).strip()
+        )
+        if test_text:
+            lines.append(f"- generated_tests: unittest/self-check failed: {test_text[:700]}")
+            lines.extend(_runtime_probe_repair_hints(test_text))
     domain = report.get("domain_validation") if isinstance(report.get("domain_validation"), dict) else {}
     missing = [str(item).strip() for item in domain.get("missing", []) if str(item).strip()] if isinstance(domain.get("missing", []), list) else []
     for item in missing[:8]:
@@ -151,6 +171,10 @@ def _runtime_probe_repair_hints(stderr: str) -> list[str]:
         hints.append(
             "- dependency: validation probes do not install dependencies; remove the missing external import or replace it with standard-library/local generated code"
         )
+        if "no module named 'src." in lowered or 'no module named "src.' in lowered:
+            hints.append(
+                "- generated_tests: tests are importing `src.<package>`; generated tests must import the package directly with the generated `src` directory on PYTHONPATH"
+            )
         if any(marker in lowered for marker in ("no module named 'service'", 'no module named "service"', "no module named 'models'", 'no module named "models"', "no module named 'exporter'", 'no module named "exporter"')):
             hints.append(
                 "- integration_qa: this looks like a bare sibling import inside a src-layout package; replace `import service`/`import models` style imports with explicit relative or package imports and update tests/entrypoint PYTHONPATH consistently"

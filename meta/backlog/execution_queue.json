@@ -7468,22 +7468,27 @@
         "produces": [
           "ctcp_adapters/source_generation_prompt.py",
           "tools/providers/project_generation_validation.py",
-          "tools/providers/project_generation_source_helpers.py",
+          "tools/providers/project_generation_generated_tests.py",
+          "tests/test_generated_project_validation_self_repair.py",
           "tests/test_api_agent_templates.py",
           "tests/test_project_generation_artifacts.py",
           "issue_memory/modifications.jsonl",
           "meta/backlog/execution_queue.json",
           "meta/tasks/CURRENT.md",
-          "meta/reports/LAST.md"
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260508-generated-project-signature-test-validation.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260508-generated-project-signature-test-validation.md"
         ],
         "tests": [
-          "focused generated-project validation tests",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_generated_project_validation_self_repair -v",
+          ".venv\\Scripts\\python.exe -m py_compile ctcp_adapters\\source_generation_prompt.py tools\\providers\\project_generation_validation.py tools\\providers\\project_generation_generated_tests.py tests\\test_generated_project_validation_self_repair.py",
           ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
           "powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
         ]
       },
-      "status": "todo",
-      "notes": "Follow-up from live test: prompt-only interaction repair improved imports and README but API output still shipped constructor/API signature mismatch and generated tests that import src.readme incorrectly."
+      "status": "done",
+      "notes": "Completed on 2026-05-08: added generic generated-project unittest/import-style validation, blocked src.<package> generated-test imports, fed generated_tests and constructor/signature failures into source_generation retry prompts, recorded issue memory 20260508_001, and passed focused regressions plus verify_repo.ps1 -Profile code."
     }
   ]
 }
