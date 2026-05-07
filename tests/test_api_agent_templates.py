@@ -923,7 +923,8 @@ class ApiAgentTemplateTests(unittest.TestCase):
                 "launcher compatibility table", "*args`/`**kwargs", "Do not ship TODO, placeholder, stub, pass-only",
                 "never put literal line breaks inside a JSON string", "--headless", "--goal --project-name --out --headless",
                 "workspace_preview.html", "interaction_trace.json", "do not write f-strings or quoted strings split across physical lines",
-                "join(lines)", "content_items", "project must declare its own concrete acceptance criteria",
+                "join(lines)", "content_items", "project must declare its own concrete acceptance criteria", "verifier does not run `pip install`",
+                "standard-library `http.server`", "do not import Flask", "`--serve` and the rich export command must exit 0",
             ):
                 self.assertIn(token, prompt)
 
@@ -943,7 +944,7 @@ class ApiAgentTemplateTests(unittest.TestCase):
                         "status": "blocked",
                         "generic_validation": {
                             "smoke_run": {
-                                "startup_probe": {"stderr_tail": "SyntaxError: unterminated f-string literal"},
+                                "startup_probe": {"stderr_tail": "ModuleNotFoundError: No module named 'flask'"},
                                 "export_probe": {"stdout_tail": "ImportError: cannot import name 'export_project_assets' from 'vn.exporters.deliver'"},
                             },
                             "python_import_consistency": {
@@ -957,6 +958,7 @@ class ApiAgentTemplateTests(unittest.TestCase):
                             },
                         },
                         "domain_validation": {"missing": ["project-defined acceptance criteria missing"]},
+                        "readme_quality": {"missing_sections": ["how_to_run", "directory_map"], "reasons": ["README missing sections: how_to_run, directory_map"]},
                         "ux_validation": {"reasons": ["visual evidence files missing"]},
                     },
                     ensure_ascii=False,
@@ -982,10 +984,13 @@ class ApiAgentTemplateTests(unittest.TestCase):
             )
 
             self.assertIn("Previous source_generation failed", prompt)
-            self.assertIn("unterminated f-string", prompt)
+            self.assertIn("No module named 'flask'", prompt)
+            self.assertIn("validation probes do not install dependencies", prompt)
             self.assertIn("export_project_assets", prompt)
             self.assertIn("StoryOutline", prompt)
             self.assertIn("project-defined acceptance criteria missing", prompt)
+            for token in ("how_to_run", "directory_map", "README missing sections", "visual evidence files missing"):
+                self.assertIn(token, prompt)
             self.assertIn("cross-file import/export checklist", prompt)
 
 if __name__ == "__main__":

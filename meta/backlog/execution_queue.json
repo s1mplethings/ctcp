@@ -7336,6 +7336,45 @@
       },
       "status": "done",
       "notes": "Completed on 2026-05-06: provider source-file parsing/materialization and high-quality extended evidence generation were extracted from project_generation_source_stage.py into focused helper modules. Source stage dropped from 995 to 648 lines, focused source-generation tests passed, code-health passed, and canonical verify code profile passed."
+    },
+    {
+      "id": "ADHOC-20260507-generated-project-runnable-source-guard",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Generated project runnable source guard",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260504-vn-generated-source-consistency-retest",
+        "ADHOC-20260506-source-stage-boundary-refactor"
+      ],
+      "dod": [
+        "Source-generation prompts require provider-authored projects to run in the current verifier environment without undeclared external dependencies",
+        "Previous source-generation failure feedback includes README quality, external dependency, and runnable probe blockers",
+        "Regression tests prove source-generation prompt guidance covers dependency-free runnable delivery and exact prior failure repair"
+      ],
+      "artifacts": {
+        "produces": [
+          "ctcp_adapters/source_generation_prompt.py",
+          "tests/test_api_agent_templates.py",
+          "issue_memory/modifications.jsonl",
+          "artifacts/PLAN.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260507-generated-project-runnable-source-guard.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260507-generated-project-runnable-source-guard.md"
+        ],
+        "tests": [
+          "$env:PYTHONPATH=(Get-Location).Path; .venv\\Scripts\\python.exe tests\\test_api_agent_templates.py -k source_generation -v",
+          "$env:PYTHONPATH=(Get-Location).Path; .venv\\Scripts\\python.exe tests\\test_project_generation_artifacts.py -k source_generation -v",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task",
+          "powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-07: source-generation prompt guidance now requires verifier-runnable validation paths without uninstalled dependency bootstrap, directs web projects toward standard-library/local code, requires --serve/export probes to exit 0, and feeds dependency/README/UX blockers back into API retries. Focused source-generation tests and canonical verify code profile passed."
     }
   ]
 }

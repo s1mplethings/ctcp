@@ -36,7 +36,11 @@ def render_source_generation_payload_requirements(*, run_dir: Path) -> list[str]
         "- Include every expected path listed below, including package __init__.py files, pyproject.toml, README, startup entrypoint, sample data, and tests.",
         "- Prefer `content_lines` as an array of complete source lines for every file; the system will join them with newline characters.",
         "- If you use `content` instead, it must be a complete file string with escaped `\\n`; never put literal line breaks inside a JSON string.",
-        "- The startup entrypoint must support `--help` and `--goal --project-name --out --headless`; the rich export command must exit 0.",
+        "- The generated project is validated in the current Python environment. The verifier does not run `pip install`, `poetry install`, `npm install`, or any dependency bootstrap before startup/export probes.",
+        "- Therefore every generated startup, export, test, and evidence path must run with Python standard library modules only unless the dependency code is included inside the generated project tree and imported locally.",
+        "- For local HTTP/web projects, prefer standard-library `http.server`, `wsgiref`, `urllib`, `json`, `html`, and generated HTML/JavaScript assets; do not import Flask, flask_cors, FastAPI, Django, requests, PyQt5, PySide, wxPython, Electron, or other uninstalled packages.",
+        "- `pyproject.toml` may document optional dependencies, but required validation paths must not import them. Optional dependency imports must be guarded and have a standard-library fallback.",
+        "- The startup entrypoint must support `--help`, `--serve`, and `--goal --project-name --out --headless`; `--serve` and the rich export command must exit 0 under the verifier instead of blocking forever on a long-running server loop.",
         "- Do not add a custom argparse `--help` option; argparse already provides it. Only define real options such as `--goal`, `--project-name`, `--out`, and `--headless`.",
         "- Prefer normal src-layout imports like `from vn.service import ...`; do not import `src.vn...` unless you also make it runnable with the project root on PYTHONPATH.",
         "- Before returning, build a cross-file import/export checklist: for every `from package.module import Symbol`, the target module must define `Symbol` or re-export it through its `__init__.py`.",
@@ -85,6 +89,11 @@ def _previous_failure_lines(run_dir: Path) -> list[str]:
         stderr = str(probe.get("stderr_tail", "") or probe.get("stdout_tail", "")).strip()
         if stderr:
             lines.append(f"- {name}: {stderr[:500]}")
+            lowered = stderr.lower()
+            if "modulenotfounderror" in lowered or "no module named" in lowered:
+                lines.append(
+                    "- dependency: validation probes do not install dependencies; remove the missing external import or replace it with standard-library/local generated code"
+                )
     imports = generic.get("python_import_consistency") if isinstance(generic.get("python_import_consistency"), dict) else {}
     missing_symbols = imports.get("missing_symbols") if isinstance(imports.get("missing_symbols"), list) else []
     for row in missing_symbols[:12]:
@@ -114,6 +123,13 @@ def _previous_failure_lines(run_dir: Path) -> list[str]:
     missing = [str(item).strip() for item in domain.get("missing", []) if str(item).strip()] if isinstance(domain.get("missing", []), list) else []
     for item in missing[:8]:
         lines.append(f"- domain: {item}")
+    readme = report.get("readme_quality") if isinstance(report.get("readme_quality"), dict) else {}
+    readme_missing = [str(item).strip() for item in readme.get("missing_sections", []) if str(item).strip()] if isinstance(readme.get("missing_sections", []), list) else []
+    if readme_missing:
+        lines.append("- readme_quality: README must include these missing sections exactly enough to be detected: " + ", ".join(readme_missing[:12]))
+    readme_reasons = [str(item).strip() for item in readme.get("reasons", []) if str(item).strip()] if isinstance(readme.get("reasons", []), list) else []
+    for item in readme_reasons[:4]:
+        lines.append(f"- readme_quality: {item}")
     ux = report.get("ux_validation") if isinstance(report.get("ux_validation"), dict) else {}
     reasons = [str(item).strip() for item in ux.get("reasons", []) if str(item).strip()] if isinstance(ux.get("reasons", []), list) else []
     for item in reasons[:6]:
