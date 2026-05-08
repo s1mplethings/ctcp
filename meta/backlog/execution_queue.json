@@ -14,6 +14,36 @@
   ],
   "items": [
     {
+      "id": "ADHOC-20260508-source-generation-interface-validation",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Project generation cross-file interface consistency validation",
+      "owner_role": "Local Verifier",
+      "deps": [
+        "L1-ORCH-001"
+      ],
+      "dod": [
+        "source_generation generic validation detects generated Python constructor/call signature drift",
+        "retry prompt includes concrete caller/callee signature mismatch evidence",
+        "focused regression tests cover missing required constructor args and unexpected keyword args",
+        "canonical repo checks pass or first failure is recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/providers/project_generation_signature_validation.py",
+          "tools/providers/project_generation_validation.py",
+          "ctcp_adapters/source_generation_prompt.py",
+          "tests/test_generated_project_signature_validation.py"
+        ],
+        "tests": [
+          "python -m unittest tests.test_generated_project_signature_validation -v",
+          "python scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed with static generated-Python signature validation, retry prompt consumption, focused regressions, and canonical code-profile verify."
+    },
+    {
       "id": "L0-CONTRACT-001",
       "layer": "L0",
       "priority": "P0",

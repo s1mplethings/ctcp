@@ -123,6 +123,26 @@ def _previous_failure_lines(run_dir: Path) -> list[str]:
     for cycle in cycles[:6]:
         if isinstance(cycle, list) and cycle:
             lines.append("- import_cycle: break this generated Python circular import: " + " -> ".join(str(item) for item in cycle))
+    signatures = generic.get("python_signature_consistency") if isinstance(generic.get("python_signature_consistency"), dict) else {}
+    signature_mismatches = signatures.get("mismatches") if isinstance(signatures.get("mismatches"), list) else []
+    for row in signature_mismatches[:10]:
+        if not isinstance(row, dict):
+            continue
+        caller = str(row.get("caller_path", "")).strip()
+        callee = str(row.get("callee", "")).strip()
+        signature = str(row.get("signature", "")).strip()
+        line = int(row.get("line", 0) or 0)
+        missing = ", ".join(str(item) for item in row.get("missing_required", [])[:8]) if isinstance(row.get("missing_required"), list) else ""
+        unexpected = ", ".join(str(item) for item in row.get("unexpected_keywords", [])[:8]) if isinstance(row.get("unexpected_keywords"), list) else ""
+        parts = [f"missing required: {missing}" if missing else "", f"unexpected keywords: {unexpected}" if unexpected else ""]
+        if row.get("too_many_positionals"):
+            parts.append("too many positional arguments")
+        details = "; ".join(part for part in parts if part)
+        if caller and callee:
+            lines.append(
+                f"- signature_consistency: `{caller}:{line}` calls `{callee}` but target signature is `{signature}`"
+                + (f" ({details})" if details else "")
+            )
     generated_tests = generic.get("generated_tests") if isinstance(generic.get("generated_tests"), dict) else {}
     test_violations = generated_tests.get("import_style_violations") if isinstance(generated_tests.get("import_style_violations"), list) else []
     for row in test_violations[:8]:
@@ -186,6 +206,14 @@ def _runtime_probe_repair_hints(stderr: str) -> list[str]:
     if "typeerror:" in lowered and "missing" in lowered and "required positional argument" in lowered:
         hints.append(
             "- integration_qa: constructor or method signature mismatch; align every service/model/exporter/test call with the actual required arguments, or add safe defaults and seed-data construction"
+        )
+    if "typeerror:" in lowered and "unexpected keyword argument" in lowered:
+        hints.append(
+            "- integration_qa: keyword signature mismatch; rename constructor/function keyword arguments consistently across models, services, entrypoints, exporters, and generated tests"
+        )
+    if "typeerror:" in lowered and "positional argument" in lowered and "were given" in lowered:
+        hints.append(
+            "- integration_qa: positional signature mismatch; align call sites with the actual constructor or method signature instead of changing only one file"
         )
     if "actively refused" in lowered or "timed out" in lowered or "connection refused" in lowered:
         hints.append(

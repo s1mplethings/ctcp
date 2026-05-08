@@ -15,6 +15,7 @@ from tools.providers.project_generation_domain_contract import (
 from tools.providers.project_generation_generated_tests import generated_tests_validation
 from tools.providers.project_generation_import_validation import python_import_consistency_validation
 from tools.providers.project_generation_sample_metrics import narrative_sample_metrics
+from tools.providers.project_generation_signature_validation import python_signature_consistency_validation
 
 _SOURCE_SCAN_EXTS = {".py", ".js", ".jsx", ".ts", ".tsx", ".html", ".css"}
 _HIGH_INTERACTION_GROUP_RULES: dict[str, tuple[str, ...]] = {
@@ -109,7 +110,6 @@ _TODO_PLACEHOLDER_LINE_RE = re.compile(
     r"^\s*(?:[-*]\s*)?(?:\[\s\]\s*)?todo(?:\s*[:：-].*|\s*)$",
     re.IGNORECASE,
 )
-
 def read_frontend_request(run_dir: Path | None) -> dict[str, Any]:
     if run_dir is None:
         return {}
@@ -121,7 +121,6 @@ def read_frontend_request(run_dir: Path | None) -> dict[str, Any]:
     except Exception:
         return {}
     return raw if isinstance(raw, dict) else {}
-
 
 def resolve_project_intent(goal: str, *, run_dir: Path | None, src: dict[str, Any]) -> dict[str, Any]:
     direct = src.get("project_intent")
@@ -135,7 +134,6 @@ def resolve_project_intent(goal: str, *, run_dir: Path | None, src: dict[str, An
     if not isinstance(constraints, dict):
         constraints = {}
     return ProjectIntent.minimal_from_goal(goal, constraints).to_payload()
-
 
 def resolve_project_spec(goal: str, *, run_dir: Path | None, src: dict[str, Any], project_intent: dict[str, Any]) -> dict[str, Any]:
     direct = src.get("project_spec")
@@ -164,7 +162,6 @@ def resolve_project_spec(goal: str, *, run_dir: Path | None, src: dict[str, Any]
         "constraint_snapshot": dict(constraints),
     }
 
-
 def pipeline_contract(*, project_root: str, startup_entrypoint: str, startup_readme: str, business_files: list[str], acceptance_files: list[str]) -> dict[str, Any]:
     core_feature_files = sorted(set(business_files))
     return {
@@ -181,7 +178,6 @@ def pipeline_contract(*, project_root: str, startup_entrypoint: str, startup_rea
             {"name": "delivery_package", "artifact": "acceptance_files", "status": "planned", "acceptance_files": list(acceptance_files), "startup_readme": startup_readme},
         ],
     }
-
 def _looks_placeholder_content(path: Path) -> bool:
     try:
         compact = path.read_text(encoding="utf-8", errors="replace").lower().strip()
@@ -193,7 +189,6 @@ def _looks_placeholder_content(path: Path) -> bool:
         return True
     lines = [line.strip() for line in compact.splitlines() if line.strip()]
     return len(lines) <= 4 and any(line == "pass" for line in lines)
-
 def _python_syntax_validation(*, run_dir: Path, generated_business_files: list[str], startup_entrypoint: str) -> dict[str, Any]:
     candidates: list[str] = []
     seen: set[str] = set()
@@ -270,6 +265,9 @@ def generic_validation(
         startup_entrypoint=startup_entrypoint,
         interface_contract=interface_contract,
     )
+    python_signature_consistency = python_signature_consistency_validation(
+        run_dir=run_dir, generated_business_files=generated_business_files, startup_entrypoint=startup_entrypoint
+    )
     generated_tests = generated_tests_validation(run_dir=run_dir, startup_entrypoint=startup_entrypoint)
     return {
         "passed": bool(entry.exists())
@@ -280,6 +278,7 @@ def generic_validation(
         and not placeholder_hits
         and bool(python_syntax.get("passed", False))
         and bool(python_import_consistency.get("passed", False))
+        and bool(python_signature_consistency.get("passed", False))
         and bool(generated_tests.get("passed", False)),
         "has_runnable_entrypoint": bool(entry.exists()),
         "readme_startup_ready": readme_has_start,
@@ -291,6 +290,7 @@ def generic_validation(
         "placeholder_hits": placeholder_hits,
         "python_syntax": python_syntax,
         "python_import_consistency": python_import_consistency,
+        "python_signature_consistency": python_signature_consistency,
         "generated_tests": generated_tests,
         "delivery_package": list(acceptance_files),
         "smoke_run": {
