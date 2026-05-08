@@ -53,6 +53,14 @@ QUERY_STOPWORDS = {
 MAX_INFERRED_QUERIES = 8
 MAX_INFERRED_FILES = 4
 INFERRED_SNIPPET_CONTEXT_LINES = 12
+ROLE_HINT_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("contract", ("agents.md", "contract", "quality_gates", "fast_rules", "patch_readme", "core")),
+    ("planning", ("plan", "workflow", "execution_flow", "backlog", "current.md", "queue")),
+    ("implementation", ("tools/", "scripts/", ".py", "provider", "source_generation")),
+    ("validation", ("test", "verify", "gate", "check", "simlab", "quality")),
+    ("delivery", ("readme", "package", "artifact", "report", "delivery")),
+    ("product", ("north_star", "intent", "project_generation", "user", "ux")),
+)
 
 
 class LibrarianContractError(RuntimeError):
@@ -457,7 +465,7 @@ def _append_need_content(
         if is_mandatory and full_bytes > remaining_bytes:
             _mandatory_budget_error(mandatory_paths, mandatory_total_bytes)
         if full_bytes <= remaining_bytes:
-            files.append({"path": rel, "why": why, "content": raw})
+            files.append(_context_file_row(path=rel, why=why, content=raw))
             return used_files + 1, used_bytes + full_bytes, budget_stopped
         if remaining_bytes <= 0:
             omitted.append({"path": rel, "reason": "budget_exceeded"})
@@ -466,7 +474,9 @@ def _append_need_content(
         if not truncated:
             omitted.append({"path": rel, "reason": "budget_exceeded"})
             return used_files, used_bytes, True
-        files.append({"path": rel, "why": why, "content": truncated, "truncated": True})
+        row = _context_file_row(path=rel, why=why, content=truncated)
+        row["truncated"] = True
+        files.append(row)
         return used_files + 1, used_bytes + _utf8_bytes(truncated), True
     if mode == "snippets":
         ranges = _clamp_ranges(_normalize_ranges(need.get("line_ranges", [])), len(raw.splitlines()))
@@ -486,7 +496,7 @@ def _append_need_content(
         if not snippet:
             omitted.append({"path": rel, "reason": "budget_exceeded" if exceeded else "invalid_request"})
             return used_files, used_bytes, (True if exceeded else budget_stopped)
-        files.append({"path": rel, "why": why, "content": snippet})
+        files.append(_context_file_row(path=rel, why=why, content=snippet))
         return used_files + 1, used_bytes + _utf8_bytes(snippet), (True if exceeded else budget_stopped)
     if is_mandatory:
         _raise_contract_error(
@@ -497,6 +507,56 @@ def _append_need_content(
         )
     omitted.append({"path": rel, "reason": "invalid_request"})
     return used_files, used_bytes, budget_stopped
+
+
+def _role_hint_for_context(*, path: str, why: str, content: str) -> str:
+    haystack = f"{path}\n{why}\n{content[:1200]}".lower()
+    for role, tokens in ROLE_HINT_RULES:
+        if any(token in haystack for token in tokens):
+            return role
+    return "reference"
+
+
+def _context_file_row(*, path: str, why: str, content: str) -> dict[str, Any]:
+    role_hint = _role_hint_for_context(path=path, why=why, content=content)
+    must_follow_rules: list[str] = []
+    avoid_patterns: list[str] = []
+    lowered = content.lower()
+    if role_hint == "contract" or any(token in lowered for token in ("must", "must not", "non-negotiable", "forbidden")):
+        must_follow_rules.append("Treat this file as local authority or constraint evidence for downstream planning.")
+    if any(token in lowered for token in ("template", "fallback", "placeholder", "stub", "todo")):
+        avoid_patterns.append("Do not convert local examples or placeholders into deterministic generated-project templates.")
+    if role_hint == "validation":
+        must_follow_rules.append("Use this as verification/gate context rather than product content.")
+    return {
+        "path": path,
+        "why": why,
+        "content": content,
+        "role_hint": role_hint,
+        "relevance_summary": f"{role_hint} context selected because {why}",
+        "compression_hint": "Use metadata and snippets first; read full content only when the downstream stage needs exact wording.",
+        "must_follow_rules": must_follow_rules,
+        "avoid_patterns": avoid_patterns,
+    }
+
+
+def _knowledge_summary(files: list[dict[str, Any]], *, selected_count: int, omitted_count: int) -> dict[str, Any]:
+    role_counts: dict[str, int] = {}
+    priority_paths: list[str] = []
+    for row in files:
+        role = str(row.get("role_hint", "")).strip() or "reference"
+        role_counts[role] = role_counts.get(role, 0) + 1
+        if role in {"contract", "planning", "implementation", "validation"} and len(priority_paths) < 12:
+            priority_paths.append(str(row.get("path", "")))
+    return {
+        "purpose": "local knowledge compression for downstream planner/source-generation API calls",
+        "boundary": "evidence_only_not_task_assignment",
+        "api_usage_guidance": "Prefer role_hint, relevance_summary, must_follow_rules, and avoid_patterns before sending full file content to an API agent.",
+        "selected_file_count": selected_count,
+        "omitted_file_count": omitted_count,
+        "role_counts": role_counts,
+        "priority_paths": priority_paths,
+    }
 
 
 def build_context_pack(
@@ -599,6 +659,7 @@ def build_context_pack(
             "budget_max_files": max_files,
             "budget_max_total_bytes": max_total_bytes,
         },
+        "knowledge_summary": _knowledge_summary(files, selected_count=len(files), omitted_count=len(omitted)),
         "files": files,
         "omitted": omitted,
     }

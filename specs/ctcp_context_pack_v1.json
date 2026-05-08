@@ -24,6 +24,52 @@
     "summary": {
       "type": "string"
     },
+    "selection_strategy": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "knowledge_summary": {
+      "type": "object",
+      "required": [
+        "purpose",
+        "boundary",
+        "api_usage_guidance",
+        "selected_file_count",
+        "omitted_file_count",
+        "role_counts",
+        "priority_paths"
+      ],
+      "properties": {
+        "purpose": {
+          "type": "string"
+        },
+        "boundary": {
+          "type": "string",
+          "const": "evidence_only_not_task_assignment"
+        },
+        "api_usage_guidance": {
+          "type": "string"
+        },
+        "selected_file_count": {
+          "type": "integer"
+        },
+        "omitted_file_count": {
+          "type": "integer"
+        },
+        "role_counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "priority_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "files": {
       "type": "array",
       "items": {
@@ -42,6 +88,39 @@
           },
           "content": {
             "type": "string"
+          },
+          "role_hint": {
+            "type": "string",
+            "enum": [
+              "contract",
+              "planning",
+              "implementation",
+              "validation",
+              "delivery",
+              "product",
+              "reference"
+            ]
+          },
+          "relevance_summary": {
+            "type": "string"
+          },
+          "compression_hint": {
+            "type": "string"
+          },
+          "must_follow_rules": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "avoid_patterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "truncated": {
+            "type": "boolean"
           }
         }
       }
@@ -63,7 +142,10 @@
             "enum": [
               "too_large",
               "denied",
-              "irrelevant"
+              "irrelevant",
+              "invalid_request",
+              "not_found",
+              "budget_exceeded"
             ]
           }
         }

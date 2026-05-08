@@ -18,6 +18,13 @@
 ## Outputs
 - `${run_dir}/artifacts/context_pack.json`
 - budget summary and omission reasons.
+- optional `knowledge_summary` metadata for API-efficient local knowledge consumption.
+- optional per-file metadata such as `role_hint`, `relevance_summary`, `compression_hint`, `must_follow_rules`, and `avoid_patterns`.
+
+## Boundary
+- Librarian output is evidence and context, not task assignment.
+- Chair/Planner and routed Virtual Team stages remain responsible for project direction, task split, and implementation decisions.
+- Librarian must not introduce project-specific templates or generate production source as proof.
 
 ## Dependencies
 - File-request contract.

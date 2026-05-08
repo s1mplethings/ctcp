@@ -7,6 +7,7 @@
 
 | Date | Topic | File |
 |------|-------|------|
+| 2026-05-08 | Local Librarian Knowledge-Pack Enrichment | [->](archive/20260508-local-librarian-knowledge-pack.md) |
 | 2026-05-08 | Generated Project Signature And Test-Import Validation Hardening | [->](archive/20260508-generated-project-signature-test-validation.md) |
 | 2026-05-08 | Live Generated Project Test After Agent Interaction Source Repair | [->](archive/20260508-agent-interaction-live-generation-test.md) |
 | 2026-05-07 | Agent Interaction Source Repair | [->](archive/20260507-agent-interaction-source-repair.md) |

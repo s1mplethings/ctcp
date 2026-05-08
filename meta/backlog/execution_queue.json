@@ -7489,6 +7489,44 @@
       },
       "status": "done",
       "notes": "Completed on 2026-05-08: added generic generated-project unittest/import-style validation, blocked src.<package> generated-test imports, fed generated_tests and constructor/signature failures into source_generation retry prompts, recorded issue memory 20260508_001, and passed focused regressions plus verify_repo.ps1 -Profile code."
+    },
+    {
+      "id": "ADHOC-20260508-local-librarian-knowledge-pack",
+      "layer": "L1",
+      "priority": "P1",
+      "title": "Local librarian knowledge-pack enrichment",
+      "owner_role": "Build Lead",
+      "deps": [],
+      "dod": [
+        "Local librarian context_pack files include compact role/usefulness metadata for downstream API prompts",
+        "Context pack records knowledge-summary evidence without assigning implementation tasks or introducing project templates",
+        "Regression tests prove sparse local knowledge requests include role hints and compression guidance"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/librarian_context_pack.py",
+          "tests/test_local_librarian.py",
+          "specs/ctcp_context_pack_v1.json",
+          "specs/modules/librarian_context_pack.md",
+          "artifacts/PLAN.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260508-local-librarian-knowledge-pack.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260508-local-librarian-knowledge-pack.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe -m py_compile tools\\librarian_context_pack.py tests\\test_local_librarian.py",
+          ".venv\\Scripts\\python.exe -m unittest discover -s tests -p \"test_local_librarian.py\" -v",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task",
+          "powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-08: local librarian context packs now include per-file role/usefulness metadata and top-level knowledge_summary guidance for API-efficient consumption while preserving the boundary that librarian provides evidence, not task assignment. Focused tests, workflow/module/patch/code-health gates, and verify_repo.ps1 -Profile code with CTCP_SKIP_LITE_REPLAY=1 passed."
     }
   ]
 }

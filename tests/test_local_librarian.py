@@ -181,9 +181,45 @@ class LocalLibrarianTests(unittest.TestCase):
             self.assertEqual(len(inferred), 1)
             self.assertIn("SMART_CONTEXT_TOKEN", str(inferred[0].get("content", "")))
             self.assertIn("inferred_context", str(inferred[0].get("why", "")))
+            self.assertEqual(str(inferred[0].get("role_hint", "")), "reference")
+            self.assertIn("compression_hint", inferred[0])
+            self.assertIn("relevance_summary", inferred[0])
             strategy = dict(doc.get("selection_strategy", {}))
             self.assertIn("SMART_CONTEXT_TOKEN", list(strategy.get("queries", [])))
             self.assertIn("docs/local_librarian_smart_context.md", list(strategy.get("selected", [])))
+            knowledge = dict(doc.get("knowledge_summary", {}))
+            self.assertEqual(str(knowledge.get("boundary", "")), "evidence_only_not_task_assignment")
+            self.assertIn("api", str(knowledge.get("api_usage_guidance", "")).lower())
+
+    def test_context_pack_marks_contract_validation_and_template_avoidance_for_api_compression(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_librarian_repo_") as repo_td:
+            repo = Path(repo_td)
+            _make_minimal_librarian_repo(repo)
+            (repo / "docs" / "validation_gate.md").write_text(
+                "Quality gate MUST block placeholder template fallback and TODO-only business code.\n",
+                encoding="utf-8",
+            )
+            file_request = {
+                "schema_version": "ctcp-file-request-v1",
+                "goal": "reduce API context for validation gate work",
+                "needs": [{"path": "docs/validation_gate.md", "mode": "full", "why": "validation gate contract"}],
+                "budget": {"max_files": 8, "max_total_bytes": 20000},
+                "reason": "local knowledge compression",
+            }
+
+            doc = build_context_pack(file_request, repo_root=repo, get_repo_slug_fn=lambda _root: "fixture")
+
+            files = list(doc.get("files", []))
+            target = [row for row in files if str(row.get("path", "")) == "docs/validation_gate.md"]
+            self.assertEqual(len(target), 1)
+            self.assertEqual(str(target[0].get("role_hint", "")), "contract")
+            self.assertTrue(list(target[0].get("must_follow_rules", [])))
+            self.assertTrue(list(target[0].get("avoid_patterns", [])))
+            knowledge = dict(doc.get("knowledge_summary", {}))
+            self.assertEqual(str(knowledge.get("boundary", "")), "evidence_only_not_task_assignment")
+            role_counts = dict(knowledge.get("role_counts", {}))
+            self.assertGreaterEqual(int(role_counts.get("contract", 0)), 1)
+            self.assertIn("docs/validation_gate.md", list(knowledge.get("priority_paths", [])))
 
     def test_ctcp_librarian_records_structured_failure_for_invalid_request_contract(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ctcp_librarian_repo_") as repo_td, tempfile.TemporaryDirectory(
