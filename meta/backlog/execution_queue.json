@@ -7527,6 +7527,43 @@
       },
       "status": "done",
       "notes": "Completed on 2026-05-08: local librarian context packs now include per-file role/usefulness metadata and top-level knowledge_summary guidance for API-efficient consumption while preserving the boundary that librarian provides evidence, not task assignment. Focused tests, workflow/module/patch/code-health gates, and verify_repo.ps1 -Profile code with CTCP_SKIP_LITE_REPLAY=1 passed."
+    },
+    {
+      "id": "ADHOC-20260508-voice-assistant-generation-speed-test",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Voice assistant concrete project generation speed test",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260508-local-librarian-knowledge-pack",
+        "ADHOC-20260508-generated-project-signature-test-validation"
+      ],
+      "dod": [
+        "A fresh concrete phone-to-PC voice assistant generation run is created outside the repo",
+        "The run is advanced with timing evidence for new-run, advance, final status, and first blocker or delivery result",
+        "Provider/source_generation evidence is inspected without modifying generated project source as proof"
+      ],
+      "artifacts": {
+        "produces": [
+          "external run_dir",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260508-voice-assistant-generation-speed-test.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260508-voice-assistant-generation-speed-test.md",
+          "issue_memory/modifications.jsonl"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py new-run --run-id voice-assistant-speed-20260508 --goal <voice assistant goal>",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py advance --run-dir <run_dir> --max-steps <n>",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py status --run-dir <run_dir>",
+          "inspect generated project/source_generation/provider evidence",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-08: voice-assistant-speed-20260508 new-run took 0.603s, advance --max-steps 16 took 1278.028s and blocked at source_generation generic_validation.passed=false. API was used for all critical steps (fallback_count=0, all_critical_steps_api=true, critical_api_step_count=17, source_generation_attempts=10), but generated source still had cross-file constructor signature drift. Recorded issue memory 20260508_002."
     }
   ]
 }

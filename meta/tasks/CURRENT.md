@@ -1,170 +1,180 @@
-# Task - Local Librarian Knowledge-Pack Enrichment
+# Task - Voice Assistant Concrete Project Generation Speed Test
 
 ## Queue Binding
 
-- Queue Item: `ADHOC-20260508-local-librarian-knowledge-pack`
-- Layer/Priority: `L1 / P1`
+- Queue Item: `ADHOC-20260508-voice-assistant-generation-speed-test`
+- Layer/Priority: `L1 / P0`
 - Source Queue File: `meta/backlog/execution_queue.json`
-- [x] Code changes allowed
+- [ ] Code changes allowed
 
 ## Context
 
-- Why this item now: user clarified the local librarian is mainly for maintaining local knowledge and reducing API usage.
+- Why this item now: user asked to start a concrete project generation speed test after local librarian and generated-project self-repair improvements.
 - Lane: Delivery Lane.
-- Scope boundary: enrich librarian context packs as compact local knowledge evidence; do not let librarian assign implementation tasks or create project-specific templates.
+- Scope boundary: run and measure one concrete generated-project attempt; do not edit generated project source as proof.
 
 ## Task Truth Source
 
 - task_purpose:
-  - Local librarian should produce API-efficient context packs from local knowledge.
-  - Context packs should include compact role/usefulness metadata so planner/source-generation can consume less raw text.
-  - Librarian remains a context provider, not the owner of project task assignment.
+  - Run a fresh concrete phone-to-PC voice assistant generation.
+  - Measure timing and final/blocking state.
+  - Inspect provider/source_generation evidence.
 - allowed_behavior_change:
-  - `context_pack.json` may include optional per-file metadata and a top-level knowledge summary.
-  - Existing `files[].path/why/content` contract remains compatible.
+  - Repo metadata may record task/report/archive evidence.
+  - External run artifacts may be created under `CTCP_RUNS_ROOT`.
 - forbidden_goal_shift:
-  - Do not add concrete project templates.
-  - Do not move planner/Virtual Team task assignment into librarian.
-  - Do not call external API from librarian.
+  - Do not patch generated project source manually.
+  - Do not add local deterministic project templates.
   - Do not change provider credentials or endpoint config.
+  - Do not change production code during this test task.
 - in_scope_modules:
-  - `tools/librarian_context_pack.py`
-  - `tests/test_local_librarian.py`
-  - `specs/ctcp_context_pack_v1.json`
-  - `specs/modules/librarian_context_pack.md`
-  - `artifacts/PLAN.md`
-  - repo task/report metadata
+  - external run directory under `%TEMP%\ctcp_runs`
+  - `meta/backlog/execution_queue.json`
+  - `meta/tasks/CURRENT.md`
+  - `meta/tasks/ARCHIVE_INDEX.md`
+  - `meta/tasks/archive/20260508-voice-assistant-generation-speed-test.md`
+  - `meta/reports/LAST.md`
+  - `meta/reports/archive/20260508-voice-assistant-generation-speed-test.md`
+  - `issue_memory/modifications.jsonl`
 - out_of_scope_modules:
-  - source_generation implementation
-  - Telegram/support bot runtime
-  - provider routing and credentials
-  - generated project runs
+  - production source files
+  - provider credential files
+  - generated project source edits
+  - local deterministic materializers/templates
 - completion_evidence:
-  - focused local librarian tests pass.
-  - workflow/code-health/canonical verify pass or first failure is recorded.
+  - run id and run_dir recorded.
+  - new-run/advance/status timings recorded.
+  - first blocker or delivery result recorded.
+  - workflow checks pass or first failure recorded.
 
 ## Write Scope / Protection
 
 - Allowed Write Paths:
-  - `tools/librarian_context_pack.py`
-  - `tests/test_local_librarian.py`
-  - `specs/ctcp_context_pack_v1.json`
-  - `specs/modules/librarian_context_pack.md`
-  - `artifacts/PLAN.md`
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/CURRENT.md`
   - `meta/tasks/ARCHIVE_INDEX.md`
-  - `meta/tasks/archive/20260508-local-librarian-knowledge-pack.md`
+  - `meta/tasks/archive/20260508-voice-assistant-generation-speed-test.md`
   - `meta/reports/LAST.md`
-  - `meta/reports/archive/20260508-local-librarian-knowledge-pack.md`
+  - `meta/reports/archive/20260508-voice-assistant-generation-speed-test.md`
+  - `issue_memory/modifications.jsonl`
 - Protected Paths:
   - provider credentials
   - Telegram token/env files
-  - generated run directories under repo
-  - local API/proxy secrets
+  - production source files
+  - generated project source files
 - Frozen Kernels Touched: `false`
 - Explicit Elevation Required: `false`
 - Explicit Elevation Signal: `none`
 - Forbidden Bypass:
   - no local project template fallback
-  - no planner/task-assignment migration into librarian
-  - no external API calls from librarian
+  - no generated-run source patching as proof
+  - no provider credential changes
 - Acceptance Checks:
-  - `.venv\Scripts\python.exe -m py_compile tools\librarian_context_pack.py tests\test_local_librarian.py`
-  - `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_local_librarian.py" -v`
+  - `.venv\Scripts\python.exe scripts\ctcp_orchestrate.py new-run --run-id voice-assistant-speed-20260508 --goal <voice assistant goal>`
+  - `.venv\Scripts\python.exe scripts\ctcp_orchestrate.py advance --run-dir <run_dir> --max-steps <n>`
+  - `.venv\Scripts\python.exe scripts\ctcp_orchestrate.py status --run-dir <run_dir>`
   - `.venv\Scripts\python.exe scripts\workflow_checks.py`
   - `.venv\Scripts\python.exe scripts\module_protection_check.py --json`
-  - `.venv\Scripts\python.exe scripts\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task`
-  - `powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1 -Profile code`
+  - `.venv\Scripts\python.exe scripts\patch_check.py`
 
 ## Analysis / Find
 
-- Current librarian already:
-  - consumes `artifacts/file_request.json`
-  - includes mandatory contract files
-  - infers sparse local context through repo search
-  - writes `summary`, `selection_strategy`, `files`, and `omitted`
-- Current gap:
-  - `files[]` entries carry raw content and a broad `why`, but not compact downstream-use metadata.
-  - API consumers still need to infer whether a file is product context, architecture, implementation, validation, delivery, or contract.
-  - The context pack does not explicitly state that librarian guidance is evidence-only and not task assignment.
+- Test target:
+  - local computer starts a service.
+  - phone opens a LAN web page.
+  - supports voice or text command entry.
+  - computer executes whitelist-only commands.
+  - generated delivery includes README, startup entrypoint, core code, tests, sample data, and runnable verification evidence.
+- Measurement plan:
+  - record new-run wall time.
+  - record advance wall time.
+  - inspect status gate/path/reason.
+  - inspect provider ledger/source_generation report when present.
 - Repo-local search sufficient: yes.
 - External research artifact: none.
 
 ## Integration Check
 
-- upstream: Chair/Planner writes `artifacts/file_request.json`.
-- current_module: `scripts/ctcp_librarian.py` calls `build_context_pack`.
-- downstream: planner/source_generation consume `artifacts/context_pack.json`.
-- source_of_truth: `context_pack.json` and focused tests.
-- fallback: invalid/missing request still writes explicit `context_pack.failure.json`.
+- upstream: user concrete project goal.
+- current_module: `scripts/ctcp_orchestrate.py` external run mainline.
+- downstream: run artifacts and provider/source_generation reports.
+- source_of_truth: run_dir artifacts and command return codes.
+- fallback: if run blocks, record first blocking gate and minimal next repair without patching generated source.
 - acceptance_test:
-  - `tests/test_local_librarian.py`
-  - workflow/module/code-health/canonical verify
+  - orchestrator commands
+  - workflow/module/patch checks for metadata closure
 - forbidden_bypass:
-  - no API calls
-  - no project templates
-  - no task assignment from librarian
-- user_visible_effect: future API prompts can receive a smaller, better labeled local knowledge pack, reducing unnecessary token usage while preserving planner ownership.
+  - no manual generated source edits
+  - no local template fallback
+- user_visible_effect: user gets a concrete speed/quality result for the current generation pipeline.
 
 ## DoD Mapping
 
-- [x] DoD-1: `context_pack.files[]` includes role/usefulness metadata.
-- [x] DoD-2: `context_pack.knowledge_summary` records compact consumption guidance and non-assignment boundary.
-- [x] DoD-3: Regression tests prove sparse local knowledge requests expose this metadata.
-- [x] DoD-4: Focused tests and canonical verify pass or first failure is recorded.
+- [x] DoD-1: Fresh external run created.
+- [x] DoD-2: Run advanced with timing evidence.
+- [x] DoD-3: Final status/first blocker recorded.
+- [x] DoD-4: Provider/source_generation evidence inspected when available.
+- [x] DoD-5: Metadata closure checks pass or first failure recorded.
 
 ## Check/Contrast/Fix Loop Evidence
 
 - check:
-  - Existing librarian already infers sparse local context but emits mostly raw text plus broad `why`.
-  - Focused tests should prove the metadata helps downstream consumers select useful context without reading everything.
+  - Previous live run reached API source_generation but generated source blocked at runtime self-checks.
+  - The current test should show whether the latest generic validation and librarian metadata improve the concrete run.
 - contrast:
-  - A local knowledge pack is not a project plan and must not assign implementation tasks to agents.
-  - API-token reduction should come from role/usefulness metadata and compact guidance, not from hard-coded project content.
+  - A speed test is not a production code change.
+  - Successful API usage does not equal successful deliverable unless run artifacts show a runnable generated project.
 - fix:
-  - Add per-file metadata and top-level knowledge summary.
-  - Keep planner/Virtual Team ownership of task assignment explicit in the contract/spec.
+  - If blocked, record the first blocker and minimal next repair task.
+  - Do not repair generated code locally inside this test.
 
 ## Completion Criteria Evidence
 
 - completion criteria evidence: prove `connected + accumulated + consumed`.
-- connected: `scripts/ctcp_librarian.py` reaches `build_context_pack`.
-- accumulated: role/usefulness metadata and `knowledge_summary` are written into `context_pack.json`.
-- consumed: downstream planner/source-generation can consume `context_pack.files` while using metadata to reduce raw API context.
+- connected: orchestrator creates and advances the run.
+- accumulated: run_dir artifacts record timing, provider, and generation evidence.
+- consumed: report summarizes the evidence into the next repair/test decision.
 
 ## Issue Memory Decision Evidence
 
-- issue_memory_decision: not required, because this is a proactive quality improvement rather than a repeated observed defect.
+- issue_memory_decision: required because the test reproduced repeated API-authored cross-file signature drift after prior prompt and validator hardening.
 
 ## Plan
 
-1. Bind task and allowed write scope.
-2. Add local-only context file classification and compact metadata.
-3. Update context-pack schema/spec docs for optional metadata fields.
-4. Add focused regression tests.
-5. Run focused tests, workflow checks, code-health, and canonical verify.
-6. Archive report/task and keep worktree clean if possible.
+1. Bind the speed-test task.
+2. Create `voice-assistant-speed-20260508` run under `%TEMP%\ctcp_runs`.
+3. Advance the run with measured wall time.
+4. Inspect status and source/provider evidence.
+5. Record result, blocker, and minimal next action.
+6. Run metadata closure checks and archive the task/report.
 
 ## Acceptance
 
 - [x] DoD written.
-- [x] Code changes allowed.
-- [x] Librarian knowledge-pack metadata implemented.
-- [x] Focused tests pass.
-- [x] Code-health check passes.
-- [x] Canonical verify pass or first failure recorded.
+- [x] Code changes disallowed for this test.
+- [x] Run created.
+- [x] Run advanced.
+- [x] Timing/result evidence recorded.
+- [x] Metadata closure checks pass.
 
 ## Notes / Decisions
 
-- Default choice made: librarian provides evidence and compression hints; planner/Virtual Team still owns project task assignment.
-- Skill decision: skillized: no, because this extends an existing runtime component rather than creating a reusable external workflow.
+- Default choice made: use the concrete voice-assistant goal from prior testing so results are comparable.
+- Skill decision: skillized: no, this is a one-off orchestrator speed test using the existing `ctcp-orchestrate-loop`.
 - persona_lab_impact: none.
 
 ## Results
 
-- `context_pack.files[]` now includes `role_hint`, `relevance_summary`, `compression_hint`, `must_follow_rules`, and `avoid_patterns`.
-- `context_pack.knowledge_summary` records API-use guidance and boundary `evidence_only_not_task_assignment`.
-- Context-pack schema/spec docs now document optional knowledge-pack metadata.
-- Focused local librarian tests pass with 9 tests OK.
-- Canonical code-profile verify passed with `CTCP_FORCE_PROVIDER` cleared, `CTCP_RUNS_ROOT` set to temp, and `CTCP_SKIP_LITE_REPLAY=1`; SimLab lite was skipped because direct lite replay hung in the current environment.
+- Run ID: `voice-assistant-speed-20260508`
+- Run dir: `%TEMP%\ctcp_runs\ctcp\voice-assistant-speed-20260508`
+- `new-run`: exit 0, 0.603 seconds.
+- `advance --max-steps 16`: exit 0, 1278.028 seconds.
+- `status`: exit 0, 0.427 seconds.
+- First status: blocked at `artifacts/source_generation_report.json`, reason `generic_validation.passed must be true`.
+- Extra `advance --max-steps 4`: timed out after 604.069 seconds and was stopped to avoid unbounded API/time use.
+- Provider evidence: `fallback_count=0`, `all_critical_steps_api=true`, `critical_api_step_count=17`, `source_generation_attempts=10`.
+- Generated files: 29; missing required files: none.
+- Result: not deliverable; `generic_validation.passed=false`, `readme_quality.passed=true`, `ux_validation.passed=false`.
+- First concrete blocker: API-authored cross-file constructor mismatch:
+  - startup/export: `VoiceAssistantService.__init__() missing 1 required positional argument: 'whitelist'`
+  - generated tests: `CommandWhitelist.__init__() got an unexpected keyword argument 'commands'`
