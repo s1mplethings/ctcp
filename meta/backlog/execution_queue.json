@@ -14,6 +14,37 @@
   ],
   "items": [
     {
+      "id": "ADHOC-20260509-interface-repair-api-retest",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Live API retest after interface repair loop hardening",
+      "owner_role": "Local Orchestrator",
+      "deps": [
+        "ADHOC-20260509-source-generation-interface-repair-loop"
+      ],
+      "dod": [
+        "fresh external run is created for a concrete phone-to-PC voice assistant goal",
+        "run is advanced through api_agent with bounded API usage",
+        "source_generation and generic_validation evidence is inspected for interface repair impact",
+        "first blocker or delivery result is recorded without manual generated-source edits"
+      ],
+      "artifacts": {
+        "produces": [
+          "external run_dir under CTCP_RUNS_ROOT",
+          "meta/reports/LAST.md",
+          "meta/tasks/CURRENT.md"
+        ],
+        "tests": [
+          "python scripts/ctcp_orchestrate.py new-run",
+          "python scripts/ctcp_orchestrate.py advance",
+          "python scripts/ctcp_orchestrate.py status",
+          "inspect source_generation_report.json and provider ledger"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed no-code API retest. Fresh gpt-4.1/api_agent run used no local fallback but timed out before source_generation_report; partial generated project failed --serve, headless export, and generated tests. Recorded issue memory 20260509_003."
+    },
+    {
       "id": "ADHOC-20260509-source-generation-interface-repair-loop",
       "layer": "L1",
       "priority": "P0",

@@ -7,6 +7,7 @@
 
 | Date | Topic | File |
 |------|-------|------|
+| 2026-05-09 | Live API Retest After Interface Repair Loop Hardening | [->](archive/20260509-interface-repair-api-retest.md) |
 | 2026-05-09 | Source Generation Interface Repair Loop Hardening | [->](archive/20260509-source-generation-interface-repair-loop.md) |
 | 2026-05-09 | Live Source Generation Retest After Signature Validation | [->](archive/20260508-source-signature-live-retest.md) |
 | 2026-05-08 | Project Generation Cross-File Interface Validation | [->](archive/20260508-source-generation-interface-validation.md) |

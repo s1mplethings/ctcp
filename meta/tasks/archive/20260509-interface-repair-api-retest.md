@@ -35,7 +35,7 @@
   - `meta/reports/archive/20260509-interface-repair-api-retest.md`
   - `issue_memory/modifications.jsonl` only if a recurring/new failure is confirmed
 - out_of_scope_modules:
-  - provider credential files
+  - provider credentials
   - generated project source files
   - local deterministic materializers/templates
   - production source code
@@ -66,8 +66,8 @@
 - Explicit Elevation Signal: `none`
 - Forbidden Bypass:
   - no local project template fallback as proof.
-  - no generated-run source patching
-  - no provider credential changes
+  - no generated-run source patching.
+  - no provider credential changes.
 - Acceptance Checks:
   - `.venv\Scripts\python.exe scripts\ctcp_orchestrate.py new-run --run-id voice-assistant-interface-repair-api-20260509 --goal <voice assistant goal>`
   - `.venv\Scripts\python.exe scripts\ctcp_orchestrate.py advance --run-dir <run_dir> --max-steps 12`
