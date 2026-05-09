@@ -17,11 +17,25 @@ def _contract_snapshot(run_dir: Path) -> dict[str, Any]:
 def render_source_generation_payload_requirements(*, run_dir: Path) -> list[str]:
     contract = _contract_snapshot(run_dir)
     project_root = str(contract.get("project_root", "project_output/app")).strip() or "project_output/app"
+    startup_entrypoint = str(contract.get("startup_entrypoint", "")).strip().replace("\\", "/")
+    project_domain = str(contract.get("project_domain", "")).strip()
+    project_archetype = str(contract.get("project_archetype", "")).strip()
+    delivery_shape = str(contract.get("delivery_shape", "")).strip()
+    package_name = _package_name(contract=contract, project_root=project_root)
+    entrypoint_name = startup_entrypoint.rsplit("/", 1)[-1] if startup_entrypoint else "the startup entrypoint"
+    is_gui = delivery_shape == "gui_first" or entrypoint_name == "run_project_gui.py"
+    is_web = delivery_shape == "web_first" or entrypoint_name == "run_project_web.py" or project_archetype == "web_service"
+    is_narrative = (
+        project_domain == "narrative_vn_editor"
+        or "narrative" in project_archetype
+        or package_name in {"vn", "narrative_copilot"}
+        or project_root.rstrip("/").endswith("/vn")
+    )
     required_paths = _expected_paths(contract=contract, project_root=project_root)
     required_lines = [f"- {item}" for item in required_paths[:80]] or [f"- {project_root}/README.md"]
     previous_failure_lines = _previous_failure_lines(run_dir)
     schema = '{"schema_version":"ctcp-provider-source-files-v1","files":[{"path":"project_output/<project_id>/README.md","content_lines":["# Project","startup text"]}],"source_map":{"api_content_applied":true,"api_content_source_ref":"API:api_agent/source_generation"}}'
-    return [
+    lines = [
         "## Source Generation Output Requirements",
         "Return one JSON object only. Do not return a generic project description.",
         "The JSON must include concrete project source files that can be written under the run directory and run locally.",
@@ -45,10 +59,10 @@ def render_source_generation_payload_requirements(*, run_dir: Path) -> list[str]
         "- `pyproject.toml` may document optional dependencies, but required validation paths must not import them. Optional dependency imports must be guarded and have a standard-library fallback.",
         "- The startup entrypoint must support `--help`, `--serve`, and `--goal --project-name --out --headless`; `--serve` and the rich export command must exit 0 under the verifier instead of blocking forever on a long-running server loop.",
         "- Do not add a custom argparse `--help` option; argparse already provides it. Only define real options such as `--goal`, `--project-name`, `--out`, and `--headless`.",
-        "- Prefer normal src-layout imports like `from vn.service import ...`; do not import `src.vn...` unless you also make it runnable with the project root on PYTHONPATH.",
+        f"- Prefer normal src-layout imports like `from {package_name}.service import ...`; do not import `src.{package_name}...` unless you also make it runnable with the project root on PYTHONPATH.",
         "- Inside a generated `src/<package>/...` package, do not use bare sibling imports such as `import service`, `import models`, or `from exporter import ...`. Use explicit relative imports like `from . import service` / `from .models import CommandWhitelist`, or absolute package imports like `from <package>.service import ...` consistently.",
         "- Entrypoint scripts under `scripts/` must add the generated `src` directory to `sys.path` when needed, then import the concrete package modules and symbols that actually exist. Do not rely on `__init__.py` re-exporting symbols that are not defined.",
-        "- Generated tests must run with `python -m unittest discover -s tests -v` using the generated `src` directory on PYTHONPATH. Tests must import the package directly, for example `from readme import service` or `from readme.service import VoiceAssistantService`; do not import `src.readme`, `src.<package>`, or repo-local paths.",
+        f"- Generated tests must run with `python -m unittest discover -s tests -v` using the generated `src` directory on PYTHONPATH. Tests must import the package directly, for example `from {package_name} import service` or `from {package_name}.service import VoiceAssistantService`; do not import `src.{package_name}`, `src.<package>`, or repo-local paths.",
         "- Before returning, build a cross-file import/export checklist: for every `from package.module import Symbol`, the target module must define `Symbol` or re-export it through its `__init__.py`.",
         "- Include an `interfaces` object in the JSON response, keyed by Python file path, listing each file's public `defines`, `imports`, and `exports`; this must match the actual file contents exactly.",
         "- In each `interfaces[path]`, include a `signatures` object for public classes/functions, for example `{ \"VoiceAssistantService\": \"VoiceAssistantService(whitelist)\", \"run_server\": \"run_server(port=..., service_inst=..., blocking=...)\" }`; every startup, route, exporter, and test call must match this matrix.",
@@ -58,17 +72,12 @@ def render_source_generation_payload_requirements(*, run_dir: Path) -> list[str]
         "- Keep call signatures consistent across files. If the startup entrypoint constructs a service/controller with arguments, that constructor must accept them; otherwise change the launcher call to match the actual constructor.",
         "- Do not emit abstract runtime implementations. Generated runtime files must not contain `raise NotImplementedError`; if you define a contract/base class, also provide and use a concrete implementation in startup, routes, exporters, and tests.",
         "- Build an API signature matrix before returning: every model constructor, service constructor, service method, route handler, exporter function, and test call must use the same required/optional arguments. If a dataclass or class requires values, provide defaults or pass real seed data at every construction site.",
-        "- Add a launcher compatibility table before finalizing: every service/controller constructor and public method called by `run_project_gui.py` must accept exactly those positional/keyword arguments, or accept optional `*args`/`**kwargs` and normalize them safely.",
         "- The `--headless --goal --project-name --out` export path must execute the same service method signatures that the service class actually defines.",
         "- If the launcher calls a service method such as `export_project_assets(...)`, that exact method must exist on the service class or the launcher must call the actual implemented method.",
         "- Do not ship TODO, placeholder, stub, pass-only, empty-dict, or not-implemented business modules. Every listed business file must contain real working logic for this user's project goal.",
         "- In `--headless` mode, write real export evidence files into the `--out` directory: at least `workspace_preview.html`, `workspace_snapshot.json`, `interaction_trace.json`, `state_diff.json`, and one script/export file.",
-        "- `workspace_preview.html` must visibly include project/sample loader, story/scene/branch editor, character/asset management, and preview/export sections with forms, inputs, buttons/actions, and JavaScript hooks.",
         "- In Python content, do not write f-strings or quoted strings split across physical lines. For multi-line output, append complete one-line strings to a list and use `'\\n'.join(lines)`.",
-        "- `run_project_gui.py` must not contain unterminated string literals; avoid code like `f\"...` followed by a raw newline before the closing quote.",
-        "- Use Python standard library first. For a local desktop GUI prefer `tkinter`; do not import PyQt5, PySide, wxPython, Electron, or other undeclared external GUI packages.",
         "- README must include exact English section headings: `## Project Overview`, `## Implemented`, `## Not Implemented`, `## How To Run`, `## Sample Data`, `## Directory Map`, `## Limitations`. You may add Chinese text under those headings, but do not replace the detectable English headings.",
-        "- For web/mobile-local projects, include a real `/` HTML page plus `/status` and one command/action endpoint. The `--serve` verifier probe may start a short self-test server, request `/` and `/status` with `urllib`, print the local LAN URL guidance, and exit 0; the README may document how to run a long-lived server mode if implemented.",
         "- `sample_data/source_map.json` must include `content_items` with `source` values starting `API:` and `field_sources` with API refs.",
         "- The project must declare its own concrete acceptance criteria, sample-data adequacy criteria, and delivery evidence expectations in generated docs or metadata; do not rely on CTCP to provide project-specific numbers or content rules.",
         "- Sample data must be deep enough to satisfy the generated project's own declared acceptance criteria, with provenance/source metadata when the project claims API-authored content.",
@@ -76,11 +85,42 @@ def render_source_generation_payload_requirements(*, run_dir: Path) -> list[str]
         "- Before returning, mentally validate that every Python file parses with `ast.parse`, every imported symbol resolves, `--help` exits 0, and `--headless` can find sample data relative to the project root.",
         "- Do not use deterministic local templates; author the implementation from the user goal and available context.",
         "- If the runtime asks for a manifest-only or file-content batch phase, follow that narrower phase exactly; the local runtime will merge the provider-authored text files.",
-        *previous_failure_lines,
-        "Expected file paths from output_contract_freeze:",
-        *required_lines,
-        "",
     ]
+    if is_gui:
+        lines.extend(
+            [
+                f"- Add a launcher compatibility table before finalizing: every service/controller constructor and public method called by `{entrypoint_name}` must accept exactly those positional/keyword arguments, or accept optional `*args`/`**kwargs` and normalize them safely.",
+                f"- `{entrypoint_name}` must not contain unterminated string literals; avoid code like `f\"...` followed by a raw newline before the closing quote.",
+                "- Use Python standard library first. For a local desktop GUI prefer `tkinter`; do not import PyQt5, PySide, wxPython, Electron, or other undeclared external GUI packages.",
+            ]
+        )
+    if is_narrative:
+        lines.append(
+            "- `workspace_preview.html` must visibly include project/sample loader, story/scene/branch editor, character/asset management, and preview/export sections with forms, inputs, buttons/actions, and JavaScript hooks."
+        )
+    if is_web or is_gui:
+        lines.append(
+            "- For web/mobile-local projects, include a real `/` HTML page plus `/status` and one command/action endpoint. The `--serve` verifier probe may start a short self-test server, request `/` and `/status` with `urllib`, print the local LAN URL guidance, and exit 0; the README may document how to run a long-lived server mode if implemented."
+        )
+    lines.extend(
+        [
+            *previous_failure_lines,
+            "Expected file paths from output_contract_freeze:",
+            *required_lines,
+            "",
+        ]
+    )
+    return lines
+
+
+def _package_name(*, contract: dict[str, Any], project_root: str) -> str:
+    explicit = str(contract.get("package_name", "")).strip()
+    if explicit:
+        return explicit
+    tail = project_root.rstrip("/").rsplit("/", 1)[-1]
+    value = "".join(ch if ch.isalnum() else "_" for ch in tail.lower())
+    value = "_".join(part for part in value.split("_") if part)
+    return value or "project_copilot"
 
 
 def _previous_failure_lines(run_dir: Path) -> list[str]:

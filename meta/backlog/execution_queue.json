@@ -14,6 +14,44 @@
   ],
   "items": [
     {
+      "id": "ADHOC-20260509-intent-spec-prompt-leakage-repair",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Intent/spec slug and source-generation prompt leakage repair",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260509-interface-repair-api-retest"
+      ],
+      "dod": [
+        "Chinese/non-ASCII project goals no longer collapse project_id/package_name to incidental English tokens such as readme",
+        "Generic web-service output contracts preserve a goal-specific problem/scope/acceptance signal for downstream API generation",
+        "source_generation prompt only includes narrative GUI or run_project_gui rules when the frozen output contract actually uses those shapes",
+        "regression tests cover the voice-assistant API retest failure class without adding local project templates"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/providers/project_generation_artifacts.py",
+          "tools/providers/project_generation_goal_slug.py",
+          "tools/providers/project_generation_generic_spec.py",
+          "ctcp_adapters/source_generation_prompt.py",
+          "tests/test_project_generation_artifacts.py",
+          "tests/test_api_agent_templates.py",
+          "tests/test_project_generation_voice_assistant_contract.py",
+          "tests/test_source_generation_prompt_leakage.py",
+          "issue_memory/modifications.jsonl"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_project_generation_voice_assistant_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_source_generation_prompt_leakage.py\" -v",
+          "python -m unittest discover -s tests -p \"test_project_generation_artifacts.py\" -v",
+          "python -m unittest discover -s tests -p \"test_api_agent_templates.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed with semantic non-ASCII slug helper, generic goal spec enrichment helper, conditional source_generation prompt rendering, focused regressions, and canonical code-profile verify."
+    },
+    {
       "id": "ADHOC-20260509-interface-repair-api-retest",
       "layer": "L1",
       "priority": "P0",

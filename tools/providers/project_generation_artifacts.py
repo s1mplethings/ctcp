@@ -14,7 +14,6 @@ from tools.providers.project_generation_decisions import (
     STRONG_DECISION_NODES,
     TEAM_PM_KEYWORDS,
     contains_any as _contains_any,
-    enrich_project_spec,
     decide_project_generation,
     default_package_name,
     default_project_id,
@@ -41,9 +40,9 @@ from tools.providers.project_generation_runtime_support import (
 from tools.providers.project_generation_goal_detection import is_project_generation_goal_text
 
 def _slug(text: str) -> str:
-    value = re.sub(r"[^a-z0-9_-]+", "-", (text or "").strip().lower())
-    value = re.sub(r"-+", "-", value).strip("-")
-    return value or "goal"
+    from tools.providers.project_generation_goal_slug import semantic_project_slug
+
+    return semantic_project_slug(text)
 
 def _read_json_file(path: Path) -> dict[str, Any]:
     try:
@@ -1107,16 +1106,9 @@ def normalize_output_contract_freeze(doc: dict[str, Any] | None, *, goal: str, r
             "Plane-lite/team task PM project must freeze as team_task_management/team_task_pm/team_task_pm_web; "
             f"got {project_domain}/{scaffold_family}/{project_type}/{project_archetype}"
         )
-    project_spec = enrich_project_spec(
-        goal=goal_text,
-        base_spec=_resolve_project_spec(goal_text, run_dir=run_dir, src=src, project_intent=project_intent),
-        project_intent=project_intent,
-        project_domain=project_domain,
-        scaffold_family=scaffold_family,
-        project_type=project_type,
-        project_archetype=project_archetype,
-        delivery_shape=str(defaults.get("delivery_shape", CLI_SHAPE)),
-    )
+    from tools.providers.project_generation_generic_spec import enrich_output_project_spec
+
+    project_spec = enrich_output_project_spec(goal_text, _resolve_project_spec(goal_text, run_dir=run_dir, src=src, project_intent=project_intent), project_intent, project_domain, scaffold_family, project_type, project_archetype, str(defaults.get("delivery_shape", CLI_SHAPE)))
 
     target_files = src.get("target_files") if isinstance(src.get("target_files"), list) else defaults["target_files"]
     source_files = src.get("source_files") if isinstance(src.get("source_files"), list) else defaults["source_files"]
