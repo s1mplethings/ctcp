@@ -14,6 +14,41 @@
   ],
   "items": [
     {
+      "id": "ADHOC-20260509-source-generation-self-repair-contract",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Source generation self-repair contract for API-authored projects",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260509-intent-spec-prompt-leakage-repair"
+      ],
+      "dod": [
+        "Chinese phone-to-PC voice assistant goals with incidental English words such as Web or README freeze to a goal-specific project_id/package_name instead of web-readme",
+        "source_generation API retry prompts consume generic_validation failures including startup import errors, generated test failures, interface mismatches, signature mismatches, and abstract stub violations",
+        "regression tests prove validation feedback is rendered into the next source_generation request without manually patching generated project files",
+        "no local deterministic project implementation or generated-run source patch is added"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/providers/project_generation_goal_slug.py",
+          "ctcp_adapters/source_generation_prompt.py",
+          "tests/test_project_generation_voice_assistant_contract.py",
+          "tests/test_source_generation_prompt_leakage.py",
+          "issue_memory/modifications.jsonl",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          "python -m unittest discover -s tests -p \"test_project_generation_voice_assistant_contract.py\" -v",
+          "python -m unittest discover -s tests -p \"test_source_generation_prompt_leakage.py\" -v",
+          "python -m unittest discover -s tests -p \"test_api_agent_templates.py\" -v",
+          "powershell -ExecutionPolicy Bypass -File scripts/verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed with semantic slug priority repair, source_generation retry_gate prompt feedback, focused regressions, issue-memory entry 20260509_005, and canonical code-profile verify."
+    },
+    {
       "id": "ADHOC-20260509-intent-spec-prompt-leakage-repair",
       "layer": "L1",
       "priority": "P0",

@@ -18,13 +18,31 @@ def semantic_project_slug(text: str) -> str:
     for token, markers in rules:
         if any(marker in source for marker in markers):
             tokens.append(token)
-    if "voice" in tokens and "assistant" in tokens:
+    if "voice" in tokens and ("assistant" in tokens or ("control" in tokens and ("mobile" in tokens or "pc" in tokens))):
         return "voice-assistant"
-    ascii_source = source.replace("readme", "")
-    if tokens and not re.search(r"[a-z0-9]", ascii_source):
+    ascii_words = re.findall(r"[a-z0-9]+", source)
+    weak_artifact_words = {
+        "api",
+        "app",
+        "browser",
+        "docs",
+        "http",
+        "local",
+        "project",
+        "readme",
+        "script",
+        "scripts",
+        "service",
+        "test",
+        "tests",
+        "ui",
+        "web",
+    }
+    meaningful_ascii = [word for word in ascii_words if word not in weak_artifact_words]
+    if tokens and not meaningful_ascii:
         return "-".join(dict.fromkeys(tokens[:4]))
     value = re.sub(r"[^a-z0-9_-]+", "-", source)
     value = re.sub(r"-+", "-", value).strip("-")
-    if value == "readme" and tokens:
+    if value and tokens and all(part in weak_artifact_words for part in value.replace("_", "-").split("-") if part):
         return "-".join(dict.fromkeys(tokens[:4]))
     return value or "goal"

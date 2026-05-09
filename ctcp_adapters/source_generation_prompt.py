@@ -34,6 +34,13 @@ def render_source_generation_payload_requirements(*, run_dir: Path) -> list[str]
     required_paths = _expected_paths(contract=contract, project_root=project_root)
     required_lines = [f"- {item}" for item in required_paths[:80]] or [f"- {project_root}/README.md"]
     previous_failure_lines = _previous_failure_lines(run_dir)
+    if previous_failure_lines:
+        previous_failure_lines.extend(
+            [
+                "- retry_gate: generic_validation already blocked this project. The next response must replace the broken manifest/interface contract and all affected file contents so startup, import consistency, signature consistency, generated tests, and smoke probes can pass together.",
+                "- retry_gate: Do not preserve a failing symbol map, constructor signature, package `__init__.py` re-export, test import, or startup command merely because it appeared in a previous API response. Repair the whole cross-file contract as one consistent set.",
+            ]
+        )
     schema = '{"schema_version":"ctcp-provider-source-files-v1","files":[{"path":"project_output/<project_id>/README.md","content_lines":["# Project","startup text"]}],"source_map":{"api_content_applied":true,"api_content_source_ref":"API:api_agent/source_generation"}}'
     lines = [
         "## Source Generation Output Requirements",

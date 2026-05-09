@@ -7,6 +7,7 @@
 
 | Date | Topic | File |
 |------|-------|------|
+| 2026-05-09 | Source Generation Self-Repair Contract For API-Authored Projects | [->](archive/20260509-source-generation-self-repair-contract.md) |
 | 2026-05-09 | Intent/Spec Slug And Source-Generation Prompt Leakage Repair | [->](archive/20260509-intent-spec-prompt-leakage-repair.md) |
 | 2026-05-09 | Live API Retest After Interface Repair Loop Hardening | [->](archive/20260509-interface-repair-api-retest.md) |
 | 2026-05-09 | Source Generation Interface Repair Loop Hardening | [->](archive/20260509-source-generation-interface-repair-loop.md) |

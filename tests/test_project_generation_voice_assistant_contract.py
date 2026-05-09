@@ -27,6 +27,20 @@ class VoiceAssistantContractTests(unittest.TestCase):
         for token in ("手机", "语音", "白名单", "local web"):
             self.assertIn(token, spec_text)
 
+    def test_mixed_chinese_english_goal_does_not_freeze_to_web_readme(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_pg_voice_assistant_mixed_goal_") as td:
+            goal = (
+                "请生成一个本地可运行的项目：手机通过同一局域网连接电脑，"
+                "使用网页语音输入或按钮指令操控电脑上的安全白名单动作；"
+                "需要本地 Web 服务、手机网页界面、命令白名单、执行日志、状态接口、README 和可运行测试。"
+            )
+            doc = normalize_output_contract_freeze({}, goal=goal, run_dir=Path(td))
+
+        self.assertEqual(doc.get("project_id"), "voice-assistant")
+        self.assertEqual(doc.get("project_root"), "project_output/voice-assistant")
+        self.assertEqual(doc.get("package_name"), "voice_assistant")
+        self.assertNotEqual(doc.get("project_id"), "web-readme")
+
 
 if __name__ == "__main__":
     unittest.main()
