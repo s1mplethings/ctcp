@@ -14,6 +14,36 @@
   ],
   "items": [
     {
+      "id": "ADHOC-20260508-source-signature-live-retest",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Live source_generation retest after signature validation",
+      "owner_role": "Local Orchestrator",
+      "deps": [
+        "ADHOC-20260508-source-generation-interface-validation"
+      ],
+      "dod": [
+        "fresh external run is created for a concrete phone-to-PC voice assistant goal",
+        "run is advanced with bounded API usage",
+        "source_generation/generic_validation result is inspected for signature-consistency impact",
+        "first blocker or delivery result is recorded without manual generated-source edits"
+      ],
+      "artifacts": {
+        "produces": [
+          "external run_dir under CTCP_RUNS_ROOT",
+          "meta/reports/LAST.md",
+          "meta/tasks/CURRENT.md"
+        ],
+        "tests": [
+          "python scripts/ctcp_orchestrate.py new-run",
+          "python scripts/ctcp_orchestrate.py advance",
+          "python scripts/ctcp_orchestrate.py status"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed bounded live retest. Signature validation caught concrete API-authored cross-file drift, but generated project still blocked at generic_validation and retry timed out."
+    },
+    {
       "id": "ADHOC-20260508-source-generation-interface-validation",
       "layer": "L1",
       "priority": "P0",

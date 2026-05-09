@@ -1,12 +1,7 @@
-# Demo Report - LAST
+# Demo Report - Live Source Generation Retest After Signature Validation
 
-## Latest Report
+## Readlist
 
-- File: `meta/reports/archive/20260508-source-signature-live-retest.md`
-- Date: `2026-05-09`
-- Topic: `Live Source Generation Retest After Signature Validation`
-
-### Readlist
 - `AGENTS.md`
 - `.agents/skills/ctcp-orchestrate-loop/SKILL.md`
 - `ai_context/00_AI_CONTRACT.md`
@@ -17,7 +12,8 @@
 - `meta/tasks/CURRENT.md`
 - `meta/backlog/execution_queue.json`
 
-### Plan
+## Plan
+
 1. Bind `ADHOC-20260508-source-signature-live-retest`.
 2. Create a fresh concrete phone-to-PC voice assistant generation run.
 3. Advance with bounded API usage.
@@ -25,47 +21,51 @@
 5. Record first blocker or delivery result.
 6. Run metadata closure checks and archive evidence.
 
-### Changes
-- Created external run `voice-assistant-signature-retest-20260508`.
-- Advanced the CTCP generation chain using `api_agent` / `gpt-4.1` with bounded API usage.
-- Inspected `source_generation_report.json`, provider ledger, generated-test output, smoke probes, and signature-consistency evidence.
-- Recorded regression memory `20260509_001` because signature validation catches the defect but source_generation still does not converge.
+## Changes
 
-### Verify
-- PASS: `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` returned 0, 25 tests OK.
-- PASS: `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` returned 0, 3 tests OK.
-- PASS: `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` returned 0, 3 tests OK.
+- Created external run `voice-assistant-signature-retest-20260508`.
+- Advanced the CTCP generation chain using `api_agent` / `gpt-4.1`.
+- Inspected `source_generation_report.json`, provider ledger, generated-test output, smoke probes, and signature-consistency evidence.
+- Recorded regression memory `20260509_001`.
+
+## Verify
+
 - PASS: `.venv\Scripts\python.exe scripts\ctcp_orchestrate.py new-run --run-id voice-assistant-signature-retest-20260508 --goal <voice assistant goal>` returned 0 in 0.699 seconds.
 - PASS: `.venv\Scripts\python.exe scripts\ctcp_orchestrate.py status --run-dir <run_dir>` returned 0; initial blocker was `waiting for analysis.md`.
 - PASS: `.venv\Scripts\python.exe scripts\ctcp_orchestrate.py advance --run-dir <run_dir> --max-steps 12` returned 0 in 286.579 seconds and blocked at `generic_validation.passed must be true`.
 - TIMEOUT: `.venv\Scripts\python.exe scripts\ctcp_orchestrate.py advance --run-dir <run_dir> --max-steps 1` timed out after 604.8 seconds. No newer `source_generation_report.json` was written.
-- Provider evidence: `provider_ledger_summary.json` showed `fallback_count=0`, `failed_count=1`, `critical_api_step_count=8`, and `row_count=10`; local librarian remained the expected local exception.
-- Source-generation evidence: 19 generated files, 0 missing required files, `generic_validation.passed=false`, `python_signature_consistency.passed=false`, `generated_tests.passed=false`, `smoke_run.passed=false`, `readme_quality.passed=true`.
+- PASS: triplet guard tests returned 0: runtime wiring 25 OK, issue memory 3 OK, skill consumption 3 OK.
 
-### Questions
+## Questions
+
 - None.
 
-### Demo
+## Demo
+
 - Run dir: `%TEMP%\ctcp_runs\ctcp\voice-assistant-signature-retest-20260508`
 - Result: not deliverable.
-- New validator evidence is visible: `python_signature_consistency` reports `VoiceAssistantService(command_whitelist=...)` vs `VoiceAssistantService(whitelist=...)`, `run_server(host=...)` vs `run_server(port=..., service_inst=..., blocking=...)`, and `CommandRequest(command_text=...)` vs `CommandRequest(command, args)`.
+- The new signature validator produced concrete mismatch evidence:
+  - `VoiceAssistantService(command_whitelist=...)` vs `VoiceAssistantService(whitelist=...)`
+  - `run_server(host=...)` vs `run_server(port=..., service_inst=..., blocking=...)`
+  - `CommandRequest(command_text=...)` vs `CommandRequest(command, args)`
 - Generated tests also fail because generated runtime code reaches a `NotImplementedError` in an abstract service contract.
 
-### Integration Proof
+## Integration Proof
+
 - connected: orchestrator created and advanced the external run.
 - accumulated: run artifacts include provider ledger, source_generation report, generated files, smoke probe results, generated-test output, and signature mismatch rows.
 - consumed: this report records the next repair decision: source_generation must plan and reconcile interfaces before/while batching files; continuing raw retries is not enough.
 
-### Issue Memory
+## Issue Memory
+
 - issue memory decision: required and recorded as `20260509_001`.
 
-### First Failure And Repair
+## First Failure And Repair
+
 - first failure point evidence: source_generation blocked at `artifacts/source_generation_report.json`, reason `generic_validation.passed must be true`.
 - minimal fix strategy evidence: improve source_generation batch planning/self-repair to consume `python_signature_consistency` evidence and reject runtime use of abstract stubs raising `NotImplementedError`; do not patch generated source locally or add deterministic templates.
 
-### Skill Decision
+## Skill Decision
+
 - skillized: no, this is a one-off orchestrator retest using the existing `ctcp-orchestrate-loop`.
 - persona_lab_impact: none.
-- runtime wiring command evidence: `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_runtime_wiring_contract.py" -v` returned 0.
-- issue memory command evidence: `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v` returned 0.
-- skill consumption command evidence: `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_skill_consumption_contract.py" -v` returned 0.

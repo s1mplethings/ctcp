@@ -7,6 +7,7 @@
 
 | Date | Topic | File |
 |------|-------|------|
+| 2026-05-09 | Live Source Generation Retest After Signature Validation | [->](archive/20260508-source-signature-live-retest.md) |
 | 2026-05-08 | Project Generation Cross-File Interface Validation | [->](archive/20260508-source-generation-interface-validation.md) |
 | 2026-05-08 | Voice Assistant Concrete Project Generation Speed Test | [->](archive/20260508-voice-assistant-generation-speed-test.md) |
 | 2026-05-08 | Local Librarian Knowledge-Pack Enrichment | [->](archive/20260508-local-librarian-knowledge-pack.md) |
