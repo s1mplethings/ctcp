@@ -1,192 +1,184 @@
-# Task - Live Source Generation Retest After Signature Validation
+# Task - Source Generation Interface Repair Loop Hardening
 
 ## Queue Binding
 
-- Queue Item: `ADHOC-20260508-source-signature-live-retest`
+- Queue Item: `ADHOC-20260509-source-generation-interface-repair-loop`
 - Layer/Priority: `L1 / P0`
 - Source Queue File: `meta/backlog/execution_queue.json`
-- [ ] Code changes allowed
+- [x] Code changes allowed
 
 ## Context
 
-- Why this item now: user asked to continue after CTCP signature validation was implemented and verified. The next useful step is a real CTCP run, not manual project generation.
+- Why this item now: live retest `voice-assistant-signature-retest-20260508` proved the new signature validator is connected, but source_generation still emitted incompatible batches and abstract runtime stubs.
 - Lane: Delivery Lane.
-- Scope boundary: run a bounded live generation retest and record evidence. Do not patch production code or generated project source during this test.
+- Scope boundary: harden generic validation and retry feedback for interface convergence. Do not add project-specific templates or manually repair generated output.
 
 ## Task Truth Source
 
 - task_purpose:
-  - Create a fresh concrete phone-to-PC voice assistant generation run.
-  - Advance it with bounded API usage.
-  - Inspect whether `python_signature_consistency` appears in source_generation evidence and whether the run reaches delivery or a new blocker.
+  - Block generated runtime source that contains abstract `raise NotImplementedError` stubs.
+  - Make signature-consistency mismatches mandatory self-repair input for source_generation retries.
+  - Allow provider interface payloads to include a concrete signature matrix and validate that it agrees with generated code.
 - allowed_behavior_change:
-  - External run artifacts may be created under `CTCP_RUNS_ROOT`.
-  - Repo metadata may record task/report/archive evidence.
+  - Generic validation may fail generated Python files containing runtime abstract stubs.
+  - Retry prompt may include stronger signature-matrix and abstract-stub repair requirements.
+  - Provider `interfaces` may include expected signatures for generated functions/classes.
 - forbidden_goal_shift:
-  - Do not manually create or repair the generated project.
-  - Do not add local deterministic templates.
-  - Do not modify provider credentials or endpoint configuration.
-  - Do not change CTCP production code in this test task.
+  - Do not add local deterministic project templates.
+  - Do not manually patch any generated project output.
+  - Do not change provider credentials or endpoint config.
+  - Do not add voice-assistant-specific acceptance content.
 - in_scope_modules:
-  - external run directory under `%TEMP%\ctcp_runs`
+  - `tools/providers/project_generation_signature_validation.py`
+  - `tools/providers/project_generation_validation.py`
+  - `ctcp_adapters/source_generation_prompt.py`
+  - `tests/test_generated_project_signature_validation.py`
+  - `issue_memory/modifications.jsonl`
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/CURRENT.md`
   - `meta/tasks/ARCHIVE_INDEX.md`
-  - `meta/tasks/archive/20260508-source-signature-live-retest.md`
+  - `meta/tasks/archive/20260509-source-generation-interface-repair-loop.md`
   - `meta/reports/LAST.md`
-  - `meta/reports/archive/20260508-source-signature-live-retest.md`
-  - `issue_memory/modifications.jsonl` only if a repeated/new user-visible failure must be captured
+  - `meta/reports/archive/20260509-source-generation-interface-repair-loop.md`
 - out_of_scope_modules:
-  - production source files
-  - generated project source files
   - provider credential files
+  - generated project source files
   - local deterministic materializers/templates
+  - unrelated support bot/runtime behavior
 - completion_evidence:
-  - run id and run_dir recorded.
-  - new-run/advance/status commands and return codes recorded.
-  - source_generation/generic validation result recorded.
-  - first blocker or delivery result recorded.
+  - focused tests cover abstract stub rejection.
+  - focused tests cover signature-matrix mismatch detection and prompt feedback.
+  - repo gates pass or first failure is recorded.
 
 ## Write Scope / Protection
 
 - Allowed Write Paths:
+  - `tools/providers/project_generation_signature_validation.py`
+  - `tools/providers/project_generation_validation.py`
+  - `ctcp_adapters/source_generation_prompt.py`
+  - `tests/test_generated_project_signature_validation.py`
+  - `issue_memory/modifications.jsonl`
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/CURRENT.md`
   - `meta/tasks/ARCHIVE_INDEX.md`
-  - `meta/tasks/archive/20260508-source-signature-live-retest.md`
+  - `meta/tasks/archive/20260509-source-generation-interface-repair-loop.md`
   - `meta/reports/LAST.md`
-  - `meta/reports/archive/20260508-source-signature-live-retest.md`
-  - `issue_memory/modifications.jsonl`
+  - `meta/reports/archive/20260509-source-generation-interface-repair-loop.md`
 - Protected Paths:
   - provider credentials
   - Telegram token/env files
-  - production source files
   - generated project source files
   - local deterministic project templates/materializers
 - Frozen Kernels Touched: `false`
 - Explicit Elevation Required: `false`
 - Explicit Elevation Signal: `none`
 - Forbidden Bypass:
-  - no manual generated-source edits
   - no local project template fallback
+  - no generated-run source patching
   - no provider credential changes
 - Acceptance Checks:
-  - `.venv\Scripts\python.exe scripts\ctcp_orchestrate.py new-run --run-id <run-id> --goal <goal>`
-  - `.venv\Scripts\python.exe scripts\ctcp_orchestrate.py advance --run-dir <run_dir> --max-steps <bounded>`
-  - `.venv\Scripts\python.exe scripts\ctcp_orchestrate.py status --run-dir <run_dir>`
+  - `.venv\Scripts\python.exe -m unittest tests.test_generated_project_signature_validation -v`
+  - `.venv\Scripts\python.exe -m unittest tests.test_project_generation_artifacts -v`
   - `.venv\Scripts\python.exe scripts\workflow_checks.py`
   - `.venv\Scripts\python.exe scripts\module_protection_check.py --json`
   - `.venv\Scripts\python.exe scripts\patch_check.py`
+  - `powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1 -Profile code`
 
 ## Analysis / Find
 
-- Test target:
-  - phone opens a LAN/local web page served by the computer.
-  - supports voice/text command entry.
-  - computer executes whitelist-only commands.
-  - generated delivery includes README, startup entrypoint, source files, tests, sample data, and verification evidence.
-- API budget stance:
-  - Use one bounded run.
-  - Stop at the first clear blocker or delivery result.
-  - Do not run repeated unbounded retries.
+- Reproduced evidence:
+  - signature mismatch rows are present in `python_signature_consistency`.
+  - generated tests fail on `CommandRequest(command_text=...)`.
+  - generated service path calls an abstract method that raises `NotImplementedError`.
+- Validation target:
+  - static call-vs-definition mismatches.
+  - provider-declared signature matrix mismatches.
+  - abstract runtime stubs in generated Python files.
 - Repo-local search sufficient: yes.
 - External research artifact: none.
 
 ## Integration Check
 
-- upstream: fresh user-style project goal.
-- current_module: `scripts/ctcp_orchestrate.py` external run mainline.
-- downstream: run artifacts and source_generation validation reports.
-- source_of_truth: run_dir artifacts and command return codes.
-- fallback: if blocked, record first blocker and minimal next repair without patching generated output.
+- upstream: provider source_generation JSON and previous failure report.
+- current_module: generic validation and source_generation prompt rendering.
+- downstream: `artifacts/source_generation_report.json` and next API retry.
+- source_of_truth: generated Python files plus provider interface payload.
+- fallback: skip uncertain dynamic inference, but block explicit abstract stubs and explicit signature contradictions.
 - acceptance_test:
-  - orchestrator commands.
-  - metadata closure checks.
+  - focused unit tests.
+  - project generation artifact regression.
+  - metadata/gate checks.
 - forbidden_bypass:
-  - no manual generated source edits.
-  - no local template fallback.
-- user_visible_effect: user gets a CTCP-generated run result after the signature validation repair.
+  - no local generated-source patching.
+  - no deterministic template fallback.
+- user_visible_effect: CTCP should force API source_generation to repair interfaces before claiming delivery.
 
 ## DoD Mapping
 
-- [x] DoD-1: Fresh external run created.
-- [x] DoD-2: Run advanced with bounded API usage.
-- [x] DoD-3: Status and source_generation evidence inspected.
-- [x] DoD-4: First blocker or delivery result recorded.
-- [x] DoD-5: Metadata closure checks pass.
+- [x] DoD-1: Abstract `NotImplementedError` stub validation implemented.
+- [x] DoD-2: Provider signature matrix validation implemented or accepted via existing interface payload.
+- [x] DoD-3: Retry prompt includes mandatory signature-matrix repair guidance.
+- [x] DoD-4: Focused and project-generation regression tests pass.
+- [x] DoD-5: Canonical verification passes or first failure is recorded.
 
 ## Check/Contrast/Fix Loop Evidence
 
 - check:
-  - Previous comparable run reached API source_generation but blocked on cross-file signature drift.
-  - Current run should show whether signature-consistency validation produces clearer repair evidence or allows progress.
+  - Live retest showed the validator catches signature drift, but generation still repeats incompatible API surfaces.
 - contrast:
-  - This task is a live CTCP pipeline test, not a production code patch.
-  - API/provider success alone is not delivery success; generated artifacts must pass validation.
+  - Prompt-only broad instructions are insufficient when validation has structured mismatch rows.
+  - The repair must connect generated validation evidence back into source_generation retry behavior.
 - fix:
-  - If blocked, record the first blocker and minimal next repair.
-  - Do not patch generated files manually during this task.
+  - Add explicit abstract-stub validation.
+  - Add explicit provider signature-matrix comparison.
+  - Strengthen retry prompt to require repairing all signature rows before emitting new file batches.
 
 ## Completion Criteria Evidence
 
 - completion criteria evidence: prove `connected + accumulated + consumed`.
-- connected: orchestrator creates and advances the external run.
-- accumulated: run_dir artifacts record provider/source_generation/status evidence.
-- consumed: report turns those artifacts into a concrete next decision.
+- connected: generic validation computes the new blockers.
+- accumulated: source_generation report carries structured blocker rows.
+- consumed: retry prompt renders those rows and repair requirements.
 
 ## Issue Memory Decision Evidence
 
-- issue_memory_decision: required. The retest shows signature validation is connected, but API source_generation still does not converge after feedback and still emits cross-file interface drift.
+- issue_memory_decision: required because this is a repair for recorded regression `20260509_001`.
 
 ## Plan
 
-1. Bind the live retest task.
-2. Create a fresh run under `%TEMP%\ctcp_runs`.
-3. Advance with bounded `max-steps`.
-4. Inspect status and `source_generation_report.json`.
-5. Record result and first blocker or delivery evidence.
-6. Run metadata closure checks and archive the task/report.
+1. Bind the code repair task.
+2. Extend signature/static validation for abstract stubs and optional provider signature matrix.
+3. Strengthen source_generation retry prompt consumption.
+4. Add focused regression tests.
+5. Run focused and project-generation checks.
+6. Run repo gates and archive evidence.
 
 ## Acceptance
 
 - [x] DoD written.
-- [x] Code changes disallowed for this test.
-- [x] Run created.
-- [x] Run advanced.
-- [x] Result evidence recorded.
+- [x] Code changes allowed for scoped repair.
+- [x] Validator changes integrated.
+- [x] Prompt changes integrated.
+- [x] Tests pass.
 - [x] Metadata closure checks pass.
 
 ## Results
 
-- Run ID: `voice-assistant-signature-retest-20260508`
-- Run dir: `%TEMP%\ctcp_runs\ctcp\voice-assistant-signature-retest-20260508`
-- `new-run`: exit 0, 0.699 seconds.
-- First `status`: exit 0, blocked waiting for `artifacts/analysis.md`.
-- `advance --max-steps 12`: exit 0, 286.579 seconds.
-- Result after first advance: blocked at `artifacts/source_generation_report.json`, reason `generic_validation.passed must be true`.
-- Generated files: 19; missing required files: 0.
-- Validation result:
-  - `generic_validation.passed=false`
-  - `python_syntax.passed=true`
-  - `python_import_consistency.passed=false`
-  - `python_signature_consistency.passed=false`
-  - `generated_tests.passed=false`
-  - `smoke_run.passed=false`
-  - `readme_quality.passed=true`
-  - `domain_validation.passed=true`
-  - `ux_validation.passed=false`
-- Signature evidence:
-  - `VoiceAssistantService(command_whitelist=...)` conflicts with `VoiceAssistantService(whitelist=...)`.
-  - `run_server(host=...)` conflicts with `run_server(port=..., service_inst=..., blocking=...)`.
-  - `CommandRequest(command=..., input_mode=...)` conflicts with `CommandRequest(command, args)`.
-  - generated tests call `CommandRequest(command_text=...)` although the dataclass requires `command, args`.
-- Generated tests also hit `NotImplementedError` because the generated service path calls an abstract `service_contract` method.
-- One bounded retry was attempted with `advance --max-steps 1`; it timed out after 604.8 seconds. New API calls were recorded, but no newer `source_generation_report.json` was written. No generated files were manually edited.
-- First blocker: source_generation still does not produce a deliverable generated project, but the new signature validation now exposes actionable caller/callee mismatch evidence.
-- Minimal next repair: improve source_generation batch planning/self-repair so it consumes `python_signature_consistency` evidence before issuing more file batches, and block abstract-interface stubs that raise `NotImplementedError` from being used as runtime implementations.
+- `python_signature_consistency` now includes:
+  - `interface_signature_mismatches` for provider-declared `interfaces[path].signatures` that disagree with actual generated AST definitions.
+  - `abstract_stub_violations` for generated runtime Python methods/functions that raise `NotImplementedError`.
+- `generic_validation` passes the provider interface contract into signature validation.
+- `source_generation` prompt now requires `interfaces[path].signatures`, forbids abstract runtime implementations, and renders `signature_matrix` plus `abstract_stub` failures as mandatory retry evidence.
+- Focused/regression checks:
+  - `.venv\Scripts\python.exe -m py_compile tools\providers\project_generation_signature_validation.py tools\providers\project_generation_validation.py ctcp_adapters\source_generation_prompt.py tests\test_generated_project_signature_validation.py`: PASS.
+  - `.venv\Scripts\python.exe -m unittest tests.test_generated_project_signature_validation -v`: PASS, 5 tests OK.
+  - `.venv\Scripts\python.exe -m unittest tests.test_generated_project_validation_self_repair -v`: PASS, 2 tests OK.
+  - `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_api_agent_templates.py" -v`: PASS, 22 tests OK.
+  - `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_project_generation_artifacts.py" -v`: PASS, 48 tests OK.
+  - `Remove-Item Env:CTCP_FORCE_PROVIDER -ErrorAction SilentlyContinue; $env:CTCP_SKIP_LITE_REPLAY='1'; powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1 -Profile code`: PASS, 525 Python tests OK, 4 skipped.
 
 ## Notes / Decisions
 
-- Default choice made: reuse the previous phone-to-PC voice assistant goal so this retest is comparable.
-- Skill decision: skillized: no, this is a one-off orchestrator retest using the existing `ctcp-orchestrate-loop`.
+- Default choice made: keep checks generic and Python-AST based; no voice-assistant-specific content.
+- Skill decision: skillized: no, this is a validator/prompt integration inside an existing workflow, not a reusable agent workflow.
 - persona_lab_impact: none.

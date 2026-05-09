@@ -266,7 +266,7 @@ def generic_validation(
         interface_contract=interface_contract,
     )
     python_signature_consistency = python_signature_consistency_validation(
-        run_dir=run_dir, generated_business_files=generated_business_files, startup_entrypoint=startup_entrypoint
+        run_dir=run_dir, generated_business_files=generated_business_files, startup_entrypoint=startup_entrypoint, interface_contract=interface_contract
     )
     generated_tests = generated_tests_validation(run_dir=run_dir, startup_entrypoint=startup_entrypoint)
     return {

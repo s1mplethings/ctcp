@@ -51,10 +51,12 @@ def render_source_generation_payload_requirements(*, run_dir: Path) -> list[str]
         "- Generated tests must run with `python -m unittest discover -s tests -v` using the generated `src` directory on PYTHONPATH. Tests must import the package directly, for example `from readme import service` or `from readme.service import VoiceAssistantService`; do not import `src.readme`, `src.<package>`, or repo-local paths.",
         "- Before returning, build a cross-file import/export checklist: for every `from package.module import Symbol`, the target module must define `Symbol` or re-export it through its `__init__.py`.",
         "- Include an `interfaces` object in the JSON response, keyed by Python file path, listing each file's public `defines`, `imports`, and `exports`; this must match the actual file contents exactly.",
+        "- In each `interfaces[path]`, include a `signatures` object for public classes/functions, for example `{ \"VoiceAssistantService\": \"VoiceAssistantService(whitelist)\", \"run_server\": \"run_server(port=..., service_inst=..., blocking=...)\" }`; every startup, route, exporter, and test call must match this matrix.",
         "- Package `__init__.py` files count as public code too: every `from .module import Symbol` or wildcard re-export in `__init__.py` must point to a real class/function/value in that module.",
         "- Do not import helper names that are not implemented. If one file imports a helper, the target file must define that exact helper or the importing file must call the actual implemented API.",
         "- Keep public function names consistent across service, entrypoint, exporter, pipeline, workspace, and tests; rename imports and definitions together instead of inventing new names in only one file.",
         "- Keep call signatures consistent across files. If the startup entrypoint constructs a service/controller with arguments, that constructor must accept them; otherwise change the launcher call to match the actual constructor.",
+        "- Do not emit abstract runtime implementations. Generated runtime files must not contain `raise NotImplementedError`; if you define a contract/base class, also provide and use a concrete implementation in startup, routes, exporters, and tests.",
         "- Build an API signature matrix before returning: every model constructor, service constructor, service method, route handler, exporter function, and test call must use the same required/optional arguments. If a dataclass or class requires values, provide defaults or pass real seed data at every construction site.",
         "- Add a launcher compatibility table before finalizing: every service/controller constructor and public method called by `run_project_gui.py` must accept exactly those positional/keyword arguments, or accept optional `*args`/`**kwargs` and normalize them safely.",
         "- The `--headless --goal --project-name --out` export path must execute the same service method signatures that the service class actually defines.",
@@ -142,6 +144,18 @@ def _previous_failure_lines(run_dir: Path) -> list[str]:
             lines.append(
                 f"- signature_consistency: `{caller}:{line}` calls `{callee}` but target signature is `{signature}`"
                 + (f" ({details})" if details else "")
+            )
+    contract_sig_mismatches = signatures.get("interface_signature_mismatches") if isinstance(signatures.get("interface_signature_mismatches"), list) else []
+    for row in contract_sig_mismatches[:10]:
+        if isinstance(row, dict):
+            lines.append(
+                f"- signature_matrix: `{row.get('path', '')}` declares `{row.get('symbol', '')}` as `{row.get('declared_signature', '')}` but actual code is `{row.get('actual_signature', '')}`"
+            )
+    abstract_stubs = signatures.get("abstract_stub_violations") if isinstance(signatures.get("abstract_stub_violations"), list) else []
+    for row in abstract_stubs[:10]:
+        if isinstance(row, dict):
+            lines.append(
+                f"- abstract_stub: `{row.get('path', '')}:{row.get('line', 0)}` `{row.get('symbol', '')}` raises NotImplementedError; replace it with concrete runtime logic or stop routing startup/tests through it"
             )
     generated_tests = generic.get("generated_tests") if isinstance(generic.get("generated_tests"), dict) else {}
     test_violations = generated_tests.get("import_style_violations") if isinstance(generated_tests.get("import_style_violations"), list) else []

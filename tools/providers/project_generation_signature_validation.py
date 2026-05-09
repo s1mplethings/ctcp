@@ -39,6 +39,7 @@ def python_signature_consistency_validation(
     run_dir: Path,
     startup_entrypoint: str,
     generated_business_files: list[str],
+    interface_contract: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     candidates = _candidate_python_files(
         run_dir=run_dir,
@@ -54,13 +55,17 @@ def python_signature_consistency_validation(
             parse_errors.append({"path": rel, "line": int(exc.lineno or 0), "message": str(exc.msg or "syntax error")})
     definitions, ambiguous = _collect_definitions(parsed)
     mismatches = _collect_mismatches(parsed, definitions)
+    contract_mismatches = _contract_signature_mismatches(definitions, interface_contract)
+    abstract_stubs = _abstract_stub_violations(parsed)
     return {
-        "passed": not parse_errors and not mismatches,
+        "passed": not parse_errors and not mismatches and not contract_mismatches and not abstract_stubs,
         "checked_files": [rel for rel, _path in candidates],
         "definitions": len(definitions),
         "ambiguous_definitions": sorted(ambiguous),
         "parse_errors": parse_errors,
         "mismatches": mismatches,
+        "interface_signature_mismatches": contract_mismatches,
+        "abstract_stub_violations": abstract_stubs,
     }
 
 
@@ -214,6 +219,67 @@ def _collect_mismatches(parsed: list[tuple[str, ast.Module]], definitions: dict[
             if mismatch:
                 mismatches.append(mismatch)
     return mismatches
+
+
+def _contract_signature_mismatches(
+    definitions: dict[str, _Signature],
+    interface_contract: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    if not isinstance(interface_contract, dict):
+        return []
+    by_path_name = {(sig.path, sig.name): sig for sig in definitions.values()}
+    out: list[dict[str, Any]] = []
+    for raw_path, row in interface_contract.items():
+        path = str(raw_path or "").strip().replace("\\", "/")
+        contract = row if isinstance(row, dict) else {}
+        signatures = contract.get("signatures") or contract.get("signature_matrix")
+        if not isinstance(signatures, dict):
+            continue
+        for raw_name, expected_raw in signatures.items():
+            name = str(raw_name or "").strip()
+            expected = str(expected_raw or "").strip()
+            actual = by_path_name.get((path, name))
+            if not name or not expected or not actual:
+                continue
+            actual_rendered = actual.render()
+            if _normalized_signature(expected) != _normalized_signature(actual_rendered):
+                out.append(
+                    {
+                        "path": path,
+                        "symbol": name,
+                        "declared_signature": expected,
+                        "actual_signature": actual_rendered,
+                        "line": actual.line,
+                    }
+                )
+    return out
+
+
+def _normalized_signature(value: str) -> str:
+    return "".join(str(value or "").replace("=...", "").split())
+
+
+def _abstract_stub_violations(parsed: list[tuple[str, ast.Module]]) -> list[dict[str, Any]]:
+    violations: list[dict[str, Any]] = []
+    for rel, tree in parsed:
+        if "/tests/" in rel.replace("\\", "/"):
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and _raises_not_implemented(node):
+                violations.append({"path": rel, "symbol": node.name, "line": int(node.lineno or 0)})
+    return violations
+
+
+def _raises_not_implemented(node: ast.AST) -> bool:
+    for child in ast.walk(node):
+        if not isinstance(child, ast.Raise) or child.exc is None:
+            continue
+        exc = child.exc
+        if isinstance(exc, ast.Name) and exc.id == "NotImplementedError":
+            return True
+        if isinstance(exc, ast.Call) and isinstance(exc.func, ast.Name) and exc.func.id == "NotImplementedError":
+            return True
+    return False
 
 
 def _call_name(func: ast.expr) -> str:

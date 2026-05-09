@@ -124,6 +124,87 @@ class GeneratedProjectSignatureValidationTests(unittest.TestCase):
             self.assertIn("missing required: whitelist", prompt)
             self.assertIn("unexpected keywords: commands", prompt)
 
+    def test_rejects_abstract_runtime_stub_and_signature_matrix_drift(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_signature_contract_") as td:
+            run_dir = Path(td)
+            root = run_dir / "project_output" / "voice"
+            _write(root / "scripts" / "run_project_web.py", "from voice.service import VoiceAssistantService\napp = VoiceAssistantService(whitelist=[])\n")
+            _write(root / "src" / "voice" / "__init__.py", "")
+            _write(
+                root / "src" / "voice" / "service.py",
+                "class VoiceAssistantService:\n    def __init__(self, command_whitelist):\n        self.whitelist = command_whitelist\n    def execute(self, request):\n        raise NotImplementedError\n",
+            )
+
+            report = generic_validation(
+                run_dir=run_dir,
+                startup_entrypoint="project_output/voice/scripts/run_project_web.py",
+                startup_readme="project_output/voice/README.md",
+                generated_business_files=[
+                    "project_output/voice/scripts/run_project_web.py",
+                    "project_output/voice/src/voice/__init__.py",
+                    "project_output/voice/src/voice/service.py",
+                ],
+                behavior_probe={"rc": 0},
+                export_probe={"rc": 0},
+                acceptance_files=["project_output/voice/README.md"],
+                interface_contract={
+                    "project_output/voice/src/voice/service.py": {
+                        "signatures": {"VoiceAssistantService": "VoiceAssistantService(whitelist)"}
+                    }
+                },
+            )
+
+            signature_report = dict(report.get("python_signature_consistency", {}))
+            self.assertFalse(bool(signature_report.get("passed", False)))
+            self.assertEqual(signature_report["interface_signature_mismatches"][0]["symbol"], "VoiceAssistantService")
+            self.assertEqual(signature_report["abstract_stub_violations"][0]["symbol"], "execute")
+
+    def test_retry_prompt_consumes_signature_matrix_and_abstract_stub_failures(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ctcp_signature_matrix_prompt_") as td:
+            run_dir = Path(td)
+            artifacts = run_dir / "artifacts"
+            artifacts.mkdir(parents=True, exist_ok=True)
+            (artifacts / "output_contract_freeze.json").write_text(
+                json.dumps({"project_root": "project_output/voice"}, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            (artifacts / "source_generation_report.json").write_text(
+                json.dumps(
+                    {
+                        "status": "blocked",
+                        "generic_validation": {
+                            "python_signature_consistency": {
+                                "passed": False,
+                                "interface_signature_mismatches": [
+                                    {
+                                        "path": "project_output/voice/src/voice/service.py",
+                                        "symbol": "VoiceAssistantService",
+                                        "declared_signature": "VoiceAssistantService(whitelist)",
+                                        "actual_signature": "VoiceAssistantService(command_whitelist)",
+                                    }
+                                ],
+                                "abstract_stub_violations": [
+                                    {
+                                        "path": "project_output/voice/src/voice/service_contract.py",
+                                        "line": 16,
+                                        "symbol": "is_command_allowed",
+                                    }
+                                ],
+                            }
+                        },
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            prompt = "\n".join(render_source_generation_payload_requirements(run_dir=run_dir))
+
+            self.assertIn("signature_matrix", prompt)
+            self.assertIn("VoiceAssistantService(command_whitelist)", prompt)
+            self.assertIn("abstract_stub", prompt)
+            self.assertIn("raises NotImplementedError", prompt)
+
 
 if __name__ == "__main__":
     unittest.main()

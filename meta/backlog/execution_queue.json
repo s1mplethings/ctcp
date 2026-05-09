@@ -14,6 +14,36 @@
   ],
   "items": [
     {
+      "id": "ADHOC-20260509-source-generation-interface-repair-loop",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Source generation interface repair loop hardening",
+      "owner_role": "Local Verifier",
+      "deps": [
+        "ADHOC-20260508-source-signature-live-retest"
+      ],
+      "dod": [
+        "generic validation blocks generated runtime files that contain abstract NotImplementedError stubs",
+        "source_generation retry prompt treats signature mismatches as mandatory batch-repair input",
+        "provider interface payloads can declare a signature matrix that is checked against generated call sites",
+        "focused regression tests cover abstract stub rejection and signature matrix prompt consumption"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/providers/project_generation_signature_validation.py",
+          "tools/providers/project_generation_validation.py",
+          "ctcp_adapters/source_generation_prompt.py",
+          "tests/test_generated_project_signature_validation.py"
+        ],
+        "tests": [
+          "python -m unittest tests.test_generated_project_signature_validation -v",
+          "python scripts/verify_repo.ps1"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed with signature-matrix validation, abstract-stub validation, retry prompt feedback, focused regressions, and canonical code-profile verify."
+    },
+    {
       "id": "ADHOC-20260508-source-signature-live-retest",
       "layer": "L1",
       "priority": "P0",
