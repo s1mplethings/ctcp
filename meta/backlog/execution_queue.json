@@ -14,6 +14,387 @@
   ],
   "items": [
     {
+      "id": "ADHOC-20260510-vn-complete-project-direct-test",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "VN complete project direct generation test",
+      "owner_role": "Local Orchestrator",
+      "deps": [
+        "ADHOC-20260510-vn-clean-run-source-retry-test"
+      ],
+      "dod": [
+        "fresh external run is created for a complete runnable VN project goal",
+        "Virtual Team Lane artifacts are produced before source generation",
+        "provider/source_generation attempts to generate complete project files without manual Codex source edits",
+        "delivery evidence records generated project status, runnable probes, visual/interaction evidence, and first blocker if blocked"
+      ],
+      "artifacts": {
+        "produces": [
+          "external run_dir under CTCP_RUNS_ROOT",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260510-vn-complete-project-direct-test.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260510-vn-complete-project-direct-test.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py new-run --run-id vn-complete-project-direct-test-20260510 --goal <complete vn project goal>",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py advance --run-dir D:\\.c_projects\\adc\\ctcp_runs\\ctcp\\vn-complete-project-direct-test-20260510 --max-steps 20",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py status --run-dir D:\\.c_projects\\adc\\ctcp_runs\\ctcp\\vn-complete-project-direct-test-20260510",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py"
+        ]
+      },
+      "status": "in_progress",
+      "notes": "Bound on 2026-05-10 for direct complete VN project generation test. Scope excludes manual edits to generated VN project source."
+    },
+    {
+      "id": "ADHOC-20260510-vn-clean-run-source-retry-test",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "VN clean run source retry test",
+      "owner_role": "Local Orchestrator",
+      "deps": [
+        "ADHOC-20260510-vn-clean-rerun-test"
+      ],
+      "dod": [
+        "existing clean VN run is advanced again without manual generated-source edits",
+        "fresh status, generated-project probe result, and first blocker are recorded",
+        "repo workflow/module/patch checks pass or first failure is recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "external run_dir under CTCP_RUNS_ROOT",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260510-vn-clean-run-source-retry-test.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260510-vn-clean-run-source-retry-test.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py advance --run-dir D:\\.c_projects\\adc\\ctcp_runs\\ctcp\\vn-project-generation-customer-clean-20260510 --max-steps 1",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py status --run-dir D:\\.c_projects\\adc\\ctcp_runs\\ctcp\\vn-project-generation-customer-clean-20260510",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-10: advanced the existing clean VN run once. Provider output changed and generated file count increased to 55, but source_generation remains blocked by generic_validation on a missing prompt_pipeline import plus missing visual/interaction evidence. Focused repo gates passed; canonical verify timed out during lite scenario replay and matching orphaned processes were stopped."
+    },
+    {
+      "id": "ADHOC-20260510-vn-clean-rerun-test",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "VN clean rerun test",
+      "owner_role": "Local Orchestrator",
+      "deps": [
+        "ADHOC-20260510-vn-source-generation-retry-evidence"
+      ],
+      "dod": [
+        "external VN generation run history for vn-project-generation-customer* is deleted after path-boundary checks",
+        "meta/run_pointers/LAST_RUN.txt is cleared or updated if it points at a deleted VN run",
+        "a fresh customer-style VN run is created and advanced with bounded steps",
+        "delivery evidence reports the fresh run status, generated VN artifacts if present, and first blocker if blocked"
+      ],
+      "artifacts": {
+        "produces": [
+          "external run_dir under CTCP_RUNS_ROOT",
+          "meta/run_pointers/LAST_RUN.txt",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260510-vn-clean-rerun-test.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260510-vn-clean-rerun-test.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py new-run --run-id vn-project-generation-customer-clean-20260510 --goal <vn customer goal>",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py advance --run-dir <run_dir> --max-steps <n>",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py",
+          ".venv\\Scripts\\python.exe scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task",
+          "powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-10: deleted the old external VN customer run directories after path-boundary checks, created clean run vn-project-generation-customer-clean-20260510, advanced it to source_generation, and recorded that the fresh provider-authored VN project remains blocked by generic_validation on generated-source import/interface mismatch and missing visual/interaction evidence. Canonical verify timed out during lite scenario replay and matching orphaned processes were stopped."
+    },
+    {
+      "id": "ADHOC-20260510-vn-source-generation-retry-evidence",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "VN source generation retry evidence",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260510-vn-output-contract-team-pm-false-positive"
+      ],
+      "dod": [
+        "source_generation retry prompt includes live VN generic_validation blockers for missing symbols, interface drift, generated-test constructor mismatch, and UX interaction evidence absence",
+        "focused prompt regression proves UX interaction_acceptance reasons reach the next API retry",
+        "no generated VN project source is manually patched"
+      ],
+      "artifacts": {
+        "produces": [
+          "ctcp_adapters/source_generation_prompt.py",
+          "tests/test_source_generation_prompt_leakage.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260510-vn-source-generation-retry-evidence.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260510-vn-source-generation-retry-evidence.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe -m unittest discover -s tests -p \"test_source_generation_prompt_leakage.py\" -v",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py",
+          ".venv\\Scripts\\python.exe scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-10: inspected live VN run records, found source_generation retry prompt was missing UX interaction_acceptance reasons, added rendering plus focused regression, and passed focused/workflow/module/patch/code-health gates. Canonical verify timed out during lite scenario replay and the matching orphaned verify/simlab processes were stopped."
+    },
+    {
+      "id": "ADHOC-20260510-vn-output-contract-team-pm-false-positive",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "VN output contract team PM false positive",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260510-vn-project-generation-customer-run"
+      ],
+      "dod": [
+        "output_contract_freeze no longer treats incidental generated narrative asset text like notice board or timetable board as a Plane-lite/team PM request",
+        "explicit team task PM goals still retain the existing team_task_management freeze guard",
+        "focused artifact regression passes and the VN customer run can retry past the false-positive blocker or report the next first blocker"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/providers/project_generation_artifacts.py",
+          "tools/providers/project_generation_decisions.py",
+          "tools/providers/project_generation_narrative_spec.py",
+          "tests/test_project_generation_artifacts.py",
+          "tests/test_project_generation_narrative_contract.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260510-vn-output-contract-team-pm-false-positive.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260510-vn-output-contract-team-pm-false-positive.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe -m unittest tests.test_project_generation_artifacts.ProjectGenerationArtifactTests.test_output_contract_freeze_vn_board_asset_text_does_not_trigger_team_pm_guard -v",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_project_generation_narrative_contract -v",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_plane_lite_benchmark_regression -v",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py",
+          ".venv\\Scripts\\python.exe scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-10: fixed VN output_contract_freeze false-positive team PM detection, added narrative structural defaults in a new helper, added focused narrative contract regressions, preserved Plane-lite regressions, and retried the VN customer run to source_generation. The run now has provider-authored VN source/story/background/sprite files but remains blocked at generic_validation on generated-source import/interface/test mismatches and missing real visual evidence."
+    },
+    {
+      "id": "ADHOC-20260510-vn-project-generation-customer-run",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "VN project generation customer run",
+      "owner_role": "Local Orchestrator",
+      "deps": [
+        "ADHOC-20260510-source-generation-retry-evidence-tests"
+      ],
+      "dod": [
+        "fresh external project-generation run is created for a customer-style VN goal",
+        "Virtual Team Lane artifacts define intent, product direction, MVP scope, architecture, UX flow, implementation plan, acceptance, and decisions before generated implementation",
+        "run is advanced with bounded steps and no manual source-code generation or generated-source patching by Codex",
+        "delivery evidence identifies storyline, background asset plan/evidence, character sprite asset plan/evidence, runnable MVP status, and first blocker if blocked"
+      ],
+      "artifacts": {
+        "produces": [
+          "external run_dir under CTCP_RUNS_ROOT",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260510-vn-project-generation-customer-run.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260510-vn-project-generation-customer-run.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py new-run --run-id vn-project-generation-customer-20260510 --goal <vn customer goal>",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py advance --run-dir <run_dir> --max-steps <n>",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py status --run-dir <run_dir>",
+          "inspect generated run artifacts for Virtual Team design artifacts, storyline, background/sprite evidence, source_generation report, and verify report",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile doc-only"
+        ]
+      },
+      "status": "blocked",
+      "notes": "Blocked on 2026-05-10 after bounded live API generation: external run vn-project-generation-customer-20260510b reached source_generation with provider-authored VN files and no manual generated-source edits, but generic_validation failed due missing imports/interface mismatches, generated tests failing on StoryOutline(synopsis), and missing real visual/preview evidence."
+    },
+    {
+      "id": "ADHOC-20260510-source-generation-retry-evidence-tests",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Source generation retry evidence tests",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260510-live-api-project-pipeline-test"
+      ],
+      "dod": [
+        "source_generation retry prompt tests cover live API blockers for export probe failure, signature drift, interface metadata mismatch, and visual evidence absence",
+        "retry prompt renders concrete validation evidence instead of generic source_generation failure prose",
+        "focused prompt/source_generation regression tests pass"
+      ],
+      "artifacts": {
+        "produces": [
+          "ctcp_adapters/source_generation_prompt.py",
+          "tests/test_source_generation_prompt_leakage.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260510-source-generation-retry-evidence-tests.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260510-source-generation-retry-evidence-tests.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe -m unittest discover -s tests -p \"test_source_generation_prompt_leakage.py\" -v",
+          ".venv\\Scripts\\python.exe -m unittest discover -s tests -p \"test_api_agent_templates.py\" -v",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-10: added live-API-shaped source_generation retry prompt regression for export rc/status, signature drift, interface metadata mismatch, and missing visual evidence; renderer now surfaces concrete retry evidence and single-batch repair guidance; focused tests and canonical verify_repo.ps1 -Profile code passed."
+    },
+    {
+      "id": "ADHOC-20260510-live-api-project-pipeline-test",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Live API project pipeline test",
+      "owner_role": "Local Orchestrator",
+      "deps": [
+        "ADHOC-20260509-mock-pipeline-source-generation-smoke"
+      ],
+      "dod": [
+        "fresh external project-generation run is created with api_agent as the generation provider",
+        "run is advanced with bounded max steps and no generated-source manual patching",
+        "provider ledger proves whether critical generation steps used api_agent and records request ids/fallbacks",
+        "source_generation and verify evidence is inspected for pass or first concrete blocker"
+      ],
+      "artifacts": {
+        "produces": [
+          "external run_dir under CTCP_RUNS_ROOT",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260510-live-api-project-pipeline-test.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260510-live-api-project-pipeline-test.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py new-run --run-id live-api-project-pipeline-20260510 --goal <project goal>",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py advance --run-dir <run_dir> --max-steps <n>",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py status --run-dir <run_dir>",
+          "inspect provider_ledger_summary.json, source_generation_report.json, verify_report.json",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-10: fresh live-api-project-pipeline-20260510 used api_agent for all 11 critical generation steps with fallback_count=0, generated project files and provider-authored source, but blocked at source_generation generic_validation because export_probe rc=1, python signature consistency failed, and UX evidence was missing."
+    },
+    {
+      "id": "ADHOC-20260509-mock-pipeline-source-generation-smoke",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Mock pipeline source generation smoke",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260509-agent-exchange-experiment-mainline"
+      ],
+      "dod": [
+        "mock_agent source_generation emits a provider-authored source file bundle instead of an empty payload",
+        "local mock project-generation pipeline can advance past source_generation without external API usage",
+        "focused tests cover the mock source_generation bundle and source report validation shape"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/providers/mock_agent.py",
+          "tools/providers/project_generation_source_stage.py",
+          "tests/test_mock_agent_pipeline.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260509-mock-pipeline-source-generation-smoke.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260509-mock-pipeline-source-generation-smoke.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe -m unittest discover -s tests -p \"test_mock_agent_pipeline.py\" -v",
+          ".venv\\Scripts\\python.exe -m unittest discover -s tests -p \"test_project_generation_provenance.py\" -v",
+          ".venv\\Scripts\\python.exe scripts\\ctcp_orchestrate.py advance --run-dir <mock run_dir> --max-steps <n>",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          "powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-09: mock_agent source_generation now emits a provider-authored source bundle, blocked source reports include explicit generic_validation shape, focused tests passed, and fresh mock pipeline agent-exchange-mock-project-pipeline-fixed-20260509 reached PASS with critical_api_step_count=0."
+    },
+    {
+      "id": "ADHOC-20260509-agent-exchange-experiment-mainline",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Agent exchange experiment and mainline integration",
+      "owner_role": "Solution Architect",
+      "deps": [
+        "ADHOC-20260509-source-generation-self-repair-contract"
+      ],
+      "dod": [
+        "Virtual Team Lane has a written agent exchange contract for role-to-role handoff, context needs, decisions, risks, and next-stage ownership",
+        "dispatch whiteboard can persist a compact structured agent_exchange packet without breaking existing support/dispatch entries",
+        "api_agent prompts consume the agent_exchange packet so MCP/context needs and prior role decisions reach downstream agents",
+        "focused tests prove the experiment is connected, consumed, and safe to merge into the mainline prompt path"
+      ],
+      "artifacts": {
+        "produces": [
+          "docs/13_agent_exchange_contract.md",
+          "docs/12_virtual_team_contract.md",
+          "docs/13_contracts_index.md",
+          "docs/22_agent_teamnet.md",
+          "README.md",
+          "ctcp_adapters/dispatch_whiteboard.py",
+          "ctcp_adapters/agent_exchange_prompt.py",
+          "ctcp_adapters/ctcp_artifact_normalizers.py",
+          "tests/test_agent_exchange_contract.py",
+          "tests/test_api_agent_templates.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260509-agent-exchange-experiment-mainline.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260509-agent-exchange-experiment-mainline.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe -m py_compile ctcp_adapters\\dispatch_whiteboard.py ctcp_adapters\\agent_exchange_prompt.py ctcp_adapters\\ctcp_artifact_normalizers.py tests\\test_agent_exchange_contract.py",
+          ".venv\\Scripts\\python.exe -m unittest discover -s tests -p \"test_agent_exchange_contract.py\" -v",
+          ".venv\\Scripts\\python.exe -m unittest discover -s tests -p \"test_api_agent_templates.py\" -v",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py",
+          "powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-09: added ctcp-agent-exchange-v1 contract, wired optional agent_exchange packets through dispatch whiteboard and api_agent prompts, optimized after code-health rejected oversized-file growth, and passed focused tests plus canonical verify_repo.ps1 -Profile code."
+    },
+    {
       "id": "ADHOC-20260509-source-generation-self-repair-contract",
       "layer": "L1",
       "priority": "P0",

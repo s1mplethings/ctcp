@@ -7,6 +7,14 @@
 
 | Date | Topic | File |
 |------|-------|------|
+| 2026-05-10 | VN Clean Run Source Retry Test | [->](archive/20260510-vn-clean-run-source-retry-test.md) |
+| 2026-05-10 | VN Clean Rerun Test | [->](archive/20260510-vn-clean-rerun-test.md) |
+| 2026-05-10 | VN Source Generation Retry Evidence | [->](archive/20260510-vn-source-generation-retry-evidence.md) |
+| 2026-05-10 | VN Output Contract Team PM False Positive | [->](archive/20260510-vn-output-contract-team-pm-false-positive.md) |
+| 2026-05-10 | Source Generation Retry Evidence Tests | [->](archive/20260510-source-generation-retry-evidence-tests.md) |
+| 2026-05-10 | Live API Project Pipeline Test | [->](archive/20260510-live-api-project-pipeline-test.md) |
+| 2026-05-09 | Mock Pipeline Source Generation Smoke | [->](archive/20260509-mock-pipeline-source-generation-smoke.md) |
+| 2026-05-09 | Agent Exchange Experiment And Mainline Integration | [->](archive/20260509-agent-exchange-experiment-mainline.md) |
 | 2026-05-09 | Source Generation Self-Repair Contract For API-Authored Projects | [->](archive/20260509-source-generation-self-repair-contract.md) |
 | 2026-05-09 | Intent/Spec Slug And Source-Generation Prompt Leakage Repair | [->](archive/20260509-intent-spec-prompt-leakage-repair.md) |
 | 2026-05-09 | Live API Retest After Interface Repair Loop Hardening | [->](archive/20260509-interface-repair-api-retest.md) |

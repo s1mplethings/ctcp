@@ -137,6 +137,20 @@ def _blocked_source_generation_report(
     report["status"] = "blocked"
     if reason:
         report["blocking_reason"] = reason
+    report["generic_validation"] = {
+        "passed": False,
+        "has_runnable_entrypoint": False,
+        "readme_startup_ready": False,
+        "core_user_flow": [],
+        "core_feature_files": [],
+        "placeholder_hits": [],
+        "python_syntax": {"passed": False, "checked_files": [], "syntax_errors": []},
+        "python_import_consistency": {"passed": False, "issues": []},
+        "python_signature_consistency": {"passed": False, "issues": []},
+        "generated_tests": {"passed": True, "status": "skipped", "checked_files": []},
+        "delivery_package": [],
+        "smoke_run": {"startup_probe": {}, "export_probe": {}, "passed": False},
+    }
     return report
 
 

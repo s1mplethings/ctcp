@@ -4,6 +4,7 @@ Scope boundary:
 - This file is the authoritative contract for CTCP's Virtual Team Lane.
 - It defines role boundaries, lane triggers, mandatory design artifacts, and the gate from design into implementation.
 - It does not replace repo purpose (`docs/01_north_star.md`), runtime truth (`docs/00_CORE.md`), or user-visible dialogue rules (`docs/11_task_progress_dialogue.md`).
+- Role-to-role packet structure is owned by `docs/13_agent_exchange_contract.md`.
 
 ## 1) Why This Lane Exists
 
@@ -147,6 +148,26 @@ Rules:
 - generic placeholders are invalid
 - artifact names may differ only when the active task card explicitly maps them one-to-one to this contract
 
+## 4.1) Role Exchange Packets
+
+Virtual Team Lane roles SHOULD produce or update an `agent_exchange` packet when handing work to the next role or implementation stage.
+
+Authority: `docs/13_agent_exchange_contract.md`.
+
+Minimum exchange content:
+- current lane, stage, role, and goal
+- decisions that the next role must preserve
+- context or MCP-style evidence needs for the next role
+- unresolved questions or accepted assumptions
+- next role and next required artifact
+- acceptance hooks that prove the handoff was consumed
+
+Rules:
+- exchange packets supplement the mandatory design artifacts; they do not replace them
+- exchange packets must be compact enough to render into provider prompts
+- missing exchange packets are tolerated only for legacy Delivery Lane or pre-integration runs
+- once a Virtual Team Lane task enters implementation, prompt-only handoff without either design artifacts or an exchange packet is incomplete
+
 ## 5) Design-to-Implementation Gate
 
 Virtual Team Lane MUST NOT enter implementation until all of the following are true:
@@ -211,3 +232,4 @@ If CTCP only implemented code without these upstream artifacts, the task is not 
 - `docs/10_team_mode.md` owns support/frontdesk/runtime wiring only; it does not redefine design behavior.
 - `docs/11_task_progress_dialogue.md` defines how user-visible progress must expose active role, decisions made, open items, and updated artifacts.
 - `docs/14_persona_test_lab.md` is an isolated regression layer; it must not override this lane's role model.
+- `docs/13_agent_exchange_contract.md` defines the compact role-to-role exchange packet consumed by dispatch whiteboard and provider prompts.

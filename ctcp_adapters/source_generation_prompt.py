@@ -143,6 +143,19 @@ def _previous_failure_lines(run_dir: Path) -> list[str]:
     smoke = generic.get("smoke_run") if isinstance(generic.get("smoke_run"), dict) else {}
     for name in ("startup_probe", "export_probe"):
         probe = smoke.get(name) if isinstance(smoke.get(name), dict) else {}
+        probe_rc = probe.get("rc", "")
+        probe_status = str(probe.get("status", "")).strip()
+        probe_parts = []
+        if probe_rc != "":
+            probe_parts.append(f"rc={probe_rc}")
+        if probe_status:
+            probe_parts.append(f"status={probe_status}")
+        if probe_parts:
+            lines.append(f"- {name}: {' '.join(probe_parts)}")
+            if name == "export_probe" and (str(probe_rc) not in {"", "0"} or probe_status.lower() in {"blocked", "fail", "failed"}):
+                lines.append(
+                    "- delivery_qa: export command must exit 0 and write the evidence files into the requested `--out` directory without printing only argparse help"
+                )
         stderr = str(probe.get("stderr_tail", "") or probe.get("stdout_tail", "")).strip()
         if stderr:
             lines.append(f"- {name}: {stderr[:500]}")
@@ -242,6 +255,18 @@ def _previous_failure_lines(run_dir: Path) -> list[str]:
             lines.append(
                 "- delivery_qa: web/mobile projects must expose a real `/` preview page, `/status`, and export/visual evidence that the verifier can observe"
             )
+    interaction = ux.get("interaction_acceptance") if isinstance(ux.get("interaction_acceptance"), dict) else {}
+    interaction_reasons = (
+        [str(item).strip() for item in interaction.get("reasons", []) if str(item).strip()]
+        if isinstance(interaction.get("reasons", []), list)
+        else []
+    )
+    for item in interaction_reasons[:10]:
+        lines.append(f"- ux_interaction: {item}")
+    if len(lines) > 1:
+        lines.append(
+            "- retry_batch: return a single replacement batch that repairs source files, generated tests, interfaces/signatures metadata, export command behavior, and visual evidence artifacts together."
+        )
     return lines if len(lines) > 1 else []
 
 

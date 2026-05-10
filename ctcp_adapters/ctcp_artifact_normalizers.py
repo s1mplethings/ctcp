@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from ctcp_adapters.analysis_md_normalizer import normalize_analysis_md as _normalize_analysis_md
+from ctcp_adapters.agent_exchange_prompt import render_agent_exchange_md
 from ctcp_adapters.project_generation_plan_request import is_project_generation_plan_request
 from ctcp_adapters.source_generation_prompt import render_source_generation_payload_requirements
 from llm_core.providers.api_provider import _read_text, _slug, _write_text
@@ -909,6 +910,7 @@ def _render_prompt(
     for key in ("context", "constraints", "fix_brief", "externals"):
         path = evidence[key]
         lines += [f"## {path.name}", _read_text(path, limit=18000), ""]
+    lines += [render_agent_exchange_md(request), ""]
     lines += [_render_whiteboard_md(request), ""]
     return "\n".join(lines)
 

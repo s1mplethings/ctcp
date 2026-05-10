@@ -1,192 +1,135 @@
-# Task - Source Generation Self-Repair Contract For API-Authored Projects
+# Task - VN Complete Project Direct Generation Test
 
 ## Queue Binding
 
-- Queue Item: `ADHOC-20260509-source-generation-self-repair-contract`
+- Queue Item: `ADHOC-20260510-vn-complete-project-direct-test`
 - Layer/Priority: `L1 / P0`
 - Source Queue File: `meta/backlog/execution_queue.json`
+- Lane: `Virtual Team Lane`
 - [x] Code changes allowed
 
 ## Context
 
-- Why this item now: API-only run `voice-assistant-api-only-20260509` proved `api_agent` can author source files, but CTCP still blocked delivery because `source_generation` produced `project_output/web-readme`, startup imports failed, generated tests failed, and interface/signature validation failures were not repaired by subsequent API retries.
-- Lane: Delivery Lane.
-- Scope boundary: improve project identity freezing and source_generation retry feedback. Do not manually patch generated project files and do not add a local deterministic project template.
+- User request: directly test generating a complete project.
+- Direct test run id: `vn-complete-project-direct-test-20260510`.
+- Goal shape: complete runnable VN project with story, background plan/assets, character sprites, preview/export path, interaction evidence, README, tests, and delivery evidence.
+- Boundary: CTCP/provider must generate the project; Codex must not hand-author generated project source.
 
 ## Task Truth Source
 
 - task_purpose:
-  - Ensure mixed Chinese/English goals such as "本地 Web 服务 ... README" still freeze to the semantic product identity, e.g. `voice-assistant`, not incidental `web-readme`.
-  - Ensure generic validation failures are rendered as mandatory repair instructions for the next API source_generation attempt.
-  - Make API-authored source retries fix startup, import, signature, interface, abstract stub, and generated-test failures before delivery can pass.
+  - Run a fresh end-to-end complete VN project generation test and report whether CTCP can deliver a complete runnable project.
 - allowed_behavior_change:
-  - Project slug selection may prefer semantic goal tokens over weak artifact words such as `web` and `readme`.
-  - Source-generation prompts may include compact prior validation failure summaries from `artifacts/source_generation_report.json`.
-  - Retry instructions may explicitly require replacing inconsistent API-authored files rather than preserving broken interfaces.
+  - create and advance a fresh external run.
+  - update task/report/archive metadata.
 - forbidden_goal_shift:
-  - Do not add generated voice-assistant implementation code to the repo.
-  - Do not manually edit files under an external run's `project_output`.
-  - Do not add local deterministic business templates/materializers.
-  - Do not change provider credentials or endpoint config.
+  - Do not manually edit generated VN project source.
+  - Do not weaken validation gates.
+  - Do not treat partial artifacts as complete delivery.
 - in_scope_modules:
-  - `tools/providers/project_generation_goal_slug.py`
-  - `ctcp_adapters/source_generation_prompt.py`
-  - `tests/test_project_generation_voice_assistant_contract.py`
-  - `tests/test_source_generation_prompt_leakage.py`
-  - `issue_memory/modifications.jsonl`
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/CURRENT.md`
   - `meta/tasks/ARCHIVE_INDEX.md`
-  - `meta/tasks/archive/20260509-source-generation-self-repair-contract.md`
+  - `meta/tasks/archive/20260510-vn-complete-project-direct-test.md`
   - `meta/reports/LAST.md`
-  - `meta/reports/archive/20260509-source-generation-self-repair-contract.md`
+  - `meta/reports/archive/20260510-vn-complete-project-direct-test.md`
+  - `D:\.c_projects\adc\ctcp_runs\ctcp\vn-complete-project-direct-test-20260510`
 - out_of_scope_modules:
-  - generated run source files
+  - generated project manual source edits
   - provider credentials
-  - Telegram bot runtime
-  - local project templates/materializers
+  - frozen kernels
+  - unrelated external runs
 - completion_evidence:
-  - regression proves mixed Chinese/English voice assistant goal does not freeze to `web-readme`.
-  - regression proves source_generation prompt consumes prior generic_validation failure details.
-  - focused suites and canonical verify pass or first failure is recorded.
+  - fresh run creation result recorded.
+  - Virtual Team/plan artifacts recorded or first missing artifact recorded.
+  - source_generation/project delivery status recorded.
+  - generated project probes recorded if project files exist.
+  - focused repo gate results recorded.
 
 ## Write Scope / Protection
 
 - Allowed Write Paths:
-  - `tools/providers/project_generation_goal_slug.py`
-  - `ctcp_adapters/source_generation_prompt.py`
-  - `tests/test_project_generation_voice_assistant_contract.py`
-  - `tests/test_source_generation_prompt_leakage.py`
-  - `issue_memory/modifications.jsonl`
   - `meta/backlog/execution_queue.json`
   - `meta/tasks/CURRENT.md`
   - `meta/tasks/ARCHIVE_INDEX.md`
-  - `meta/tasks/archive/20260509-source-generation-self-repair-contract.md`
+  - `meta/tasks/archive/20260510-vn-complete-project-direct-test.md`
   - `meta/reports/LAST.md`
-  - `meta/reports/archive/20260509-source-generation-self-repair-contract.md`
+  - `meta/reports/archive/20260510-vn-complete-project-direct-test.md`
+  - `D:\.c_projects\adc\ctcp_runs\ctcp\vn-complete-project-direct-test-20260510`
 - Protected Paths:
+  - `.git`
+  - generated project manual source edits
   - provider credentials
-  - generated run `project_output`
-  - local deterministic project templates/materializers
   - frozen kernels
 - Frozen Kernels Touched: `false`
 - Explicit Elevation Required: `false`
 - Explicit Elevation Signal: `none`
 - Forbidden Bypass:
-  - no generated source patching
-  - no deterministic template fallback
-  - no provider credential changes
+  - no generated-source manual patching.
+  - no gate weakening.
+  - no partial-output success claim.
 - Acceptance Checks:
-  - `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_project_generation_voice_assistant_contract.py" -v`
-  - `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_source_generation_prompt_leakage.py" -v`
-  - `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_api_agent_templates.py" -v`
+  - `.venv\Scripts\python.exe scripts\ctcp_orchestrate.py new-run --run-id vn-complete-project-direct-test-20260510 --goal <complete vn project goal>`
+  - `.venv\Scripts\python.exe scripts\ctcp_orchestrate.py advance --run-dir D:\.c_projects\adc\ctcp_runs\ctcp\vn-complete-project-direct-test-20260510 --max-steps 20`
+  - `.venv\Scripts\python.exe scripts\ctcp_orchestrate.py status --run-dir D:\.c_projects\adc\ctcp_runs\ctcp\vn-complete-project-direct-test-20260510`
+  - generated project unittest/probes if source files exist.
   - `.venv\Scripts\python.exe scripts\workflow_checks.py`
   - `.venv\Scripts\python.exe scripts\module_protection_check.py --json`
   - `.venv\Scripts\python.exe scripts\patch_check.py`
-  - `powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1 -Profile code`
 
 ## Analysis / Find
 
-- Reproduced evidence from external run:
-  - provider ledger shows `source_generation` executed via `api_agent`, `fallback_used=false`, three times.
-  - generated source exists under `project_output/web-readme`, proving project identity still came from weak English artifact words.
-  - `generic_validation.passed=false` because startup imports failed, generated tests failed, interface declarations did not match actual Python symbols, signatures mismatched, and abstract stub violations remained.
-- Validation target:
-  - project identity must remain semantic and goal-specific even when the goal includes English artifact words.
-  - retries must explicitly feed validation failures back into the API prompt.
-- External research artifact: none.
-
-## Integration Check
-
-- upstream: `output_contract_freeze` goal slug selection and `source_generation` prompt assembly.
-- current_module: project-generation goal slug helper and source-generation prompt adapter.
-- downstream: API-authored source_generation batches, generic validation, delivery gate.
-- source_of_truth: external run `voice-assistant-api-only-20260509` artifacts plus current task card.
-- fallback: block delivery when validation still fails; do not locally repair generated source.
-- acceptance_test:
-  - focused slug regression.
-  - focused retry-feedback prompt regression.
-  - api-agent template suite.
-  - canonical verify.
-- forbidden_bypass:
-  - no generated source patching.
-  - no deterministic template fallback.
-- user_visible_effect:
-  - future API-only project generation should name the project from the user's actual product goal and should retry source_generation with concrete validation blockers instead of repeating broken source bundles.
-
-## DoD Mapping
-
-- [x] DoD-1: mixed Chinese/English voice-assistant goal freezes to `voice-assistant`, not `web-readme`.
-- [x] DoD-2: source_generation prompt includes compact validation failure feedback from prior source_generation report.
-- [x] DoD-3: retry feedback names startup/import/test/interface/signature/abstract-stub repair obligations.
-- [x] DoD-4: focused and broader regression tests pass.
-- [x] DoD-5: canonical verification passes or first failure is recorded.
-
-## Check/Contrast/Fix Loop Evidence
-
-- check:
-  - API-only run `voice-assistant-api-only-20260509` showed `api_agent` authored source files but froze project identity as `web-readme` and remained blocked on `generic_validation.passed=false`.
-  - Focused regression initially reproduced a related slug failure: the mixed Chinese/English goal froze as `voice-mobile-pc-web` instead of `voice-assistant`.
-- contrast:
-  - The previous slug fix handled goals with explicit `助理/assistant`, but not goals expressed as `语音输入 + 手机/电脑 + 操控` plus incidental English artifact words.
-  - Existing validation feedback existed, but API retries could still preserve a broken manifest/interface contract instead of replacing all affected files together.
-- fix:
-  - Prefer semantic voice-control product identity over weak artifact ASCII words.
-  - Add retry-gate instructions that make validation failure evidence blocking repair input for the next source_generation attempt.
-
-## Completion Criteria Evidence
-
-- completion criteria evidence: prove `connected + accumulated + consumed`.
-- connected: `normalize_output_contract_freeze()` reaches the updated slug helper through `_slug(goal)`, and source_generation prompt rendering reads the prior `artifacts/source_generation_report.json`.
-- accumulated: issue memory entry `20260509_005` records the API-only run failure and this fix attempt.
-- consumed: `api_agent._render_prompt()` includes the corrected identity and retry-gate validation blockers in prompts used by source_generation manifest and file-content batches.
+- The previous clean VN run proved CTCP can reach source_generation and generate many files, but it still failed cross-file interface validation.
+- This task tests a fresh complete-project goal directly, so the result should be judged by fresh run evidence, not by old run assumptions.
+- Because this is a new project request, it is routed as Virtual Team Lane; implementation is only valid after the run produces planning/design artifacts.
 
 ## Plan
 
-1. Bind this repair task.
-2. Add/extend focused regressions for mixed-language project identity and validation-feedback prompt consumption.
-3. Update semantic slug priority to prefer product semantics over weak artifact words.
-4. Add compact source_generation validation failure rendering to API prompt requirements.
-5. Run focused suites, repo gates, and canonical verify.
-6. Record issue memory and archive task/report evidence.
+1. Bind this Virtual Team Lane direct generation test.
+2. Create a fresh external run for the complete VN project goal.
+3. Advance the run with bounded steps.
+4. Inspect run status, source_generation/project_manifest evidence, generated files, and runnable probes.
+5. Record first blocker or complete delivery evidence.
+6. Run focused repo gates and archive this task/report.
+
+## Integration Check
+
+- upstream: user asked to directly test complete project generation.
+- current_module: CTCP orchestrator new-run/advance over a fresh VN project run.
+- downstream: generated project source, validation reports, delivery status, and user-visible evidence.
+- source_of_truth: `D:\.c_projects\adc\ctcp_runs\ctcp\vn-complete-project-direct-test-20260510`.
+- fallback: if generation blocks, record the first blocker and stop without generated-source patching.
+- acceptance_test: orchestrator status plus generated project probes where available.
+- forbidden_bypass: no manual generated-source repair and no partial-output success claim.
+- user_visible_effect: the user sees whether CTCP can directly generate a complete runnable VN project or where it currently fails.
 
 ## Acceptance
 
-- [x] DoD written.
-- [x] Code changes allowed for scoped repair.
-- [x] Slug priority repair implemented.
-- [x] Validation-feedback prompt repair implemented.
-- [x] Tests pass.
-- [x] Metadata closure checks pass.
+- [x] Lane selected as Virtual Team Lane.
+- [x] Queue item bound before run creation.
+- [ ] Fresh run created.
+- [ ] Fresh run advanced or timeout recorded.
+- [ ] Generated project status/probes recorded.
+- [ ] Repo focused gates recorded.
 
-## Results
+## Check/Contrast/Fix Loop Evidence
 
-- Implemented semantic slug priority repair in `tools/providers/project_generation_goal_slug.py`:
-  - Weak delivery/artifact ASCII words such as `web`, `readme`, `service`, `test`, and `project` no longer override semantic Chinese goal markers.
-  - `voice + control + mobile/pc` now freezes as `voice-assistant` even when the literal word `assistant`/`助理` is absent.
-- Strengthened source-generation retry feedback in `ctcp_adapters/source_generation_prompt.py`:
-  - When a previous `source_generation_report.json` is blocked, the next prompt includes a `retry_gate`.
-  - The `retry_gate` requires replacing the broken manifest/interface contract and affected file contents together, rather than preserving failing imports, signatures, re-exports, tests, or startup commands.
-- Added regressions:
-  - mixed Chinese/English phone-to-PC voice-control goal freezes to `project_output/voice-assistant` and `voice_assistant`, not `web-readme`.
-  - retry prompt consumes startup/import/interface/signature/abstract-stub/generated-test failures from `generic_validation`.
-- Issue memory fix attempt recorded as `20260509_005`.
-- Checks:
-  - `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_project_generation_voice_assistant_contract.py" -v`: PASS, 2 tests OK.
-  - `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_source_generation_prompt_leakage.py" -v`: PASS, 2 tests OK.
-  - `.venv\Scripts\python.exe -m py_compile tools\providers\project_generation_goal_slug.py ctcp_adapters\source_generation_prompt.py tests\test_project_generation_voice_assistant_contract.py tests\test_source_generation_prompt_leakage.py`: PASS.
-  - `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_api_agent_templates.py" -v`: PASS, 22 tests OK.
-  - `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_project_generation_artifacts.py" -v`: PASS, 48 tests OK.
-  - `.venv\Scripts\python.exe scripts\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task`: PASS.
-  - `.venv\Scripts\python.exe scripts\module_protection_check.py --json`: PASS, no violations.
-  - `.venv\Scripts\python.exe scripts\patch_check.py`: PASS.
-  - `.venv\Scripts\python.exe -m unittest discover -s tests -p "test_issue_memory_accumulation_contract.py" -v`: PASS, 3 tests OK.
-  - `.venv\Scripts\python.exe scripts\workflow_checks.py`: FIRST FAILURE, `meta/reports/LAST.md` not updated yet; repair is to update the report before rerun.
-  - `.venv\Scripts\python.exe scripts\workflow_checks.py`: PASS after task/report evidence updates.
-  - `Remove-Item Env:CTCP_FORCE_PROVIDER -ErrorAction SilentlyContinue; Remove-Item Env:CTCP_FORMAL_API_ONLY -ErrorAction SilentlyContinue; $env:CTCP_SKIP_LITE_REPLAY='1'; powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1 -Profile code`: PASS, 529 Python tests OK, 4 skipped.
+- check: pending.
+- contrast: pending.
+- fix: pending.
+- re-check: pending.
 
-## Notes / Decisions
+## Completion Criteria Evidence
 
-- Default choice made: repair CTCP's contract/prompt feedback loop, not the generated project.
-- Skill decision: skillized: no, because this is a project-generation bug fix in an existing CTCP workflow; it can become a skill only if repeated API retry triage becomes a reusable operator workflow.
+- completion criteria evidence: pending.
+
+## Issue Memory Decision Evidence
+
+- issue memory decision evidence: pending.
+
+## Skill Decision Evidence
+
+- skill used: `ctcp-workflow`.
+- reason: the task requires CTCP queue discipline, Virtual Team Lane routing, external run orchestration, and gate reporting.
+- skillized: no.
 - persona_lab_impact: none.

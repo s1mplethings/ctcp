@@ -1068,14 +1068,8 @@ def normalize_output_contract_freeze(doc: dict[str, Any] | None, *, goal: str, r
     project_archetype = str(defaults.get("project_archetype", "generic_copilot"))
     package_name = str(defaults["package_name"])
     project_profile = str(defaults["project_profile"])
-    team_pm_requested = _contains_any(
-        " ".join(
-            [
-                goal_text,
-                json.dumps(project_intent, ensure_ascii=False),
-                json.dumps(src.get("project_spec", {}) if isinstance(src.get("project_spec", {}), dict) else {}, ensure_ascii=False),
-            ]
-        ),
+    team_pm_requested = project_domain == "team_task_management" or _contains_any(
+        " ".join([goal_text, json.dumps(project_intent, ensure_ascii=False)]),
         TEAM_PM_KEYWORDS,
     )
     indie_hub_requested = is_indie_studio_hub_signal(

@@ -7,6 +7,7 @@
 | Run Events JSONL | [run_events.schema.json](../specs/contract_output/run_events.schema.json) | Pipeline runtime → RunLoader → UI |
 | File Request JSON | [ctcp_file_request_v1.json](../specs/ctcp_file_request_v1.json) | Chair/Planner → Local Librarian |
 | Context Pack JSON | [ctcp_context_pack_v1.json](../specs/ctcp_context_pack_v1.json) | Local Librarian → Chair/Planner |
+| Agent Exchange Packet | [13_agent_exchange_contract.md](13_agent_exchange_contract.md) | Virtual Team roles / dispatch whiteboard → downstream provider prompts |
 | Contract Review Spec | [ctcp_review_contract_v1.json](../specs/ctcp_review_contract_v1.json) | ContractGuardian → Orchestrator gate |
 | Cost Review Spec | [ctcp_review_cost_v1.json](../specs/ctcp_review_cost_v1.json) | CostController → Orchestrator gate |
 | Find Web JSON | [ctcp_find_web_v1.json](../specs/ctcp_find_web_v1.json) | Researcher (external) → Local Orchestrator |
@@ -23,6 +24,7 @@
 | Contract | Authority | Producer / Consumer |
 |---|---|---|
 | [11_task_progress_dialogue.md](11_task_progress_dialogue.md) | Markdown contract | Frontend/support reply renderers → user-visible task replies |
+| [13_agent_exchange_contract.md](13_agent_exchange_contract.md) | Markdown contract | Virtual Team roles / TeamNet dispatch → provider prompt handoff |
 | [14_persona_test_lab.md](14_persona_test_lab.md) | Markdown contract | Persona-lab runner/judge/spec assets → isolated style regression evidence |
 | [30_artifact_contracts.md](30_artifact_contracts.md) | Markdown contract | Orchestrator/test runners/support delivery → run artifacts and demo evidence |
 | [40_reference_project.md](40_reference_project.md) | Markdown contract | scaffold/live-reference exporters → generated project provenance |

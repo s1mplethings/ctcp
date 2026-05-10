@@ -1,6 +1,7 @@
 # Agent TeamNet Contract (v0.2)
 
 `docs/00_CORE.md` is authoritative. This file turns that contract into role wiring for multi-agent execution.
+Role-to-role packet structure is owned by `docs/13_agent_exchange_contract.md`.
 
 ## TeamNet Mesh
 
@@ -55,6 +56,23 @@
 - Local Orchestrator/Librarian are low-cost context providers and gate drivers, not strategists.
 - Web Researcher provides offline, structured candidate evidence only; cannot become execution single point of failure.
 - Adversarial roles (`ContractGuardian`, `CostController`, optional red-team) exist to block unsafe plans; they cannot write code directly.
+
+## Exchange Packet Handoff
+
+TeamNet roles MAY carry a compact `agent_exchange` packet through dispatch requests.
+
+Rules:
+- the packet schema is `ctcp-agent-exchange-v1`
+- the packet is a handoff summary, not a second plan authority
+- `decisions`, `handoff.must_preserve`, and `handoff.must_not_do` must be treated as stronger than freeform prompt suggestions
+- `context_needs` declares required evidence for a broker/librarian path; it does not authorize direct unbounded MCP or web access
+- dispatch/runtime may truncate packet fields before storing them in the whiteboard or rendering them into prompts
+- absent packets preserve existing TeamNet behavior
+
+Mainline consumption:
+- dispatch whiteboard stores a sanitized exchange entry when present
+- api-agent prompt rendering includes an `AGENT_EXCHANGE` section when present
+- verification must prove connected + consumed before claiming a workflow optimization
 
 ## Dispatcher/Provider Wiring
 

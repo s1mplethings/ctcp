@@ -20,6 +20,8 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 import ctcp_dispatch
 import ctcp_orchestrate
+from tools.providers import mock_agent
+from tools.providers.project_generation_artifacts import normalize_output_contract_freeze
 
 
 FLOW_GATES: list[dict[str, str]] = [
@@ -131,6 +133,8 @@ def _build_api_stub_env(run_dir: Path) -> dict[str, str]:
         "OPENAI_BASE_URL": "",
         "CTCP_OPENAI_API_KEY": "",
         "CTCP_OPENAI_BASE_URL": "",
+        "CTCP_FORCE_PROVIDER": "",
+        "CTCP_FORMAL_API_ONLY": "",
     }
 
 
@@ -392,6 +396,52 @@ def _run_flow_with_fault(
 
 
 class MockAgentPipelineTests(unittest.TestCase):
+    def test_mock_source_generation_emits_provider_authored_project(self) -> None:
+        goal = "Generate a local runnable web service with README, /status route, tests, and final package."
+        with tempfile.TemporaryDirectory() as td:
+            run_dir = Path(td) / "run"
+            (run_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+            contract = normalize_output_contract_freeze({}, goal=goal, run_dir=run_dir)
+            _write_json(run_dir / "artifacts" / "output_contract_freeze.json", contract)
+            _write_json(
+                run_dir / "artifacts" / "context_pack.json",
+                {
+                    "schema_version": "ctcp-context-pack-v1",
+                    "goal": goal,
+                    "repo_slug": "ctcp",
+                    "summary": "mock project generation context",
+                    "files": [
+                        {"path": "docs/41_low_capability_project_generation.md", "why": "contract", "content": "provider source files"},
+                        {"path": "workflow_registry/wf_project_generation_manifest/recipe.yaml", "why": "workflow", "content": "source_generation deliver"},
+                        {"path": "scripts/project_generation_gate.py", "why": "gate", "content": "generic_validation web service"},
+                    ],
+                    "omitted": [],
+                },
+            )
+
+            result = mock_agent.execute(
+                repo_root=ROOT,
+                run_dir=run_dir,
+                request={
+                    "role": "chair",
+                    "action": "source_generation",
+                    "goal": goal,
+                    "target_path": "artifacts/source_generation_report.json",
+                },
+                config={},
+                guardrails_budgets={},
+            )
+
+            self.assertEqual(result.get("status"), "executed", msg=str(result))
+            report = _read_json(run_dir / "artifacts" / "source_generation_report.json")
+            self.assertIsInstance(report.get("generic_validation"), dict)
+            self.assertTrue(bool(dict(report.get("generic_validation", {})).get("passed", False)), msg=json.dumps(report.get("generic_validation", {}), indent=2))
+            materialization = dict(report.get("file_materialization", {}))
+            self.assertEqual(materialization.get("strategy"), "provider_authored_source")
+            self.assertTrue(bool(materialization.get("provider_source_files_applied", False)))
+            self.assertTrue((run_dir / str(contract.get("startup_entrypoint", ""))).exists())
+            self.assertTrue((run_dir / str(contract.get("startup_readme", ""))).exists())
+
     def test_linked_flow_smoke(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             run_dir = Path(td) / "run"

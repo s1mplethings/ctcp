@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from tools.providers.project_generation_domain_contract import detect_project_domain
+from tools.providers.project_generation_narrative_spec import apply_narrative_project_spec_defaults
 
 PRODUCTION_MODE = "production"
 BENCHMARK_MODE = "benchmark_regression"
@@ -234,8 +235,7 @@ def enrich_project_spec(
     spec["delivery_shape"] = str(delivery_shape).strip()
 
     if project_domain == "narrative_vn_editor":
-        spec.setdefault("acceptance_criteria", list(project_intent.get("acceptance_criteria", [])) or ["the generated project declares and satisfies its own domain-specific acceptance criteria"])
-        spec.setdefault("delivery_requirements", ["runnable project package", "startup instructions", "validation evidence"])
+        apply_narrative_project_spec_defaults(spec, project_intent)
         spec["project_specific_standards_source"] = "generated_project"
         return spec
 

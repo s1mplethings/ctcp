@@ -67,6 +67,95 @@ def _safe_whiteboard_hits(rows: Any, *, max_items: int = 5) -> list[dict[str, An
     return out
 
 
+def _safe_text_list(rows: Any, *, max_items: int = 8, max_chars: int = 180) -> list[str]:
+    values = rows if isinstance(rows, list) else [rows]
+    out: list[str] = []
+    for item in values:
+        text = _brief_text(str(item or ""), max_chars=max_chars)
+        if not text:
+            continue
+        out.append(text)
+        if len(out) >= max(1, int(max_items)):
+            break
+    return out
+
+
+def _safe_context_needs(rows: Any, *, max_items: int = 5) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    if not isinstance(rows, list):
+        return out
+    for item in rows:
+        if not isinstance(item, dict):
+            continue
+        query = _brief_text(str(item.get("query", "")), max_chars=180)
+        reason = _brief_text(str(item.get("reason", "")), max_chars=180)
+        kind = _brief_text(str(item.get("kind", "")), max_chars=40) or "repo"
+        if not query and not reason:
+            continue
+        row: dict[str, Any] = {"kind": kind}
+        if query:
+            row["query"] = query
+        if reason:
+            row["reason"] = reason
+        budget = item.get("budget")
+        if isinstance(budget, dict):
+            safe_budget: dict[str, int] = {}
+            for key in ("max_files", "max_total_bytes"):
+                try:
+                    value = int(budget.get(key, 0) or 0)
+                except Exception:
+                    value = 0
+                if value > 0:
+                    safe_budget[key] = value
+            if safe_budget:
+                row["budget"] = safe_budget
+        out.append(row)
+        if len(out) >= max(1, int(max_items)):
+            break
+    return out
+
+
+def _safe_handoff(value: Any) -> dict[str, Any]:
+    src = value if isinstance(value, dict) else {}
+    out: dict[str, Any] = {}
+    for key in ("next_role", "next_required_artifact"):
+        text = _brief_text(str(src.get(key, "")), max_chars=120)
+        if text:
+            out[key] = text
+    preserve = _safe_text_list(src.get("must_preserve", []), max_items=6, max_chars=180)
+    forbidden = _safe_text_list(src.get("must_not_do", []), max_items=6, max_chars=180)
+    if preserve:
+        out["must_preserve"] = preserve
+    if forbidden:
+        out["must_not_do"] = forbidden
+    return out
+
+
+def safe_agent_exchange_packet(value: Any) -> dict[str, Any]:
+    src = value if isinstance(value, dict) else {}
+    if not src:
+        return {}
+    out: dict[str, Any] = {}
+    schema = _brief_text(str(src.get("schema_version", "")), max_chars=80)
+    out["schema_version"] = schema or "ctcp-agent-exchange-v1"
+    for key in ("lane", "stage", "role", "goal"):
+        text = _brief_text(str(src.get(key, "")), max_chars=220 if key == "goal" else 80)
+        if text:
+            out[key] = text
+    out["input_refs"] = _safe_text_list(src.get("input_refs", []), max_items=8, max_chars=180)
+    out["context_needs"] = _safe_context_needs(src.get("context_needs", []), max_items=5)
+    for key in ("decisions", "assumptions", "open_questions", "risks", "acceptance_hooks", "evidence"):
+        out[key] = _safe_text_list(src.get(key, []), max_items=8, max_chars=220)
+    handoff = _safe_handoff(src.get("handoff", {}))
+    if handoff:
+        out["handoff"] = handoff
+    return {
+        key: value
+        for key, value in out.items()
+        if value not in ("", [], {})
+    }
+
+
 def _safe_whiteboard_entries(rows: Any, *, max_items: int = 120) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     if not isinstance(rows, list):
@@ -93,6 +182,9 @@ def _safe_whiteboard_entries(rows: Any, *, max_items: int = 120) -> list[dict[st
         if hits:
             entry["hits"] = hits
             entry["hit_count"] = len(hits)
+        exchange = safe_agent_exchange_packet(item.get("agent_exchange"))
+        if exchange:
+            entry["agent_exchange"] = exchange
         out.append(entry)
     return out
 
@@ -148,6 +240,9 @@ def _compact_whiteboard_snapshot(state: dict[str, Any], *, max_entries: int = 5)
         if hits:
             row["hits"] = hits
             row["hit_count"] = len(hits)
+        exchange = safe_agent_exchange_packet(item.get("agent_exchange"))
+        if exchange:
+            row["agent_exchange"] = exchange
         summary_entries.append(row)
     return {
         "path": SUPPORT_WHITEBOARD_REL.as_posix(),
@@ -292,6 +387,7 @@ def prepare_dispatch_whiteboard_context(
     target_path = _brief_text(str(request.get("target_path", "")), max_chars=140)
     reason = _brief_text(str(request.get("reason", "")), max_chars=220)
     query = _dispatch_whiteboard_query(request)
+    exchange = safe_agent_exchange_packet(request.get("agent_exchange"))
     last_query = _last_librarian_query(entries)
     should_lookup = bool(query) and query.lower() != last_query.lower()
     hits: list[dict[str, Any]] = []
@@ -305,6 +401,22 @@ def prepare_dispatch_whiteboard_context(
 
     dispatch_text = _brief_text(f"{role}/{action} -> {target_path}; {reason or 'dispatch requested'}", max_chars=260)
     entries.append({"ts": _now_iso(), "role": role, "kind": "dispatch_request", "text": dispatch_text, "query": query})
+    if exchange:
+        exchange_text = _brief_text(
+            f"{role}/{action} exchange stage={exchange.get('stage', '')} "
+            f"next={dict(exchange.get('handoff', {})).get('next_role', '')}",
+            max_chars=260,
+        )
+        entries.append(
+            {
+                "ts": _now_iso(),
+                "role": str(exchange.get("role", role)),
+                "kind": "agent_exchange",
+                "text": exchange_text,
+                "query": query,
+                "agent_exchange": exchange,
+            }
+        )
 
     if should_lookup:
         librarian_entry: dict[str, Any] = {
@@ -330,6 +442,7 @@ def prepare_dispatch_whiteboard_context(
         "query": query,
         "hits": hits,
         "lookup_error": lookup_error,
+        "agent_exchange": exchange,
         "snapshot": _compact_whiteboard_snapshot(board, max_entries=5),
     }
 
