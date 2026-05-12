@@ -1,0 +1,14 @@
+{
+  "case_id": "ecommerce_growth",
+  "title": "Shopify ecommerce growth multi-agent system",
+  "goal": "Create a Shopify ecommerce operations growth system. It analyzes orders, products, traffic, and conversion data; diagnoses sales decline; recommends promotions; suggests product title optimization; writes email marketing copy; decides which actions need human confirmation; and outputs a weekly growth report. Decide whether this should be multi-agent.",
+  "expected": [
+    "multi-agent consideration",
+    "data analyst",
+    "campaign strategist",
+    "copywriting",
+    "reporting",
+    "approval",
+    "separate analysis recommendation execution approval"
+  ]
+}

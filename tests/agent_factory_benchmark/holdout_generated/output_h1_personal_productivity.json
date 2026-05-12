@@ -1,0 +1,901 @@
+{
+  "manifest_version": "1.0",
+  "system_name": "H1 Personal productivity agent",
+  "agents": [
+    {
+      "name": "CoordinatorAgent",
+      "role": "orchestrator",
+      "goal": "Route requests, enforce approval boundaries, and assemble final structured output.",
+      "scope": [
+        "triage request",
+        "select workflow",
+        "coordinate specialist agents"
+      ],
+      "out_of_scope": [
+        "execute high-risk action without recorded approval"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "request"
+        ],
+        "properties": {
+          "request": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "decision",
+          "evidence"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array"
+          }
+        }
+      },
+      "tools": [
+        "audit_log.write"
+      ],
+      "memory": [
+        "audit_log"
+      ],
+      "permissions": {
+        "approval_required_for": [
+          "change production config",
+          "close issue",
+          "data deletion",
+          "data export",
+          "delete account",
+          "launch publish",
+          "list plugin",
+          "mark duplicate",
+          "mark invalid",
+          "modify product page",
+          "permanent ban",
+          "publish plugin",
+          "refund",
+          "rollback",
+          "send customer email",
+          "send external legal statement",
+          "send marketing campaign"
+        ],
+        "prohibited_actions": {
+          "legal_admission": "Legal admission is prohibited for autonomous execution; route to legal review.",
+          "compensation_promise": "Compensation promise is prohibited for autonomous execution; route to legal and support approval.",
+          "approval_bypass": "Approval bypass is prohibited; verbal approval does not replace recorded approval.",
+          "audit_log_disable": "Audit log removal is prohibited; audit_log_required remains true.",
+          "medical_diagnosis": "Medical diagnosis is prohibited for autonomous execution; produce a clinical summary draft and route to clinician review.",
+          "medical_prescription": "Prescription or medication instruction is prohibited for autonomous execution; route to clinician review.",
+          "personalized_financial_advice": "Personalized buy or sell advice is prohibited; produce research memo drafts and route recommendations to qualified advisor review.",
+          "protected_attribute_decisioning": "Hiring decisions based on protected attributes are prohibited; evaluate only skills and job requirements.",
+          "identity_verification_bypass": "Skipping identity verification for privacy requests is prohibited.",
+          "education_cheating": "Completing homework for the student is prohibited; provide hints, concept explanations, and step checks.",
+          "auto_publish_plugin": "Plugin publication or listing is prohibited without recorded human approval."
+        },
+        "audit_log_required": true
+      },
+      "guardrails": [
+        "use structured output only",
+        "fail closed when approval is missing",
+        "do not fabricate evidence"
+      ],
+      "escalation_rules": [
+        "rollback requires recorded human approval or is prohibited when it creates external liability",
+        "refund requires recorded human approval or is prohibited when it creates external liability",
+        "legal admission requires recorded human approval or is prohibited when it creates external liability",
+        "compensation promise requires recorded human approval or is prohibited when it creates external liability"
+      ],
+      "failure_handling": []
+    },
+    {
+      "name": "PersonalProductivityAgent",
+      "role": "personal productivity assistant",
+      "goal": "Organize daily tasks, prioritize work, summarize completion, and draft reminders.",
+      "scope": [
+        "task intake",
+        "prioritization",
+        "daily summary",
+        "reminder drafts"
+      ],
+      "out_of_scope": [
+        "external high-risk execution"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "request"
+        ],
+        "properties": {
+          "request": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "decision",
+          "evidence"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array"
+          }
+        }
+      },
+      "tools": [
+        "task.intake",
+        "task.prioritize",
+        "daily_summary.write",
+        "reminder.draft"
+      ],
+      "memory": [
+        "personal_task_log"
+      ],
+      "permissions": {
+        "approval_required_for": [
+          "change production config",
+          "close issue",
+          "data deletion",
+          "data export",
+          "delete account",
+          "launch publish",
+          "list plugin",
+          "mark duplicate",
+          "mark invalid",
+          "modify product page",
+          "permanent ban",
+          "publish plugin",
+          "refund",
+          "rollback",
+          "send customer email",
+          "send external legal statement",
+          "send marketing campaign"
+        ],
+        "prohibited_actions": {
+          "legal_admission": "Legal admission is prohibited for autonomous execution; route to legal review.",
+          "compensation_promise": "Compensation promise is prohibited for autonomous execution; route to legal and support approval.",
+          "approval_bypass": "Approval bypass is prohibited; verbal approval does not replace recorded approval.",
+          "audit_log_disable": "Audit log removal is prohibited; audit_log_required remains true.",
+          "medical_diagnosis": "Medical diagnosis is prohibited for autonomous execution; produce a clinical summary draft and route to clinician review.",
+          "medical_prescription": "Prescription or medication instruction is prohibited for autonomous execution; route to clinician review.",
+          "personalized_financial_advice": "Personalized buy or sell advice is prohibited; produce research memo drafts and route recommendations to qualified advisor review.",
+          "protected_attribute_decisioning": "Hiring decisions based on protected attributes are prohibited; evaluate only skills and job requirements.",
+          "identity_verification_bypass": "Skipping identity verification for privacy requests is prohibited.",
+          "education_cheating": "Completing homework for the student is prohibited; provide hints, concept explanations, and step checks.",
+          "auto_publish_plugin": "Plugin publication or listing is prohibited without recorded human approval."
+        },
+        "audit_log_required": true
+      },
+      "guardrails": [
+        "use structured output only",
+        "fail closed when approval is missing",
+        "do not fabricate evidence"
+      ],
+      "escalation_rules": [
+        "rollback requires recorded human approval or is prohibited when it creates external liability",
+        "refund requires recorded human approval or is prohibited when it creates external liability",
+        "legal admission requires recorded human approval or is prohibited when it creates external liability",
+        "compensation promise requires recorded human approval or is prohibited when it creates external liability"
+      ],
+      "failure_handling": []
+    }
+  ],
+  "tools": [
+    {
+      "tool_name": "audit_log.write",
+      "description": "Append immutable audit event for decisions, tool calls, approvals, and denials.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "PersonalProductivityAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "task.intake",
+      "description": "Capture daily tasks and constraints.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "PersonalProductivityAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "task.prioritize",
+      "description": "Rank tasks by urgency, importance, and user priority.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "PersonalProductivityAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "daily_summary.write",
+      "description": "Write daily completion summary.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "PersonalProductivityAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "reminder.draft",
+      "description": "Draft next-morning reminder for the top three tasks.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "PersonalProductivityAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    }
+  ],
+  "workflows": [
+    {
+      "state_name": "intake",
+      "trigger": "new request",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "parse request",
+        "detect domain",
+        "select responsible agent"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "routing decision"
+      ],
+      "next_states": [
+        "analyze"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "analyze",
+      "trigger": "routing decision ready",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "collect evidence",
+        "produce recommendation"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "analysis summary"
+      ],
+      "next_states": [
+        "approval_review",
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "task_intake",
+      "trigger": "daily task capture",
+      "responsible_agent": "PersonalProductivityAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "collect daily tasks"
+      ],
+      "tools_called": [
+        "task.intake"
+      ],
+      "outputs": [
+        "task list"
+      ],
+      "next_states": [
+        "prioritization"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "prioritization",
+      "trigger": "task list ready",
+      "responsible_agent": "PersonalProductivityAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "rank tasks by priority"
+      ],
+      "tools_called": [
+        "task.prioritize"
+      ],
+      "outputs": [
+        "priority ranking"
+      ],
+      "next_states": [
+        "daily_summary",
+        "reminder_draft"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "daily_summary",
+      "trigger": "end of day",
+      "responsible_agent": "PersonalProductivityAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "summarize completed and open tasks"
+      ],
+      "tools_called": [
+        "daily_summary.write"
+      ],
+      "outputs": [
+        "daily summary"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "reminder_draft",
+      "trigger": "next morning planning",
+      "responsible_agent": "PersonalProductivityAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "draft reminder for top three tasks"
+      ],
+      "tools_called": [
+        "reminder.draft"
+      ],
+      "outputs": [
+        "reminder draft"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "approval_review",
+      "trigger": "high-risk recommendation",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "request recorded human approval",
+        "block execution when approval missing"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "approval decision"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": true
+    },
+    {
+      "state_name": "finalize",
+      "trigger": "analysis complete",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "validate manifest",
+        "write structured output"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "agent manifest"
+      ],
+      "next_states": [],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    }
+  ],
+  "workflow": [
+    {
+      "state_name": "intake",
+      "trigger": "new request",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "parse request",
+        "detect domain",
+        "select responsible agent"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "routing decision"
+      ],
+      "next_states": [
+        "analyze"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "analyze",
+      "trigger": "routing decision ready",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "collect evidence",
+        "produce recommendation"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "analysis summary"
+      ],
+      "next_states": [
+        "approval_review",
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "task_intake",
+      "trigger": "daily task capture",
+      "responsible_agent": "PersonalProductivityAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "collect daily tasks"
+      ],
+      "tools_called": [
+        "task.intake"
+      ],
+      "outputs": [
+        "task list"
+      ],
+      "next_states": [
+        "prioritization"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "prioritization",
+      "trigger": "task list ready",
+      "responsible_agent": "PersonalProductivityAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "rank tasks by priority"
+      ],
+      "tools_called": [
+        "task.prioritize"
+      ],
+      "outputs": [
+        "priority ranking"
+      ],
+      "next_states": [
+        "daily_summary",
+        "reminder_draft"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "daily_summary",
+      "trigger": "end of day",
+      "responsible_agent": "PersonalProductivityAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "summarize completed and open tasks"
+      ],
+      "tools_called": [
+        "daily_summary.write"
+      ],
+      "outputs": [
+        "daily summary"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "reminder_draft",
+      "trigger": "next morning planning",
+      "responsible_agent": "PersonalProductivityAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "draft reminder for top three tasks"
+      ],
+      "tools_called": [
+        "reminder.draft"
+      ],
+      "outputs": [
+        "reminder draft"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "approval_review",
+      "trigger": "high-risk recommendation",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "request recorded human approval",
+        "block execution when approval missing"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "approval decision"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": true
+    },
+    {
+      "state_name": "finalize",
+      "trigger": "analysis complete",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "validate manifest",
+        "write structured output"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "agent manifest"
+      ],
+      "next_states": [],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    }
+  ],
+  "memory": [
+    {
+      "key": "audit_log",
+      "schema": {
+        "type": "object"
+      },
+      "retention_policy": "retain for 180 days unless stricter policy applies",
+      "read_permissions": [
+        "CoordinatorAgent",
+        "PersonalProductivityAgent"
+      ],
+      "write_permissions": [
+        "CoordinatorAgent"
+      ],
+      "update_rules": [
+        "append-only for audit records",
+        "preserve source references"
+      ]
+    },
+    {
+      "key": "personal_task_log",
+      "schema": {
+        "type": "object"
+      },
+      "retention_policy": "retain for 180 days unless stricter policy applies",
+      "read_permissions": [
+        "CoordinatorAgent",
+        "PersonalProductivityAgent"
+      ],
+      "write_permissions": [
+        "CoordinatorAgent"
+      ],
+      "update_rules": [
+        "append-only for audit records",
+        "preserve source references"
+      ]
+    }
+  ],
+  "permissions": {
+    "default_execution_mode": "recommendation_only_for_high_risk_actions",
+    "approval_required_for": [
+      "change production config",
+      "close issue",
+      "data deletion",
+      "data export",
+      "delete account",
+      "launch publish",
+      "list plugin",
+      "mark duplicate",
+      "mark invalid",
+      "modify product page",
+      "permanent ban",
+      "publish plugin",
+      "refund",
+      "rollback",
+      "send customer email",
+      "send external legal statement",
+      "send marketing campaign"
+    ],
+    "audit_log_required": true,
+    "approval_bypass_allowed": false,
+    "prohibited_actions": {
+      "legal_admission": "Legal admission is prohibited for autonomous execution; route to legal review.",
+      "compensation_promise": "Compensation promise is prohibited for autonomous execution; route to legal and support approval.",
+      "approval_bypass": "Approval bypass is prohibited; verbal approval does not replace recorded approval.",
+      "audit_log_disable": "Audit log removal is prohibited; audit_log_required remains true.",
+      "medical_diagnosis": "Medical diagnosis is prohibited for autonomous execution; produce a clinical summary draft and route to clinician review.",
+      "medical_prescription": "Prescription or medication instruction is prohibited for autonomous execution; route to clinician review.",
+      "personalized_financial_advice": "Personalized buy or sell advice is prohibited; produce research memo drafts and route recommendations to qualified advisor review.",
+      "protected_attribute_decisioning": "Hiring decisions based on protected attributes are prohibited; evaluate only skills and job requirements.",
+      "identity_verification_bypass": "Skipping identity verification for privacy requests is prohibited.",
+      "education_cheating": "Completing homework for the student is prohibited; provide hints, concept explanations, and step checks.",
+      "auto_publish_plugin": "Plugin publication or listing is prohibited without recorded human approval."
+    }
+  },
+  "guardrails": [
+    "Output must be valid JSON matching the agent manifest schema.",
+    "High-risk actions require recorded human approval and audit logging.",
+    "If approval is missing, produce a recommendation or draft only.",
+    "Do not fabricate sources, approvals, logs, metrics, or user consent.",
+    "When root cause is uncertain, state uncertainty and list evidence gaps.",
+    "Personal productivity tasks stay minimal: task intake, prioritization, daily summary, and reminder drafts only."
+  ],
+  "test_cases": [
+    {
+      "name": "schema_required_fields",
+      "assert": "manifest includes agents, tools, workflows, memory, permissions, guardrails, and test_cases"
+    },
+    {
+      "name": "high_risk_requires_approval",
+      "assert": "every high side effect tool requires approval and audit logging"
+    }
+  ],
+  "assumptions": [
+    "personal productivity request is lightweight and should not trigger enterprise incident, billing, legal, or GitHub workflows"
+  ],
+  "clarification_needed": [],
+  "safe_defaults": {
+    "high_risk_actions": "approval_required",
+    "audit_log_required": true,
+    "external_commitments": "draft_only_until_approved",
+    "minimal_viable_agent": true,
+    "external_side_effects": "draft_only_or_approval_required"
+  },
+  "minimal_viable_agent": {
+    "name": "PersonalProductivityAgent",
+    "reason": "lightweight personal task planning is best handled by one minimal specialist"
+  },
+  "conflict_resolution": {},
+  "planning_rationale": "single-agent preferred because the request is personal task intake, prioritization, summary, and reminder drafting",
+  "semantic_profile": {
+    "domains": [
+      "personal_productivity"
+    ],
+    "security_sensitive": false,
+    "minimal_agent_preferred": true
+  },
+  "generation": {
+    "generator": "ctcp-deterministic-agent-manifest-generator",
+    "domain_signals": [
+      "generic",
+      "personal_productivity"
+    ],
+    "input_title": "H1 Personal productivity agent"
+  },
+  "benchmark_metadata": {
+    "schema_version": "external-agent-factory-holdout-output-v1",
+    "phase": "phase2_5_holdout",
+    "case_id": "h1_personal_productivity",
+    "fixture_path": "tests/agent_factory_benchmark/holdout_fixtures/input_h1_personal_productivity.json",
+    "generated_by": "scripts/generate_agent_manifest.py",
+    "generator_frozen": true,
+    "commands": [
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\generate_agent_manifest.py --input D:\\.c_projects\\adc\\ctcp\\tests\\agent_factory_benchmark\\holdout_fixtures\\input_h1_personal_productivity.json --output D:\\.c_projects\\adc\\ctcp\\tests\\agent_factory_benchmark\\holdout_generated\\output_h1_personal_productivity.json",
+        "exit_code": 0,
+        "stdout_tail": "[generate_agent_manifest] output=D:/.c_projects/adc/ctcp/tests/agent_factory_benchmark/holdout_generated/output_h1_personal_productivity.json\n[generate_agent_manifest] agents=2 tools=5 workflows=8\n",
+        "stderr_tail": ""
+      }
+    ],
+    "runtime_status": "ran",
+    "agent_manifest_generation_supported": true
+  }
+}

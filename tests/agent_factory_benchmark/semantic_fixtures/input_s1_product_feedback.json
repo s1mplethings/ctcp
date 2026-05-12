@@ -1,0 +1,15 @@
+{
+  "case_id": "s1_product_feedback",
+  "title": "S1 Product feedback daily digest agent",
+  "goal": "创建一个 agent，帮我每天整理产品反馈。要求：收集反馈、分类、总结趋势、输出周报。没有提到 GitHub、DevOps、退款、法务、incident、rollback。",
+  "semantic_expectations": {
+    "required_keywords": ["feedback", "classification", "trend", "weekly report"],
+    "forbidden_keywords": ["rollback", "refund", "deployment history"],
+    "required_tool_domains": ["feedback"],
+    "forbidden_tool_domains": ["devops", "billing", "legal"],
+    "required_workflow_states": ["ingest_feedback", "classify_feedback", "summarize_trends", "weekly_report"],
+    "forbidden_workflow_states": ["incident_response", "rollback", "refund"],
+    "prefer_single_agent": true,
+    "lightweight_case": true
+  }
+}

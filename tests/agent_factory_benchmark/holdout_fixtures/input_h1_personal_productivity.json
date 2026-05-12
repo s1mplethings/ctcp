@@ -1,0 +1,12 @@
+{
+  "case_id": "h1_personal_productivity",
+  "title": "H1 Personal productivity agent",
+  "goal": "创建一个 personal productivity agent。它需要整理我的每日任务，根据优先级排序，每天晚上总结完成情况，明天早上提醒我最重要的 3 件事。",
+  "holdout_expectations": {
+    "required_keywords": ["task", "priority", "daily summary", "reminder"],
+    "forbidden_domains": ["devops", "billing", "legal", "github_issue"],
+    "required_workflow_states": ["task_intake", "prioritization", "daily_summary", "reminder_draft"],
+    "lightweight_case": true,
+    "high_risk_external_actions": []
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "benchmark_id": "concrete_issue_tracker_api",
+  "title": "Local Issue Tracker API",
+  "goal": "Generate a real runnable local HTTP API project for tracking issues. The project must not be an agent manifest, agent scaffold, or agent dry-run. It must be a concrete software project with README, source code, automated tests, and SQLite persistence.",
+  "project_requirements": {
+    "runtime": "Python 3.10+",
+    "storage": "SQLite database file created locally",
+    "api": {
+      "base_url": "http://127.0.0.1:<port>",
+      "required_endpoints": [
+        "POST /issues",
+        "GET /issues",
+        "GET /issues/{id}",
+        "PATCH /issues/{id}/status",
+        "POST /issues/{id}/close"
+      ]
+    },
+    "issue_model": {
+      "fields": [
+        "id",
+        "title",
+        "description",
+        "status",
+        "created_at",
+        "updated_at"
+      ],
+      "valid_statuses": [
+        "open",
+        "in_progress",
+        "closed"
+      ]
+    }
+  },
+  "acceptance_criteria": [
+    "README.md documents setup, tests, and how to start the API server.",
+    "Source files implement a local HTTP API, not only documentation or schemas.",
+    "Tests exist and can be executed by the benchmark.",
+    "The API server can be started locally.",
+    "The benchmark can create, list, fetch, update status, and close an issue with real HTTP requests.",
+    "SQLite usage is detectable in source or a SQLite database file is created during runtime."
+  ],
+  "negative_constraints": [
+    "Do not generate an agent manifest.",
+    "Do not generate an agent scaffold.",
+    "Do not generate a dry-run-only agent project.",
+    "Do not treat permissions, guardrails, or manifest fields as the concrete application."
+  ]
+}

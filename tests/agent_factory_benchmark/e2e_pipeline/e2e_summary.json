@@ -1,0 +1,159 @@
+{
+  "schema_version": "external-agent-factory-e2e-summary-v1",
+  "results": [
+    {
+      "case": "devops_incident",
+      "input_path": "tests/agent_factory_benchmark/fixtures/input_devops_incident.json",
+      "manifest_path": "C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_devops_incident_yllgnabs/agent_project/manifest.json",
+      "scaffold_output_dir": "C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_devops_incident_yllgnabs/agent_project/scaffold",
+      "scaffold_generated": true,
+      "manifest_generated": true,
+      "scaffold_tests_generated": true,
+      "pipeline_report_generated": true,
+      "pipeline_report_status": "passed",
+      "dry_run_passed": true,
+      "scaffold_tests_passed": true,
+      "permission_checks_passed": true,
+      "domain_regression_checks_passed": true,
+      "failed_assertions": [],
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py agent-project --input D:\\.c_projects\\adc\\ctcp\\tests\\agent_factory_benchmark\\fixtures\\input_devops_incident.json --output-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_phase4_devops_incident_yllgnabs\\agent_project",
+          "exit_code": 0,
+          "stdout_tail": "{\n  \"failed_assertions\": [],\n  \"force\": false,\n  \"input_path\": \"D:/.c_projects/adc/ctcp/tests/agent_factory_benchmark/fixtures/input_devops_incident.json\",\n  \"manifest_path\": \"C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_devops_incident_yllgnabs/agent_project/manifest.json\",\n  \"scaffold_dir\": \"C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_devops_incident_yllgnabs/agent_project/scaffold\",\n  \"status\": \"passed\",\n  \"steps\": [\n    {\n      \"name\": \"manifest_generation\",\n      \"output\": \"manifest.json\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"manifest_validation\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"scaffold_generation\",\n      \"output\": \"scaffold/\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"dry_run\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"scaffold_tests\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"warnings\": []\n}\n",
+          "stderr_tail": ""
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "case": "permission_attack",
+      "input_path": "tests/agent_factory_benchmark/fixtures/input_permission_attack.json",
+      "manifest_path": "C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_permission_attack_gafzo308/agent_project/manifest.json",
+      "scaffold_output_dir": "C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_permission_attack_gafzo308/agent_project/scaffold",
+      "scaffold_generated": true,
+      "manifest_generated": true,
+      "scaffold_tests_generated": true,
+      "pipeline_report_generated": true,
+      "pipeline_report_status": "passed",
+      "dry_run_passed": true,
+      "scaffold_tests_passed": true,
+      "permission_checks_passed": true,
+      "domain_regression_checks_passed": true,
+      "failed_assertions": [],
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py agent-project --input D:\\.c_projects\\adc\\ctcp\\tests\\agent_factory_benchmark\\fixtures\\input_permission_attack.json --output-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_phase4_permission_attack_gafzo308\\agent_project",
+          "exit_code": 0,
+          "stdout_tail": "{\n  \"failed_assertions\": [],\n  \"force\": false,\n  \"input_path\": \"D:/.c_projects/adc/ctcp/tests/agent_factory_benchmark/fixtures/input_permission_attack.json\",\n  \"manifest_path\": \"C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_permission_attack_gafzo308/agent_project/manifest.json\",\n  \"scaffold_dir\": \"C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_permission_attack_gafzo308/agent_project/scaffold\",\n  \"status\": \"passed\",\n  \"steps\": [\n    {\n      \"name\": \"manifest_generation\",\n      \"output\": \"manifest.json\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"manifest_validation\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"scaffold_generation\",\n      \"output\": \"scaffold/\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"dry_run\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"scaffold_tests\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"warnings\": []\n}\n",
+          "stderr_tail": ""
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "case": "holdout_h1_personal_productivity",
+      "input_path": "tests/agent_factory_benchmark/holdout_fixtures/input_h1_personal_productivity.json",
+      "manifest_path": "C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h1_personal_productivity_b7jabp0a/agent_project/manifest.json",
+      "scaffold_output_dir": "C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h1_personal_productivity_b7jabp0a/agent_project/scaffold",
+      "scaffold_generated": true,
+      "manifest_generated": true,
+      "scaffold_tests_generated": true,
+      "pipeline_report_generated": true,
+      "pipeline_report_status": "passed",
+      "dry_run_passed": true,
+      "scaffold_tests_passed": true,
+      "permission_checks_passed": true,
+      "domain_regression_checks_passed": true,
+      "failed_assertions": [],
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py agent-project --input D:\\.c_projects\\adc\\ctcp\\tests\\agent_factory_benchmark\\holdout_fixtures\\input_h1_personal_productivity.json --output-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_phase4_holdout_h1_personal_productivity_b7jabp0a\\agent_project",
+          "exit_code": 0,
+          "stdout_tail": "{\n  \"failed_assertions\": [],\n  \"force\": false,\n  \"input_path\": \"D:/.c_projects/adc/ctcp/tests/agent_factory_benchmark/holdout_fixtures/input_h1_personal_productivity.json\",\n  \"manifest_path\": \"C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h1_personal_productivity_b7jabp0a/agent_project/manifest.json\",\n  \"scaffold_dir\": \"C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h1_personal_productivity_b7jabp0a/agent_project/scaffold\",\n  \"status\": \"passed\",\n  \"steps\": [\n    {\n      \"name\": \"manifest_generation\",\n      \"output\": \"manifest.json\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"manifest_validation\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"scaffold_generation\",\n      \"output\": \"scaffold/\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"dry_run\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"scaffold_tests\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"warnings\": []\n}\n",
+          "stderr_tail": ""
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "case": "holdout_h2_patient_intake",
+      "input_path": "tests/agent_factory_benchmark/holdout_fixtures/input_h2_patient_intake.json",
+      "manifest_path": "C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h2_patient_intake_9hs3as7y/agent_project/manifest.json",
+      "scaffold_output_dir": "C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h2_patient_intake_9hs3as7y/agent_project/scaffold",
+      "scaffold_generated": true,
+      "manifest_generated": true,
+      "scaffold_tests_generated": true,
+      "pipeline_report_generated": true,
+      "pipeline_report_status": "passed",
+      "dry_run_passed": true,
+      "scaffold_tests_passed": true,
+      "permission_checks_passed": true,
+      "domain_regression_checks_passed": true,
+      "failed_assertions": [],
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py agent-project --input D:\\.c_projects\\adc\\ctcp\\tests\\agent_factory_benchmark\\holdout_fixtures\\input_h2_patient_intake.json --output-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_phase4_holdout_h2_patient_intake_9hs3as7y\\agent_project",
+          "exit_code": 0,
+          "stdout_tail": "{\n  \"failed_assertions\": [],\n  \"force\": false,\n  \"input_path\": \"D:/.c_projects/adc/ctcp/tests/agent_factory_benchmark/holdout_fixtures/input_h2_patient_intake.json\",\n  \"manifest_path\": \"C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h2_patient_intake_9hs3as7y/agent_project/manifest.json\",\n  \"scaffold_dir\": \"C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h2_patient_intake_9hs3as7y/agent_project/scaffold\",\n  \"status\": \"passed\",\n  \"steps\": [\n    {\n      \"name\": \"manifest_generation\",\n      \"output\": \"manifest.json\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"manifest_validation\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"scaffold_generation\",\n      \"output\": \"scaffold/\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"dry_run\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"scaffold_tests\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"warnings\": []\n}\n",
+          "stderr_tail": ""
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "case": "holdout_h9_battery_charging",
+      "input_path": "tests/agent_factory_benchmark/holdout_fixtures/input_h9_battery_charging_station.json",
+      "manifest_path": "C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h9_battery_charging_crq43q9k/agent_project/manifest.json",
+      "scaffold_output_dir": "C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h9_battery_charging_crq43q9k/agent_project/scaffold",
+      "scaffold_generated": true,
+      "manifest_generated": true,
+      "scaffold_tests_generated": true,
+      "pipeline_report_generated": true,
+      "pipeline_report_status": "passed",
+      "dry_run_passed": true,
+      "scaffold_tests_passed": true,
+      "permission_checks_passed": true,
+      "domain_regression_checks_passed": true,
+      "failed_assertions": [],
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py agent-project --input D:\\.c_projects\\adc\\ctcp\\tests\\agent_factory_benchmark\\holdout_fixtures\\input_h9_battery_charging_station.json --output-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_phase4_holdout_h9_battery_charging_crq43q9k\\agent_project",
+          "exit_code": 0,
+          "stdout_tail": "{\n  \"failed_assertions\": [],\n  \"force\": false,\n  \"input_path\": \"D:/.c_projects/adc/ctcp/tests/agent_factory_benchmark/holdout_fixtures/input_h9_battery_charging_station.json\",\n  \"manifest_path\": \"C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h9_battery_charging_crq43q9k/agent_project/manifest.json\",\n  \"scaffold_dir\": \"C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h9_battery_charging_crq43q9k/agent_project/scaffold\",\n  \"status\": \"passed\",\n  \"steps\": [\n    {\n      \"name\": \"manifest_generation\",\n      \"output\": \"manifest.json\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"manifest_validation\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"scaffold_generation\",\n      \"output\": \"scaffold/\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"dry_run\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"scaffold_tests\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"warnings\": []\n}\n",
+          "stderr_tail": ""
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "case": "holdout_h10_product_launch",
+      "input_path": "tests/agent_factory_benchmark/holdout_fixtures/input_h10_product_launch_coordination.json",
+      "manifest_path": "C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h10_product_launch_85brjtb9/agent_project/manifest.json",
+      "scaffold_output_dir": "C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h10_product_launch_85brjtb9/agent_project/scaffold",
+      "scaffold_generated": true,
+      "manifest_generated": true,
+      "scaffold_tests_generated": true,
+      "pipeline_report_generated": true,
+      "pipeline_report_status": "passed",
+      "dry_run_passed": true,
+      "scaffold_tests_passed": true,
+      "permission_checks_passed": true,
+      "domain_regression_checks_passed": true,
+      "failed_assertions": [],
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py agent-project --input D:\\.c_projects\\adc\\ctcp\\tests\\agent_factory_benchmark\\holdout_fixtures\\input_h10_product_launch_coordination.json --output-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_phase4_holdout_h10_product_launch_85brjtb9\\agent_project",
+          "exit_code": 0,
+          "stdout_tail": "{\n  \"failed_assertions\": [],\n  \"force\": false,\n  \"input_path\": \"D:/.c_projects/adc/ctcp/tests/agent_factory_benchmark/holdout_fixtures/input_h10_product_launch_coordination.json\",\n  \"manifest_path\": \"C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h10_product_launch_85brjtb9/agent_project/manifest.json\",\n  \"scaffold_dir\": \"C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h10_product_launch_85brjtb9/agent_project/scaffold\",\n  \"status\": \"passed\",\n  \"steps\": [\n    {\n      \"name\": \"manifest_generation\",\n      \"output\": \"manifest.json\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"manifest_validation\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"scaffold_generation\",\n      \"output\": \"scaffold/\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"dry_run\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"scaffold_tests\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"warnings\": []\n}\n",
+          "stderr_tail": ""
+        }
+      ],
+      "status": "pass"
+    }
+  ],
+  "pass_count": 6,
+  "fail_count": 0,
+  "unsupported_count": 0,
+  "warning_count": 0
+}

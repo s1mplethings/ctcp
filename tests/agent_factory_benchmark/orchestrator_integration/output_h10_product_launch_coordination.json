@@ -1,0 +1,1610 @@
+{
+  "manifest_version": "1.0",
+  "system_name": "H10 Product launch coordination system",
+  "agents": [
+    {
+      "name": "CoordinatorAgent",
+      "role": "orchestrator",
+      "goal": "Route requests, enforce approval boundaries, and assemble final structured output.",
+      "scope": [
+        "triage request",
+        "select workflow",
+        "coordinate specialist agents"
+      ],
+      "out_of_scope": [
+        "execute high-risk action without recorded approval"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "request"
+        ],
+        "properties": {
+          "request": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "decision",
+          "evidence"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array"
+          }
+        }
+      },
+      "tools": [
+        "audit_log.write"
+      ],
+      "memory": [
+        "audit_log"
+      ],
+      "permissions": {
+        "approval_required_for": [
+          "change production config",
+          "close issue",
+          "data deletion",
+          "data export",
+          "delete account",
+          "launch publish",
+          "list plugin",
+          "mark duplicate",
+          "mark invalid",
+          "modify product page",
+          "permanent ban",
+          "publish plugin",
+          "refund",
+          "rollback",
+          "send customer email",
+          "send external legal statement",
+          "send marketing campaign"
+        ],
+        "prohibited_actions": {
+          "legal_admission": "Legal admission is prohibited for autonomous execution; route to legal review.",
+          "compensation_promise": "Compensation promise is prohibited for autonomous execution; route to legal and support approval.",
+          "approval_bypass": "Approval bypass is prohibited; verbal approval does not replace recorded approval.",
+          "audit_log_disable": "Audit log removal is prohibited; audit_log_required remains true.",
+          "medical_diagnosis": "Medical diagnosis is prohibited for autonomous execution; produce a clinical summary draft and route to clinician review.",
+          "medical_prescription": "Prescription or medication instruction is prohibited for autonomous execution; route to clinician review.",
+          "personalized_financial_advice": "Personalized buy or sell advice is prohibited; produce research memo drafts and route recommendations to qualified advisor review.",
+          "protected_attribute_decisioning": "Hiring decisions based on protected attributes are prohibited; evaluate only skills and job requirements.",
+          "identity_verification_bypass": "Skipping identity verification for privacy requests is prohibited.",
+          "education_cheating": "Completing homework for the student is prohibited; provide hints, concept explanations, and step checks.",
+          "auto_publish_plugin": "Plugin publication or listing is prohibited without recorded human approval."
+        },
+        "audit_log_required": true
+      },
+      "guardrails": [
+        "use structured output only",
+        "fail closed when approval is missing",
+        "do not fabricate evidence"
+      ],
+      "escalation_rules": [
+        "rollback requires recorded human approval or is prohibited when it creates external liability",
+        "refund requires recorded human approval or is prohibited when it creates external liability",
+        "legal admission requires recorded human approval or is prohibited when it creates external liability",
+        "compensation promise requires recorded human approval or is prohibited when it creates external liability"
+      ],
+      "failure_handling": []
+    },
+    {
+      "name": "LaunchCoordinationAgent",
+      "role": "launch coordinator",
+      "goal": "Coordinate product launch readiness across product, marketing, support, and sales.",
+      "scope": [
+        "launch coordination",
+        "approval before publish"
+      ],
+      "out_of_scope": [
+        "incident response",
+        "rollback"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "request"
+        ],
+        "properties": {
+          "request": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "decision",
+          "evidence"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array"
+          }
+        }
+      },
+      "tools": [
+        "checklist.write",
+        "launch_publish.approval_request"
+      ],
+      "memory": [
+        "launch_readiness_log"
+      ],
+      "permissions": {
+        "approval_required_for": [
+          "change production config",
+          "close issue",
+          "data deletion",
+          "data export",
+          "delete account",
+          "launch publish",
+          "list plugin",
+          "mark duplicate",
+          "mark invalid",
+          "modify product page",
+          "permanent ban",
+          "publish plugin",
+          "refund",
+          "rollback",
+          "send customer email",
+          "send external legal statement",
+          "send marketing campaign"
+        ],
+        "prohibited_actions": {
+          "legal_admission": "Legal admission is prohibited for autonomous execution; route to legal review.",
+          "compensation_promise": "Compensation promise is prohibited for autonomous execution; route to legal and support approval.",
+          "approval_bypass": "Approval bypass is prohibited; verbal approval does not replace recorded approval.",
+          "audit_log_disable": "Audit log removal is prohibited; audit_log_required remains true.",
+          "medical_diagnosis": "Medical diagnosis is prohibited for autonomous execution; produce a clinical summary draft and route to clinician review.",
+          "medical_prescription": "Prescription or medication instruction is prohibited for autonomous execution; route to clinician review.",
+          "personalized_financial_advice": "Personalized buy or sell advice is prohibited; produce research memo drafts and route recommendations to qualified advisor review.",
+          "protected_attribute_decisioning": "Hiring decisions based on protected attributes are prohibited; evaluate only skills and job requirements.",
+          "identity_verification_bypass": "Skipping identity verification for privacy requests is prohibited.",
+          "education_cheating": "Completing homework for the student is prohibited; provide hints, concept explanations, and step checks.",
+          "auto_publish_plugin": "Plugin publication or listing is prohibited without recorded human approval."
+        },
+        "audit_log_required": true
+      },
+      "guardrails": [
+        "use structured output only",
+        "fail closed when approval is missing",
+        "do not fabricate evidence"
+      ],
+      "escalation_rules": [
+        "rollback requires recorded human approval or is prohibited when it creates external liability",
+        "refund requires recorded human approval or is prohibited when it creates external liability",
+        "legal admission requires recorded human approval or is prohibited when it creates external liability",
+        "compensation promise requires recorded human approval or is prohibited when it creates external liability"
+      ],
+      "failure_handling": []
+    },
+    {
+      "name": "PRDExtractionAgent",
+      "role": "PRD extraction specialist",
+      "goal": "Extract launch features and customer-facing changes from PRDs.",
+      "scope": [
+        "PRD extraction",
+        "feature extraction"
+      ],
+      "out_of_scope": [
+        "deployment history analysis"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "request"
+        ],
+        "properties": {
+          "request": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "decision",
+          "evidence"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array"
+          }
+        }
+      },
+      "tools": [
+        "prd.read",
+        "prd.feature.extract"
+      ],
+      "memory": [
+        "prd_feature_index"
+      ],
+      "permissions": {
+        "approval_required_for": [
+          "change production config",
+          "close issue",
+          "data deletion",
+          "data export",
+          "delete account",
+          "launch publish",
+          "list plugin",
+          "mark duplicate",
+          "mark invalid",
+          "modify product page",
+          "permanent ban",
+          "publish plugin",
+          "refund",
+          "rollback",
+          "send customer email",
+          "send external legal statement",
+          "send marketing campaign"
+        ],
+        "prohibited_actions": {
+          "legal_admission": "Legal admission is prohibited for autonomous execution; route to legal review.",
+          "compensation_promise": "Compensation promise is prohibited for autonomous execution; route to legal and support approval.",
+          "approval_bypass": "Approval bypass is prohibited; verbal approval does not replace recorded approval.",
+          "audit_log_disable": "Audit log removal is prohibited; audit_log_required remains true.",
+          "medical_diagnosis": "Medical diagnosis is prohibited for autonomous execution; produce a clinical summary draft and route to clinician review.",
+          "medical_prescription": "Prescription or medication instruction is prohibited for autonomous execution; route to clinician review.",
+          "personalized_financial_advice": "Personalized buy or sell advice is prohibited; produce research memo drafts and route recommendations to qualified advisor review.",
+          "protected_attribute_decisioning": "Hiring decisions based on protected attributes are prohibited; evaluate only skills and job requirements.",
+          "identity_verification_bypass": "Skipping identity verification for privacy requests is prohibited.",
+          "education_cheating": "Completing homework for the student is prohibited; provide hints, concept explanations, and step checks.",
+          "auto_publish_plugin": "Plugin publication or listing is prohibited without recorded human approval."
+        },
+        "audit_log_required": true
+      },
+      "guardrails": [
+        "use structured output only",
+        "fail closed when approval is missing",
+        "do not fabricate evidence"
+      ],
+      "escalation_rules": [
+        "rollback requires recorded human approval or is prohibited when it creates external liability",
+        "refund requires recorded human approval or is prohibited when it creates external liability",
+        "legal admission requires recorded human approval or is prohibited when it creates external liability",
+        "compensation promise requires recorded human approval or is prohibited when it creates external liability"
+      ],
+      "failure_handling": []
+    },
+    {
+      "name": "MarketingDraftAgent",
+      "role": "marketing draft writer",
+      "goal": "Draft launch announcements without sending them.",
+      "scope": [
+        "marketing draft"
+      ],
+      "out_of_scope": [
+        "send marketing campaign"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "request"
+        ],
+        "properties": {
+          "request": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "decision",
+          "evidence"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array"
+          }
+        }
+      },
+      "tools": [
+        "marketing_draft.write"
+      ],
+      "memory": [
+        "launch_marketing_drafts"
+      ],
+      "permissions": {
+        "approval_required_for": [
+          "change production config",
+          "close issue",
+          "data deletion",
+          "data export",
+          "delete account",
+          "launch publish",
+          "list plugin",
+          "mark duplicate",
+          "mark invalid",
+          "modify product page",
+          "permanent ban",
+          "publish plugin",
+          "refund",
+          "rollback",
+          "send customer email",
+          "send external legal statement",
+          "send marketing campaign"
+        ],
+        "prohibited_actions": {
+          "legal_admission": "Legal admission is prohibited for autonomous execution; route to legal review.",
+          "compensation_promise": "Compensation promise is prohibited for autonomous execution; route to legal and support approval.",
+          "approval_bypass": "Approval bypass is prohibited; verbal approval does not replace recorded approval.",
+          "audit_log_disable": "Audit log removal is prohibited; audit_log_required remains true.",
+          "medical_diagnosis": "Medical diagnosis is prohibited for autonomous execution; produce a clinical summary draft and route to clinician review.",
+          "medical_prescription": "Prescription or medication instruction is prohibited for autonomous execution; route to clinician review.",
+          "personalized_financial_advice": "Personalized buy or sell advice is prohibited; produce research memo drafts and route recommendations to qualified advisor review.",
+          "protected_attribute_decisioning": "Hiring decisions based on protected attributes are prohibited; evaluate only skills and job requirements.",
+          "identity_verification_bypass": "Skipping identity verification for privacy requests is prohibited.",
+          "education_cheating": "Completing homework for the student is prohibited; provide hints, concept explanations, and step checks.",
+          "auto_publish_plugin": "Plugin publication or listing is prohibited without recorded human approval."
+        },
+        "audit_log_required": true
+      },
+      "guardrails": [
+        "use structured output only",
+        "fail closed when approval is missing",
+        "do not fabricate evidence"
+      ],
+      "escalation_rules": [
+        "rollback requires recorded human approval or is prohibited when it creates external liability",
+        "refund requires recorded human approval or is prohibited when it creates external liability",
+        "legal admission requires recorded human approval or is prohibited when it creates external liability",
+        "compensation promise requires recorded human approval or is prohibited when it creates external liability"
+      ],
+      "failure_handling": []
+    },
+    {
+      "name": "SupportFAQAgent",
+      "role": "support FAQ writer",
+      "goal": "Draft launch support FAQs for customer support teams.",
+      "scope": [
+        "support FAQ draft"
+      ],
+      "out_of_scope": [
+        "customer refund handling"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "request"
+        ],
+        "properties": {
+          "request": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "decision",
+          "evidence"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array"
+          }
+        }
+      },
+      "tools": [
+        "support_faq.draft"
+      ],
+      "memory": [
+        "launch_support_faqs"
+      ],
+      "permissions": {
+        "approval_required_for": [
+          "change production config",
+          "close issue",
+          "data deletion",
+          "data export",
+          "delete account",
+          "launch publish",
+          "list plugin",
+          "mark duplicate",
+          "mark invalid",
+          "modify product page",
+          "permanent ban",
+          "publish plugin",
+          "refund",
+          "rollback",
+          "send customer email",
+          "send external legal statement",
+          "send marketing campaign"
+        ],
+        "prohibited_actions": {
+          "legal_admission": "Legal admission is prohibited for autonomous execution; route to legal review.",
+          "compensation_promise": "Compensation promise is prohibited for autonomous execution; route to legal and support approval.",
+          "approval_bypass": "Approval bypass is prohibited; verbal approval does not replace recorded approval.",
+          "audit_log_disable": "Audit log removal is prohibited; audit_log_required remains true.",
+          "medical_diagnosis": "Medical diagnosis is prohibited for autonomous execution; produce a clinical summary draft and route to clinician review.",
+          "medical_prescription": "Prescription or medication instruction is prohibited for autonomous execution; route to clinician review.",
+          "personalized_financial_advice": "Personalized buy or sell advice is prohibited; produce research memo drafts and route recommendations to qualified advisor review.",
+          "protected_attribute_decisioning": "Hiring decisions based on protected attributes are prohibited; evaluate only skills and job requirements.",
+          "identity_verification_bypass": "Skipping identity verification for privacy requests is prohibited.",
+          "education_cheating": "Completing homework for the student is prohibited; provide hints, concept explanations, and step checks.",
+          "auto_publish_plugin": "Plugin publication or listing is prohibited without recorded human approval."
+        },
+        "audit_log_required": true
+      },
+      "guardrails": [
+        "use structured output only",
+        "fail closed when approval is missing",
+        "do not fabricate evidence"
+      ],
+      "escalation_rules": [
+        "rollback requires recorded human approval or is prohibited when it creates external liability",
+        "refund requires recorded human approval or is prohibited when it creates external liability",
+        "legal admission requires recorded human approval or is prohibited when it creates external liability",
+        "compensation promise requires recorded human approval or is prohibited when it creates external liability"
+      ],
+      "failure_handling": []
+    },
+    {
+      "name": "SalesEnablementAgent",
+      "role": "sales enablement drafter",
+      "goal": "Draft sales enablement material from launch features.",
+      "scope": [
+        "sales enablement draft"
+      ],
+      "out_of_scope": [
+        "external legal commitments"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "request"
+        ],
+        "properties": {
+          "request": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "decision",
+          "evidence"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array"
+          }
+        }
+      },
+      "tools": [
+        "sales_enablement.draft"
+      ],
+      "memory": [
+        "sales_enablement_drafts"
+      ],
+      "permissions": {
+        "approval_required_for": [
+          "change production config",
+          "close issue",
+          "data deletion",
+          "data export",
+          "delete account",
+          "launch publish",
+          "list plugin",
+          "mark duplicate",
+          "mark invalid",
+          "modify product page",
+          "permanent ban",
+          "publish plugin",
+          "refund",
+          "rollback",
+          "send customer email",
+          "send external legal statement",
+          "send marketing campaign"
+        ],
+        "prohibited_actions": {
+          "legal_admission": "Legal admission is prohibited for autonomous execution; route to legal review.",
+          "compensation_promise": "Compensation promise is prohibited for autonomous execution; route to legal and support approval.",
+          "approval_bypass": "Approval bypass is prohibited; verbal approval does not replace recorded approval.",
+          "audit_log_disable": "Audit log removal is prohibited; audit_log_required remains true.",
+          "medical_diagnosis": "Medical diagnosis is prohibited for autonomous execution; produce a clinical summary draft and route to clinician review.",
+          "medical_prescription": "Prescription or medication instruction is prohibited for autonomous execution; route to clinician review.",
+          "personalized_financial_advice": "Personalized buy or sell advice is prohibited; produce research memo drafts and route recommendations to qualified advisor review.",
+          "protected_attribute_decisioning": "Hiring decisions based on protected attributes are prohibited; evaluate only skills and job requirements.",
+          "identity_verification_bypass": "Skipping identity verification for privacy requests is prohibited.",
+          "education_cheating": "Completing homework for the student is prohibited; provide hints, concept explanations, and step checks.",
+          "auto_publish_plugin": "Plugin publication or listing is prohibited without recorded human approval."
+        },
+        "audit_log_required": true
+      },
+      "guardrails": [
+        "use structured output only",
+        "fail closed when approval is missing",
+        "do not fabricate evidence"
+      ],
+      "escalation_rules": [
+        "rollback requires recorded human approval or is prohibited when it creates external liability",
+        "refund requires recorded human approval or is prohibited when it creates external liability",
+        "legal admission requires recorded human approval or is prohibited when it creates external liability",
+        "compensation promise requires recorded human approval or is prohibited when it creates external liability"
+      ],
+      "failure_handling": []
+    }
+  ],
+  "tools": [
+    {
+      "tool_name": "audit_log.write",
+      "description": "Append immutable audit event for decisions, tool calls, approvals, and denials.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "LaunchCoordinationAgent",
+        "PRDExtractionAgent",
+        "MarketingDraftAgent",
+        "SupportFAQAgent",
+        "SalesEnablementAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "checklist.write",
+      "description": "Generate product launch checklist.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "LaunchCoordinationAgent",
+        "PRDExtractionAgent",
+        "MarketingDraftAgent",
+        "SupportFAQAgent",
+        "SalesEnablementAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "prd.read",
+      "description": "Read PRD source material.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "LaunchCoordinationAgent",
+        "PRDExtractionAgent",
+        "MarketingDraftAgent",
+        "SupportFAQAgent",
+        "SalesEnablementAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "prd.feature.extract",
+      "description": "Extract customer-facing launch features from PRD.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "LaunchCoordinationAgent",
+        "PRDExtractionAgent",
+        "MarketingDraftAgent",
+        "SupportFAQAgent",
+        "SalesEnablementAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "marketing_draft.write",
+      "description": "Draft launch marketing announcement without sending.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "LaunchCoordinationAgent",
+        "PRDExtractionAgent",
+        "MarketingDraftAgent",
+        "SupportFAQAgent",
+        "SalesEnablementAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "support_faq.draft",
+      "description": "Draft support FAQ for launch.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "LaunchCoordinationAgent",
+        "PRDExtractionAgent",
+        "MarketingDraftAgent",
+        "SupportFAQAgent",
+        "SalesEnablementAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "sales_enablement.draft",
+      "description": "Draft sales enablement material.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "LaunchCoordinationAgent",
+        "PRDExtractionAgent",
+        "MarketingDraftAgent",
+        "SupportFAQAgent",
+        "SalesEnablementAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "launch_publish.approval_request",
+      "description": "Request responsible owner approval before publish.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "high",
+      "requires_approval": true,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "LaunchCoordinationAgent",
+        "PRDExtractionAgent",
+        "MarketingDraftAgent",
+        "SupportFAQAgent",
+        "SalesEnablementAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    }
+  ],
+  "workflows": [
+    {
+      "state_name": "intake",
+      "trigger": "new request",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "parse request",
+        "detect domain",
+        "select responsible agent"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "routing decision"
+      ],
+      "next_states": [
+        "analyze"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "analyze",
+      "trigger": "routing decision ready",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "collect evidence",
+        "produce recommendation"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "analysis summary"
+      ],
+      "next_states": [
+        "approval_review",
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "launch_coordination",
+      "trigger": "product launch requested",
+      "responsible_agent": "LaunchCoordinationAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "coordinate product, marketing, support, and sales readiness"
+      ],
+      "tools_called": [
+        "checklist.write"
+      ],
+      "outputs": [
+        "launch checklist"
+      ],
+      "next_states": [
+        "prd_extraction"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "prd_extraction",
+      "trigger": "launch checklist started",
+      "responsible_agent": "PRDExtractionAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "read PRD and extract features"
+      ],
+      "tools_called": [
+        "prd.read",
+        "prd.feature.extract"
+      ],
+      "outputs": [
+        "PRD extraction"
+      ],
+      "next_states": [
+        "feature_extraction"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "feature_extraction",
+      "trigger": "PRD source ready",
+      "responsible_agent": "PRDExtractionAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "extract customer-facing feature list"
+      ],
+      "tools_called": [
+        "prd.feature.extract"
+      ],
+      "outputs": [
+        "feature list"
+      ],
+      "next_states": [
+        "marketing_draft",
+        "support_faq",
+        "sales_enablement"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "marketing_draft",
+      "trigger": "feature list ready",
+      "responsible_agent": "MarketingDraftAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "draft marketing launch announcement"
+      ],
+      "tools_called": [
+        "marketing_draft.write"
+      ],
+      "outputs": [
+        "marketing draft"
+      ],
+      "next_states": [
+        "launch_approval"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "support_faq",
+      "trigger": "feature list ready",
+      "responsible_agent": "SupportFAQAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "draft support FAQ"
+      ],
+      "tools_called": [
+        "support_faq.draft"
+      ],
+      "outputs": [
+        "support FAQ draft"
+      ],
+      "next_states": [
+        "launch_approval"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "sales_enablement",
+      "trigger": "feature list ready",
+      "responsible_agent": "SalesEnablementAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "draft sales enablement"
+      ],
+      "tools_called": [
+        "sales_enablement.draft"
+      ],
+      "outputs": [
+        "sales enablement draft"
+      ],
+      "next_states": [
+        "launch_approval"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "launch_approval",
+      "trigger": "launch materials ready",
+      "responsible_agent": "LaunchCoordinationAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "request responsible owner approval before publish"
+      ],
+      "tools_called": [
+        "launch_publish.approval_request",
+        "audit_log.write"
+      ],
+      "outputs": [
+        "launch approval"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": true
+    },
+    {
+      "state_name": "approval_review",
+      "trigger": "high-risk recommendation",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "request recorded human approval",
+        "block execution when approval missing"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "approval decision"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": true
+    },
+    {
+      "state_name": "finalize",
+      "trigger": "analysis complete",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "validate manifest",
+        "write structured output"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "agent manifest"
+      ],
+      "next_states": [],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    }
+  ],
+  "workflow": [
+    {
+      "state_name": "intake",
+      "trigger": "new request",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "parse request",
+        "detect domain",
+        "select responsible agent"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "routing decision"
+      ],
+      "next_states": [
+        "analyze"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "analyze",
+      "trigger": "routing decision ready",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "collect evidence",
+        "produce recommendation"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "analysis summary"
+      ],
+      "next_states": [
+        "approval_review",
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "launch_coordination",
+      "trigger": "product launch requested",
+      "responsible_agent": "LaunchCoordinationAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "coordinate product, marketing, support, and sales readiness"
+      ],
+      "tools_called": [
+        "checklist.write"
+      ],
+      "outputs": [
+        "launch checklist"
+      ],
+      "next_states": [
+        "prd_extraction"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "prd_extraction",
+      "trigger": "launch checklist started",
+      "responsible_agent": "PRDExtractionAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "read PRD and extract features"
+      ],
+      "tools_called": [
+        "prd.read",
+        "prd.feature.extract"
+      ],
+      "outputs": [
+        "PRD extraction"
+      ],
+      "next_states": [
+        "feature_extraction"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "feature_extraction",
+      "trigger": "PRD source ready",
+      "responsible_agent": "PRDExtractionAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "extract customer-facing feature list"
+      ],
+      "tools_called": [
+        "prd.feature.extract"
+      ],
+      "outputs": [
+        "feature list"
+      ],
+      "next_states": [
+        "marketing_draft",
+        "support_faq",
+        "sales_enablement"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "marketing_draft",
+      "trigger": "feature list ready",
+      "responsible_agent": "MarketingDraftAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "draft marketing launch announcement"
+      ],
+      "tools_called": [
+        "marketing_draft.write"
+      ],
+      "outputs": [
+        "marketing draft"
+      ],
+      "next_states": [
+        "launch_approval"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "support_faq",
+      "trigger": "feature list ready",
+      "responsible_agent": "SupportFAQAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "draft support FAQ"
+      ],
+      "tools_called": [
+        "support_faq.draft"
+      ],
+      "outputs": [
+        "support FAQ draft"
+      ],
+      "next_states": [
+        "launch_approval"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "sales_enablement",
+      "trigger": "feature list ready",
+      "responsible_agent": "SalesEnablementAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "draft sales enablement"
+      ],
+      "tools_called": [
+        "sales_enablement.draft"
+      ],
+      "outputs": [
+        "sales enablement draft"
+      ],
+      "next_states": [
+        "launch_approval"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "launch_approval",
+      "trigger": "launch materials ready",
+      "responsible_agent": "LaunchCoordinationAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "request responsible owner approval before publish"
+      ],
+      "tools_called": [
+        "launch_publish.approval_request",
+        "audit_log.write"
+      ],
+      "outputs": [
+        "launch approval"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": true
+    },
+    {
+      "state_name": "approval_review",
+      "trigger": "high-risk recommendation",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "request recorded human approval",
+        "block execution when approval missing"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "approval decision"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": true
+    },
+    {
+      "state_name": "finalize",
+      "trigger": "analysis complete",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "validate manifest",
+        "write structured output"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "agent manifest"
+      ],
+      "next_states": [],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    }
+  ],
+  "memory": [
+    {
+      "key": "audit_log",
+      "schema": {
+        "type": "object"
+      },
+      "retention_policy": "retain for 180 days unless stricter policy applies",
+      "read_permissions": [
+        "CoordinatorAgent",
+        "LaunchCoordinationAgent",
+        "PRDExtractionAgent",
+        "MarketingDraftAgent",
+        "SupportFAQAgent",
+        "SalesEnablementAgent"
+      ],
+      "write_permissions": [
+        "CoordinatorAgent"
+      ],
+      "update_rules": [
+        "append-only for audit records",
+        "preserve source references"
+      ]
+    },
+    {
+      "key": "launch_readiness_log",
+      "schema": {
+        "type": "object"
+      },
+      "retention_policy": "retain for 180 days unless stricter policy applies",
+      "read_permissions": [
+        "CoordinatorAgent",
+        "LaunchCoordinationAgent",
+        "PRDExtractionAgent",
+        "MarketingDraftAgent",
+        "SupportFAQAgent",
+        "SalesEnablementAgent"
+      ],
+      "write_permissions": [
+        "CoordinatorAgent"
+      ],
+      "update_rules": [
+        "append-only for audit records",
+        "preserve source references"
+      ]
+    },
+    {
+      "key": "prd_feature_index",
+      "schema": {
+        "type": "object"
+      },
+      "retention_policy": "retain for 180 days unless stricter policy applies",
+      "read_permissions": [
+        "CoordinatorAgent",
+        "LaunchCoordinationAgent",
+        "PRDExtractionAgent",
+        "MarketingDraftAgent",
+        "SupportFAQAgent",
+        "SalesEnablementAgent"
+      ],
+      "write_permissions": [
+        "CoordinatorAgent"
+      ],
+      "update_rules": [
+        "append-only for audit records",
+        "preserve source references"
+      ]
+    },
+    {
+      "key": "launch_marketing_drafts",
+      "schema": {
+        "type": "object"
+      },
+      "retention_policy": "retain for 180 days unless stricter policy applies",
+      "read_permissions": [
+        "CoordinatorAgent",
+        "LaunchCoordinationAgent",
+        "PRDExtractionAgent",
+        "MarketingDraftAgent",
+        "SupportFAQAgent",
+        "SalesEnablementAgent"
+      ],
+      "write_permissions": [
+        "CoordinatorAgent"
+      ],
+      "update_rules": [
+        "append-only for audit records",
+        "preserve source references"
+      ]
+    },
+    {
+      "key": "launch_support_faqs",
+      "schema": {
+        "type": "object"
+      },
+      "retention_policy": "retain for 180 days unless stricter policy applies",
+      "read_permissions": [
+        "CoordinatorAgent",
+        "LaunchCoordinationAgent",
+        "PRDExtractionAgent",
+        "MarketingDraftAgent",
+        "SupportFAQAgent",
+        "SalesEnablementAgent"
+      ],
+      "write_permissions": [
+        "CoordinatorAgent"
+      ],
+      "update_rules": [
+        "append-only for audit records",
+        "preserve source references"
+      ]
+    },
+    {
+      "key": "sales_enablement_drafts",
+      "schema": {
+        "type": "object"
+      },
+      "retention_policy": "retain for 180 days unless stricter policy applies",
+      "read_permissions": [
+        "CoordinatorAgent",
+        "LaunchCoordinationAgent",
+        "PRDExtractionAgent",
+        "MarketingDraftAgent",
+        "SupportFAQAgent",
+        "SalesEnablementAgent"
+      ],
+      "write_permissions": [
+        "CoordinatorAgent"
+      ],
+      "update_rules": [
+        "append-only for audit records",
+        "preserve source references"
+      ]
+    }
+  ],
+  "permissions": {
+    "default_execution_mode": "recommendation_only_for_high_risk_actions",
+    "approval_required_for": [
+      "change production config",
+      "close issue",
+      "data deletion",
+      "data export",
+      "delete account",
+      "launch publish",
+      "list plugin",
+      "mark duplicate",
+      "mark invalid",
+      "modify product page",
+      "permanent ban",
+      "publish plugin",
+      "refund",
+      "rollback",
+      "send customer email",
+      "send external legal statement",
+      "send marketing campaign"
+    ],
+    "audit_log_required": true,
+    "approval_bypass_allowed": false,
+    "prohibited_actions": {
+      "legal_admission": "Legal admission is prohibited for autonomous execution; route to legal review.",
+      "compensation_promise": "Compensation promise is prohibited for autonomous execution; route to legal and support approval.",
+      "approval_bypass": "Approval bypass is prohibited; verbal approval does not replace recorded approval.",
+      "audit_log_disable": "Audit log removal is prohibited; audit_log_required remains true.",
+      "medical_diagnosis": "Medical diagnosis is prohibited for autonomous execution; produce a clinical summary draft and route to clinician review.",
+      "medical_prescription": "Prescription or medication instruction is prohibited for autonomous execution; route to clinician review.",
+      "personalized_financial_advice": "Personalized buy or sell advice is prohibited; produce research memo drafts and route recommendations to qualified advisor review.",
+      "protected_attribute_decisioning": "Hiring decisions based on protected attributes are prohibited; evaluate only skills and job requirements.",
+      "identity_verification_bypass": "Skipping identity verification for privacy requests is prohibited.",
+      "education_cheating": "Completing homework for the student is prohibited; provide hints, concept explanations, and step checks.",
+      "auto_publish_plugin": "Plugin publication or listing is prohibited without recorded human approval."
+    }
+  },
+  "guardrails": [
+    "Output must be valid JSON matching the agent manifest schema.",
+    "High-risk actions require recorded human approval and audit logging.",
+    "If approval is missing, produce a recommendation or draft only.",
+    "Do not fabricate sources, approvals, logs, metrics, or user consent.",
+    "When root cause is uncertain, state uncertainty and list evidence gaps.",
+    "Product launch coordination is not incident response or rollback; publish requires approval."
+  ],
+  "test_cases": [
+    {
+      "name": "schema_required_fields",
+      "assert": "manifest includes agents, tools, workflows, memory, permissions, guardrails, and test_cases"
+    },
+    {
+      "name": "high_risk_requires_approval",
+      "assert": "every high side effect tool requires approval and audit logging"
+    },
+    {
+      "name": "launch_not_incident",
+      "assert": "product launch coordination does not create incident response or rollback workflows"
+    }
+  ],
+  "assumptions": [
+    "launch means product launch coordination, not incident response or rollback"
+  ],
+  "clarification_needed": [],
+  "safe_defaults": {
+    "high_risk_actions": "approval_required",
+    "audit_log_required": true,
+    "external_commitments": "draft_only_until_approved"
+  },
+  "minimal_viable_agent": {
+    "name": "CoordinatorAgent",
+    "reason": "minimum coordinator plus domain specialist selected from request signals"
+  },
+  "conflict_resolution": {},
+  "planning_rationale": "multi-agent design is justified by distinct PRD extraction, marketing, support FAQ, sales enablement, and approval coordination duties",
+  "semantic_profile": {
+    "domains": [
+      "approval",
+      "customer_support",
+      "launch_coordination"
+    ],
+    "security_sensitive": true,
+    "minimal_agent_preferred": false
+  },
+  "generation": {
+    "generator": "ctcp-deterministic-agent-manifest-generator",
+    "domain_signals": [
+      "approval",
+      "customer_support",
+      "generic",
+      "launch_coordination"
+    ],
+    "input_title": "H10 Product launch coordination system"
+  }
+}

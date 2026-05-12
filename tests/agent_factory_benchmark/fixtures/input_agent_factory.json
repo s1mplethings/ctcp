@@ -1,0 +1,20 @@
+{
+  "case_id": "agent_factory",
+  "title": "Agent Factory bootstrap",
+  "goal": "Create an Agent Factory Agent that creates new agents from user needs. It must generate an agent manifest, tools, memory schema, workflow, permissions, guardrails, and test cases. It must decide single-agent vs multi-agent, human approval, and advisory-only boundaries. Output must be machine-parseable.",
+  "expected": [
+    "agent name",
+    "role",
+    "goal",
+    "scope",
+    "input_schema",
+    "output_schema",
+    "tools",
+    "memory",
+    "workflow",
+    "permissions",
+    "guardrails",
+    "test_cases",
+    "human approval boundary"
+  ]
+}

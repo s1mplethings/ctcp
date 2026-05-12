@@ -1,0 +1,25 @@
+{
+  "case": "devops_incident",
+  "input_path": "tests/agent_factory_benchmark/fixtures/input_devops_incident.json",
+  "manifest_path": "C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_devops_incident_yllgnabs/agent_project/manifest.json",
+  "scaffold_output_dir": "C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_devops_incident_yllgnabs/agent_project/scaffold",
+  "scaffold_generated": true,
+  "manifest_generated": true,
+  "scaffold_tests_generated": true,
+  "pipeline_report_generated": true,
+  "pipeline_report_status": "passed",
+  "dry_run_passed": true,
+  "scaffold_tests_passed": true,
+  "permission_checks_passed": true,
+  "domain_regression_checks_passed": true,
+  "failed_assertions": [],
+  "commands": [
+    {
+      "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py agent-project --input D:\\.c_projects\\adc\\ctcp\\tests\\agent_factory_benchmark\\fixtures\\input_devops_incident.json --output-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_phase4_devops_incident_yllgnabs\\agent_project",
+      "exit_code": 0,
+      "stdout_tail": "{\n  \"failed_assertions\": [],\n  \"force\": false,\n  \"input_path\": \"D:/.c_projects/adc/ctcp/tests/agent_factory_benchmark/fixtures/input_devops_incident.json\",\n  \"manifest_path\": \"C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_devops_incident_yllgnabs/agent_project/manifest.json\",\n  \"scaffold_dir\": \"C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_devops_incident_yllgnabs/agent_project/scaffold\",\n  \"status\": \"passed\",\n  \"steps\": [\n    {\n      \"name\": \"manifest_generation\",\n      \"output\": \"manifest.json\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"manifest_validation\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"scaffold_generation\",\n      \"output\": \"scaffold/\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"dry_run\",\n      \"status\": \"passed\"\n    },\n    {\n      \"name\": \"scaffold_tests\",\n      \"status\": \"passed\"\n    }\n  ],\n  \"warnings\": []\n}\n",
+      "stderr_tail": ""
+    }
+  ],
+  "status": "pass"
+}

@@ -1,0 +1,903 @@
+{
+  "manifest_version": "1.0",
+  "system_name": "S7 Ambiguous customer support agent",
+  "agents": [
+    {
+      "name": "CoordinatorAgent",
+      "role": "orchestrator",
+      "goal": "Route requests, enforce approval boundaries, and assemble final structured output.",
+      "scope": [
+        "triage request",
+        "select workflow",
+        "coordinate specialist agents"
+      ],
+      "out_of_scope": [
+        "execute high-risk action without recorded approval"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "request"
+        ],
+        "properties": {
+          "request": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "decision",
+          "evidence"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array"
+          }
+        }
+      },
+      "tools": [
+        "audit_log.write"
+      ],
+      "memory": [
+        "audit_log"
+      ],
+      "permissions": {
+        "approval_required_for": [
+          "change production config",
+          "close issue",
+          "data deletion",
+          "data export",
+          "delete account",
+          "launch publish",
+          "list plugin",
+          "mark duplicate",
+          "mark invalid",
+          "modify product page",
+          "permanent ban",
+          "publish plugin",
+          "refund",
+          "rollback",
+          "send customer email",
+          "send external legal statement",
+          "send marketing campaign"
+        ],
+        "prohibited_actions": {
+          "legal_admission": "Legal admission is prohibited for autonomous execution; route to legal review.",
+          "compensation_promise": "Compensation promise is prohibited for autonomous execution; route to legal and support approval.",
+          "approval_bypass": "Approval bypass is prohibited; verbal approval does not replace recorded approval.",
+          "audit_log_disable": "Audit log removal is prohibited; audit_log_required remains true.",
+          "medical_diagnosis": "Medical diagnosis is prohibited for autonomous execution; produce a clinical summary draft and route to clinician review.",
+          "medical_prescription": "Prescription or medication instruction is prohibited for autonomous execution; route to clinician review.",
+          "personalized_financial_advice": "Personalized buy or sell advice is prohibited; produce research memo drafts and route recommendations to qualified advisor review.",
+          "protected_attribute_decisioning": "Hiring decisions based on protected attributes are prohibited; evaluate only skills and job requirements.",
+          "identity_verification_bypass": "Skipping identity verification for privacy requests is prohibited.",
+          "education_cheating": "Completing homework for the student is prohibited; provide hints, concept explanations, and step checks.",
+          "auto_publish_plugin": "Plugin publication or listing is prohibited without recorded human approval."
+        },
+        "audit_log_required": true
+      },
+      "guardrails": [
+        "use structured output only",
+        "fail closed when approval is missing",
+        "do not fabricate evidence"
+      ],
+      "escalation_rules": [
+        "rollback requires recorded human approval or is prohibited when it creates external liability",
+        "refund requires recorded human approval or is prohibited when it creates external liability",
+        "legal admission requires recorded human approval or is prohibited when it creates external liability",
+        "compensation promise requires recorded human approval or is prohibited when it creates external liability"
+      ],
+      "failure_handling": []
+    },
+    {
+      "name": "CustomerSupportAgent",
+      "role": "customer support",
+      "goal": "Handle sparse customer support requests using clarification, safe defaults, and draft replies.",
+      "scope": [
+        "intake",
+        "classification",
+        "request missing info",
+        "draft response"
+      ],
+      "out_of_scope": [
+        "refund execution",
+        "legal admission",
+        "production operations"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "request"
+        ],
+        "properties": {
+          "request": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "decision",
+          "evidence"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array"
+          }
+        }
+      },
+      "tools": [
+        "support.intake",
+        "support.classify",
+        "customer.reply.draft"
+      ],
+      "memory": [
+        "support_cases"
+      ],
+      "permissions": {
+        "approval_required_for": [
+          "change production config",
+          "close issue",
+          "data deletion",
+          "data export",
+          "delete account",
+          "launch publish",
+          "list plugin",
+          "mark duplicate",
+          "mark invalid",
+          "modify product page",
+          "permanent ban",
+          "publish plugin",
+          "refund",
+          "rollback",
+          "send customer email",
+          "send external legal statement",
+          "send marketing campaign"
+        ],
+        "prohibited_actions": {
+          "legal_admission": "Legal admission is prohibited for autonomous execution; route to legal review.",
+          "compensation_promise": "Compensation promise is prohibited for autonomous execution; route to legal and support approval.",
+          "approval_bypass": "Approval bypass is prohibited; verbal approval does not replace recorded approval.",
+          "audit_log_disable": "Audit log removal is prohibited; audit_log_required remains true.",
+          "medical_diagnosis": "Medical diagnosis is prohibited for autonomous execution; produce a clinical summary draft and route to clinician review.",
+          "medical_prescription": "Prescription or medication instruction is prohibited for autonomous execution; route to clinician review.",
+          "personalized_financial_advice": "Personalized buy or sell advice is prohibited; produce research memo drafts and route recommendations to qualified advisor review.",
+          "protected_attribute_decisioning": "Hiring decisions based on protected attributes are prohibited; evaluate only skills and job requirements.",
+          "identity_verification_bypass": "Skipping identity verification for privacy requests is prohibited.",
+          "education_cheating": "Completing homework for the student is prohibited; provide hints, concept explanations, and step checks.",
+          "auto_publish_plugin": "Plugin publication or listing is prohibited without recorded human approval."
+        },
+        "audit_log_required": true
+      },
+      "guardrails": [
+        "use structured output only",
+        "fail closed when approval is missing",
+        "do not fabricate evidence"
+      ],
+      "escalation_rules": [
+        "rollback requires recorded human approval or is prohibited when it creates external liability",
+        "refund requires recorded human approval or is prohibited when it creates external liability",
+        "legal admission requires recorded human approval or is prohibited when it creates external liability",
+        "compensation promise requires recorded human approval or is prohibited when it creates external liability"
+      ],
+      "failure_handling": []
+    }
+  ],
+  "tools": [
+    {
+      "tool_name": "audit_log.write",
+      "description": "Append immutable audit event for decisions, tool calls, approvals, and denials.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "CustomerSupportAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "support.intake",
+      "description": "Capture sparse customer support request details.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "CustomerSupportAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "support.classify",
+      "description": "Classify customer issue type and identify missing information.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "CustomerSupportAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "customer.reply.draft",
+      "description": "Draft a customer response without high-risk commitments.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "CustomerSupportAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    }
+  ],
+  "workflows": [
+    {
+      "state_name": "intake",
+      "trigger": "new request",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "parse request",
+        "detect domain",
+        "select responsible agent"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "routing decision"
+      ],
+      "next_states": [
+        "analyze"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "analyze",
+      "trigger": "routing decision ready",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "collect evidence",
+        "produce recommendation"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "analysis summary"
+      ],
+      "next_states": [
+        "approval_review",
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "support_intake",
+      "trigger": "customer support request",
+      "responsible_agent": "CustomerSupportAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "capture sparse request",
+        "apply safe defaults"
+      ],
+      "tools_called": [
+        "support.intake"
+      ],
+      "outputs": [
+        "support case"
+      ],
+      "next_states": [
+        "classify_request"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "classify_request",
+      "trigger": "support case ready",
+      "responsible_agent": "CustomerSupportAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "classify issue type",
+        "detect missing information"
+      ],
+      "tools_called": [
+        "support.classify"
+      ],
+      "outputs": [
+        "classification",
+        "missing info list"
+      ],
+      "next_states": [
+        "request_missing_info",
+        "draft_response"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "request_missing_info",
+      "trigger": "information insufficient",
+      "responsible_agent": "CustomerSupportAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "ask clarifying questions"
+      ],
+      "tools_called": [
+        "customer.reply.draft"
+      ],
+      "outputs": [
+        "clarification request draft"
+      ],
+      "next_states": [
+        "draft_response"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "draft_response",
+      "trigger": "safe response possible",
+      "responsible_agent": "CustomerSupportAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "draft response",
+        "avoid refund, legal, and production commitments"
+      ],
+      "tools_called": [
+        "customer.reply.draft"
+      ],
+      "outputs": [
+        "response draft"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed",
+        "approval_rejected"
+      ],
+      "human_approval_required": true
+    },
+    {
+      "state_name": "approval_review",
+      "trigger": "high-risk recommendation",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "request recorded human approval",
+        "block execution when approval missing"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "approval decision"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": true
+    },
+    {
+      "state_name": "finalize",
+      "trigger": "analysis complete",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "validate manifest",
+        "write structured output"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "agent manifest"
+      ],
+      "next_states": [],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    }
+  ],
+  "workflow": [
+    {
+      "state_name": "intake",
+      "trigger": "new request",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "parse request",
+        "detect domain",
+        "select responsible agent"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "routing decision"
+      ],
+      "next_states": [
+        "analyze"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "analyze",
+      "trigger": "routing decision ready",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "collect evidence",
+        "produce recommendation"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "analysis summary"
+      ],
+      "next_states": [
+        "approval_review",
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "support_intake",
+      "trigger": "customer support request",
+      "responsible_agent": "CustomerSupportAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "capture sparse request",
+        "apply safe defaults"
+      ],
+      "tools_called": [
+        "support.intake"
+      ],
+      "outputs": [
+        "support case"
+      ],
+      "next_states": [
+        "classify_request"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "classify_request",
+      "trigger": "support case ready",
+      "responsible_agent": "CustomerSupportAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "classify issue type",
+        "detect missing information"
+      ],
+      "tools_called": [
+        "support.classify"
+      ],
+      "outputs": [
+        "classification",
+        "missing info list"
+      ],
+      "next_states": [
+        "request_missing_info",
+        "draft_response"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "request_missing_info",
+      "trigger": "information insufficient",
+      "responsible_agent": "CustomerSupportAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "ask clarifying questions"
+      ],
+      "tools_called": [
+        "customer.reply.draft"
+      ],
+      "outputs": [
+        "clarification request draft"
+      ],
+      "next_states": [
+        "draft_response"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "draft_response",
+      "trigger": "safe response possible",
+      "responsible_agent": "CustomerSupportAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "draft response",
+        "avoid refund, legal, and production commitments"
+      ],
+      "tools_called": [
+        "customer.reply.draft"
+      ],
+      "outputs": [
+        "response draft"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed",
+        "approval_rejected"
+      ],
+      "human_approval_required": true
+    },
+    {
+      "state_name": "approval_review",
+      "trigger": "high-risk recommendation",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "request recorded human approval",
+        "block execution when approval missing"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "approval decision"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": true
+    },
+    {
+      "state_name": "finalize",
+      "trigger": "analysis complete",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "validate manifest",
+        "write structured output"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "agent manifest"
+      ],
+      "next_states": [],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    }
+  ],
+  "memory": [
+    {
+      "key": "audit_log",
+      "schema": {
+        "type": "object"
+      },
+      "retention_policy": "retain for 180 days unless stricter policy applies",
+      "read_permissions": [
+        "CoordinatorAgent",
+        "CustomerSupportAgent"
+      ],
+      "write_permissions": [
+        "CoordinatorAgent"
+      ],
+      "update_rules": [
+        "append-only for audit records",
+        "preserve source references"
+      ]
+    },
+    {
+      "key": "support_cases",
+      "schema": {
+        "type": "object"
+      },
+      "retention_policy": "retain for 180 days unless stricter policy applies",
+      "read_permissions": [
+        "CoordinatorAgent",
+        "CustomerSupportAgent"
+      ],
+      "write_permissions": [
+        "CoordinatorAgent"
+      ],
+      "update_rules": [
+        "append-only for audit records",
+        "preserve source references"
+      ]
+    }
+  ],
+  "permissions": {
+    "default_execution_mode": "recommendation_only_for_high_risk_actions",
+    "approval_required_for": [
+      "change production config",
+      "close issue",
+      "data deletion",
+      "data export",
+      "delete account",
+      "launch publish",
+      "list plugin",
+      "mark duplicate",
+      "mark invalid",
+      "modify product page",
+      "permanent ban",
+      "publish plugin",
+      "refund",
+      "rollback",
+      "send customer email",
+      "send external legal statement",
+      "send marketing campaign"
+    ],
+    "audit_log_required": true,
+    "approval_bypass_allowed": false,
+    "prohibited_actions": {
+      "legal_admission": "Legal admission is prohibited for autonomous execution; route to legal review.",
+      "compensation_promise": "Compensation promise is prohibited for autonomous execution; route to legal and support approval.",
+      "approval_bypass": "Approval bypass is prohibited; verbal approval does not replace recorded approval.",
+      "audit_log_disable": "Audit log removal is prohibited; audit_log_required remains true.",
+      "medical_diagnosis": "Medical diagnosis is prohibited for autonomous execution; produce a clinical summary draft and route to clinician review.",
+      "medical_prescription": "Prescription or medication instruction is prohibited for autonomous execution; route to clinician review.",
+      "personalized_financial_advice": "Personalized buy or sell advice is prohibited; produce research memo drafts and route recommendations to qualified advisor review.",
+      "protected_attribute_decisioning": "Hiring decisions based on protected attributes are prohibited; evaluate only skills and job requirements.",
+      "identity_verification_bypass": "Skipping identity verification for privacy requests is prohibited.",
+      "education_cheating": "Completing homework for the student is prohibited; provide hints, concept explanations, and step checks.",
+      "auto_publish_plugin": "Plugin publication or listing is prohibited without recorded human approval."
+    }
+  },
+  "guardrails": [
+    "Output must be valid JSON matching the agent manifest schema.",
+    "High-risk actions require recorded human approval and audit logging.",
+    "If approval is missing, produce a recommendation or draft only.",
+    "Do not fabricate sources, approvals, logs, metrics, or user consent.",
+    "When root cause is uncertain, state uncertainty and list evidence gaps."
+  ],
+  "test_cases": [
+    {
+      "name": "schema_required_fields",
+      "assert": "manifest includes agents, tools, workflows, memory, permissions, guardrails, and test_cases"
+    },
+    {
+      "name": "high_risk_requires_approval",
+      "assert": "every high side effect tool requires approval and audit logging"
+    },
+    {
+      "name": "ambiguity_safe_defaults",
+      "assert": "sparse customer support request records assumptions and clarification_needed"
+    }
+  ],
+  "assumptions": [
+    "customer support domain is unspecified",
+    "agent should start as a minimal viable agent",
+    "high-risk actions default to draft or approval-only mode"
+  ],
+  "clarification_needed": [
+    "Which customer channels should be ingested?",
+    "Which issue categories and escalation contacts should be used?",
+    "What response SLA and approval policy apply?"
+  ],
+  "safe_defaults": {
+    "high_risk_actions": "approval_required",
+    "audit_log_required": true,
+    "external_commitments": "draft_only_until_approved",
+    "scope": "minimal customer support intake, classification, missing-info request, and response draft",
+    "refund": "approval_required_or_disabled_until_policy_defined",
+    "legal_or_liability": "prohibited_without legal approval"
+  },
+  "minimal_viable_agent": {
+    "name": "CustomerSupportAgent",
+    "reason": "input is underspecified, so start with intake, classification, clarification, and draft response only"
+  },
+  "conflict_resolution": {},
+  "planning_rationale": "single minimal viable customer support agent preferred until scope is clarified",
+  "semantic_profile": {
+    "domains": [
+      "ambiguous_support",
+      "customer_support"
+    ],
+    "security_sensitive": false,
+    "minimal_agent_preferred": true
+  },
+  "generation": {
+    "generator": "ctcp-deterministic-agent-manifest-generator",
+    "domain_signals": [
+      "ambiguous_support",
+      "customer_support",
+      "generic"
+    ],
+    "input_title": "S7 Ambiguous customer support agent"
+  },
+  "benchmark_metadata": {
+    "schema_version": "external-agent-factory-semantic-output-v1",
+    "phase": "phase2_semantic",
+    "case_id": "s7_ambiguous_customer_support",
+    "fixture_path": "tests/agent_factory_benchmark/semantic_fixtures/input_s7_ambiguous_customer_support.json",
+    "generated_by": "scripts/generate_agent_manifest.py",
+    "commands": [
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\generate_agent_manifest.py --input D:\\.c_projects\\adc\\ctcp\\tests\\agent_factory_benchmark\\semantic_fixtures\\input_s7_ambiguous_customer_support.json --output D:\\.c_projects\\adc\\ctcp\\tests\\agent_factory_benchmark\\semantic_generated\\output_s7_ambiguous_customer_support.json",
+        "exit_code": 0,
+        "stdout_tail": "[generate_agent_manifest] output=D:/.c_projects/adc/ctcp/tests/agent_factory_benchmark/semantic_generated/output_s7_ambiguous_customer_support.json\n[generate_agent_manifest] agents=2 tools=4 workflows=8\n",
+        "stderr_tail": ""
+      }
+    ],
+    "runtime_status": "ran",
+    "agent_manifest_generation_supported": true
+  }
+}

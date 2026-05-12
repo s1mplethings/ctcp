@@ -4,23 +4,12 @@ import json
 from pathlib import Path
 from typing import Any
 
+from tools.providers.project_generation_provider_payload import normalize_provider_source_payload
+
 
 def _candidate_provider_file_rows(src: dict[str, Any]) -> list[dict[str, Any]]:
-    candidates: list[Any] = []
-    for key in ("files", "provider_source_files", "generated_files", "project_files"):
-        value = src.get(key)
-        if isinstance(value, list):
-            candidates.extend(value)
-        elif isinstance(value, dict):
-            candidates.extend({"path": k, "content": v} for k, v in value.items())
-    bundle = src.get("source_bundle")
-    if isinstance(bundle, dict):
-        value = bundle.get("files")
-        if isinstance(value, list):
-            candidates.extend(value)
-        elif isinstance(value, dict):
-            candidates.extend({"path": k, "content": v} for k, v in value.items())
-    return [dict(row) for row in candidates if isinstance(row, dict)]
+    normalized = normalize_provider_source_payload(src)
+    return [dict(row) for row in normalized.get("provider_source_files", []) if isinstance(row, dict)]
 
 
 def _provider_source_file_rows(inputs: dict[str, Any]) -> list[dict[str, str]]:
@@ -33,10 +22,6 @@ def _provider_source_file_rows(inputs: dict[str, Any]) -> list[dict[str, str]]:
     for row in _candidate_provider_file_rows(src):
         rel = str(row.get("path", "")).strip().replace("\\", "/").lstrip("/")
         content = row.get("content")
-        content_lines = row.get("content_lines")
-        if not isinstance(content, str) and isinstance(content_lines, list):
-            normalized_lines = [str(item) for item in content_lines]
-            content = "\n".join(normalized_lines) + ("\n" if normalized_lines else "")
         if rel and rel not in seen and rel.startswith(project_root + "/") and isinstance(content, str) and content.strip():
             out.append({"path": rel, "content": content})
             seen.add(rel)

@@ -1,0 +1,978 @@
+{
+  "manifest_version": "1.0",
+  "system_name": "H5 Recruiting screening agent",
+  "agents": [
+    {
+      "name": "CoordinatorAgent",
+      "role": "orchestrator",
+      "goal": "Route requests, enforce approval boundaries, and assemble final structured output.",
+      "scope": [
+        "triage request",
+        "select workflow",
+        "coordinate specialist agents"
+      ],
+      "out_of_scope": [
+        "execute high-risk action without recorded approval"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "request"
+        ],
+        "properties": {
+          "request": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "decision",
+          "evidence"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array"
+          }
+        }
+      },
+      "tools": [
+        "audit_log.write"
+      ],
+      "memory": [
+        "audit_log"
+      ],
+      "permissions": {
+        "approval_required_for": [
+          "change production config",
+          "close issue",
+          "data deletion",
+          "data export",
+          "delete account",
+          "launch publish",
+          "list plugin",
+          "mark duplicate",
+          "mark invalid",
+          "modify product page",
+          "permanent ban",
+          "publish plugin",
+          "refund",
+          "rollback",
+          "send customer email",
+          "send external legal statement",
+          "send marketing campaign"
+        ],
+        "prohibited_actions": {
+          "legal_admission": "Legal admission is prohibited for autonomous execution; route to legal review.",
+          "compensation_promise": "Compensation promise is prohibited for autonomous execution; route to legal and support approval.",
+          "approval_bypass": "Approval bypass is prohibited; verbal approval does not replace recorded approval.",
+          "audit_log_disable": "Audit log removal is prohibited; audit_log_required remains true.",
+          "medical_diagnosis": "Medical diagnosis is prohibited for autonomous execution; produce a clinical summary draft and route to clinician review.",
+          "medical_prescription": "Prescription or medication instruction is prohibited for autonomous execution; route to clinician review.",
+          "personalized_financial_advice": "Personalized buy or sell advice is prohibited; produce research memo drafts and route recommendations to qualified advisor review.",
+          "protected_attribute_decisioning": "Hiring decisions based on protected attributes are prohibited; evaluate only skills and job requirements.",
+          "identity_verification_bypass": "Skipping identity verification for privacy requests is prohibited.",
+          "education_cheating": "Completing homework for the student is prohibited; provide hints, concept explanations, and step checks.",
+          "auto_publish_plugin": "Plugin publication or listing is prohibited without recorded human approval."
+        },
+        "audit_log_required": true
+      },
+      "guardrails": [
+        "use structured output only",
+        "fail closed when approval is missing",
+        "do not fabricate evidence"
+      ],
+      "escalation_rules": [
+        "rollback requires recorded human approval or is prohibited when it creates external liability",
+        "refund requires recorded human approval or is prohibited when it creates external liability",
+        "legal admission requires recorded human approval or is prohibited when it creates external liability",
+        "compensation promise requires recorded human approval or is prohibited when it creates external liability"
+      ],
+      "failure_handling": []
+    },
+    {
+      "name": "RecruitingScreeningAgent",
+      "role": "skills-based recruiting screener",
+      "goal": "Extract skills and experience, match job requirements, draft interview questions, and route to human review.",
+      "scope": [
+        "skills extraction",
+        "job requirement matching",
+        "interview question draft",
+        "human review"
+      ],
+      "out_of_scope": [
+        "protected attribute decisioning"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "request"
+        ],
+        "properties": {
+          "request": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "decision",
+          "evidence"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array"
+          }
+        }
+      },
+      "tools": [
+        "resume.read",
+        "skill.extract",
+        "job_requirement.match",
+        "interview_question.draft",
+        "human_review.request"
+      ],
+      "memory": [
+        "candidate_skill_records"
+      ],
+      "permissions": {
+        "approval_required_for": [
+          "change production config",
+          "close issue",
+          "data deletion",
+          "data export",
+          "delete account",
+          "launch publish",
+          "list plugin",
+          "mark duplicate",
+          "mark invalid",
+          "modify product page",
+          "permanent ban",
+          "publish plugin",
+          "refund",
+          "rollback",
+          "send customer email",
+          "send external legal statement",
+          "send marketing campaign"
+        ],
+        "prohibited_actions": {
+          "legal_admission": "Legal admission is prohibited for autonomous execution; route to legal review.",
+          "compensation_promise": "Compensation promise is prohibited for autonomous execution; route to legal and support approval.",
+          "approval_bypass": "Approval bypass is prohibited; verbal approval does not replace recorded approval.",
+          "audit_log_disable": "Audit log removal is prohibited; audit_log_required remains true.",
+          "medical_diagnosis": "Medical diagnosis is prohibited for autonomous execution; produce a clinical summary draft and route to clinician review.",
+          "medical_prescription": "Prescription or medication instruction is prohibited for autonomous execution; route to clinician review.",
+          "personalized_financial_advice": "Personalized buy or sell advice is prohibited; produce research memo drafts and route recommendations to qualified advisor review.",
+          "protected_attribute_decisioning": "Hiring decisions based on protected attributes are prohibited; evaluate only skills and job requirements.",
+          "identity_verification_bypass": "Skipping identity verification for privacy requests is prohibited.",
+          "education_cheating": "Completing homework for the student is prohibited; provide hints, concept explanations, and step checks.",
+          "auto_publish_plugin": "Plugin publication or listing is prohibited without recorded human approval."
+        },
+        "audit_log_required": true
+      },
+      "guardrails": [
+        "use structured output only",
+        "fail closed when approval is missing",
+        "do not fabricate evidence"
+      ],
+      "escalation_rules": [
+        "rollback requires recorded human approval or is prohibited when it creates external liability",
+        "refund requires recorded human approval or is prohibited when it creates external liability",
+        "legal admission requires recorded human approval or is prohibited when it creates external liability",
+        "compensation promise requires recorded human approval or is prohibited when it creates external liability"
+      ],
+      "failure_handling": []
+    }
+  ],
+  "tools": [
+    {
+      "tool_name": "audit_log.write",
+      "description": "Append immutable audit event for decisions, tool calls, approvals, and denials.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "RecruitingScreeningAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "resume.read",
+      "description": "Read resume content.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "RecruitingScreeningAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "skill.extract",
+      "description": "Extract skills and experience evidence.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "RecruitingScreeningAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "job_requirement.match",
+      "description": "Create skill match summary against job requirements.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "RecruitingScreeningAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "interview_question.draft",
+      "description": "Draft interview questions for human review.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "RecruitingScreeningAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "human_review.request",
+      "description": "Request human_review before screening decisions.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "high",
+      "requires_approval": true,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "RecruitingScreeningAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    }
+  ],
+  "workflows": [
+    {
+      "state_name": "intake",
+      "trigger": "new request",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "parse request",
+        "detect domain",
+        "select responsible agent"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "routing decision"
+      ],
+      "next_states": [
+        "analyze"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "analyze",
+      "trigger": "routing decision ready",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "collect evidence",
+        "produce recommendation"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "analysis summary"
+      ],
+      "next_states": [
+        "approval_review",
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "resume_intake",
+      "trigger": "resume received",
+      "responsible_agent": "RecruitingScreeningAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "read resume and preserve evidence"
+      ],
+      "tools_called": [
+        "resume.read"
+      ],
+      "outputs": [
+        "resume record"
+      ],
+      "next_states": [
+        "skill_extraction"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "skill_extraction",
+      "trigger": "resume record ready",
+      "responsible_agent": "RecruitingScreeningAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "extract skills and experience"
+      ],
+      "tools_called": [
+        "skill.extract"
+      ],
+      "outputs": [
+        "skills evidence"
+      ],
+      "next_states": [
+        "job_match"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "job_match",
+      "trigger": "skills evidence ready",
+      "responsible_agent": "RecruitingScreeningAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "match skills to job requirements only"
+      ],
+      "tools_called": [
+        "job_requirement.match"
+      ],
+      "outputs": [
+        "skill match summary"
+      ],
+      "next_states": [
+        "interview_question_draft"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "interview_question_draft",
+      "trigger": "job match ready",
+      "responsible_agent": "RecruitingScreeningAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "draft interview questions"
+      ],
+      "tools_called": [
+        "interview_question.draft"
+      ],
+      "outputs": [
+        "interview question draft"
+      ],
+      "next_states": [
+        "human_review"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "human_review",
+      "trigger": "screening draft ready",
+      "responsible_agent": "RecruitingScreeningAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "request human review before decision"
+      ],
+      "tools_called": [
+        "human_review.request"
+      ],
+      "outputs": [
+        "human review request"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": true
+    },
+    {
+      "state_name": "approval_review",
+      "trigger": "high-risk recommendation",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "request recorded human approval",
+        "block execution when approval missing"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "approval decision"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": true
+    },
+    {
+      "state_name": "finalize",
+      "trigger": "analysis complete",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "validate manifest",
+        "write structured output"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "agent manifest"
+      ],
+      "next_states": [],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    }
+  ],
+  "workflow": [
+    {
+      "state_name": "intake",
+      "trigger": "new request",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "parse request",
+        "detect domain",
+        "select responsible agent"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "routing decision"
+      ],
+      "next_states": [
+        "analyze"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "analyze",
+      "trigger": "routing decision ready",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "collect evidence",
+        "produce recommendation"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "analysis summary"
+      ],
+      "next_states": [
+        "approval_review",
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "resume_intake",
+      "trigger": "resume received",
+      "responsible_agent": "RecruitingScreeningAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "read resume and preserve evidence"
+      ],
+      "tools_called": [
+        "resume.read"
+      ],
+      "outputs": [
+        "resume record"
+      ],
+      "next_states": [
+        "skill_extraction"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "skill_extraction",
+      "trigger": "resume record ready",
+      "responsible_agent": "RecruitingScreeningAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "extract skills and experience"
+      ],
+      "tools_called": [
+        "skill.extract"
+      ],
+      "outputs": [
+        "skills evidence"
+      ],
+      "next_states": [
+        "job_match"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "job_match",
+      "trigger": "skills evidence ready",
+      "responsible_agent": "RecruitingScreeningAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "match skills to job requirements only"
+      ],
+      "tools_called": [
+        "job_requirement.match"
+      ],
+      "outputs": [
+        "skill match summary"
+      ],
+      "next_states": [
+        "interview_question_draft"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "interview_question_draft",
+      "trigger": "job match ready",
+      "responsible_agent": "RecruitingScreeningAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "draft interview questions"
+      ],
+      "tools_called": [
+        "interview_question.draft"
+      ],
+      "outputs": [
+        "interview question draft"
+      ],
+      "next_states": [
+        "human_review"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "human_review",
+      "trigger": "screening draft ready",
+      "responsible_agent": "RecruitingScreeningAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "request human review before decision"
+      ],
+      "tools_called": [
+        "human_review.request"
+      ],
+      "outputs": [
+        "human review request"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": true
+    },
+    {
+      "state_name": "approval_review",
+      "trigger": "high-risk recommendation",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "request recorded human approval",
+        "block execution when approval missing"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "approval decision"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": true
+    },
+    {
+      "state_name": "finalize",
+      "trigger": "analysis complete",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "validate manifest",
+        "write structured output"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "agent manifest"
+      ],
+      "next_states": [],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    }
+  ],
+  "memory": [
+    {
+      "key": "audit_log",
+      "schema": {
+        "type": "object"
+      },
+      "retention_policy": "retain for 180 days unless stricter policy applies",
+      "read_permissions": [
+        "CoordinatorAgent",
+        "RecruitingScreeningAgent"
+      ],
+      "write_permissions": [
+        "CoordinatorAgent"
+      ],
+      "update_rules": [
+        "append-only for audit records",
+        "preserve source references"
+      ]
+    },
+    {
+      "key": "candidate_skill_records",
+      "schema": {
+        "type": "object"
+      },
+      "retention_policy": "retain for 180 days unless stricter policy applies",
+      "read_permissions": [
+        "CoordinatorAgent",
+        "RecruitingScreeningAgent"
+      ],
+      "write_permissions": [
+        "CoordinatorAgent"
+      ],
+      "update_rules": [
+        "append-only for audit records",
+        "preserve source references"
+      ]
+    }
+  ],
+  "permissions": {
+    "default_execution_mode": "recommendation_only_for_high_risk_actions",
+    "approval_required_for": [
+      "change production config",
+      "close issue",
+      "data deletion",
+      "data export",
+      "delete account",
+      "launch publish",
+      "list plugin",
+      "mark duplicate",
+      "mark invalid",
+      "modify product page",
+      "permanent ban",
+      "publish plugin",
+      "refund",
+      "rollback",
+      "send customer email",
+      "send external legal statement",
+      "send marketing campaign"
+    ],
+    "audit_log_required": true,
+    "approval_bypass_allowed": false,
+    "prohibited_actions": {
+      "legal_admission": "Legal admission is prohibited for autonomous execution; route to legal review.",
+      "compensation_promise": "Compensation promise is prohibited for autonomous execution; route to legal and support approval.",
+      "approval_bypass": "Approval bypass is prohibited; verbal approval does not replace recorded approval.",
+      "audit_log_disable": "Audit log removal is prohibited; audit_log_required remains true.",
+      "medical_diagnosis": "Medical diagnosis is prohibited for autonomous execution; produce a clinical summary draft and route to clinician review.",
+      "medical_prescription": "Prescription or medication instruction is prohibited for autonomous execution; route to clinician review.",
+      "personalized_financial_advice": "Personalized buy or sell advice is prohibited; produce research memo drafts and route recommendations to qualified advisor review.",
+      "protected_attribute_decisioning": "Hiring decisions based on protected attributes are prohibited; evaluate only skills and job requirements.",
+      "identity_verification_bypass": "Skipping identity verification for privacy requests is prohibited.",
+      "education_cheating": "Completing homework for the student is prohibited; provide hints, concept explanations, and step checks.",
+      "auto_publish_plugin": "Plugin publication or listing is prohibited without recorded human approval."
+    }
+  },
+  "guardrails": [
+    "Output must be valid JSON matching the agent manifest schema.",
+    "High-risk actions require recorded human approval and audit logging.",
+    "If approval is missing, produce a recommendation or draft only.",
+    "Do not fabricate sources, approvals, logs, metrics, or user consent.",
+    "When root cause is uncertain, state uncertainty and list evidence gaps.",
+    "anti_discrimination and no_protected_attribute_decisioning guardrails apply.",
+    "Recruiting output is skills based and requires human_review before decisions."
+  ],
+  "test_cases": [
+    {
+      "name": "schema_required_fields",
+      "assert": "manifest includes agents, tools, workflows, memory, permissions, guardrails, and test_cases"
+    },
+    {
+      "name": "high_risk_requires_approval",
+      "assert": "every high side effect tool requires approval and audit logging"
+    },
+    {
+      "name": "regulated_domain_safety",
+      "assert": "regulated domain prohibited actions are guardrails only and high-risk actions require approval"
+    }
+  ],
+  "assumptions": [],
+  "clarification_needed": [],
+  "safe_defaults": {
+    "high_risk_actions": "approval_required",
+    "audit_log_required": true,
+    "external_commitments": "draft_only_until_approved",
+    "regulated_domain_safety_profile": "enabled"
+  },
+  "minimal_viable_agent": {
+    "name": "CoordinatorAgent",
+    "reason": "minimum coordinator plus domain specialist selected from request signals"
+  },
+  "conflict_resolution": {},
+  "planning_rationale": "minimal specialist design selected from semantic request signals",
+  "semantic_profile": {
+    "domains": [
+      "recruiting"
+    ],
+    "security_sensitive": true,
+    "minimal_agent_preferred": false
+  },
+  "generation": {
+    "generator": "ctcp-deterministic-agent-manifest-generator",
+    "domain_signals": [
+      "generic",
+      "recruiting"
+    ],
+    "input_title": "H5 Recruiting screening agent"
+  },
+  "benchmark_metadata": {
+    "schema_version": "external-agent-factory-holdout-output-v1",
+    "phase": "phase2_5_holdout",
+    "case_id": "h5_recruiting_screening",
+    "fixture_path": "tests/agent_factory_benchmark/holdout_fixtures/input_h5_recruiting_screening.json",
+    "generated_by": "scripts/generate_agent_manifest.py",
+    "generator_frozen": true,
+    "commands": [
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\generate_agent_manifest.py --input D:\\.c_projects\\adc\\ctcp\\tests\\agent_factory_benchmark\\holdout_fixtures\\input_h5_recruiting_screening.json --output D:\\.c_projects\\adc\\ctcp\\tests\\agent_factory_benchmark\\holdout_generated\\output_h5_recruiting_screening.json",
+        "exit_code": 0,
+        "stdout_tail": "[generate_agent_manifest] output=D:/.c_projects/adc/ctcp/tests/agent_factory_benchmark/holdout_generated/output_h5_recruiting_screening.json\n[generate_agent_manifest] agents=2 tools=6 workflows=9\n",
+        "stderr_tail": ""
+      }
+    ],
+    "runtime_status": "ran",
+    "agent_manifest_generation_supported": true
+  }
+}

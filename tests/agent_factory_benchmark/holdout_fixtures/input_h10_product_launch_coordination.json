@@ -1,0 +1,12 @@
+{
+  "case_id": "h10_product_launch_coordination",
+  "title": "H10 Product launch coordination system",
+  "goal": "创建一个 product launch coordination system。它需要协调 product、marketing、support、sales，生成 launch checklist，从 PRD 提取功能点，生成销售 enablement draft，生成客服 FAQ draft，发布前需要负责人审批。这不是 incident，也不是 rollback 场景。",
+  "holdout_expectations": {
+    "required_keywords": ["launch coordination", "PRD extraction", "marketing draft", "support FAQ", "sales enablement"],
+    "forbidden_domains": ["devops", "billing", "incident", "rollback"],
+    "required_workflow_states": ["launch_coordination", "prd_extraction", "marketing_draft", "support_faq", "sales_enablement", "launch_approval"],
+    "allow_multi_agent": true,
+    "high_risk_external_actions": ["launch publish"]
+  }
+}

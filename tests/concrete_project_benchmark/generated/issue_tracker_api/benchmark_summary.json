@@ -1,0 +1,604 @@
+{
+  "benchmark": "concrete_project_generation_issue_tracker_api",
+  "status": "failed",
+  "max_wall_clock_seconds": 540,
+  "timeout_step": "resume_advance",
+  "step_timings": [
+    {
+      "step": "discovery",
+      "duration_seconds": 0.348,
+      "status": "passed"
+    },
+    {
+      "step": "new_run",
+      "duration_seconds": 0.617,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "status_before_generation",
+      "duration_seconds": 0.375,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "advance_1",
+      "duration_seconds": 9.404,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "status_after_advance",
+      "duration_seconds": 0.334,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "advance_2",
+      "duration_seconds": 2.924,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "status_after_advance",
+      "duration_seconds": 0.348,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "advance_3",
+      "duration_seconds": 13.222,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "status_after_advance",
+      "duration_seconds": 0.343,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "advance_4",
+      "duration_seconds": 0.739,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "status_after_advance",
+      "duration_seconds": 0.365,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "advance_5",
+      "duration_seconds": 29.645,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "status_after_advance",
+      "duration_seconds": 0.35,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "advance_6",
+      "duration_seconds": 13.622,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "status_after_advance",
+      "duration_seconds": 0.365,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "advance_7",
+      "duration_seconds": 12.614,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "status_after_advance",
+      "duration_seconds": 0.382,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "advance_8",
+      "duration_seconds": 31.26,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "status_after_advance",
+      "duration_seconds": 0.351,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "advance_9",
+      "duration_seconds": 15.99,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "status_after_advance",
+      "duration_seconds": 0.421,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "interrupted_advance",
+      "duration_seconds": 65.546,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "status_after_advance",
+      "duration_seconds": 0.423,
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "step": "resume_advance",
+      "duration_seconds": 180.036,
+      "status": "timeout",
+      "exit_code": 124
+    },
+    {
+      "step": "source_generation",
+      "duration_seconds": 246.011,
+      "status": "timeout",
+      "completed_batches": 1,
+      "partial_project_output_seen": true
+    },
+    {
+      "step": "generated_project_discovery",
+      "duration_seconds": 0.017,
+      "status": "passed"
+    },
+    {
+      "step": "convergence_extraction",
+      "duration_seconds": 0.031,
+      "status": "passed",
+      "pass": 0,
+      "drift_count": 0,
+      "graph_hash": "b82efc098fb337989feccff3fab052a2da2f770f8a358e838f7d7bb0604e035f",
+      "changed_files": []
+    },
+    {
+      "step": "convergence_validation",
+      "duration_seconds": 0.0,
+      "status": "passed",
+      "pass": 0,
+      "drift_count": 0,
+      "graph_hash": "b82efc098fb337989feccff3fab052a2da2f770f8a358e838f7d7bb0604e035f",
+      "changed_files": []
+    },
+    {
+      "step": "convergence_repair",
+      "duration_seconds": 0.0,
+      "status": "passed",
+      "pass": 0,
+      "drift_count": 0,
+      "graph_hash": "b82efc098fb337989feccff3fab052a2da2f770f8a358e838f7d7bb0604e035f",
+      "changed_files": []
+    },
+    {
+      "step": "generated_project_tests",
+      "duration_seconds": 0.002,
+      "status": "failed",
+      "reason": "no generated test files found"
+    },
+    {
+      "step": "HTTP probe",
+      "duration_seconds": 0.001,
+      "status": "failed",
+      "reason": "required fixture routes are absent from generated_routes.json"
+    },
+    {
+      "step": "SQLite validation",
+      "duration_seconds": 0.113,
+      "status": "passed"
+    },
+    {
+      "step": "report_write",
+      "duration_seconds": 0.011,
+      "status": "passed"
+    }
+  ],
+  "entrypoint_discovery": {
+    "help_command": {
+      "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py --help",
+      "cwd": "D:\\.c_projects\\adc\\ctcp",
+      "exit_code": 0,
+      "stdout": "usage: ctcp_orchestrate.py [-h]\n                           {agent-manifest,agent-scaffold,agent-project,new-run,status,advance,cos-user-v2p,scaffold,scaffold-pointcloud} ...\n\nCTCP local orchestrator (artifact-driven state machine)\n\npositional arguments:\n  {agent-manifest,agent-scaffold,agent-project,new-run,status,advance,cos-user-v2p,scaffold,scaffold-pointcloud}\n    agent-manifest      Generate an agent manifest through the isolated mode\n    agent-scaffold      Generate a runnable dry-run scaffold from an agent\n                        manifest\n    agent-project       Generate an end-to-end dry-run agent project from a\n                        requirement input\n    new-run             Create a new external run directory\n    status              Show current gate and missing artifact\n    advance             Advance one-or-more steps by artifact presence\n    cos-user-v2p        Run external V2P testkit with CTCP dialogue, evidence\n                        and fixed destination copy\n    scaffold            Generate a reference CTCP project skeleton\n    scaffold-pointcloud\n                        Generate a point-cloud project scaffold from templates\n\noptions:\n  -h, --help            show this help message and exit\n",
+      "stderr": "",
+      "duration_seconds": 0.347,
+      "timed_out": false
+    },
+    "ordinary_entrypoints_found": [
+      "new-run",
+      "status",
+      "advance",
+      "scaffold",
+      "scaffold-pointcloud"
+    ],
+    "agent_mode_entrypoints_excluded": [
+      "agent-manifest",
+      "agent-project",
+      "agent-scaffold"
+    ],
+    "selected_entrypoint": "scripts/ctcp_orchestrate.py new-run + advance",
+    "can_run_ordinary_project_generation": true
+  },
+  "generation": {
+    "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845",
+    "commands": [
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py new-run --goal Generate a real runnable local HTTP API project for tracking issues. The project must not be an agent manifest, agent scaffold, or agent dry-run. It must be a concrete software project with README, source code, automated tests, and SQLite persistence. Required endpoints: POST /issues, GET /issues, GET /issues/{id}, PATCH /issues/{id}/status, POST /issues/{id}/close. Use SQLite persistence. Valid issue statuses: open, in_progress, closed. Generate the concrete project files, tests, README, runnable local HTTP server, and delivery package. --run-id concrete-issue-tracker-1778591845",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n",
+        "stderr": "",
+        "duration_seconds": 0.617,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for analysis.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/analysis.md\n[ctcp_orchestrate] reason=waiting for analysis.md\n",
+        "stderr": "",
+        "duration_seconds": 0.375,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845 --max-steps 1",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=8.47\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+        "stderr": "",
+        "duration_seconds": 9.404,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=8.47\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+        "stderr": "",
+        "duration_seconds": 0.334,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845 --max-steps 1",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=8.47\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+        "stderr": "",
+        "duration_seconds": 2.923,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=8.47\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+        "stderr": "",
+        "duration_seconds": 0.348,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845 --max-steps 1",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=8.47\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+        "stderr": "",
+        "duration_seconds": 13.222,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=8.47\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+        "stderr": "",
+        "duration_seconds": 0.343,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845 --max-steps 1",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=8.47\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+        "stderr": "",
+        "duration_seconds": 0.739,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=8.47\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+        "stderr": "",
+        "duration_seconds": 0.365,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845 --max-steps 1",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=8.47\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+        "stderr": "",
+        "duration_seconds": 29.645,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=8.47\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+        "stderr": "",
+        "duration_seconds": 0.35,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845 --max-steps 1",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=8.47\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+        "stderr": "",
+        "duration_seconds": 13.622,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=8.47\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+        "stderr": "",
+        "duration_seconds": 0.365,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845 --max-steps 1",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=8.47\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+        "stderr": "",
+        "duration_seconds": 12.614,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=8.47\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+        "stderr": "",
+        "duration_seconds": 0.382,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845 --max-steps 1",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=8.47\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+        "stderr": "",
+        "duration_seconds": 31.26,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=8.47\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+        "stderr": "",
+        "duration_seconds": 0.351,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845 --max-steps 1",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=8.47\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+        "stderr": "",
+        "duration_seconds": 15.99,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=8.47\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+        "stderr": "",
+        "duration_seconds": 0.421,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845 --max-steps 1",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] blocked: provider reported executed but target missing: artifacts/source_generation_report.json\n",
+        "stderr": "",
+        "duration_seconds": 65.546,
+        "timed_out": false,
+        "intentional_source_generation_interrupt": true
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 0,
+        "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\n[ctcp_orchestrate] run_status=blocked\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=8.47\n[ctcp_orchestrate] source_generation_progress=completed_batches=1/6, generated_files=3, materialized_files=3, remaining_batches=5, status=running\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+        "stderr": "",
+        "duration_seconds": 0.423,
+        "timed_out": false
+      },
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845 --max-steps 1",
+        "cwd": "D:\\.c_projects\\adc\\ctcp",
+        "exit_code": 124,
+        "stdout": "",
+        "stderr": "",
+        "duration_seconds": 180.036,
+        "timed_out": true
+      }
+    ],
+    "blocked": false,
+    "block_reason": "",
+    "source_generation_recovery": {
+      "intentional_source_generation_interrupt": true,
+      "resume_attempted": true,
+      "partial_project_output_seen": true,
+      "completed_batch_count_after_interrupt": 1,
+      "completed_batch_count_after_resume": 1
+    }
+  },
+  "project_discovery": {
+    "project_found": true,
+    "project_root": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\\project_output\\generate-a-real-runnable-local-http-api-project-",
+    "project_path_pointer": "D:\\.c_projects\\adc\\ctcp\\tests\\concrete_project_benchmark\\generated\\issue_tracker_api\\project_path.txt",
+    "candidates": [
+      {
+        "path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\\project_output\\generate-a-real-runnable-local-http-api-project-",
+        "score": 5
+      }
+    ]
+  },
+  "validation": {
+    "passed": false,
+    "checks": {
+      "not_agent_artifact": {
+        "passed": true
+      },
+      "readme": {
+        "passed": true,
+        "path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\\project_output\\generate-a-real-runnable-local-http-api-project-\\README.md"
+      },
+      "source": {
+        "passed": false,
+        "files": []
+      },
+      "tests": {
+        "passed": false,
+        "files": []
+      },
+      "project_tests": {
+        "passed": false,
+        "commands": [],
+        "reason": "no generated test files found"
+      },
+      "http_api": {
+        "passed": false,
+        "server_started": false,
+        "candidates": [],
+        "endpoint_results": {},
+        "route_registry": [],
+        "missing_required_routes": [
+          "GET /issues",
+          "GET /issues/{id}",
+          "PATCH /issues/{id}/status",
+          "POST /issues",
+          "POST /issues/{id}/close"
+        ],
+        "reason": "required fixture routes are absent from generated_routes.json"
+      },
+      "sqlite": {
+        "passed": true,
+        "sqlite_usage_detected": true,
+        "database_file_created": false,
+        "code_hits": [
+          "README.md",
+          "docs/00_CORE.md",
+          "docs/web_workflow.md",
+          "meta/reports/LAST.md"
+        ],
+        "database_files": []
+      },
+      "shared_contracts": {
+        "passed": true,
+        "graph_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\\artifacts\\contract_graph.json",
+        "graph_hash": "b82efc098fb337989feccff3fab052a2da2f770f8a358e838f7d7bb0604e035f",
+        "symbols_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\\artifacts\\generated_symbols.json",
+        "routes_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\\artifacts\\generated_routes.json",
+        "runtime_contract_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\\artifacts\\runtime_contract.json",
+        "reconciliation_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\\artifacts\\reconciliation_report.json",
+        "reconciliation_status": "passed",
+        "converged": true,
+        "typed_issue_count": 0,
+        "provider_call_count": 0,
+        "stopped_reason": "converged",
+        "max_passes": 3,
+        "max_wall_clock_seconds": 120.0,
+        "cache_hits": 0,
+        "cache_misses": 0
+      }
+    }
+  },
+  "failed_assertions": [
+    "source check failed",
+    "tests check failed",
+    "project_tests check failed",
+    "http_api check failed"
+  ],
+  "unsupported_reasons": [],
+  "analysis_progress": {
+    "action": "plan_draft",
+    "analysis_profile": "fast",
+    "artifact_write_completed_at": "2026-05-12T13:17:35Z",
+    "artifact_write_started_at": "2026-05-12T13:17:35Z",
+    "cmd": "\"D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe\" \"D:\\.c_projects\\adc\\ctcp\\scripts\\externals\\openai_agent_api.py\"",
+    "duration_seconds": 8.47,
+    "error": null,
+    "last_event": "artifact_write_completed",
+    "max_output_tokens": 900,
+    "output_contract": "# Analysis\n\n## Project Type\nOne short paragraph naming the concrete software project type.\n\n## Required Files\nBullets for the minimum files/directories the later source_generation step must create.\n\n## Runtime\nBullets for entrypoint, HTTP/server behavior, CLI args if needed, and local run command expectations.\n\n## Data Model\nBullets for persisted entities, fields, enums/status values, and SQLite expectations.\n\n## Acceptance Checks\nBullets for generated tests, HTTP probes, SQLite validation, and README/run instructions.",
+    "owner": "chair",
+    "parser_completed_at": "2026-05-12T13:17:35Z",
+    "parser_started_at": "2026-05-12T13:17:35Z",
+    "partial_artifact_exists": false,
+    "partial_artifact_path": "",
+    "prompt_char_count": 2232,
+    "prompt_estimated_tokens": 558,
+    "prompt_path": "outbox/AGENT_PROMPT_chair_plan_draft.md",
+    "provider": "api_agent",
+    "provider_call_completed_at": "2026-05-12T13:17:35Z",
+    "provider_call_started_at": "2026-05-12T13:17:26Z",
+    "provider_model": "gpt-4.1-mini",
+    "provider_return_code": 0,
+    "provider_timeout_seconds": 90,
+    "raw_response_exists": true,
+    "raw_response_path": "artifacts/analysis.raw.txt",
+    "resume_possible": false,
+    "role": "chair",
+    "stage": "analysis",
+    "started_at": "2026-05-12T13:17:26Z",
+    "started_epoch_seconds": 1778591846.8300898,
+    "status": "completed",
+    "target_exists": true,
+    "target_path": "artifacts/analysis.md",
+    "updated_at": "2026-05-12T13:17:35Z"
+  },
+  "analysis_timeout": true,
+  "analysis_target": "artifacts/analysis.md",
+  "analysis_prompt_path": "outbox/AGENT_PROMPT_chair_plan_draft.md",
+  "analysis_provider_model": "gpt-4.1-mini",
+  "analysis_provider": "api_agent",
+  "analysis_provider_timeout_seconds": 90,
+  "analysis_profile": "fast",
+  "analysis_prompt_char_count": 2232,
+  "analysis_prompt_estimated_tokens": 558,
+  "analysis_output_contract": "# Analysis\n\n## Project Type\nOne short paragraph naming the concrete software project type.\n\n## Required Files\nBullets for the minimum files/directories the later source_generation step must create.\n\n## Runtime\nBullets for entrypoint, HTTP/server behavior, CLI args if needed, and local run command expectations.\n\n## Data Model\nBullets for persisted entities, fields, enums/status values, and SQLite expectations.\n\n## Acceptance Checks\nBullets for generated tests, HTTP probes, SQLite validation, and README/run instructions.",
+  "analysis_max_output_tokens": 900,
+  "analysis_last_event": "artifact_write_completed",
+  "analysis_error": null,
+  "analysis_raw_exists": true,
+  "analysis_raw_path": "artifacts/analysis.raw.txt",
+  "analysis_partial_exists": false,
+  "analysis_partial_path": "",
+  "analysis_resume_possible": false,
+  "generated_project_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_benchmark_runs\\ctcp\\concrete-issue-tracker-1778591845\\project_output\\generate-a-real-runnable-local-http-api-project-",
+  "elapsed_seconds": 380.279
+}

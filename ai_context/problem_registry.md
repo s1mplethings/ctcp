@@ -844,3 +844,18 @@ When to add:
   任何 repo purpose 或 root contract 的主链更新，都必须同步检查 generation gate、default context request、bridge/render snapshot、以及 progress reply consumer 是否一起收敛；只改顶层 md 不算完成。
 - Tags:
   contract-drift, generation, progress, visible-evidence, runtime-wiring, docs-alignment
+
+## Example 32
+
+- Symptom:
+  Agent manifest generation over-triggered nearby enterprise domains from ambiguous words, such as treating battery charging `charge` as billing/refund or product launch as incident/rollback planning.
+- Repro:
+  Run `.\.venv\Scripts\python.exe tests\agent_factory_benchmark\run_benchmark.py` and inspect holdout cases H9 and H10.
+- Root cause:
+  Domain detection relied on broad keyword hits and lacked negative context handling, lightweight-domain minimality, regulated-domain safety profiles, and action-risk separation by tool/action.
+- Fix:
+  Add explicit negative context handling, holdout domain profiles, minimal tool generation, and approval-gated action risk handling in `tools/agent_manifest_generator.py`.
+- Prevention:
+  Keep holdout benchmark H1-H10 and generator unit tests covering charge, launch, regulated safety, high-risk approvals, and audit log preservation.
+- Tags:
+  agent-manifest, domain-detection, routing, holdout, safety, benchmark

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CTCP Library Usage Verification",
+  "type": "object",
+  "required": ["schema_version", "passed", "checks"],
+  "properties": {
+    "schema_version": {"const": "ctcp-library-usage-verification-v1"},
+    "passed": {"type": "boolean"},
+    "checks": {"type": "array"},
+    "file_results": {"type": "array"}
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,14 @@
+{
+  "case_id": "s5_legal_contract_review",
+  "title": "S5 Legal contract review agent",
+  "goal": "创建一个 legal contract review agent。它需要读取 SaaS 合同，提取付款、续约、终止、赔偿、数据处理、责任限制条款，标记风险等级，给出修改建议，明确不是律师意见，高风险条款需要人工律师复核。",
+  "semantic_expectations": {
+    "required_keywords": ["contract", "clause", "risk", "lawyer review", "not legal advice"],
+    "forbidden_keywords": ["rollback", "incident timeline", "github issue triage"],
+    "required_tool_domains": ["contract", "legal_review"],
+    "forbidden_tool_domains": ["devops", "github"],
+    "required_workflow_states": ["contract_ingestion", "clause_extraction", "risk_scoring", "lawyer_review"],
+    "forbidden_workflow_states": ["incident_response", "triage_issue"],
+    "specific_case": true
+  }
+}

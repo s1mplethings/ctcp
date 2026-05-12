@@ -1,0 +1,983 @@
+{
+  "manifest_version": "1.0",
+  "system_name": "H7 Privacy request agent",
+  "agents": [
+    {
+      "name": "CoordinatorAgent",
+      "role": "orchestrator",
+      "goal": "Route requests, enforce approval boundaries, and assemble final structured output.",
+      "scope": [
+        "triage request",
+        "select workflow",
+        "coordinate specialist agents"
+      ],
+      "out_of_scope": [
+        "execute high-risk action without recorded approval"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "request"
+        ],
+        "properties": {
+          "request": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "decision",
+          "evidence"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array"
+          }
+        }
+      },
+      "tools": [
+        "audit_log.write"
+      ],
+      "memory": [
+        "audit_log"
+      ],
+      "permissions": {
+        "approval_required_for": [
+          "change production config",
+          "close issue",
+          "data deletion",
+          "data export",
+          "delete account",
+          "launch publish",
+          "list plugin",
+          "mark duplicate",
+          "mark invalid",
+          "modify product page",
+          "permanent ban",
+          "publish plugin",
+          "refund",
+          "rollback",
+          "send customer email",
+          "send external legal statement",
+          "send marketing campaign"
+        ],
+        "prohibited_actions": {
+          "legal_admission": "Legal admission is prohibited for autonomous execution; route to legal review.",
+          "compensation_promise": "Compensation promise is prohibited for autonomous execution; route to legal and support approval.",
+          "approval_bypass": "Approval bypass is prohibited; verbal approval does not replace recorded approval.",
+          "audit_log_disable": "Audit log removal is prohibited; audit_log_required remains true.",
+          "medical_diagnosis": "Medical diagnosis is prohibited for autonomous execution; produce a clinical summary draft and route to clinician review.",
+          "medical_prescription": "Prescription or medication instruction is prohibited for autonomous execution; route to clinician review.",
+          "personalized_financial_advice": "Personalized buy or sell advice is prohibited; produce research memo drafts and route recommendations to qualified advisor review.",
+          "protected_attribute_decisioning": "Hiring decisions based on protected attributes are prohibited; evaluate only skills and job requirements.",
+          "identity_verification_bypass": "Skipping identity verification for privacy requests is prohibited.",
+          "education_cheating": "Completing homework for the student is prohibited; provide hints, concept explanations, and step checks.",
+          "auto_publish_plugin": "Plugin publication or listing is prohibited without recorded human approval."
+        },
+        "audit_log_required": true
+      },
+      "guardrails": [
+        "use structured output only",
+        "fail closed when approval is missing",
+        "do not fabricate evidence"
+      ],
+      "escalation_rules": [
+        "rollback requires recorded human approval or is prohibited when it creates external liability",
+        "refund requires recorded human approval or is prohibited when it creates external liability",
+        "legal admission requires recorded human approval or is prohibited when it creates external liability",
+        "compensation promise requires recorded human approval or is prohibited when it creates external liability"
+      ],
+      "failure_handling": []
+    },
+    {
+      "name": "PrivacyRequestAgent",
+      "role": "privacy request processor",
+      "goal": "Verify identity, classify export or deletion requests, prepare data actions, and record audit logs.",
+      "scope": [
+        "identity verification",
+        "data export preparation",
+        "account deletion approval",
+        "audit log recording"
+      ],
+      "out_of_scope": [
+        "skip identity verification"
+      ],
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "request"
+        ],
+        "properties": {
+          "request": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "decision",
+          "evidence"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array"
+          }
+        }
+      },
+      "tools": [
+        "privacy_request.intake",
+        "identity_verification.check",
+        "data_export.prepare",
+        "account_deletion.prepare",
+        "deletion_approval.request"
+      ],
+      "memory": [
+        "privacy_request_log"
+      ],
+      "permissions": {
+        "approval_required_for": [
+          "change production config",
+          "close issue",
+          "data deletion",
+          "data export",
+          "delete account",
+          "launch publish",
+          "list plugin",
+          "mark duplicate",
+          "mark invalid",
+          "modify product page",
+          "permanent ban",
+          "publish plugin",
+          "refund",
+          "rollback",
+          "send customer email",
+          "send external legal statement",
+          "send marketing campaign"
+        ],
+        "prohibited_actions": {
+          "legal_admission": "Legal admission is prohibited for autonomous execution; route to legal review.",
+          "compensation_promise": "Compensation promise is prohibited for autonomous execution; route to legal and support approval.",
+          "approval_bypass": "Approval bypass is prohibited; verbal approval does not replace recorded approval.",
+          "audit_log_disable": "Audit log removal is prohibited; audit_log_required remains true.",
+          "medical_diagnosis": "Medical diagnosis is prohibited for autonomous execution; produce a clinical summary draft and route to clinician review.",
+          "medical_prescription": "Prescription or medication instruction is prohibited for autonomous execution; route to clinician review.",
+          "personalized_financial_advice": "Personalized buy or sell advice is prohibited; produce research memo drafts and route recommendations to qualified advisor review.",
+          "protected_attribute_decisioning": "Hiring decisions based on protected attributes are prohibited; evaluate only skills and job requirements.",
+          "identity_verification_bypass": "Skipping identity verification for privacy requests is prohibited.",
+          "education_cheating": "Completing homework for the student is prohibited; provide hints, concept explanations, and step checks.",
+          "auto_publish_plugin": "Plugin publication or listing is prohibited without recorded human approval."
+        },
+        "audit_log_required": true
+      },
+      "guardrails": [
+        "use structured output only",
+        "fail closed when approval is missing",
+        "do not fabricate evidence"
+      ],
+      "escalation_rules": [
+        "rollback requires recorded human approval or is prohibited when it creates external liability",
+        "refund requires recorded human approval or is prohibited when it creates external liability",
+        "legal admission requires recorded human approval or is prohibited when it creates external liability",
+        "compensation promise requires recorded human approval or is prohibited when it creates external liability"
+      ],
+      "failure_handling": []
+    }
+  ],
+  "tools": [
+    {
+      "tool_name": "audit_log.write",
+      "description": "Append immutable audit event for decisions, tool calls, approvals, and denials.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "PrivacyRequestAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "privacy_request.intake",
+      "description": "Capture privacy request details.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "low",
+      "requires_approval": false,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "PrivacyRequestAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "identity_verification.check",
+      "description": "Verify requester identity before data export or deletion.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "high",
+      "requires_approval": true,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "PrivacyRequestAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "data_export.prepare",
+      "description": "Prepare data export after identity verification.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "high",
+      "requires_approval": true,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "PrivacyRequestAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "account_deletion.prepare",
+      "description": "Prepare account deletion package after strong verification.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "high",
+      "requires_approval": true,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "PrivacyRequestAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    },
+    {
+      "tool_name": "deletion_approval.request",
+      "description": "Request approval or strong verification for data deletion.",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "side_effect_level": "high",
+      "requires_approval": true,
+      "allowed_callers": [
+        "CoordinatorAgent",
+        "PrivacyRequestAgent"
+      ],
+      "rate_limit": "60 calls/minute",
+      "timeout_strategy": "fail closed after 30 seconds and return a retryable tool_error",
+      "retry_strategy": "retry read-only operations twice with exponential backoff; do not retry high-risk writes",
+      "audit_log_required": true
+    }
+  ],
+  "workflows": [
+    {
+      "state_name": "intake",
+      "trigger": "new request",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "parse request",
+        "detect domain",
+        "select responsible agent"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "routing decision"
+      ],
+      "next_states": [
+        "analyze"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "analyze",
+      "trigger": "routing decision ready",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "collect evidence",
+        "produce recommendation"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "analysis summary"
+      ],
+      "next_states": [
+        "approval_review",
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "request_intake",
+      "trigger": "privacy request received",
+      "responsible_agent": "PrivacyRequestAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "capture data export or deletion request"
+      ],
+      "tools_called": [
+        "privacy_request.intake"
+      ],
+      "outputs": [
+        "privacy request"
+      ],
+      "next_states": [
+        "identity_verification"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "identity_verification",
+      "trigger": "privacy request captured",
+      "responsible_agent": "PrivacyRequestAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "verify requester identity"
+      ],
+      "tools_called": [
+        "identity_verification.check"
+      ],
+      "outputs": [
+        "identity verification result"
+      ],
+      "next_states": [
+        "data_export_request",
+        "deletion_approval"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "data_export_request",
+      "trigger": "verified export request",
+      "responsible_agent": "PrivacyRequestAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "prepare data export after verification"
+      ],
+      "tools_called": [
+        "data_export.prepare"
+      ],
+      "outputs": [
+        "data export package"
+      ],
+      "next_states": [
+        "audit_log"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": true
+    },
+    {
+      "state_name": "deletion_approval",
+      "trigger": "verified deletion request",
+      "responsible_agent": "PrivacyRequestAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "prepare deletion and require strong verification or approval"
+      ],
+      "tools_called": [
+        "account_deletion.prepare",
+        "deletion_approval.request"
+      ],
+      "outputs": [
+        "deletion approval request"
+      ],
+      "next_states": [
+        "audit_log"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": true
+    },
+    {
+      "state_name": "audit_log",
+      "trigger": "privacy action prepared",
+      "responsible_agent": "PrivacyRequestAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "record privacy request audit event"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "audit log record"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "approval_review",
+      "trigger": "high-risk recommendation",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "request recorded human approval",
+        "block execution when approval missing"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "approval decision"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": true
+    },
+    {
+      "state_name": "finalize",
+      "trigger": "analysis complete",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "validate manifest",
+        "write structured output"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "agent manifest"
+      ],
+      "next_states": [],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    }
+  ],
+  "workflow": [
+    {
+      "state_name": "intake",
+      "trigger": "new request",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "parse request",
+        "detect domain",
+        "select responsible agent"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "routing decision"
+      ],
+      "next_states": [
+        "analyze"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "analyze",
+      "trigger": "routing decision ready",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "collect evidence",
+        "produce recommendation"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "analysis summary"
+      ],
+      "next_states": [
+        "approval_review",
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "request_intake",
+      "trigger": "privacy request received",
+      "responsible_agent": "PrivacyRequestAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "capture data export or deletion request"
+      ],
+      "tools_called": [
+        "privacy_request.intake"
+      ],
+      "outputs": [
+        "privacy request"
+      ],
+      "next_states": [
+        "identity_verification"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "identity_verification",
+      "trigger": "privacy request captured",
+      "responsible_agent": "PrivacyRequestAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "verify requester identity"
+      ],
+      "tools_called": [
+        "identity_verification.check"
+      ],
+      "outputs": [
+        "identity verification result"
+      ],
+      "next_states": [
+        "data_export_request",
+        "deletion_approval"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "data_export_request",
+      "trigger": "verified export request",
+      "responsible_agent": "PrivacyRequestAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "prepare data export after verification"
+      ],
+      "tools_called": [
+        "data_export.prepare"
+      ],
+      "outputs": [
+        "data export package"
+      ],
+      "next_states": [
+        "audit_log"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": true
+    },
+    {
+      "state_name": "deletion_approval",
+      "trigger": "verified deletion request",
+      "responsible_agent": "PrivacyRequestAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "prepare deletion and require strong verification or approval"
+      ],
+      "tools_called": [
+        "account_deletion.prepare",
+        "deletion_approval.request"
+      ],
+      "outputs": [
+        "deletion approval request"
+      ],
+      "next_states": [
+        "audit_log"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": true
+    },
+    {
+      "state_name": "audit_log",
+      "trigger": "privacy action prepared",
+      "responsible_agent": "PrivacyRequestAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "record privacy request audit event"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "audit log record"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    },
+    {
+      "state_name": "approval_review",
+      "trigger": "high-risk recommendation",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "request recorded human approval",
+        "block execution when approval missing"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "approval decision"
+      ],
+      "next_states": [
+        "finalize"
+      ],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": true
+    },
+    {
+      "state_name": "finalize",
+      "trigger": "analysis complete",
+      "responsible_agent": "CoordinatorAgent",
+      "inputs": [
+        "request",
+        "context",
+        "memory"
+      ],
+      "actions": [
+        "validate manifest",
+        "write structured output"
+      ],
+      "tools_called": [
+        "audit_log.write"
+      ],
+      "outputs": [
+        "agent manifest"
+      ],
+      "next_states": [],
+      "failure_paths": [
+        "tool_timeout",
+        "missing_required_input",
+        "validation_failed"
+      ],
+      "human_approval_required": false
+    }
+  ],
+  "memory": [
+    {
+      "key": "audit_log",
+      "schema": {
+        "type": "object"
+      },
+      "retention_policy": "retain for 180 days unless stricter policy applies",
+      "read_permissions": [
+        "CoordinatorAgent",
+        "PrivacyRequestAgent"
+      ],
+      "write_permissions": [
+        "CoordinatorAgent"
+      ],
+      "update_rules": [
+        "append-only for audit records",
+        "preserve source references"
+      ]
+    },
+    {
+      "key": "privacy_request_log",
+      "schema": {
+        "type": "object"
+      },
+      "retention_policy": "retain for 180 days unless stricter policy applies",
+      "read_permissions": [
+        "CoordinatorAgent",
+        "PrivacyRequestAgent"
+      ],
+      "write_permissions": [
+        "CoordinatorAgent"
+      ],
+      "update_rules": [
+        "append-only for audit records",
+        "preserve source references"
+      ]
+    }
+  ],
+  "permissions": {
+    "default_execution_mode": "recommendation_only_for_high_risk_actions",
+    "approval_required_for": [
+      "change production config",
+      "close issue",
+      "data deletion",
+      "data export",
+      "delete account",
+      "launch publish",
+      "list plugin",
+      "mark duplicate",
+      "mark invalid",
+      "modify product page",
+      "permanent ban",
+      "publish plugin",
+      "refund",
+      "rollback",
+      "send customer email",
+      "send external legal statement",
+      "send marketing campaign"
+    ],
+    "audit_log_required": true,
+    "approval_bypass_allowed": false,
+    "prohibited_actions": {
+      "legal_admission": "Legal admission is prohibited for autonomous execution; route to legal review.",
+      "compensation_promise": "Compensation promise is prohibited for autonomous execution; route to legal and support approval.",
+      "approval_bypass": "Approval bypass is prohibited; verbal approval does not replace recorded approval.",
+      "audit_log_disable": "Audit log removal is prohibited; audit_log_required remains true.",
+      "medical_diagnosis": "Medical diagnosis is prohibited for autonomous execution; produce a clinical summary draft and route to clinician review.",
+      "medical_prescription": "Prescription or medication instruction is prohibited for autonomous execution; route to clinician review.",
+      "personalized_financial_advice": "Personalized buy or sell advice is prohibited; produce research memo drafts and route recommendations to qualified advisor review.",
+      "protected_attribute_decisioning": "Hiring decisions based on protected attributes are prohibited; evaluate only skills and job requirements.",
+      "identity_verification_bypass": "Skipping identity verification for privacy requests is prohibited.",
+      "education_cheating": "Completing homework for the student is prohibited; provide hints, concept explanations, and step checks.",
+      "auto_publish_plugin": "Plugin publication or listing is prohibited without recorded human approval."
+    }
+  },
+  "guardrails": [
+    "Output must be valid JSON matching the agent manifest schema.",
+    "High-risk actions require recorded human approval and audit logging.",
+    "If approval is missing, produce a recommendation or draft only.",
+    "Do not fabricate sources, approvals, logs, metrics, or user consent.",
+    "When root cause is uncertain, state uncertainty and list evidence gaps.",
+    "identity_verification_required for data export or deletion.",
+    "no_skip_verification; audit_log_required for every privacy request.",
+    "data deletion requires strong verification or approval."
+  ],
+  "test_cases": [
+    {
+      "name": "schema_required_fields",
+      "assert": "manifest includes agents, tools, workflows, memory, permissions, guardrails, and test_cases"
+    },
+    {
+      "name": "high_risk_requires_approval",
+      "assert": "every high side effect tool requires approval and audit logging"
+    },
+    {
+      "name": "regulated_domain_safety",
+      "assert": "regulated domain prohibited actions are guardrails only and high-risk actions require approval"
+    }
+  ],
+  "assumptions": [],
+  "clarification_needed": [],
+  "safe_defaults": {
+    "high_risk_actions": "approval_required",
+    "audit_log_required": true,
+    "external_commitments": "draft_only_until_approved",
+    "regulated_domain_safety_profile": "enabled"
+  },
+  "minimal_viable_agent": {
+    "name": "CoordinatorAgent",
+    "reason": "minimum coordinator plus domain specialist selected from request signals"
+  },
+  "conflict_resolution": {},
+  "planning_rationale": "minimal specialist design selected from semantic request signals",
+  "semantic_profile": {
+    "domains": [
+      "privacy"
+    ],
+    "security_sensitive": true,
+    "minimal_agent_preferred": false
+  },
+  "generation": {
+    "generator": "ctcp-deterministic-agent-manifest-generator",
+    "domain_signals": [
+      "generic",
+      "privacy"
+    ],
+    "input_title": "H7 Privacy request agent"
+  },
+  "benchmark_metadata": {
+    "schema_version": "external-agent-factory-holdout-output-v1",
+    "phase": "phase2_5_holdout",
+    "case_id": "h7_privacy_request",
+    "fixture_path": "tests/agent_factory_benchmark/holdout_fixtures/input_h7_privacy_request.json",
+    "generated_by": "scripts/generate_agent_manifest.py",
+    "generator_frozen": true,
+    "commands": [
+      {
+        "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\generate_agent_manifest.py --input D:\\.c_projects\\adc\\ctcp\\tests\\agent_factory_benchmark\\holdout_fixtures\\input_h7_privacy_request.json --output D:\\.c_projects\\adc\\ctcp\\tests\\agent_factory_benchmark\\holdout_generated\\output_h7_privacy_request.json",
+        "exit_code": 0,
+        "stdout_tail": "[generate_agent_manifest] output=D:/.c_projects/adc/ctcp/tests/agent_factory_benchmark/holdout_generated/output_h7_privacy_request.json\n[generate_agent_manifest] agents=2 tools=6 workflows=9\n",
+        "stderr_tail": ""
+      }
+    ],
+    "runtime_status": "ran",
+    "agent_manifest_generation_supported": true
+  }
+}

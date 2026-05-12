@@ -325,6 +325,9 @@ def call_openai_responses(
         "model": model,
         "input": safe_prompt,
     }
+    max_output_tokens = _safe_int_env("SDDAI_OPENAI_MAX_OUTPUT_TOKENS", 0, minimum=0, maximum=8000)
+    if max_output_tokens > 0:
+        responses_payload["max_output_tokens"] = max_output_tokens
     if response_format == "json_object":
         responses_payload["text"] = {"format": {"type": "json_object"}}
     doc: dict[str, Any] | None = None
@@ -354,6 +357,8 @@ def call_openai_responses(
             "model": model,
             "messages": [{"role": "user", "content": safe_prompt}],
         }
+        if max_output_tokens > 0:
+            chat_payload["max_tokens"] = max_output_tokens
         if response_format == "json_object":
             chat_payload["response_format"] = {"type": "json_object"}
         chat_doc, chat_reason = _call_with_retry(

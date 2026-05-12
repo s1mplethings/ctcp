@@ -350,7 +350,7 @@ class ApiAgentTemplateTests(unittest.TestCase):
             self.assertIn("Goal: 第一行需求 第二行需求 第三行需求", text)
             self.assertIn("Reason: waiting for analysis.md and planner retry", text)
 
-    def test_execute_plan_only_falls_back_to_normalized_analysis_when_plan_command_fails(self) -> None:
+    def test_execute_plan_only_records_analysis_failure_when_plan_command_fails(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             repo_root = Path(td) / "repo"
             run_dir = repo_root / "runs" / "r1"
@@ -386,12 +386,14 @@ class ApiAgentTemplateTests(unittest.TestCase):
                     guardrails_budgets={},
                 )
 
-            self.assertEqual(result.get("status"), "executed", msg=str(result))
-            self.assertTrue(bool(result.get("fallback_used", False)))
-            text = (run_dir / "artifacts" / "analysis.md").read_text(encoding="utf-8")
-            self.assertIn("## Core Goal", text)
-            self.assertIn("## Single User Path", text)
-            self.assertIn("上传输入文件", text)
+            self.assertEqual(result.get("status"), "exec_failed", msg=str(result))
+            self.assertIn("analysis provider command failed", str(result.get("reason", "")))
+            self.assertFalse((run_dir / "artifacts" / "analysis.md").exists())
+            progress_path = run_dir / "artifacts" / "analysis_progress.json"
+            self.assertTrue(progress_path.exists())
+            progress = json.loads(progress_path.read_text(encoding="utf-8"))
+            self.assertEqual(progress.get("status"), "failed")
+            self.assertEqual(progress.get("last_event"), "provider_call_failed")
 
     def test_execute_file_request_normalizes_non_json_output(self) -> None:
         with tempfile.TemporaryDirectory() as td:

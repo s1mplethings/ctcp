@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CTCP Project Library Plan",
+  "type": "object",
+  "required": ["schema_version", "policy", "selected_libraries", "feature_library_map"],
+  "properties": {
+    "schema_version": {"const": "ctcp-library-plan-v1"},
+    "policy": {"const": "library_first"},
+    "selected_libraries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "purpose"],
+        "properties": {
+          "name": {"type": "string"},
+          "purpose": {"type": "string"},
+          "why": {"type": "string"},
+          "risk": {"type": "string"}
+        },
+        "additionalProperties": true
+      }
+    },
+    "feature_library_map": {"type": "array"},
+    "custom_code_allowed": {"type": "array", "items": {"type": "string"}},
+    "custom_code_forbidden": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": true
+}

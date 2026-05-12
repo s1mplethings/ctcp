@@ -5,6 +5,12 @@ import re
 from pathlib import Path
 from typing import Any, Callable
 
+from tools.librarian_retrieval import (
+    build_hybrid_retrieval,
+    constraints_for_downstream,
+    selected_context_from_trace,
+)
+
 MANDATORY_NEED_PATHS = (
     "AGENTS.md",
     "ai_context/00_AI_CONTRACT.md",
@@ -297,6 +303,40 @@ def _infer_context_needs(
     if max_files <= 0:
         return [], {"strategy": "request_keyword_repo_search", "queries": [], "candidates": [], "selected": []}
     queries = _split_query_terms(_request_text_for_inference(file_request))
+    query_text = _request_text_for_inference(file_request)
+    try:
+        trace = build_hybrid_retrieval(
+            repo_root=repo_root,
+            query=query_text,
+            task_type=str(file_request.get("reason", "")),
+            project_domain=str(file_request.get("project_domain", "")),
+            exclude_paths=existing_paths,
+            max_selected=max_files,
+        )
+        selected = []
+        for row in trace.get("selected", []):
+            if not isinstance(row, dict):
+                continue
+            rel = str(row.get("path", "")).strip().replace("\\", "/").lstrip("./")
+            if not rel:
+                continue
+            selected.append(
+                {
+                    "path": rel,
+                    "mode": "snippets",
+                    "line_ranges": [[int(row.get("start_line", 1) or 1), int(row.get("end_line", 1) or 1)]],
+                    "why": "inferred_context:hybrid_retrieval:" + ",".join(str(item) for item in row.get("retrieval_modes", [])),
+                }
+            )
+        return selected, {
+            "strategy": "hybrid_keyword_token_vector_search",
+            "queries": queries,
+            "candidates": list(trace.get("selected", [])),
+            "selected": [str(item.get("path", "")) for item in selected],
+            "retrieval_trace": trace,
+        }
+    except Exception:
+        pass
     selected: list[dict[str, Any]] = []
     candidates: list[dict[str, Any]] = []
     selected_paths: set[str] = set()
@@ -642,6 +682,10 @@ def build_context_pack(
         reason = str(row.get("reason", "")).strip() or "unknown"
         reason_counts[reason] = reason_counts.get(reason, 0) + 1
     reason_summary = ",".join(f"{k}:{reason_counts[k]}" for k in sorted(reason_counts))
+    retrieval_trace = dict(selection_strategy.get("retrieval_trace", {})) if isinstance(selection_strategy.get("retrieval_trace", {}), dict) else {}
+    selected_context = selected_context_from_trace(retrieval_trace) if retrieval_trace else []
+    missing_context = list(retrieval_trace.get("missing_context", [])) if isinstance(retrieval_trace.get("missing_context", []), list) else []
+    downstream_constraints = constraints_for_downstream(selected_context)
     return {
         "schema_version": "ctcp-context-pack-v1",
         "goal": goal,
@@ -659,7 +703,32 @@ def build_context_pack(
             "budget_max_files": max_files,
             "budget_max_total_bytes": max_total_bytes,
         },
+        "retrieval_trace": retrieval_trace,
+        "selected_context": selected_context,
+        "constraints_for_downstream_agents": downstream_constraints,
+        "missing_context": missing_context,
         "knowledge_summary": _knowledge_summary(files, selected_count=len(files), omitted_count=len(omitted)),
         "files": files,
         "omitted": omitted,
+    }
+
+
+def build_librarian_context_pack(context_pack: dict[str, Any]) -> dict[str, Any]:
+    selected_context = [dict(row) for row in context_pack.get("selected_context", []) if isinstance(row, dict)]
+    retrieval_trace = dict(context_pack.get("retrieval_trace", {})) if isinstance(context_pack.get("retrieval_trace", {}), dict) else {}
+    missing_context = list(context_pack.get("missing_context", [])) if isinstance(context_pack.get("missing_context", []), list) else []
+    confidence = 0.0
+    if selected_context:
+        confidence = min(0.95, 0.45 + 0.05 * len(selected_context))
+    return {
+        "schema_version": "ctcp-librarian-context-pack-v1",
+        "query": str(context_pack.get("goal", "")),
+        "intent": "local_hybrid_context_retrieval",
+        "selected_context": selected_context,
+        "constraints_for_downstream_agents": list(context_pack.get("constraints_for_downstream_agents", [])),
+        "missing_context": missing_context,
+        "confidence": round(confidence, 3),
+        "retrieval_trace": retrieval_trace,
+        "context_pack_ref": "artifacts/context_pack.json",
+        "knowledge_summary": dict(context_pack.get("knowledge_summary", {})) if isinstance(context_pack.get("knowledge_summary", {}), dict) else {},
     }

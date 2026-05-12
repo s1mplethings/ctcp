@@ -19,6 +19,13 @@ from tools.providers.project_generation_extended_evidence import (
     _materialize_high_quality_team_task_evidence,
 )
 from tools.providers.project_generation_import_validation import provider_interface_contract
+from tools.providers.project_generation_library_first import (
+    prepare_library_first_artifacts,
+    verify_and_write_library_usage,
+)
+from tools.librarian_experience import write_librarian_experience_feedback
+from tools.providers.project_generation_model_budget import write_model_budget_artifact
+from tools.providers.project_generation_contracts import write_generation_contract_artifacts
 from tools.providers.project_generation_provider_source_files import (
     _ensure_provider_package_init_files,
     _materialize_provider_source_files,
@@ -171,12 +178,16 @@ def _blocked_local_templates_disabled_report(*, inputs: dict[str, Any], run_dir:
     report["capability_plan"] = inputs["capability_plan"]
     report["project_spec_path"] = inputs["project_spec_path"]
     report["capability_plan_path"] = inputs["capability_plan_path"]
+    for key in ("library_plan", "library_plan_path", "file_manifest", "file_manifest_path", "file_task_paths"):
+        if key in inputs:
+            report[key] = inputs[key]
     report["generation_quality_report_path"] = inputs["generation_quality_report_path"]
     report["generation_quality"] = generation_quality
     report["materialize_capabilities"] = []
     provenance_inputs = dict(inputs)
     provenance_inputs["local_templates_disabled"] = True
     attach_source_generation_provenance(report, run_dir, provenance_inputs, [], [])
+    _attach_model_budget_and_experience(report=report, run_dir=run_dir, inputs=inputs)
     return report
 
 
@@ -205,6 +216,20 @@ def _source_stage_contract(inputs: dict[str, Any], current_materialize: list[str
 def _write_json(path: Path, doc: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _attach_model_budget_and_experience(*, report: dict[str, Any], run_dir: Path, inputs: dict[str, Any]) -> None:
+    model_budget = inputs.get("model_budget") if isinstance(inputs.get("model_budget"), dict) else {}
+    if not model_budget:
+        model_budget = write_model_budget_artifact(run_dir=run_dir, file_tasks=list(inputs.get("file_tasks", [])))
+        inputs["model_budget"] = model_budget
+        inputs["model_budget_path"] = str(model_budget.get("path", "artifacts/model_budget.json"))
+    report["model_budget_path"] = str(inputs.get("model_budget_path", "artifacts/model_budget.json"))
+    report["model_budget"] = dict(model_budget)
+    feedback = write_librarian_experience_feedback(run_dir=run_dir, report=report)
+    report["librarian_experience_record_path"] = feedback["record_path"]
+    report["librarian_recipe_candidate_path"] = feedback["recipe_path"]
+    report["librarian_experience_record"] = feedback["record"]
 
 
 def _copy_sample_generation_artifacts(*, run_dir: Path, project_root: str, artifact_paths: list[str]) -> list[str]:
@@ -467,7 +492,94 @@ def _blocked_by_validation(report: dict[str, Any], validation: dict[str, Any], s
         or not bool(validation["product_validation"].get("passed", False))
         or not bool(report.get("capability_validation", {}).get("passed", False))
         or not bool(report.get("generation_quality", {}).get("passed", False))
+        or not bool(report.get("library_usage_verification", {}).get("passed", True))
     )
+
+
+def _build_source_generation_report(
+    *,
+    run_dir: Path,
+    inputs: dict[str, Any],
+    generated_files: list[str],
+    business_generated: list[str],
+    business_missing: list[str],
+    current_materialize: list[str],
+    scaffold: dict[str, Any],
+    validation: dict[str, Any],
+    capability_validation: dict[str, Any],
+    generation_quality: dict[str, Any],
+    sample_generation_artifacts: list[str],
+    library_usage_verification: dict[str, Any],
+) -> dict[str, Any]:
+    lists = inputs["lists"]
+    report = _stage_report(
+        stage="source_generation",
+        goal=inputs["goal_text"],
+        project_root=inputs["project_root"],
+        required_files=list(lists.get("source_files", [])),
+        generated_files=generated_files,
+        extra=build_success_extra(
+            lists=lists,
+            project_id=str(lists.get("project_id", "")),
+            project_domain=inputs["project_domain"],
+            scaffold_family=inputs["scaffold_family"],
+            project_type=inputs["project_type"],
+            package_name=inputs["package_name"],
+            entry_script=inputs["entry_script"],
+            consumed_context=inputs["consumed_context"],
+            consumed_files=inputs["consumed_files"],
+            context_influence_summary=list(inputs["context_usage"].get("context_influence_summary", [])),
+            business_generated=business_generated,
+            business_missing=business_missing,
+            reference_style_applied=inputs["context_usage"].get("reference_style_applied", []),
+            gate_layers=validation["gate_layers"],
+            behavior_probe=validation["behavior_probe"],
+            export_probe=validation["export_probe"],
+            scaffold=scaffold,
+            visual_evidence=validation["visual_evidence"],
+        ),
+    )
+    for key in (
+        "project_intent",
+        "project_spec",
+        "pipeline_contract",
+        "project_domain",
+        "scaffold_family",
+        "domain_compatibility",
+        "capability_plan",
+        "sample_generation_plan",
+        "library_plan",
+        "file_manifest",
+    ):
+        report[key] = inputs[key]
+    report["project_spec_path"] = inputs["project_spec_path"]
+    report["capability_plan_path"] = inputs["capability_plan_path"]
+    report["sample_generation_artifacts"] = sample_generation_artifacts
+    report["library_plan_path"] = inputs["library_plan_path"]
+    report["file_manifest_path"] = inputs["file_manifest_path"]
+    report["file_task_paths"] = list(inputs.get("file_task_paths", []))
+    report["library_usage_verification_path"] = library_usage_verification["path"]
+    report["library_usage_verification"] = library_usage_verification
+    report["model_budget_path"] = inputs.get("model_budget_path", "artifacts/model_budget.json")
+    report["model_budget"] = dict(inputs.get("model_budget", {})) if isinstance(inputs.get("model_budget", {}), dict) else {}
+    report["generation_quality_report_path"] = inputs["generation_quality_report_path"]
+    report["build_profile"] = str(lists.get("build_profile", "standard_mvp"))
+    report["product_depth"] = str(lists.get("product_depth", "mvp"))
+    report["required_pages"] = int(lists.get("required_pages", 0) or 0)
+    report["required_screenshots"] = int(lists.get("required_screenshots", 0) or 0)
+    report["capability_validation"] = capability_validation
+    report["generation_quality"] = generation_quality
+    if isinstance(generation_quality.get("extended_coverage"), dict):
+        report["extended_coverage"] = generation_quality["extended_coverage"]
+        report["extended_coverage_ledger_path"] = "artifacts/extended_coverage_ledger.json"
+    report["materialize_capabilities"] = current_materialize
+    attach_source_generation_provenance(report, run_dir, inputs, business_generated, current_materialize)
+    for key in ("generic_validation", "domain_validation", "readme_quality", "ux_validation", "product_validation"):
+        report[key] = validation[key]
+    if _blocked_by_validation(report, validation, scaffold):
+        report["status"] = "blocked"
+    _attach_model_budget_and_experience(report=report, run_dir=run_dir, inputs=inputs)
+    return report
 
 
 def normalize_source_generation_stage(
@@ -494,6 +606,11 @@ def normalize_source_generation_stage(
     lists = inputs["lists"]
     _write_source_planning_artifacts(inputs=inputs, run_dir=run_dir)
     provider_file_rows = _provider_source_file_rows(inputs)
+    library_first = prepare_library_first_artifacts(run_dir=run_dir, inputs=inputs, provider_rows=provider_file_rows)
+    inputs.update(library_first)
+    model_budget = write_model_budget_artifact(run_dir=run_dir, file_tasks=list(inputs.get("file_tasks", [])))
+    inputs["model_budget"] = model_budget
+    inputs["model_budget_path"] = str(model_budget.get("path", "artifacts/model_budget.json"))
     if _production_local_templates_disabled(inputs) and not provider_file_rows:
         return _blocked_local_templates_disabled_report(inputs=inputs, run_dir=run_dir)
     inputs["provider_source_files_applied"] = bool(provider_file_rows)
@@ -521,6 +638,12 @@ def normalize_source_generation_stage(
             _materialize_provider_source_files(run_dir=run_dir, inputs=inputs, rows=provider_file_rows)
         else:
             _materialize_nonproduction_business_files(run_dir, inputs["goal_text"], stage_contract, inputs["consumed_files"])
+        reconciliation = write_generation_contract_artifacts(
+            run_dir,
+            project_root=inputs["project_root"],
+            entrypoint=inputs["entry_script"],
+            repair=True,
+        )
         extended_coverage: dict[str, Any] = {}
         if _is_indie_studio_hub(inputs):
             extended_coverage = _materialize_high_quality_indie_studio_hub_evidence(run_dir=run_dir, inputs=inputs)
@@ -572,6 +695,25 @@ def normalize_source_generation_stage(
             refinement_round=round_index,
             refinement_notes=refinement_notes,
         )
+        generation_quality["reconciliation"] = reconciliation
+        generation_quality["passed"] = bool(generation_quality.get("passed", False)) and bool(reconciliation.get("converged", False))
+        generation_quality["targeted_checks"].append(
+            {
+                "check_id": "typed_contract_graph_convergence",
+                "passed": bool(reconciliation.get("converged", False)),
+                "details": json.dumps(
+                    {
+                        "graph_hash": reconciliation.get("graph_hash", ""),
+                        "iterations": reconciliation.get("iterations", []),
+                        "typed_issues": reconciliation.get("typed_issues", []),
+                        "targeted_regeneration_scope": reconciliation.get("targeted_regeneration_scope", []),
+                        "unresolved_references": reconciliation.get("unresolved_references", []),
+                        "repairs": reconciliation.get("repairs", []),
+                    },
+                    ensure_ascii=False,
+                ),
+            }
+        )
         if extended_coverage:
             generation_quality["extended_coverage"] = extended_coverage
             generation_quality["passed"] = bool(generation_quality.get("passed", False)) and bool(extended_coverage.get("passed", False))
@@ -601,62 +743,22 @@ def normalize_source_generation_stage(
         )
         current_materialize = required_materialize
 
-    _write_json((run_dir / inputs["generation_quality_report_path"]).resolve(), generation_quality)
-    report = _stage_report(
-        stage="source_generation",
-        goal=inputs["goal_text"],
-        project_root=inputs["project_root"],
-        required_files=list(lists.get("source_files", [])),
-        generated_files=generated_files,
-        extra=build_success_extra(
-            lists=lists,
-            project_id=str(lists.get("project_id", "")),
-            project_domain=inputs["project_domain"],
-            scaffold_family=inputs["scaffold_family"],
-            project_type=inputs["project_type"],
-            package_name=inputs["package_name"],
-            entry_script=inputs["entry_script"],
-            consumed_context=inputs["consumed_context"],
-            consumed_files=inputs["consumed_files"],
-            context_influence_summary=list(inputs["context_usage"].get("context_influence_summary", [])),
-            business_generated=business_generated,
-            business_missing=business_missing,
-            reference_style_applied=inputs["context_usage"].get("reference_style_applied", []),
-            gate_layers=validation["gate_layers"],
-            behavior_probe=validation["behavior_probe"],
-            export_probe=validation["export_probe"],
-            scaffold=scaffold,
-            visual_evidence=validation["visual_evidence"],
-        ),
+    library_usage_verification = verify_and_write_library_usage(
+        run_dir=run_dir,
+        file_tasks=list(inputs.get("file_tasks", [])),
     )
-    for key in (
-        "project_intent",
-        "project_spec",
-        "pipeline_contract",
-        "project_domain",
-        "scaffold_family",
-        "domain_compatibility",
-        "capability_plan",
-        "sample_generation_plan",
-    ):
-        report[key] = inputs[key]
-    report["project_spec_path"] = inputs["project_spec_path"]
-    report["capability_plan_path"] = inputs["capability_plan_path"]
-    report["sample_generation_artifacts"] = sample_generation_artifacts
-    report["generation_quality_report_path"] = inputs["generation_quality_report_path"]
-    report["build_profile"] = str(lists.get("build_profile", "standard_mvp"))
-    report["product_depth"] = str(lists.get("product_depth", "mvp"))
-    report["required_pages"] = int(lists.get("required_pages", 0) or 0)
-    report["required_screenshots"] = int(lists.get("required_screenshots", 0) or 0)
-    report["capability_validation"] = capability_validation
-    report["generation_quality"] = generation_quality
-    if isinstance(generation_quality.get("extended_coverage"), dict):
-        report["extended_coverage"] = generation_quality["extended_coverage"]
-        report["extended_coverage_ledger_path"] = "artifacts/extended_coverage_ledger.json"
-    report["materialize_capabilities"] = current_materialize
-    attach_source_generation_provenance(report, run_dir, inputs, business_generated, current_materialize)
-    for key in ("generic_validation", "domain_validation", "readme_quality", "ux_validation", "product_validation"):
-        report[key] = validation[key]
-    if _blocked_by_validation(report, validation, scaffold):
-        report["status"] = "blocked"
-    return report
+    _write_json((run_dir / inputs["generation_quality_report_path"]).resolve(), generation_quality)
+    return _build_source_generation_report(
+        run_dir=run_dir,
+        inputs=inputs,
+        generated_files=generated_files,
+        business_generated=business_generated,
+        business_missing=business_missing,
+        current_materialize=current_materialize,
+        scaffold=scaffold,
+        validation=validation,
+        capability_validation=capability_validation,
+        generation_quality=generation_quality,
+        sample_generation_artifacts=sample_generation_artifacts,
+        library_usage_verification=library_usage_verification,
+    )

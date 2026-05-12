@@ -1,0 +1,14 @@
+{
+  "case_id": "s6_release_notes",
+  "title": "S6 Release notes agent",
+  "goal": "创建一个 release notes agent。它负责从 merged PRs 生成 release notes，按 feature、bug fix、breaking change 分类，给 marketing team 生成 announcement draft，给 support team 生成 FAQ draft。注意：这里的 release 不是 production rollback，也不是 incident response。",
+  "semantic_expectations": {
+    "required_keywords": ["release notes", "merged PRs", "announcement draft", "FAQ draft"],
+    "forbidden_keywords": ["rollback", "incident timeline", "production emergency"],
+    "required_tool_domains": ["github_pr", "release_notes"],
+    "forbidden_tool_domains": ["devops", "billing"],
+    "required_workflow_states": ["collect_merged_prs", "classify_changes", "draft_release_notes"],
+    "forbidden_workflow_states": ["incident_response", "rollback"],
+    "specific_case": true
+  }
+}

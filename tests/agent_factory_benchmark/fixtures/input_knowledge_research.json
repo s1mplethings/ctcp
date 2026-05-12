@@ -1,0 +1,12 @@
+{
+  "case_id": "knowledge_research",
+  "title": "Personal Knowledge Base Research Agent",
+  "goal": "Create a personal knowledge-base Research Agent. It ingests markdown, PDFs, web excerpts, and notes; builds a topic index; retrieves before answering; cites sources; says it does not know when the answer is absent; and never fabricates sources.",
+  "expected": [
+    "document ingestion workflow",
+    "retrieval workflow",
+    "citation schema",
+    "hallucination guardrails",
+    "unknown answer handling"
+  ]
+}

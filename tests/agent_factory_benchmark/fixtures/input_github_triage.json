@@ -1,0 +1,12 @@
+{
+  "case_id": "github_triage",
+  "title": "GitHub Issue Triage Agent",
+  "goal": "Create a GitHub Issue Triage Agent. It reads issue title, body, labels, and comments; classifies bug, feature_request, question, documentation, duplicate, or invalid; detects missing reproduction info for bugs; suggests labels; drafts replies; and requires human confirmation before closing, invalid marking, or duplicate marking.",
+  "expected": [
+    "github tools",
+    "issue classification workflow",
+    "human approval",
+    "no automatic issue close",
+    "missing information handling"
+  ]
+}

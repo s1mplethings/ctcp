@@ -17,6 +17,8 @@ from llm_core.providers.api_retry_helpers import (
     handle_failed_agent_attempt,
     handle_successful_agent_attempt,
 )
+from tools import analysis_fast_profile
+from tools import analysis_stage_progress
 from tools.formal_api_lock import formal_api_only_enabled, requires_formal_api
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -152,6 +154,7 @@ def _run_command(
     cwd: Path,
     stdin_text: str,
     extra_env: dict[str, str] | None = None,
+    timeout_seconds: float | int | None = None,
 ) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env.setdefault("PYTHONIOENCODING", "utf-8")
@@ -159,20 +162,53 @@ def _run_command(
     if extra_env:
         for key, value in extra_env.items():
             env[str(key)] = str(value)
-    proc = subprocess.run(
+    creationflags = 0
+    if os.name == "nt":
+        creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    proc = subprocess.Popen(
         cmd,
         cwd=str(cwd),
         shell=True,
         env=env,
-        input=str(stdin_text or "").encode("utf-8"),
-        capture_output=True,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=False,
+        creationflags=creationflags,
     )
+    try:
+        stdout_bytes, stderr_bytes = proc.communicate(
+            input=str(stdin_text or "").encode("utf-8"),
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as exc:
+        if os.name == "nt":
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                capture_output=True,
+                text=False,
+            )
+        else:
+            proc.kill()
+        try:
+            stdout_after, stderr_after = proc.communicate(timeout=5)
+        except Exception:
+            stdout_after, stderr_after = b"", b""
+        stdout_raw = (exc.stdout or b"") + (stdout_after or b"")
+        stderr_raw = (exc.stderr or b"") + (stderr_after or b"")
+        stdout = _decode_subprocess_text(stdout_raw) if isinstance(stdout_raw, bytes) else str(stdout_raw or "")
+        stderr = _decode_subprocess_text(stderr_raw) if isinstance(stderr_raw, bytes) else str(stderr_raw or "")
+        timeout_note = f"analysis_provider_timeout after {float(timeout_seconds or 0):.3f}s"
+        if stderr:
+            stderr = stderr.rstrip() + "\n" + timeout_note
+        else:
+            stderr = timeout_note
+        return subprocess.CompletedProcess(args=cmd, returncode=124, stdout=stdout, stderr=stderr)
     return subprocess.CompletedProcess(
-        args=proc.args,
-        returncode=proc.returncode,
-        stdout=_decode_subprocess_text(proc.stdout or b""),
-        stderr=_decode_subprocess_text(proc.stderr or b""),
+        args=cmd,
+        returncode=int(proc.returncode or 0),
+        stdout=_decode_subprocess_text(stdout_bytes or b""),
+        stderr=_decode_subprocess_text(stderr_bytes or b""),
     )
 
 
@@ -320,6 +356,9 @@ def _build_api_call_env(*, run_dir: Path, request: dict[str, Any]) -> dict[str, 
     target_path = str(request.get("target_path", "")).strip().lower()
     if target_path.endswith(".json"):
         env["SDDAI_OPENAI_RESPONSE_FORMAT"] = os.environ.get("SDDAI_OPENAI_RESPONSE_FORMAT", "json_object")
+    if analysis_fast_profile.fast_analysis_enabled(request):
+        env["SDDAI_OPENAI_MAX_OUTPUT_TOKENS"] = str(analysis_fast_profile.max_output_tokens())
+        env["CTCP_ANALYSIS_PROFILE"] = analysis_fast_profile.FAST_ANALYSIS_PROFILE
     return env
 
 
@@ -401,6 +440,61 @@ def _agent_retry_policy(request: dict[str, Any]) -> tuple[int, float]:
         base_delay = _safe_float_env("CTCP_OUTPUT_CONTRACT_API_RETRY_BASE_DELAY_SEC", 10.0, minimum=0.0, maximum=120.0)
         return attempts, base_delay
     return 1, 0.0
+
+
+def _analysis_provider_timeout_seconds() -> int:
+    return _safe_int_env("CTCP_ANALYSIS_PROVIDER_TIMEOUT_SECONDS", 90, minimum=1, maximum=600)
+
+
+def _analysis_provider_model() -> str:
+    return (
+        os.environ.get("SDDAI_OPENAI_AGENT_MODEL", "")
+        or os.environ.get("SDDAI_OPENAI_MODEL", "")
+        or "gpt-4.1-mini"
+    ).strip()
+
+
+def _analysis_progress_rel(run_dir: Path) -> str:
+    return analysis_stage_progress.progress_path(run_dir).relative_to(run_dir).as_posix()
+
+
+def _analysis_failure_metadata(run_dir: Path) -> dict[str, Any]:
+    progress = analysis_stage_progress.load_progress(run_dir)
+    return {
+        "analysis_progress_path": _analysis_progress_rel(run_dir),
+        "analysis_progress": progress,
+        "analysis_raw_path": analysis_stage_progress.ANALYSIS_RAW_PATH
+        if analysis_stage_progress.raw_path(run_dir).exists()
+        else "",
+        "analysis_partial_path": analysis_stage_progress.ANALYSIS_PARTIAL_PATH
+        if analysis_stage_progress.partial_path(run_dir).exists()
+        else "",
+        "analysis_resume_possible": bool(progress.get("resume_possible")),
+    }
+
+
+def _analysis_exec_failure(
+    *,
+    run_dir: Path,
+    hooks: ApiProviderHooks,
+    reason: str,
+    cmd: str = "",
+    rc: int | None = None,
+    stdout_log: Path | None = None,
+    stderr_log: Path | None = None,
+) -> dict[str, Any]:
+    review = hooks.record_failure_review(run_dir, reason)
+    result = _failure_result(
+        run_dir=run_dir,
+        review_path=review,
+        reason=reason,
+        cmd=cmd,
+        rc=rc,
+        stdout_log=stdout_log,
+        stderr_log=stderr_log,
+    )
+    result.update(_analysis_failure_metadata(run_dir))
+    return result
 
 
 def _write_agent_attempt_logs(logs_dir: Path, attempt: int, stdout: str, stderr: str) -> tuple[Path, Path]:
@@ -658,27 +752,72 @@ def _run_agent_attempts(
     proc: subprocess.CompletedProcess[str] | None = None
     target_payload = ""
     norm_err = ""
+    is_analysis = analysis_stage_progress.is_analysis_request(request)
+    timeout_seconds = _analysis_provider_timeout_seconds() if is_analysis else None
     for attempt in range(1, max_attempts + 1):
-        proc = _run_command(cmd, cwd=repo_root, stdin_text=prompt_text, extra_env=api_call_env)
+        if is_analysis:
+            analysis_stage_progress.mark_provider_started(run_dir, cmd=cmd)
+        proc = _run_command(
+            cmd,
+            cwd=repo_root,
+            stdin_text=prompt_text,
+            extra_env=api_call_env,
+            timeout_seconds=timeout_seconds,
+        )
         attempt_stdout, attempt_stderr = _write_agent_attempt_logs(logs_dir, attempt, proc.stdout, proc.stderr)
         _write_text(agent_stdout, proc.stdout)
         _write_text(agent_stderr, proc.stderr)
-        if proc.returncode == 0:
-            target_payload, norm_err, retry_after_success = handle_successful_agent_attempt(
-                hooks=hooks,
-                repo_root=repo_root,
-                run_dir=run_dir,
-                request=request,
-                proc=proc,
-                attempt=attempt,
-                max_attempts=max_attempts,
-                base_delay=base_delay,
-                logs_dir=logs_dir,
-                attempt_stdout=attempt_stdout,
-                attempt_stderr=attempt_stderr,
-                retry_errors=retry_errors,
-                is_transient_transport_error=_is_transient_transport_error,
+        if is_analysis and (proc.stdout or ""):
+            analysis_stage_progress.preserve_raw_response(run_dir, proc.stdout or "")
+        if is_analysis and proc.returncode == 124:
+            analysis_stage_progress.mark_timeout(
+                run_dir,
+                error="analysis_provider_timeout",
+                rc=proc.returncode,
             )
+            retry_errors.append(
+                {
+                    "attempt": attempt,
+                    "rc": proc.returncode,
+                    "analysis_provider_timeout": True,
+                    "stdout_log": attempt_stdout.relative_to(run_dir).as_posix(),
+                    "stderr_log": attempt_stderr.relative_to(run_dir).as_posix(),
+                }
+            )
+            break
+        if is_analysis and proc.returncode != 0:
+            analysis_stage_progress.mark_provider_completed(run_dir, rc=proc.returncode)
+        if proc.returncode == 0:
+            if is_analysis:
+                analysis_stage_progress.mark_provider_completed(run_dir, rc=proc.returncode)
+                analysis_stage_progress.mark_parser_started(run_dir)
+                target_payload, norm_err = hooks.normalize_target_payload(
+                    repo_root=repo_root,
+                    run_dir=run_dir,
+                    request=request,
+                    raw_text=(proc.stdout or "").rstrip(),
+                )
+                if norm_err:
+                    analysis_stage_progress.mark_failed(run_dir, last_event="parser_failed", error=norm_err)
+                else:
+                    analysis_stage_progress.mark_parser_completed(run_dir)
+                retry_after_success = False
+            else:
+                target_payload, norm_err, retry_after_success = handle_successful_agent_attempt(
+                    hooks=hooks,
+                    repo_root=repo_root,
+                    run_dir=run_dir,
+                    request=request,
+                    proc=proc,
+                    attempt=attempt,
+                    max_attempts=max_attempts,
+                    base_delay=base_delay,
+                    logs_dir=logs_dir,
+                    attempt_stdout=attempt_stdout,
+                    attempt_stderr=attempt_stderr,
+                    retry_errors=retry_errors,
+                    is_transient_transport_error=_is_transient_transport_error,
+                )
             if retry_after_success:
                 continue
             if attempt > 1:
@@ -729,7 +868,26 @@ def _finalize_agent_phase(
     agent_stdout: Path,
     agent_stderr: Path,
 ) -> dict[str, Any]:
+    is_analysis = analysis_stage_progress.is_analysis_request(request)
     if proc.returncode != 0:
+        if is_analysis:
+            reason = "analysis_provider_timeout" if proc.returncode == 124 else f"analysis provider command failed rc={proc.returncode}"
+            if proc.returncode != 124:
+                analysis_stage_progress.mark_failed(run_dir, last_event="provider_call_failed", error=reason)
+            result = _analysis_exec_failure(
+                run_dir=run_dir,
+                hooks=hooks,
+                reason=reason,
+                cmd=str(proc.args or ""),
+                rc=proc.returncode,
+                stdout_log=agent_stdout,
+                stderr_log=agent_stderr,
+            )
+            if retry_errors:
+                result["api_retry_attempts"] = len(retry_errors)
+                result["api_retry_errors"] = retry_errors
+                result["api_retry_log"] = (logs_dir / "agent_retry.jsonl").relative_to(run_dir).as_posix()
+            return result
         result = _fallback_target_result(
             hooks=hooks,
             repo_root=repo_root,
@@ -749,13 +907,34 @@ def _finalize_agent_phase(
         return result
 
     if not target_payload and not norm_err:
+        if is_analysis:
+            analysis_stage_progress.mark_parser_started(run_dir)
         target_payload, norm_err = hooks.normalize_target_payload(
             repo_root=repo_root,
             run_dir=run_dir,
             request=request,
             raw_text=(proc.stdout or "").rstrip(),
         )
+        if is_analysis:
+            if norm_err:
+                analysis_stage_progress.mark_failed(run_dir, last_event="parser_failed", error=norm_err)
+            else:
+                analysis_stage_progress.mark_parser_completed(run_dir)
     if norm_err:
+        if is_analysis:
+            result = _analysis_exec_failure(
+                run_dir=run_dir,
+                hooks=hooks,
+                reason=norm_err,
+                cmd=str(proc.args or ""),
+                stdout_log=agent_stdout,
+                stderr_log=agent_stderr,
+            )
+            if retry_errors:
+                result["api_retry_attempts"] = len(retry_errors)
+                result["api_retry_errors"] = retry_errors
+                result["api_retry_log"] = (logs_dir / "agent_retry.jsonl").relative_to(run_dir).as_posix()
+            return result
         result = _fallback_target_result(
             hooks=hooks,
             repo_root=repo_root,
@@ -773,7 +952,24 @@ def _finalize_agent_phase(
             result["api_retry_errors"] = retry_errors
             result["api_retry_log"] = (logs_dir / "agent_retry.jsonl").relative_to(run_dir).as_posix()
         return result
-    _write_text(target_path, target_payload)
+    if is_analysis:
+        analysis_stage_progress.mark_artifact_write_started(run_dir)
+        try:
+            _write_text(target_path, target_payload)
+        except Exception as exc:
+            analysis_stage_progress.preserve_partial_artifact(run_dir, target_payload)
+            analysis_stage_progress.mark_failed(run_dir, last_event="artifact_write_failed", error=str(exc))
+            return _analysis_exec_failure(
+                run_dir=run_dir,
+                hooks=hooks,
+                reason=f"analysis artifact write failed: {exc}",
+                cmd=str(proc.args or ""),
+                stdout_log=agent_stdout,
+                stderr_log=agent_stderr,
+            )
+        analysis_stage_progress.mark_artifact_write_completed(run_dir)
+    else:
+        _write_text(target_path, target_payload)
     result = {
         "status": "executed",
         "target_path": target_rel,
@@ -787,6 +983,81 @@ def _finalize_agent_phase(
     if retry_errors:
         result["api_retry_errors"] = retry_errors
         result["api_retry_log"] = (logs_dir / "agent_retry.jsonl").relative_to(run_dir).as_posix()
+    if is_analysis:
+        result.update(_analysis_failure_metadata(run_dir))
+    return result
+
+
+def _resume_analysis_from_raw(
+    *,
+    hooks: ApiProviderHooks,
+    repo_root: Path,
+    run_dir: Path,
+    request: dict[str, Any],
+    target_path: Path,
+    target_rel: str,
+    prompt_path: Path,
+    logs_dir: Path,
+) -> dict[str, Any] | None:
+    if not analysis_stage_progress.is_analysis_request(request):
+        return None
+    if target_path.exists():
+        return None
+    raw_path = analysis_stage_progress.raw_path(run_dir)
+    if not raw_path.exists():
+        return None
+    raw_text = raw_path.read_text(encoding="utf-8", errors="replace")
+    analysis_stage_progress.start_progress(
+        run_dir=run_dir,
+        request=request,
+        prompt_path=prompt_path.relative_to(run_dir).as_posix(),
+        provider="api_agent",
+        provider_model=_analysis_provider_model(),
+        provider_timeout_seconds=_analysis_provider_timeout_seconds(),
+        last_event="resume_raw_started",
+    )
+    analysis_stage_progress.mark_parser_started(run_dir)
+    target_payload, norm_err = hooks.normalize_target_payload(
+        repo_root=repo_root,
+        run_dir=run_dir,
+        request=request,
+        raw_text=raw_text.rstrip(),
+    )
+    if norm_err:
+        analysis_stage_progress.mark_failed(run_dir, last_event="parser_failed", error=norm_err)
+        return _analysis_exec_failure(
+            run_dir=run_dir,
+            hooks=hooks,
+            reason=norm_err,
+            stdout_log=logs_dir / "agent.stdout",
+            stderr_log=logs_dir / "agent.stderr",
+        )
+    analysis_stage_progress.mark_parser_completed(run_dir)
+    analysis_stage_progress.mark_artifact_write_started(run_dir)
+    try:
+        _write_text(target_path, target_payload)
+    except Exception as exc:
+        analysis_stage_progress.preserve_partial_artifact(run_dir, target_payload)
+        analysis_stage_progress.mark_failed(run_dir, last_event="artifact_write_failed", error=str(exc))
+        return _analysis_exec_failure(
+            run_dir=run_dir,
+            hooks=hooks,
+            reason=f"analysis artifact write failed: {exc}",
+            stdout_log=logs_dir / "agent.stdout",
+            stderr_log=logs_dir / "agent.stderr",
+        )
+    analysis_stage_progress.mark_artifact_write_completed(run_dir)
+    _write_text(logs_dir / "agent.stdout", "")
+    _write_text(logs_dir / "agent.stderr", "resumed from artifacts/analysis.raw.txt\n")
+    result = {
+        "status": "executed",
+        "target_path": target_rel,
+        "prompt_path": prompt_path.relative_to(run_dir).as_posix(),
+        "stdout_log": (logs_dir / "agent.stdout").relative_to(run_dir).as_posix(),
+        "stderr_log": (logs_dir / "agent.stderr").relative_to(run_dir).as_posix(),
+        "resumed_from_analysis_raw": True,
+    }
+    result.update(_analysis_failure_metadata(run_dir))
     return result
 
 
@@ -832,6 +1103,30 @@ def _run_agent_phase(
     if fmt_err:
         review = hooks.record_failure_review(run_dir, fmt_err)
         return _failure_result(run_dir=run_dir, review_path=review, reason=fmt_err)
+    if analysis_stage_progress.is_analysis_request(request):
+        profile = analysis_fast_profile.analysis_profile()
+        analysis_stage_progress.start_progress(
+            run_dir=run_dir,
+            request=request,
+            prompt_path=prompt_path.relative_to(run_dir).as_posix(),
+            provider="api_agent",
+            provider_model=_analysis_provider_model(),
+            provider_timeout_seconds=_analysis_provider_timeout_seconds(),
+            cmd=cmd,
+            prompt_budget=analysis_fast_profile.prompt_budget(prompt_text, profile=profile),
+        )
+        resumed = _resume_analysis_from_raw(
+            hooks=hooks,
+            repo_root=repo_root,
+            run_dir=run_dir,
+            request=request,
+            target_path=target_path,
+            target_rel=target_rel,
+            prompt_path=prompt_path,
+            logs_dir=logs_dir,
+        )
+        if resumed is not None:
+            return resumed
     proc, target_payload, norm_err, retry_errors, max_attempts, agent_stdout, agent_stderr = _run_agent_attempts(
         cmd=cmd,
         repo_root=repo_root,
@@ -890,6 +1185,14 @@ def execute(
         guardrails_budgets=guardrails_budgets,
     )
     prompt_text = hooks.render_prompt(run_dir=run_dir, repo_root=repo_root, request=request, evidence=evidence)
+    is_analysis = analysis_stage_progress.is_analysis_request(request)
+    if is_analysis and analysis_fast_profile.analysis_profile() == analysis_fast_profile.FAST_ANALYSIS_PROFILE:
+        prompt_text = analysis_fast_profile.render_fast_analysis_prompt(
+            run_dir=run_dir,
+            repo_root=repo_root,
+            request=request,
+            evidence=evidence,
+        )
 
     role = str(request.get("role", ""))
     action = str(request.get("action", ""))
@@ -912,8 +1215,7 @@ def execute(
         run_dir=run_dir,
     )
     api_call_env = _build_api_call_env(run_dir=run_dir, request=request)
-
-    if "plan" in templates:
+    if "plan" in templates and not is_analysis:
         failure = _run_plan_phase(
             template=templates["plan"],
             placeholders=placeholders,
@@ -949,6 +1251,8 @@ def execute(
             return patch_result
 
     agent_tpl = templates.get("agent") or templates.get("plan")
+    if is_analysis and analysis_fast_profile.analysis_profile() == analysis_fast_profile.FAST_ANALYSIS_PROFILE:
+        agent_tpl = str(os.environ.get("SDDAI_AGENT_CMD", "")).strip() or _default_agent_cmd(repo_root)
     if not agent_tpl:
         available_keys = ", ".join(sorted(templates.keys())) or "(none)"
         reason = (

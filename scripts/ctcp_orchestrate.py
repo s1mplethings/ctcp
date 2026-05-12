@@ -31,16 +31,19 @@ MANAGED_DIRTY_POINTERS = {
     LAST_BUNDLE_POINTER.relative_to(ROOT).as_posix(),
 }
 
-
 try:
     from tools.run_paths import get_repo_slug, get_runs_root, make_run_dir
     from tools.run_manifest import update_adlc_state, update_run_manifest
     from tools.formal_api_lock import formal_api_only_enabled
+    from tools.source_generation_progress import format_source_generation_progress
+    from tools.analysis_stage_progress import status_line as format_analysis_progress
 except ModuleNotFoundError:
     sys.path.insert(0, str(ROOT))
     from tools.run_paths import get_repo_slug, get_runs_root, make_run_dir
     from tools.run_manifest import update_adlc_state, update_run_manifest
     from tools.formal_api_lock import formal_api_only_enabled
+    from tools.source_generation_progress import format_source_generation_progress
+    from tools.analysis_stage_progress import status_line as format_analysis_progress
 
 try:
     import ctcp_dispatch
@@ -161,13 +164,9 @@ def ensure_active_patch(run_dir: Path) -> tuple[Path | None, bool]:
     if patch.exists():
         return patch, False
     return None, False
-
-
 def normalize_find_mode(value: str) -> str:
     v = (value or "").strip().lower()
     return v if v in {"resolver_only", "resolver_plus_web"} else "resolver_only"
-
-
 def write_pointer(path: Path, target: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True); path.write_text(str(target.resolve()) + "\n", encoding="utf-8")
 
@@ -177,15 +176,11 @@ def is_within(child: Path, parent: Path) -> bool:
         child.resolve().relative_to(parent.resolve()); return True
     except ValueError:
         return False
-
-
 def ensure_external_run_dir(run_dir: Path) -> None:
     if is_within(run_dir, ROOT):
         raise SystemExit(
             f"[ctcp_orchestrate] run_dir must be outside repo root; got inside repo: {run_dir}"
-        )
-
-
+    )
 def resolve_run_dir(raw: str) -> Path:
     if raw.strip():
         run_dir = Path(raw).expanduser().resolve()
@@ -199,16 +194,12 @@ def resolve_run_dir(raw: str) -> Path:
     run_dir = Path(pointed).expanduser().resolve()
     ensure_external_run_dir(run_dir)
     return run_dir
-
-
 def resolve_scaffold_runs_root(raw: str) -> Path:
     if value := str(raw or "").strip():
         return Path(value).expanduser().resolve()
     if env_raw := str(os.environ.get("CTCP_RUNS_ROOT", "")).strip():
         return Path(env_raw).expanduser().resolve()
     return (ROOT / "simlab" / "_runs").resolve()
-
-
 def resolve_scaffold_out_dir(raw: str) -> Path:
     if not str(raw or "").strip():
         raise SystemExit("[ctcp_orchestrate] scaffold requires --out")
@@ -2736,6 +2727,12 @@ def cmd_status(run_dir: Path) -> int:
     )
     if gate["state"] == "blocked":
         print(f"[ctcp_orchestrate] blocked: {gate['reason']}")
+    analysis_line = format_analysis_progress(run_dir)
+    if analysis_line:
+        print(analysis_line)
+    progress_line = format_source_generation_progress(run_dir)
+    if progress_line:
+        print(progress_line)
     if latest_outbox:
         print(f"[ctcp_orchestrate] outbox prompt created: {latest_outbox}")
     if preview.get("status") == "budget_exceeded":
@@ -3144,23 +3141,20 @@ def cmd_advance(run_dir: Path, max_steps: int) -> int:
 
     print(f"[ctcp_orchestrate] reached max-steps={max_steps}")
     return cmd_status(run_dir)
-
-
 def main() -> int:
     ap = argparse.ArgumentParser(description="CTCP local orchestrator (artifact-driven state machine)")
     sub = ap.add_subparsers(dest="cmd")
-
+    __import__("tools.agent_manifest_adapter", fromlist=["register_agent_manifest_subcommand"]).register_agent_manifest_subcommand(sub)
+    __import__("tools.agent_manifest_consumer", fromlist=["register_agent_scaffold_subcommand"]).register_agent_scaffold_subcommand(sub)
+    __import__("tools.agent_project_pipeline", fromlist=["register_agent_project_subcommand"]).register_agent_project_subcommand(sub)
     p_new = sub.add_parser("new-run", help="Create a new external run directory")
     p_new.add_argument("--goal", required=True)
     p_new.add_argument("--run-id", default="")
-
     p_status = sub.add_parser("status", help="Show current gate and missing artifact")
     p_status.add_argument("--run-dir", default="")
-
     p_adv = sub.add_parser("advance", help="Advance one-or-more steps by artifact presence")
     p_adv.add_argument("--run-dir", default="")
     p_adv.add_argument("--max-steps", type=int, default=16)
-
     p_cos = sub.add_parser(
         "cos-user-v2p",
         help="Run external V2P testkit with CTCP dialogue, evidence and fixed destination copy",
@@ -3201,7 +3195,6 @@ def main() -> int:
     p_cos.add_argument("--post-verify-cmd", default="", help="Verify command executed inside --repo after testkit run")
     p_cos.add_argument("--skip-verify", action="store_true", help="Skip repo verify commands")
     p_cos.add_argument("--force", action="store_true", help="Overwrite destination run folder if already exists")
-
     p_scaffold = sub.add_parser("scaffold", help="Generate a reference CTCP project skeleton")
     p_scaffold.add_argument("--out", required=True, help="Output directory for the generated project")
     p_scaffold.add_argument("--name", default="", help="Project name (default: basename of --out)")
@@ -3228,7 +3221,6 @@ def main() -> int:
         default="",
         help="Optional run root for scaffold evidence (default: CTCP_RUNS_ROOT or simlab/_runs)",
     )
-
     p_scaffold_pc = sub.add_parser("scaffold-pointcloud", help="Generate a point-cloud project scaffold from templates")
     p_scaffold_pc.add_argument("--out", required=True, help="Output directory (project root)")
     p_scaffold_pc.add_argument("--name", default="", help="Project name (default: basename of --out)")
@@ -3259,6 +3251,12 @@ def main() -> int:
     p_scaffold_pc.add_argument("--agent-cmd", default="", help="Live agent command for answering dialogue questions")
 
     args = ap.parse_args()
+    if args.cmd == "agent-manifest":
+        return __import__("tools.agent_manifest_adapter", fromlist=["run_agent_manifest_command"]).run_agent_manifest_command(args)
+    if args.cmd == "agent-scaffold":
+        return __import__("tools.agent_manifest_consumer", fromlist=["run_agent_scaffold_command"]).run_agent_scaffold_command(args)
+    if args.cmd == "agent-project":
+        return __import__("tools.agent_project_pipeline", fromlist=["run_agent_project_command"]).run_agent_project_command(args)
     if args.cmd == "new-run":
         return cmd_new_run(goal=args.goal, run_id=args.run_id)
     if args.cmd == "status":

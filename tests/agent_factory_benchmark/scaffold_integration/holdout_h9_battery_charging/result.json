@@ -1,0 +1,31 @@
+{
+  "case": "holdout_h9_battery_charging",
+  "manifest_path": "tests/agent_factory_benchmark/holdout_generated/output_h9_battery_charging_station.json",
+  "scaffold_output_dir": "C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h9_battery_charging_oz3kedb8/agent_project",
+  "scaffold_generated": true,
+  "dry_run_passed": true,
+  "scaffold_tests_passed": true,
+  "permission_checks_passed": true,
+  "failed_assertions": [],
+  "commands": [
+    {
+      "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py agent-scaffold --manifest D:\\.c_projects\\adc\\ctcp\\tests\\agent_factory_benchmark\\holdout_generated\\output_h9_battery_charging_station.json --output-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_phase4_holdout_h9_battery_charging_oz3kedb8\\agent_project --force",
+      "exit_code": 0,
+      "stdout_tail": "{\n  \"agents_count\": 2,\n  \"dry_run_entrypoint\": \"run_agent.py --dry-run --input sample_input.json\",\n  \"entrypoint\": \"scripts/ctcp_orchestrate.py agent-scaffold\",\n  \"manifest_path\": \"D:/.c_projects/adc/ctcp/tests/agent_factory_benchmark/holdout_generated/output_h9_battery_charging_station.json\",\n  \"mode\": \"agent-scaffold\",\n  \"output_dir\": \"C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h9_battery_charging_oz3kedb8/agent_project\",\n  \"schema_version\": \"ctcp-agent-scaffold-generation-result-v1\",\n  \"status\": \"pass\",\n  \"system_name\": \"H9 Battery charging station support agent\",\n  \"test_files\": [\n    \"tests/test_manifest_contract.py\",\n    \"tests/test_permissions.py\",\n    \"tests/test_workflows.py\"\n  ],\n  \"tools_count\": 4,\n  \"workflows_count\": 7\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_phase4_holdout_h9_battery_charging_oz3kedb8\\agent_project\\run_agent.py --dry-run --input C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_phase4_holdout_h9_battery_charging_oz3kedb8\\agent_project\\sample_input.json",
+      "exit_code": 0,
+      "stdout_tail": " \"ok\",\n    \"timestamp\": \"2026-05-11T11:34:48.376945+00:00\",\n    \"workflow_start\": \"intake\"\n  },\n  \"audit_log_path\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_phase4_holdout_h9_battery_charging_oz3kedb8\\\\agent_project\\\\audit.log\",\n  \"audit_log_required\": true,\n  \"guardrails_active\": [\n    \"Output must be valid JSON matching the agent manifest schema.\",\n    \"High-risk actions require recorded human approval and audit logging.\",\n    \"If approval is missing, produce a recommendation or draft only.\",\n    \"Do not fabricate sources, approvals, logs, metrics, or user consent.\",\n    \"When root cause is uncertain, state uncertainty and list evidence gaps.\",\n    \"Battery charging station charge means electrical charging, not payment, billing, or refund.\"\n  ],\n  \"input_path\": \"C:\\\\Users\\\\sunom\\\\AppData\\\\Local\\\\Temp\\\\ctcp_phase4_holdout_h9_battery_charging_oz3kedb8\\\\agent_project\\\\sample_input.json\",\n  \"mode\": \"dry_run\",\n  \"pending_approval_tools\": [],\n  \"selected_agent\": \"CoordinatorAgent\",\n  \"status\": \"ok\",\n  \"tools_available\": [\n    \"audit_log.write\",\n    \"device_status.check\",\n    \"maintenance_ticket.create\",\n    \"field_technician.notification_draft\"\n  ],\n  \"workflow_start\": \"intake\"\n}\n",
+      "stderr_tail": ""
+    },
+    {
+      "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe -m unittest discover C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_phase4_holdout_h9_battery_charging_oz3kedb8\\agent_project\\tests -v",
+      "exit_code": 0,
+      "stdout_tail": "",
+      "stderr_tail": "test_manifest_contract (test_manifest_contract.ManifestContractTests.test_manifest_contract) ... ok\ntest_high_side_effect_tools_are_approval_gated (test_permissions.PermissionTests.test_high_side_effect_tools_are_approval_gated) ... ok\ntest_workflows_have_required_flow_fields (test_workflows.WorkflowTests.test_workflows_have_required_flow_fields) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.002s\n\nOK\n"
+    }
+  ],
+  "status": "pass"
+}

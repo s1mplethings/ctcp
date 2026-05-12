@@ -180,20 +180,32 @@ def build_success_extra(
     }
 
 
-def _run_command_capture(cmd: list[str], *, cwd: Path, extra_env: dict[str, str] | None = None) -> dict[str, Any]:
+def _run_command_capture(cmd: list[str], *, cwd: Path, extra_env: dict[str, str] | None = None, timeout: int = 30) -> dict[str, Any]:
     env = None
     if extra_env:
         env = dict(os.environ)
         env.update({str(key): str(value) for key, value in extra_env.items() if str(key).strip()})
-    proc = subprocess.run(
-        cmd,
-        cwd=str(cwd),
-        env=env,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=str(cwd),
+            env=env,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return {
+            "command": " ".join(cmd),
+            "rc": 124,
+            "stdout_tail": "\n".join(str(exc.stdout or "").splitlines()[-12:]),
+            "stderr_tail": "\n".join(str(exc.stderr or "").splitlines()[-12:]),
+            "status": "blocked",
+            "timeout_seconds": timeout,
+            "reason": "runtime probe timed out",
+        }
     return {
         "command": " ".join(cmd),
         "rc": int(proc.returncode),

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CTCP File Manifest",
+  "type": "object",
+  "required": ["schema_version", "files"],
+  "properties": {
+    "schema_version": {"const": "ctcp-file-manifest-v1"},
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "file_type", "generation_mode"],
+        "properties": {
+          "path": {"type": "string"},
+          "file_type": {"type": "string"},
+          "generation_mode": {"type": "string"},
+          "primary_libraries": {"type": "array", "items": {"type": "string"}},
+          "depends_on": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

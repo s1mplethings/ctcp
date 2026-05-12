@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "ctcp-agent-manifest-schema-v1",
+  "title": "CTCP Agent Manifest",
+  "type": "object",
+  "required": [
+    "manifest_version",
+    "system_name",
+    "agents",
+    "tools",
+    "workflows",
+    "memory",
+    "permissions",
+    "guardrails",
+    "test_cases"
+  ],
+  "properties": {
+    "manifest_version": {"type": "string"},
+    "system_name": {"type": "string"},
+    "agents": {"type": "array"},
+    "tools": {"type": "array"},
+    "workflows": {"type": "array"},
+    "memory": {"type": "array"},
+    "permissions": {"type": "object"},
+    "guardrails": {"type": "array"},
+    "test_cases": {"type": "array"}
+  }
+}

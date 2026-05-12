@@ -1,0 +1,12 @@
+{
+  "case_id": "h8_plugin_marketplace_review",
+  "title": "H8 Plugin marketplace review agent",
+  "goal": "创建一个 plugin marketplace review agent。它需要审核第三方插件提交，检查权限范围，检查是否请求过多权限，检查是否包含可疑网络请求，自动给出 approve/reject 建议，但不能自动上架插件。",
+  "holdout_expectations": {
+    "required_keywords": ["permission scope analysis", "suspicious network check", "approve reject recommendation", "listing approval"],
+    "forbidden_domains": ["devops", "billing", "legal"],
+    "required_workflow_states": ["plugin_submission_review", "permission_scope_analysis", "suspicious_network_check", "listing_approval"],
+    "lightweight_case": true,
+    "high_risk_external_actions": ["publish plugin", "list plugin"]
+  }
+}

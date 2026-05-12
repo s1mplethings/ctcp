@@ -7,6 +7,19 @@
 
 | Date | Topic | File |
 |------|-------|------|
+| 2026-05-12 | Concrete Project Generation Benchmark | [->](archive/20260512-concrete-project-generation-benchmark.md) |
+| 2026-05-11 | End-to-End Agent Project Pipeline Integration | [->](archive/20260511-agent-project-e2e-pipeline.md) |
+| 2026-05-11 | Agent Manifest Consumer Scaffold Generation | [->](archive/20260511-agent-manifest-consumer-scaffold.md) |
+| 2026-05-11 | Agent Manifest Orchestrator Integration | [->](archive/20260511-agent-manifest-orchestrator-integration.md) |
+| 2026-05-11 | Agent Manifest Generator Holdout Repair | [->](archive/20260511-agent-manifest-generator-holdout-repair.md) |
+| 2026-05-11 | Agent Factory Holdout Generalization Audit | [->](archive/20260511-agent-factory-holdout-audit.md) |
+| 2026-05-11 | Agent Factory Semantic Benchmark Hardening | [->](archive/20260511-agent-factory-semantic-benchmark.md) |
+| 2026-05-11 | Agent Manifest Generation Entrypoint | [->](archive/20260511-agent-manifest-generation-entrypoint.md) |
+| 2026-05-11 | External Agent Factory Benchmark | [->](archive/20260511-external-agent-factory-benchmark.md) |
+| 2026-05-11 | Model Budget And Librarian Experience Feedback P3/P4 | [->](archive/20260511-model-budget-experience-feedback-p3p4.md) |
+| 2026-05-11 | Local Librarian hybrid context pack P2 | [->](archive/20260511-local-librarian-hybrid-context-p2.md) |
+| 2026-05-11 | Library-first source_generation P0 foundation | [->](archive/20260511-library-first-source-generation-p0.md) |
+| 2026-05-10 | VN Complete Project Direct Generation Test | [->](archive/20260510-vn-complete-project-direct-test.md) |
 | 2026-05-10 | VN Clean Run Source Retry Test | [->](archive/20260510-vn-clean-run-source-retry-test.md) |
 | 2026-05-10 | VN Clean Rerun Test | [->](archive/20260510-vn-clean-rerun-test.md) |
 | 2026-05-10 | VN Source Generation Retry Evidence | [->](archive/20260510-vn-source-generation-retry-evidence.md) |

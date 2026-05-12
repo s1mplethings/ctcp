@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CTCP File Task",
+  "type": "object",
+  "required": ["schema_version", "path", "implementation_mode", "output_contract"],
+  "properties": {
+    "schema_version": {"const": "ctcp-file-task-v1"},
+    "path": {"type": "string"},
+    "implementation_mode": {"type": "string"},
+    "primary_libraries": {"type": "array", "items": {"type": "string"}},
+    "must_use": {"type": "array", "items": {"type": "string"}},
+    "must_not_use": {"type": "array", "items": {"type": "string"}},
+    "required_behavior": {"type": "array", "items": {"type": "string"}},
+    "acceptance": {"type": "array", "items": {"type": "string"}},
+    "output_contract": {"type": "object"}
+  },
+  "additionalProperties": true
+}

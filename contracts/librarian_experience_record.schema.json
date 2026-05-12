@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ctcp-librarian-experience-record-v1",
+  "title": "CTCP Librarian Experience Record",
+  "type": "object",
+  "required": ["schema_version", "source", "status", "project_domain", "lessons", "retrieval_text"],
+  "properties": {
+    "schema_version": {
+      "const": "ctcp-librarian-experience-record-v1"
+    },
+    "source": {
+      "type": "object",
+      "required": ["artifact", "stage"]
+    },
+    "status": {
+      "type": "string"
+    },
+    "project_domain": {
+      "type": "string"
+    },
+    "scaffold_family": {
+      "type": "string"
+    },
+    "library_plan_path": {
+      "type": "string"
+    },
+    "file_manifest_path": {
+      "type": "string"
+    },
+    "blocking_reason": {
+      "type": "string"
+    },
+    "failed_checks": {
+      "type": "array"
+    },
+    "lessons": {
+      "type": "array"
+    },
+    "retrieval_text": {
+      "type": "string"
+    }
+  }
+}

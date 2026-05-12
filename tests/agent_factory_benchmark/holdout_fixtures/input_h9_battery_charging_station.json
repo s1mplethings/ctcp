@@ -1,0 +1,13 @@
+{
+  "case_id": "h9_battery_charging_station",
+  "title": "H9 Battery charging station support agent",
+  "goal": "创建一个 battery charging station support agent。它需要处理充电桩故障，查询设备状态，生成维修工单，通知现场维护人员。charge 在这里表示充电，不是扣款。",
+  "holdout_expectations": {
+    "required_keywords": ["device status", "maintenance ticket", "field technician notification draft"],
+    "forbidden_domains": ["billing", "payment", "refund"],
+    "required_workflow_states": ["device_status_check", "maintenance_ticket", "field_technician_notification_draft"],
+    "lightweight_case": true,
+    "non_billing_charge": true,
+    "high_risk_external_actions": []
+  }
+}

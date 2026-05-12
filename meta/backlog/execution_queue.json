@@ -14,6 +14,718 @@
   ],
   "items": [
     {
+      "id": "ADHOC-20260512-analysis-prompt-slimming-fast-mode",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Analysis prompt slimming and fast analysis mode",
+      "owner_role": "Analysis Fast Profile Agent",
+      "deps": [
+        "ADHOC-20260512-pre-source-analysis-timeout-repair"
+      ],
+      "dod": [
+        "fast analysis profile is selected by CTCP_ANALYSIS_PROFILE=fast",
+        "fast analysis prompt is materially smaller than the default prompt while retaining concrete project requirements and excluding agent manifest/scaffold context",
+        "analysis_progress.json records prompt_char_count, prompt_estimated_tokens, output_contract, max_output_tokens, and analysis_profile",
+        "analysis output contract is short Markdown with Project Type, Required Files, Runtime, Data Model, and Acceptance Checks sections",
+        "concrete benchmark sets CTCP_ANALYSIS_PROFILE=fast and reports prompt budget evidence",
+        "focused fast profile and prompt budget tests pass",
+        "concrete benchmark proceeds past analysis or reports exact prompt budget evidence if provider still fails",
+        "repo gates pass"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/analysis_fast_profile.py",
+          "tools/analysis_stage_progress.py",
+          "llm_core/clients/openai_compatible.py",
+          "llm_core/providers/api_provider.py",
+          "scripts/ctcp_orchestrate.py",
+          "tests/test_analysis_fast_profile.py",
+          "tests/test_analysis_prompt_budget.py",
+          "tests/test_analysis_stage_progress.py",
+          "tests/test_analysis_stage_timeout.py",
+          "tests/test_analysis_stage_resume.py",
+          "tests/test_api_agent_templates.py",
+          "tests/test_api_provider_core.py",
+          "tests/concrete_project_benchmark/run_concrete_project_benchmark.py",
+          "tests/concrete_project_benchmark/benchmark_report.md",
+          "tests/concrete_project_benchmark/generated/issue_tracker_api/**",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260512-pre-source-analysis-timeout-repair.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe tests\\concrete_project_benchmark\\run_concrete_project_benchmark.py",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_analysis_stage_progress -v",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_analysis_stage_timeout -v",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_analysis_stage_resume -v",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_generation_consistency -v",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_convergence_performance_guards -v",
+          ".venv\\Scripts\\python.exe -m unittest discover tests -v",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py",
+          ".venv\\Scripts\\python.exe scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task",
+          "$env:CTCP_SKIP_LITE_REPLAY='1'; $env:CTCP_RUNS_ROOT='D:\\.c_projects\\adc\\ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "doing",
+      "notes": "Bound on 2026-05-12 after Phase 6.2 made analysis provider timeout structured; Phase 6.3 narrows analysis into a fast bounded artifact."
+    },
+    {
+      "id": "ADHOC-20260512-incremental-source-generation-repair",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Incremental source generation checkpoint and resume repair",
+      "owner_role": "Incremental Source Generation Repair Agent",
+      "deps": [
+        "ADHOC-20260512-concrete-project-generation-benchmark"
+      ],
+      "dod": [
+        "source_generation writes per-batch checkpoints under artifacts/source_generation_batches",
+        "completed source-generation batches are materialized into project_output immediately",
+        "source_generation_state.json and source_generation_partial_report.json record resumable progress",
+        "a later advance resumes pending source-generation batches without regenerating completed batches",
+        "ctcp_orchestrate.py status shows source-generation progress",
+        "adaptive batching reduces default source-generation round trips without disabling chunk generation",
+        "focused incremental/resume/partial-materialization tests pass",
+        "concrete project benchmark records recovered concrete project generation",
+        "repo gates pass or first blocker is recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "llm_core/providers/api_source_chunking.py",
+          "tools/providers/project_generation_artifacts.py",
+          "tools/providers/project_generation_source_stage.py",
+          "scripts/ctcp_orchestrate.py",
+          "tests/test_incremental_source_generation.py",
+          "tests/test_source_generation_resume.py",
+          "tests/test_source_generation_partial_materialization.py",
+          "tests/concrete_project_benchmark/run_concrete_project_benchmark.py",
+          "tests/concrete_project_benchmark/benchmark_report.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/reports/LAST.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe tests\\concrete_project_benchmark\\run_concrete_project_benchmark.py",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_incremental_source_generation -v",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_source_generation_resume -v",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_source_generation_partial_materialization -v",
+          ".venv\\Scripts\\python.exe -m unittest discover tests -v",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py",
+          ".venv\\Scripts\\python.exe scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task",
+          "$env:CTCP_SKIP_LITE_REPLAY='1'; $env:CTCP_RUNS_ROOT='D:\\.c_projects\\adc\\ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "doing",
+      "notes": "Bound on 2026-05-12 after concrete benchmark showed source_generation timeout in chunked provider before source_generation_report/project_output emission."
+    },
+    {
+      "id": "ADHOC-20260512-concrete-project-generation-benchmark",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Concrete project generation benchmark for local issue tracker API",
+      "owner_role": "Concrete Project Generation Benchmark Agent",
+      "deps": [],
+      "dod": [
+        "benchmark fixture for a Local Issue Tracker API exists",
+        "benchmark runner scouts ordinary CTCP project generation entrypoints without using agent-manifest, agent-scaffold, or agent-project",
+        "benchmark invokes ordinary project generation or reports unsupported when no ordinary project entrypoint can generate a project",
+        "benchmark validates generated project structure, generated tests, HTTP API endpoints, and SQLite/database evidence when a project is generated",
+        "benchmark report records concrete status, commands, generated project path, test results, HTTP endpoint results, SQLite verification, and unsupported reasons",
+        "repo gates pass"
+      ],
+      "artifacts": {
+        "produces": [
+          "tests/concrete_project_benchmark/fixtures/issue_tracker_api.json",
+          "tests/concrete_project_benchmark/run_concrete_project_benchmark.py",
+          "tests/concrete_project_benchmark/generated/issue_tracker_api/**",
+          "tests/concrete_project_benchmark/benchmark_report.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260512-concrete-project-generation-benchmark.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260512-concrete-project-generation-benchmark.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe tests\\concrete_project_benchmark\\run_concrete_project_benchmark.py",
+          ".venv\\Scripts\\python.exe -m py_compile tests\\concrete_project_benchmark\\run_concrete_project_benchmark.py",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py",
+          ".venv\\Scripts\\python.exe scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task",
+          "$env:CTCP_SKIP_LITE_REPLAY='1'; $env:CTCP_RUNS_ROOT='D:\\.c_projects\\adc\\ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "blocked",
+      "notes": "Executed on 2026-05-12. Added concrete project generation fixture and benchmark runner using ordinary ctcp_orchestrate.py new-run/status/advance only. Latest benchmark status is unsupported because source_generation timed out before a concrete project was produced. Repo verify is blocked by a pre-existing frozen-kernel dirty change in scripts/ctcp_orchestrate.py outside this task scope."
+    },
+    {
+      "id": "ADHOC-20260511-agent-project-e2e-pipeline",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "End-to-end agent project pipeline integration",
+      "owner_role": "End-to-End Agent Pipeline Integration Agent",
+      "deps": [
+        "ADHOC-20260511-agent-manifest-consumer-scaffold"
+      ],
+      "dod": [
+        "agent-project is exposed as an explicit CTCP orchestrator subcommand",
+        "agent-manifest independent and orchestrator entrypoints remain available",
+        "agent-project generates manifest, scaffold, dry-run evidence, scaffold test results, and pipeline reports",
+        "existing benchmark phases remain green without fixture or validator changes",
+        "e2e pipeline benchmark covers devops, permission attack, H1, H2, H9, and H10",
+        "agent-project refuses to overwrite existing output directories unless --force is provided",
+        "ordinary CTCP project generation does not default to agent-project mode",
+        "focused commands and canonical verify pass"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/agent_project_pipeline.py",
+          "tools/agent_manifest_consumer.py",
+          "scripts/generate_agent_scaffold.py",
+          "scripts/ctcp_orchestrate.py",
+          "tests/test_agent_manifest_consumer.py",
+          "tests/test_agent_project_pipeline.py",
+          "tests/test_agent_project_orchestrator_e2e.py",
+          "tests/agent_factory_benchmark/e2e_pipeline/**",
+          "tests/agent_factory_benchmark/run_benchmark.py",
+          "docs/agent_project_pipeline.md",
+          "docs/agent_scaffold_mode.md",
+          "docs/agent_manifest_mode.md",
+          "README.md",
+          "tests/agent_factory_benchmark/benchmark_report.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260511-agent-project-e2e-pipeline.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260511-agent-project-e2e-pipeline.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe tests\\agent_factory_benchmark\\run_benchmark.py",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_agent_manifest_generator -v",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_agent_manifest_orchestrator_integration -v",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_agent_manifest_consumer -v",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_agent_project_pipeline -v",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_agent_project_orchestrator_e2e -v",
+          ".venv\\Scripts\\python.exe -m unittest discover tests -v",
+          ".venv\\Scripts\\python.exe -m py_compile tools\\agent_manifest_consumer.py tools\\agent_project_pipeline.py scripts\\generate_agent_scaffold.py scripts\\ctcp_orchestrate.py",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py",
+          ".venv\\Scripts\\python.exe scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task",
+          "$env:CTCP_SKIP_LITE_REPLAY='1'; $env:CTCP_RUNS_ROOT='D:\\.c_projects\\adc\\ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-11. Added explicit agent-project end-to-end pipeline, scaffold generator entrypoint, pipeline reports, generated dry-run audit JSONL, Phase 4 e2e benchmark evidence, tests, and docs without modifying generator, fixtures, validators, or ordinary project generation."
+    },
+    {
+      "id": "ADHOC-20260511-agent-manifest-consumer-scaffold",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Agent manifest consumer scaffold generation",
+      "owner_role": "Agent Manifest Consumer Agent",
+      "deps": [
+        "ADHOC-20260511-agent-manifest-orchestrator-integration"
+      ],
+      "dod": [
+        "agent-scaffold is exposed as an explicit CTCP orchestrator subcommand",
+        "agent-manifest independent and orchestrator entrypoints remain available",
+        "manifest consumer generates runnable dry-run scaffold projects from manifests",
+        "scaffold preserves manifest permissions and high-risk approval requirements",
+        "scaffold integration covers devops, permission attack, H9 charge, and H10 launch cases",
+        "phase 1 benchmark remains 6/6 pass",
+        "phase 2 semantic benchmark remains 8/8 pass with no warnings",
+        "phase 2.5 holdout benchmark remains 10/10 pass with no warnings",
+        "focused commands and canonical verify pass"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/agent_manifest_consumer.py",
+          "scripts/ctcp_orchestrate.py",
+          "tests/test_agent_manifest_consumer.py",
+          "tests/test_agent_scaffold_integration.py",
+          "tests/agent_factory_benchmark/scaffold_integration/**",
+          "tests/agent_factory_benchmark/run_benchmark.py",
+          "docs/agent_scaffold_mode.md",
+          "docs/agent_manifest_mode.md",
+          "README.md",
+          "tests/agent_factory_benchmark/benchmark_report.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260511-agent-manifest-consumer-scaffold.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260511-agent-manifest-consumer-scaffold.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe tests\\agent_factory_benchmark\\run_benchmark.py",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_agent_manifest_generator -v",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_agent_manifest_orchestrator_integration -v",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_agent_manifest_consumer -v",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_agent_scaffold_integration -v",
+          ".venv\\Scripts\\python.exe -m unittest discover tests -v",
+          ".venv\\Scripts\\python.exe -m py_compile tools\\agent_manifest_consumer.py scripts\\ctcp_orchestrate.py",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py",
+          ".venv\\Scripts\\python.exe scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task",
+          "$env:CTCP_SKIP_LITE_REPLAY='1'; $env:CTCP_RUNS_ROOT='D:\\.c_projects\\adc\\ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-11. Added explicit agent-scaffold mode, manifest consumer, scaffold dry-run, scaffold tests, Phase 4 benchmark evidence, and docs without modifying generator, fixtures, validators, or ordinary project generation."
+    },
+    {
+      "id": "ADHOC-20260511-agent-manifest-orchestrator-integration",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Agent manifest mode orchestrator integration",
+      "owner_role": "Orchestrator Integration Agent",
+      "deps": [
+        "ADHOC-20260511-agent-manifest-generator-holdout-repair"
+      ],
+      "dod": [
+        "agent manifest generation is exposed through an explicit isolated CTCP generation mode",
+        "ordinary CTCP project generation does not default to agent manifest mode",
+        "phase 1 benchmark remains 6/6 pass",
+        "phase 2 semantic benchmark remains 8/8 pass with no warnings",
+        "phase 2.5 holdout benchmark remains 10/10 pass with no warnings",
+        "orchestrator integration smoke tests cover devops, permission attack, H9 charge, and H10 launch cases",
+        "permission attack remains safe through the orchestrator entrypoint",
+        "focused commands and canonical verify pass"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/agent_manifest_adapter.py",
+          "scripts/ctcp_orchestrate.py",
+          "tests/test_agent_manifest_orchestrator_integration.py",
+          "tests/agent_factory_benchmark/orchestrator_integration/*.json",
+          "docs/agent_manifest_mode.md",
+          "README.md",
+          "tests/agent_factory_benchmark/benchmark_report.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260511-agent-manifest-orchestrator-integration.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260511-agent-manifest-orchestrator-integration.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe tests\\agent_factory_benchmark\\run_benchmark.py",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_agent_manifest_generator -v",
+          ".venv\\Scripts\\python.exe -m unittest discover tests -v",
+          ".venv\\Scripts\\python.exe -m py_compile tools\\agent_manifest_generator.py scripts\\generate_agent_manifest.py",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py",
+          ".venv\\Scripts\\python.exe scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task",
+          "$env:CTCP_SKIP_LITE_REPLAY='1'; $env:CTCP_RUNS_ROOT='D:\\.c_projects\\adc\\ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-11. Added explicit isolated ctcp_orchestrate.py agent-manifest subcommand, adapter, integration tests, smoke outputs, docs, and benchmark report evidence without modifying fixtures, validators, generator core, or ordinary project-generation behavior."
+    },
+    {
+      "id": "ADHOC-20260511-agent-manifest-generator-holdout-repair",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Agent manifest generator holdout generalization repair",
+      "owner_role": "Agent Manifest Generator Repair Agent",
+      "deps": [
+        "ADHOC-20260511-agent-factory-holdout-audit"
+      ],
+      "dod": [
+        "phase 1 benchmark remains 6/6 pass",
+        "phase 2 semantic benchmark remains 8/8 pass with no warnings",
+        "phase 2.5 holdout unsupported count remains 0",
+        "phase 2.5 improves to at least 5/10 pass without fixture or validator relaxation",
+        "H9 battery charge is not classified as billing/refund/payment",
+        "H10 product launch is not classified as incident/rollback",
+        "regulated holdout domains preserve medical, financial, recruiting, privacy, moderation, education, and plugin safety boundaries",
+        "focused unit tests, benchmark, and canonical verify pass"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/agent_manifest_generator.py",
+          "tests/test_agent_manifest_generator.py",
+          "tests/agent_factory_benchmark/generated/*.json",
+          "tests/agent_factory_benchmark/semantic_generated/*.json",
+          "tests/agent_factory_benchmark/holdout_generated/*.json",
+          "tests/agent_factory_benchmark/benchmark_report.md",
+          "ai_context/problem_registry.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260511-agent-manifest-generator-holdout-repair.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260511-agent-manifest-generator-holdout-repair.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe tests\\agent_factory_benchmark\\run_benchmark.py",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_agent_manifest_generator -v",
+          ".venv\\Scripts\\python.exe -m py_compile tools\\agent_manifest_generator.py scripts\\generate_agent_manifest.py tests\\agent_factory_benchmark\\run_benchmark.py",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py",
+          ".venv\\Scripts\\python.exe scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task",
+          "$env:CTCP_SKIP_LITE_REPLAY='1'; $env:CTCP_RUNS_ROOT='D:\\.c_projects\\adc\\ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-11: repaired generator domain detection, minimality, regulated safety profiles, action risk policy, and negative context handling without fixture or validator edits. Phase 1 stayed 6/6, Phase 2 stayed 8/8, Phase 2.5 improved from 0/10 with 8 warnings to 10/10 with 0 warnings, and canonical verify passed."
+    },
+    {
+      "id": "ADHOC-20260511-agent-factory-holdout-audit",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Agent factory holdout generalization audit",
+      "owner_role": "Holdout Benchmark Audit Agent",
+      "deps": [
+        "ADHOC-20260511-agent-factory-semantic-benchmark"
+      ],
+      "dod": [
+        "agent manifest generator and CLI are frozen with no edits in this task",
+        "phase 1 benchmark remains 6/6 pass",
+        "phase 2 semantic benchmark remains 8/8 pass",
+        "phase 2.5 holdout benchmark adds ten blind fixtures and generated outputs",
+        "holdout validators cover domain precision, regulated safety, minimality, action risk, and similarity",
+        "holdout report records pass/fail/warning/unsupported counts without treating warnings or unsupported as pass",
+        "focused commands and canonical verify pass"
+      ],
+      "artifacts": {
+        "produces": [
+          "tests/agent_factory_benchmark/run_benchmark.py",
+          "tests/agent_factory_benchmark/holdout_fixtures/*.json",
+          "tests/agent_factory_benchmark/holdout_generated/*.json",
+          "tests/agent_factory_benchmark/holdout_validators/*.py",
+          "tests/agent_factory_benchmark/benchmark_report.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260511-agent-factory-holdout-audit.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260511-agent-factory-holdout-audit.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe tests\\agent_factory_benchmark\\run_benchmark.py",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_agent_manifest_generator -v",
+          ".venv\\Scripts\\python.exe -m py_compile tests\\agent_factory_benchmark\\run_benchmark.py",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py",
+          ".venv\\Scripts\\python.exe scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task",
+          "$env:CTCP_SKIP_LITE_REPLAY='1'; $env:CTCP_RUNS_ROOT='D:\\.c_projects\\adc\\ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-11: added frozen-generator Phase 2.5 holdout audit with ten fixtures, five validators, generated outputs, and report integration. Phase 1 remained 6/6, Phase 2 remained 8/8, Holdout produced 0 pass, 10 fail, 8 warning, 0 unsupported. Canonical verify passed."
+    },
+    {
+      "id": "ADHOC-20260511-agent-factory-semantic-benchmark",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Agent factory semantic benchmark hardening",
+      "owner_role": "Benchmark Hardening Agent",
+      "deps": [
+        "ADHOC-20260511-agent-manifest-generation-entrypoint"
+      ],
+      "dod": [
+        "phase 1 benchmark remains 6/6 pass",
+        "phase 2 semantic benchmark adds eight fixed semantic fixtures without modifying existing fixtures",
+        "semantic validators cover relevance, overgeneration, permission bypass, ambiguity, and conflict resolution",
+        "benchmark report separates phase 1 structural/security results from phase 2 semantic stress results",
+        "S3 prompt injection and S4 cross-agent permission bypass pass",
+        "focused unit tests, benchmark, and canonical verify pass"
+      ],
+      "artifacts": {
+        "produces": [
+          "tools/agent_manifest_generator.py",
+          "scripts/generate_agent_manifest.py",
+          "tests/test_agent_manifest_generator.py",
+          "tests/agent_factory_benchmark/run_benchmark.py",
+          "tests/agent_factory_benchmark/semantic_fixtures/*.json",
+          "tests/agent_factory_benchmark/semantic_generated/*.json",
+          "tests/agent_factory_benchmark/semantic_validators/*.py",
+          "tests/agent_factory_benchmark/benchmark_report.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260511-agent-factory-semantic-benchmark.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260511-agent-factory-semantic-benchmark.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe tests\\agent_factory_benchmark\\run_benchmark.py",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_agent_manifest_generator -v",
+          ".venv\\Scripts\\python.exe -m py_compile tools\\agent_manifest_generator.py scripts\\generate_agent_manifest.py tests\\agent_factory_benchmark\\run_benchmark.py",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py",
+          ".venv\\Scripts\\python.exe scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task",
+          "$env:CTCP_SKIP_LITE_REPLAY='1'; $env:CTCP_RUNS_ROOT='D:\\.c_projects\\adc\\ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-11: added phase 2 semantic fixtures, validators, generated outputs, benchmark report separation, semantic generator improvements, focused tests, and canonical verify evidence. Phase 1 is 6 passed, 0 failed, 0 unsupported; phase 2 is 8 passed, 0 failed, 0 warnings, 0 unsupported."
+    },
+    {
+      "id": "ADHOC-20260511-agent-manifest-generation-entrypoint",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Agent manifest generation entrypoint",
+      "owner_role": "Implementation Agent",
+      "deps": [
+        "ADHOC-20260511-external-agent-factory-benchmark"
+      ],
+      "dod": [
+        "scripts/generate_agent_manifest.py reads benchmark-style JSON input and writes machine-readable agent manifest JSON",
+        "manifest output contains agents, tools, workflows, memory, permissions, guardrails, and test_cases",
+        "permission sanitizer prevents direct rollback, refund, legal admission, compensation promise, audit-log disable, and approval bypass",
+        "benchmark runner calls the new real entrypoint and unsupported_count becomes 0",
+        "focused unit tests, benchmark, and canonical verify pass"
+      ],
+      "artifacts": {
+        "produces": [
+          "contracts/agent_manifest.schema.json",
+          "tools/agent_manifest_generator.py",
+          "scripts/generate_agent_manifest.py",
+          "tests/test_agent_manifest_generator.py",
+          "tests/agent_factory_benchmark/run_benchmark.py",
+          "tests/agent_factory_benchmark/generated/*.json",
+          "tests/agent_factory_benchmark/benchmark_report.md",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260511-agent-manifest-generation-entrypoint.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260511-agent-manifest-generation-entrypoint.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe -m unittest tests.test_agent_manifest_generator -v",
+          ".venv\\Scripts\\python.exe tests\\agent_factory_benchmark\\run_benchmark.py",
+          ".venv\\Scripts\\python.exe -m py_compile tools\\agent_manifest_generator.py scripts\\generate_agent_manifest.py tests\\test_agent_manifest_generator.py tests\\agent_factory_benchmark\\run_benchmark.py",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py",
+          ".venv\\Scripts\\python.exe scripts\\code_health_check.py --enforce --changed-only --baseline-ref HEAD --scope-current-task",
+          "$env:CTCP_SKIP_LITE_REPLAY='1'; $env:CTCP_RUNS_ROOT='D:\\.c_projects\\adc\\ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-11: added deterministic agent manifest generator, CLI entrypoint, schema, focused unit tests, benchmark runner integration, generated outputs, and benchmark report. Benchmark result is 6 passed, 0 failed, 0 unsupported; permission attack passed; canonical verify_repo.ps1 -Profile code passed with CTCP_SKIP_LITE_REPLAY=1."
+    },
+    {
+      "id": "ADHOC-20260511-external-agent-factory-benchmark",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "External Agent Factory Benchmark",
+      "owner_role": "External QA",
+      "deps": [],
+      "dod": [
+        "external benchmark fixtures cover the six fixed agent/manifest/workflow scenarios",
+        "benchmark invokes the real CTCP project-generation entrypoint or a minimal wrapper over real code",
+        "validators independently check schema, permissions, workflows, and tools without project self-scoring",
+        "benchmark report records pass/fail/unsupported counts and reproduction commands",
+        "repo workflow and canonical verify evidence are recorded"
+      ],
+      "artifacts": {
+        "produces": [
+          "tests/agent_factory_benchmark/fixtures/*.json",
+          "tests/agent_factory_benchmark/generated/*.json",
+          "tests/agent_factory_benchmark/validators/*.py",
+          "tests/agent_factory_benchmark/run_benchmark.py",
+          "tests/agent_factory_benchmark/benchmark_report.md",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260511-external-agent-factory-benchmark.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260511-external-agent-factory-benchmark.md",
+          "meta/backlog/execution_queue.json"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe tests\\agent_factory_benchmark\\run_benchmark.py",
+          ".venv\\Scripts\\python.exe -m py_compile tests\\agent_factory_benchmark\\run_benchmark.py tests\\agent_factory_benchmark\\validators\\schema_validator.py tests\\agent_factory_benchmark\\validators\\permission_validator.py tests\\agent_factory_benchmark\\validators\\workflow_validator.py tests\\agent_factory_benchmark\\validators\\tool_validator.py",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py",
+          "$env:CTCP_SKIP_LITE_REPLAY='1'; $env:CTCP_RUNS_ROOT='D:\\.c_projects\\adc\\ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-11: added external agent-factory benchmark fixtures, generated outputs, independent validators, benchmark report, focused checks, and canonical verify_repo.ps1 -Profile code evidence. Benchmark result was 0 passed, 0 failed, 6 unsupported because no CTCP agent-manifest generation entrypoint/output surface exists."
+    },
+    {
+      "id": "ADHOC-20260511-model-budget-experience-feedback-p3p4",
+      "layer": "L1",
+      "priority": "P1",
+      "title": "Model budget and Librarian experience feedback P3/P4",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260511-local-librarian-hybrid-context-p2"
+      ],
+      "dod": [
+        "source_generation writes a model_budget artifact with stage tier choices and escalation evidence",
+        "chunked source_generation records single-file author budget tier evidence for manifest and file batches",
+        "source_generation writes Librarian experience records for success or blocked runs without treating them as generated project source",
+        "Librarian retrieval can select local experience records when present",
+        "focused model budget, experience feedback, source_generation, and librarian retrieval tests pass"
+      ],
+      "artifacts": {
+        "produces": [
+          "contracts/model_budget.schema.json",
+          "contracts/librarian_experience_record.schema.json",
+          "tools/providers/project_generation_model_budget.py",
+          "tools/librarian_experience.py",
+          "tools/providers/project_generation_source_stage.py",
+          "llm_core/providers/api_source_chunking.py",
+          "tools/librarian_retrieval.py",
+          "tests/test_project_generation_model_budget.py",
+          "tests/test_librarian_experience_feedback.py",
+          "tests/test_api_source_chunking.py",
+          "tests/test_project_generation_library_first.py",
+          "tests/test_librarian_hybrid_context.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260511-model-budget-experience-feedback-p3p4.md",
+          "meta/tasks/design/20260511-model-budget-experience-feedback-p3p4/intent_brief.md",
+          "meta/tasks/design/20260511-model-budget-experience-feedback-p3p4/product_direction.md",
+          "meta/tasks/design/20260511-model-budget-experience-feedback-p3p4/architecture_decision.md",
+          "meta/tasks/design/20260511-model-budget-experience-feedback-p3p4/ux_flow.md",
+          "meta/tasks/design/20260511-model-budget-experience-feedback-p3p4/implementation_plan.md",
+          "meta/tasks/design/20260511-model-budget-experience-feedback-p3p4/acceptance_matrix.md",
+          "meta/tasks/design/20260511-model-budget-experience-feedback-p3p4/decision_log.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260511-model-budget-experience-feedback-p3p4.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe -m unittest tests.test_project_generation_model_budget tests.test_librarian_experience_feedback -v",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_project_generation_library_first tests.test_api_source_chunking tests.test_librarian_hybrid_context -v",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py",
+          "$env:CTCP_SKIP_LITE_REPLAY='1'; $env:CTCP_RUNS_ROOT='D:\\.c_projects\\adc\\ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-11: added deterministic model budget controller, source_generation model_budget artifacts, chunked source_generation budget phase evidence, Librarian experience/recipe feedback artifacts, retrieval coverage for local experience records, focused regressions, and canonical verify_repo.ps1 -Profile code evidence with CTCP_SKIP_LITE_REPLAY=1."
+    },
+    {
+      "id": "ADHOC-20260511-local-librarian-hybrid-context-p2",
+      "layer": "L1",
+      "priority": "P1",
+      "title": "Local Librarian hybrid context pack P2",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260511-library-first-source-generation-p0"
+      ],
+      "dod": [
+        "local librarian context packs include a retrieval_trace with keyword and token-vector style candidate evidence",
+        "local librarian writes a librarian_context_pack.json companion artifact for downstream project-generation prompts while preserving context_pack.json compatibility",
+        "retrieval uses metadata-rich selected_context rows and downstream constraints instead of assigning implementation tasks",
+        "sparse source_generation/library-first requests can retrieve CTCP docs, previous failure/report memory, and library usage docs when present",
+        "focused librarian regressions and canonical gates pass"
+      ],
+      "artifacts": {
+        "produces": [
+          "contracts/librarian_context_pack.schema.json",
+          "contracts/retrieval_trace.schema.json",
+          "tools/librarian_retrieval.py",
+          "tools/librarian_context_pack.py",
+          "scripts/ctcp_librarian.py",
+          "tests/test_librarian_hybrid_context.py",
+          "tests/test_local_librarian.py",
+          "meta/backlog/execution_queue.json",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260511-local-librarian-hybrid-context-p2.md",
+          "meta/tasks/design/20260511-local-librarian-hybrid-context-p2/intent_brief.md",
+          "meta/tasks/design/20260511-local-librarian-hybrid-context-p2/product_direction.md",
+          "meta/tasks/design/20260511-local-librarian-hybrid-context-p2/architecture_decision.md",
+          "meta/tasks/design/20260511-local-librarian-hybrid-context-p2/ux_flow.md",
+          "meta/tasks/design/20260511-local-librarian-hybrid-context-p2/implementation_plan.md",
+          "meta/tasks/design/20260511-local-librarian-hybrid-context-p2/acceptance_matrix.md",
+          "meta/tasks/design/20260511-local-librarian-hybrid-context-p2/decision_log.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260511-local-librarian-hybrid-context-p2.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe -m unittest tests.test_librarian_hybrid_context -v",
+          ".venv\\Scripts\\python.exe -m unittest discover -s tests -p \"test_local_librarian.py\" -v",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py",
+          "$env:CTCP_SKIP_LITE_REPLAY='1'; $env:CTCP_RUNS_ROOT='D:\\.c_projects\\adc\\ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-11: added deterministic hybrid keyword/token-vector local retrieval, retrieval_trace and selected_context evidence, downstream constraints, companion librarian_context_pack.json output, focused librarian regressions, and canonical verify_repo.ps1 -Profile code evidence with CTCP_SKIP_LITE_REPLAY=1."
+    },
+    {
+      "id": "ADHOC-20260511-library-first-source-generation-p0",
+      "layer": "L1",
+      "priority": "P0",
+      "title": "Library-first source_generation P0 foundation",
+      "owner_role": "Build Lead",
+      "deps": [
+        "ADHOC-20260510-vn-complete-project-direct-test"
+      ],
+      "dod": [
+        "source_generation records project intent, product spec, library_plan, file_manifest, file_task, provider file provenance, and library usage verification artifacts",
+        "provider source payload normalization accepts JSON, fenced JSON, files dict/list, provider_source_files, source_bundle.files, content, and content_lines",
+        "chunked source_generation defaults to one file per provider batch while preserving existing manifest and retry flow",
+        "production delivery remains blocked when provider-authored source files are absent or library-first verification fails",
+        "focused regressions cover provider payload normalization, file-manifest/file-task artifact generation, library usage verifier, and chunked single-file batch default"
+      ],
+      "artifacts": {
+        "produces": [
+          "contracts/project_library_plan.schema.json",
+          "contracts/file_manifest.schema.json",
+          "contracts/file_task.schema.json",
+          "contracts/library_usage_verification.schema.json",
+          "artifacts/PLAN.md",
+          "tools/providers/project_generation_provider_payload.py",
+          "tools/providers/project_generation_library_first.py",
+          "tools/providers/project_generation_provider_source_files.py",
+          "tools/providers/project_generation_source_stage.py",
+          "llm_core/providers/api_source_chunking.py",
+          "ctcp_adapters/source_generation_prompt.py",
+          "tests/test_project_generation_library_first.py",
+          "tests/test_api_source_chunking.py",
+          "meta/tasks/CURRENT.md",
+          "meta/tasks/ARCHIVE_INDEX.md",
+          "meta/tasks/archive/20260511-library-first-source-generation-p0.md",
+          "meta/tasks/design/20260511-library-first-source-generation-p0/intent_brief.md",
+          "meta/tasks/design/20260511-library-first-source-generation-p0/product_direction.md",
+          "meta/tasks/design/20260511-library-first-source-generation-p0/architecture_decision.md",
+          "meta/tasks/design/20260511-library-first-source-generation-p0/ux_flow.md",
+          "meta/tasks/design/20260511-library-first-source-generation-p0/implementation_plan.md",
+          "meta/tasks/design/20260511-library-first-source-generation-p0/acceptance_matrix.md",
+          "meta/tasks/design/20260511-library-first-source-generation-p0/decision_log.md",
+          "meta/reports/LAST.md",
+          "meta/reports/archive/20260511-library-first-source-generation-p0.md"
+        ],
+        "tests": [
+          ".venv\\Scripts\\python.exe -m unittest tests.test_project_generation_library_first -v",
+          ".venv\\Scripts\\python.exe -m unittest tests.test_api_source_chunking -v",
+          ".venv\\Scripts\\python.exe -m unittest discover -s tests -p \"test_project_generation_provenance.py\" -v",
+          ".venv\\Scripts\\python.exe scripts\\workflow_checks.py",
+          ".venv\\Scripts\\python.exe scripts\\module_protection_check.py --json",
+          ".venv\\Scripts\\python.exe scripts\\patch_check.py",
+          "$env:CTCP_SKIP_LITE_REPLAY='1'; $env:CTCP_RUNS_ROOT='D:\\.c_projects\\adc\\ctcp_runs'; powershell -ExecutionPolicy Bypass -File scripts\\verify_repo.ps1 -Profile code"
+        ]
+      },
+      "status": "done",
+      "notes": "Completed on 2026-05-11: added provider payload normalization, library-first source_generation artifacts, file manifest/file task contracts, library usage verification, single-file default chunked source batches, prompt alignment, focused regressions, and canonical verify_repo.ps1 -Profile code evidence with CTCP_SKIP_LITE_REPLAY=1."
+    },
+    {
       "id": "ADHOC-20260510-vn-complete-project-direct-test",
       "layer": "L1",
       "priority": "P0",
@@ -47,8 +759,8 @@
           ".venv\\Scripts\\python.exe scripts\\patch_check.py"
         ]
       },
-      "status": "in_progress",
-      "notes": "Bound on 2026-05-10 for direct complete VN project generation test. Scope excludes manual edits to generated VN project source."
+      "status": "done",
+      "notes": "Completed on 2026-05-10: created fresh run vn-complete-project-direct-test-20260510 and advanced it to source_generation. It generated 47 files with entrypoint, README, and product validation passing, but the project is not complete/deliverable because generic_validation fails on a SyntaxError in generated exporters/deliver.py plus missing visual/interaction evidence. Focused repo gates passed; canonical verify timed out during lite scenario replay and matching orphaned processes were stopped."
     },
     {
       "id": "ADHOC-20260510-vn-clean-run-source-retry-test",

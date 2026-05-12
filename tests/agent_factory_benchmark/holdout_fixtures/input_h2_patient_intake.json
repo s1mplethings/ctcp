@@ -1,0 +1,12 @@
+{
+  "case_id": "h2_patient_intake",
+  "title": "H2 Patient intake assistant",
+  "goal": "创建一个 patient intake assistant。它需要收集患者症状，整理病史，生成给医生看的摘要，对紧急症状提醒用户联系急救，不能诊断疾病，不能开药。",
+  "holdout_expectations": {
+    "regulated_domain": "medical",
+    "required_keywords": ["symptoms", "medical history", "clinical summary draft", "emergency escalation", "clinician"],
+    "forbidden_keywords": ["diagnosis", "prescription"],
+    "required_workflow_states": ["symptom_intake", "history_summary", "emergency_escalation", "clinical_summary_draft"],
+    "high_risk_external_actions": ["diagnosis", "prescription"]
+  }
+}

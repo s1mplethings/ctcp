@@ -93,7 +93,7 @@ class ApiProviderCoreTests(unittest.TestCase):
             self.assertTrue((run_dir / "outbox" / "AGENT_PROMPT_chair_plan_draft.md").exists())
             self.assertTrue((run_dir / "logs" / "agent.stdout").exists())
 
-    def test_execute_falls_back_to_normalized_target_when_agent_command_fails(self) -> None:
+    def test_execute_records_analysis_failure_when_agent_command_fails(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             repo_root = root / "repo"
@@ -142,10 +142,11 @@ class ApiProviderCoreTests(unittest.TestCase):
                 hooks=hooks,
             )
 
-            self.assertEqual(result.get("status"), "executed", msg=str(result))
-            self.assertTrue(bool(result.get("fallback_used", False)))
-            self.assertIn("agent command failed", str(result.get("fallback_reason", "")))
-            self.assertIn("fallback-goal", (run_dir / "artifacts" / "analysis.md").read_text(encoding="utf-8"))
+            self.assertEqual(result.get("status"), "exec_failed", msg=str(result))
+            self.assertIn("analysis provider command failed", str(result.get("reason", "")))
+            self.assertFalse((run_dir / "artifacts" / "analysis.md").exists())
+            self.assertTrue((run_dir / "artifacts" / "analysis_progress.json").exists())
+            self.assertIn("provider_call_failed", (run_dir / "artifacts" / "analysis_progress.json").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,52 @@
+{
+  "schema_version": "ctcp-find-result-v1",
+  "generated_at": "2026-05-11T13:00:41",
+  "goal": "Create a Shopify ecommerce operations growth system. It analyzes orders, products, traffic, and conversion data; diagnoses sales decline; recommends promotions; suggests product title optimization; writes email marketing copy; decides which actions need human confirmation; and outputs a weekly growth report. Decide whether this should be multi-agent.",
+  "selected_workflow_id": "wf_project_generation_manifest",
+  "selected_version": "1.0.0",
+  "selected_path": "workflow_registry/wf_project_generation_manifest/recipe.yaml",
+  "candidates": [
+    {
+      "workflow_id": "wf_project_generation_manifest",
+      "version": "1.0.0",
+      "score": 442,
+      "why": "{\"tag_hits\": 0, \"dependency_level\": \"low\", \"history_score\": 64, \"project_bias\": 220, \"total_score\": 442}"
+    }
+  ],
+  "params_schema": {
+    "goal": "string",
+    "constraints": "object",
+    "repo_hints": "object"
+  },
+  "params": {
+    "goal": "Create a Shopify ecommerce operations growth system. It analyzes orders, products, traffic, and conversion data; diagnoses sales decline; recommends promotions; suggests product title optimization; writes email marketing copy; decides which actions need human confirmation; and outputs a weekly growth report. Decide whether this should be multi-agent.",
+    "constraints": {},
+    "repo_hints": {
+      "headless_default": true
+    }
+  },
+  "top_candidates": [
+    {
+      "id": "wf_project_generation_manifest",
+      "version": "1.0.0",
+      "score": 442,
+      "dependency_level": "low",
+      "path": "workflow_registry/wf_project_generation_manifest/recipe.yaml",
+      "detail": {
+        "tag_hits": 0,
+        "dependency_level": "low",
+        "history_score": 64,
+        "project_bias": 220,
+        "total_score": 442
+      }
+    }
+  ],
+  "decision": {
+    "reason": "prefer local workflow_registry + recent successful runs + low dependency",
+    "history_scores": {
+      "wf_project_generation_manifest": 64
+    },
+    "fallback_used": false,
+    "project_generation_goal": true
+  }
+}

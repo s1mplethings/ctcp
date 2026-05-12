@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CTCP Retrieval Trace",
+  "type": "object",
+  "required": ["schema_version", "query", "stages", "selected"],
+  "properties": {
+    "schema_version": {"const": "ctcp-retrieval-trace-v1"},
+    "query": {"type": "string"},
+    "task_type": {"type": "string"},
+    "project_domain": {"type": "string"},
+    "stages": {"type": "array"},
+    "selected": {"type": "array"},
+    "missing_context": {"type": "array"}
+  },
+  "additionalProperties": true
+}

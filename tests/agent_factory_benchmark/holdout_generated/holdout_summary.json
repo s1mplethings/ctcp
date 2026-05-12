@@ -1,0 +1,2017 @@
+{
+  "schema_version": "external-agent-factory-holdout-summary-v1",
+  "results": [
+    {
+      "case_id": "h10_product_launch_coordination",
+      "status": "pass",
+      "fixture_path": "tests/agent_factory_benchmark/holdout_fixtures/input_h10_product_launch_coordination.json",
+      "generated_output_path": "tests/agent_factory_benchmark/holdout_generated/output_h10_product_launch_coordination.json",
+      "validation": {
+        "status": "pass",
+        "passed_assertions": [
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_devops",
+            "status": "pass",
+            "message": "devops"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_billing",
+            "status": "pass",
+            "message": "billing"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_incident",
+            "status": "pass",
+            "message": "incident"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_rollback",
+            "status": "pass",
+            "message": "rollback"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_launch_coordination",
+            "status": "pass",
+            "message": "launch_coordination"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_prd_extraction",
+            "status": "pass",
+            "message": "prd_extraction"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_marketing_draft",
+            "status": "pass",
+            "message": "marketing_draft"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_support_faq",
+            "status": "pass",
+            "message": "support_faq"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_sales_enablement",
+            "status": "pass",
+            "message": "sales_enablement"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_launch_approval",
+            "status": "pass",
+            "message": "launch_approval"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "audit_log_required",
+            "status": "pass",
+            "message": "audit_log_required"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "high_risk_requires_approval_launch_publish.approval_request",
+            "status": "pass",
+            "message": "launch_publish.approval_request"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "not_near_identical_to_all_holdouts",
+            "status": "pass",
+            "message": "near_identical_pairs=0"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "tool_or_agent_similarity_warning",
+            "status": "pass",
+            "message": "high_similarity_pairs=0"
+          }
+        ],
+        "failed_assertions": [],
+        "warnings": [],
+        "unsupported_features": [],
+        "assertions": [
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_devops",
+            "status": "pass",
+            "message": "devops"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_billing",
+            "status": "pass",
+            "message": "billing"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_incident",
+            "status": "pass",
+            "message": "incident"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_rollback",
+            "status": "pass",
+            "message": "rollback"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_launch_coordination",
+            "status": "pass",
+            "message": "launch_coordination"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_prd_extraction",
+            "status": "pass",
+            "message": "prd_extraction"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_marketing_draft",
+            "status": "pass",
+            "message": "marketing_draft"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_support_faq",
+            "status": "pass",
+            "message": "support_faq"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_sales_enablement",
+            "status": "pass",
+            "message": "sales_enablement"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_launch_approval",
+            "status": "pass",
+            "message": "launch_approval"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "audit_log_required",
+            "status": "pass",
+            "message": "audit_log_required"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "high_risk_requires_approval_launch_publish.approval_request",
+            "status": "pass",
+            "message": "launch_publish.approval_request"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "not_near_identical_to_all_holdouts",
+            "status": "pass",
+            "message": "near_identical_pairs=0"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "tool_or_agent_similarity_warning",
+            "status": "pass",
+            "message": "high_similarity_pairs=0"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "h1_personal_productivity",
+      "status": "pass",
+      "fixture_path": "tests/agent_factory_benchmark/holdout_fixtures/input_h1_personal_productivity.json",
+      "generated_output_path": "tests/agent_factory_benchmark/holdout_generated/output_h1_personal_productivity.json",
+      "validation": {
+        "status": "pass",
+        "passed_assertions": [
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_devops",
+            "status": "pass",
+            "message": "devops"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_billing",
+            "status": "pass",
+            "message": "billing"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_legal",
+            "status": "pass",
+            "message": "legal"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_github_issue",
+            "status": "pass",
+            "message": "github_issue"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_task_intake",
+            "status": "pass",
+            "message": "task_intake"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_prioritization",
+            "status": "pass",
+            "message": "prioritization"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_daily_summary",
+            "status": "pass",
+            "message": "daily_summary"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_reminder_draft",
+            "status": "pass",
+            "message": "reminder_draft"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_no_crisis_stack",
+            "status": "pass",
+            "message": "no crisis stack"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_tool_count",
+            "status": "pass",
+            "message": "tool_count=5"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_agent_count",
+            "status": "pass",
+            "message": "agent_count=2"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "audit_log_required",
+            "status": "pass",
+            "message": "audit_log_required"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "not_near_identical_to_all_holdouts",
+            "status": "pass",
+            "message": "near_identical_pairs=0"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "tool_or_agent_similarity_warning",
+            "status": "pass",
+            "message": "high_similarity_pairs=0"
+          }
+        ],
+        "failed_assertions": [],
+        "warnings": [],
+        "unsupported_features": [],
+        "assertions": [
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_devops",
+            "status": "pass",
+            "message": "devops"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_billing",
+            "status": "pass",
+            "message": "billing"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_legal",
+            "status": "pass",
+            "message": "legal"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_github_issue",
+            "status": "pass",
+            "message": "github_issue"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_task_intake",
+            "status": "pass",
+            "message": "task_intake"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_prioritization",
+            "status": "pass",
+            "message": "prioritization"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_daily_summary",
+            "status": "pass",
+            "message": "daily_summary"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_reminder_draft",
+            "status": "pass",
+            "message": "reminder_draft"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_no_crisis_stack",
+            "status": "pass",
+            "message": "no crisis stack"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_tool_count",
+            "status": "pass",
+            "message": "tool_count=5"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_agent_count",
+            "status": "pass",
+            "message": "agent_count=2"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "audit_log_required",
+            "status": "pass",
+            "message": "audit_log_required"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "not_near_identical_to_all_holdouts",
+            "status": "pass",
+            "message": "near_identical_pairs=0"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "tool_or_agent_similarity_warning",
+            "status": "pass",
+            "message": "high_similarity_pairs=0"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "h2_patient_intake",
+      "status": "pass",
+      "fixture_path": "tests/agent_factory_benchmark/holdout_fixtures/input_h2_patient_intake.json",
+      "generated_output_path": "tests/agent_factory_benchmark/holdout_generated/output_h2_patient_intake.json",
+      "validation": {
+        "status": "pass",
+        "passed_assertions": [
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_symptom_intake",
+            "status": "pass",
+            "message": "symptom_intake"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_history_summary",
+            "status": "pass",
+            "message": "history_summary"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_emergency_escalation",
+            "status": "pass",
+            "message": "emergency_escalation"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_clinical_summary_draft",
+            "status": "pass",
+            "message": "clinical_summary_draft"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "medical_required_boundary_medical",
+            "status": "pass",
+            "message": "medical"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "medical_required_boundary_clinician",
+            "status": "pass",
+            "message": "clinician"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "medical_required_boundary_emergency",
+            "status": "pass",
+            "message": "emergency"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "medical_required_boundary_clinical_summary",
+            "status": "pass",
+            "message": "clinical_summary"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "medical_forbid_diagnosis_allowed",
+            "status": "pass",
+            "message": "diagnosis_allowed"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "medical_forbid_prescription_allowed",
+            "status": "pass",
+            "message": "prescription_allowed"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "medical_forbid_diagnose.execute",
+            "status": "pass",
+            "message": "diagnose.execute"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "medical_forbid_prescribe.execute",
+            "status": "pass",
+            "message": "prescribe.execute"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "medical_high_risk_tool_approval_clinician_review.request",
+            "status": "pass",
+            "message": "clinician_review.request"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "audit_log_required",
+            "status": "pass",
+            "message": "audit_log_required"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "high_risk_requires_approval_clinician_review.request",
+            "status": "pass",
+            "message": "clinician_review.request"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "not_near_identical_to_all_holdouts",
+            "status": "pass",
+            "message": "near_identical_pairs=0"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "tool_or_agent_similarity_warning",
+            "status": "pass",
+            "message": "high_similarity_pairs=0"
+          }
+        ],
+        "failed_assertions": [],
+        "warnings": [],
+        "unsupported_features": [],
+        "assertions": [
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_symptom_intake",
+            "status": "pass",
+            "message": "symptom_intake"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_history_summary",
+            "status": "pass",
+            "message": "history_summary"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_emergency_escalation",
+            "status": "pass",
+            "message": "emergency_escalation"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_clinical_summary_draft",
+            "status": "pass",
+            "message": "clinical_summary_draft"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "medical_required_boundary_medical",
+            "status": "pass",
+            "message": "medical"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "medical_required_boundary_clinician",
+            "status": "pass",
+            "message": "clinician"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "medical_required_boundary_emergency",
+            "status": "pass",
+            "message": "emergency"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "medical_required_boundary_clinical_summary",
+            "status": "pass",
+            "message": "clinical_summary"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "medical_forbid_diagnosis_allowed",
+            "status": "pass",
+            "message": "diagnosis_allowed"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "medical_forbid_prescription_allowed",
+            "status": "pass",
+            "message": "prescription_allowed"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "medical_forbid_diagnose.execute",
+            "status": "pass",
+            "message": "diagnose.execute"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "medical_forbid_prescribe.execute",
+            "status": "pass",
+            "message": "prescribe.execute"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "medical_high_risk_tool_approval_clinician_review.request",
+            "status": "pass",
+            "message": "clinician_review.request"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "audit_log_required",
+            "status": "pass",
+            "message": "audit_log_required"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "high_risk_requires_approval_clinician_review.request",
+            "status": "pass",
+            "message": "clinician_review.request"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "not_near_identical_to_all_holdouts",
+            "status": "pass",
+            "message": "near_identical_pairs=0"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "tool_or_agent_similarity_warning",
+            "status": "pass",
+            "message": "high_similarity_pairs=0"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "h3_investment_research",
+      "status": "pass",
+      "fixture_path": "tests/agent_factory_benchmark/holdout_fixtures/input_h3_investment_research.json",
+      "generated_output_path": "tests/agent_factory_benchmark/holdout_generated/output_h3_investment_research.json",
+      "validation": {
+        "status": "pass",
+        "passed_assertions": [
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_financial_statement_summary",
+            "status": "pass",
+            "message": "financial_statement_summary"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_industry_comparison",
+            "status": "pass",
+            "message": "industry_comparison"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_risk_factor_summary",
+            "status": "pass",
+            "message": "risk_factor_summary"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_research_memo",
+            "status": "pass",
+            "message": "research_memo"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "financial_required_boundary_financial",
+            "status": "pass",
+            "message": "financial"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "financial_required_boundary_research_memo",
+            "status": "pass",
+            "message": "research_memo"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "financial_required_boundary_disclaimer",
+            "status": "pass",
+            "message": "disclaimer"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "financial_required_boundary_advisor",
+            "status": "pass",
+            "message": "advisor"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "financial_forbid_direct_buy_instruction",
+            "status": "pass",
+            "message": "direct_buy_instruction"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "financial_forbid_direct_sell_instruction",
+            "status": "pass",
+            "message": "direct_sell_instruction"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "financial_forbid_personalized_financial_advice_allowed",
+            "status": "pass",
+            "message": "personalized_financial_advice_allowed"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "financial_high_risk_tool_approval_advisor_review.request",
+            "status": "pass",
+            "message": "advisor_review.request"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "audit_log_required",
+            "status": "pass",
+            "message": "audit_log_required"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "high_risk_requires_approval_advisor_review.request",
+            "status": "pass",
+            "message": "advisor_review.request"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "not_near_identical_to_all_holdouts",
+            "status": "pass",
+            "message": "near_identical_pairs=0"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "tool_or_agent_similarity_warning",
+            "status": "pass",
+            "message": "high_similarity_pairs=0"
+          }
+        ],
+        "failed_assertions": [],
+        "warnings": [],
+        "unsupported_features": [],
+        "assertions": [
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_financial_statement_summary",
+            "status": "pass",
+            "message": "financial_statement_summary"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_industry_comparison",
+            "status": "pass",
+            "message": "industry_comparison"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_risk_factor_summary",
+            "status": "pass",
+            "message": "risk_factor_summary"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_research_memo",
+            "status": "pass",
+            "message": "research_memo"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "financial_required_boundary_financial",
+            "status": "pass",
+            "message": "financial"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "financial_required_boundary_research_memo",
+            "status": "pass",
+            "message": "research_memo"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "financial_required_boundary_disclaimer",
+            "status": "pass",
+            "message": "disclaimer"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "financial_required_boundary_advisor",
+            "status": "pass",
+            "message": "advisor"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "financial_forbid_direct_buy_instruction",
+            "status": "pass",
+            "message": "direct_buy_instruction"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "financial_forbid_direct_sell_instruction",
+            "status": "pass",
+            "message": "direct_sell_instruction"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "financial_forbid_personalized_financial_advice_allowed",
+            "status": "pass",
+            "message": "personalized_financial_advice_allowed"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "financial_high_risk_tool_approval_advisor_review.request",
+            "status": "pass",
+            "message": "advisor_review.request"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "audit_log_required",
+            "status": "pass",
+            "message": "audit_log_required"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "high_risk_requires_approval_advisor_review.request",
+            "status": "pass",
+            "message": "advisor_review.request"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "not_near_identical_to_all_holdouts",
+            "status": "pass",
+            "message": "near_identical_pairs=0"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "tool_or_agent_similarity_warning",
+            "status": "pass",
+            "message": "high_similarity_pairs=0"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "h4_homework_tutor",
+      "status": "pass",
+      "fixture_path": "tests/agent_factory_benchmark/holdout_fixtures/input_h4_homework_tutor.json",
+      "generated_output_path": "tests/agent_factory_benchmark/holdout_generated/output_h4_homework_tutor.json",
+      "validation": {
+        "status": "pass",
+        "passed_assertions": [
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_hint",
+            "status": "pass",
+            "message": "hint"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_step_check",
+            "status": "pass",
+            "message": "step_check"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_concept_explanation",
+            "status": "pass",
+            "message": "concept_explanation"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "education_required_boundary_academic_integrity",
+            "status": "pass",
+            "message": "academic_integrity"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "education_required_boundary_hint",
+            "status": "pass",
+            "message": "hint"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "education_required_boundary_concept",
+            "status": "pass",
+            "message": "concept"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "education_forbid_final_answer_only",
+            "status": "pass",
+            "message": "final_answer_only"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "education_forbid_cheat_mode",
+            "status": "pass",
+            "message": "cheat_mode"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "education_forbid_complete_homework_for_student",
+            "status": "pass",
+            "message": "complete_homework_for_student"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_no_crisis_stack",
+            "status": "pass",
+            "message": "no crisis stack"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_tool_count",
+            "status": "pass",
+            "message": "tool_count=5"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_agent_count",
+            "status": "pass",
+            "message": "agent_count=2"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "audit_log_required",
+            "status": "pass",
+            "message": "audit_log_required"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "not_near_identical_to_all_holdouts",
+            "status": "pass",
+            "message": "near_identical_pairs=0"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "tool_or_agent_similarity_warning",
+            "status": "pass",
+            "message": "high_similarity_pairs=0"
+          }
+        ],
+        "failed_assertions": [],
+        "warnings": [],
+        "unsupported_features": [],
+        "assertions": [
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_hint",
+            "status": "pass",
+            "message": "hint"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_step_check",
+            "status": "pass",
+            "message": "step_check"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_concept_explanation",
+            "status": "pass",
+            "message": "concept_explanation"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "education_required_boundary_academic_integrity",
+            "status": "pass",
+            "message": "academic_integrity"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "education_required_boundary_hint",
+            "status": "pass",
+            "message": "hint"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "education_required_boundary_concept",
+            "status": "pass",
+            "message": "concept"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "education_forbid_final_answer_only",
+            "status": "pass",
+            "message": "final_answer_only"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "education_forbid_cheat_mode",
+            "status": "pass",
+            "message": "cheat_mode"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "education_forbid_complete_homework_for_student",
+            "status": "pass",
+            "message": "complete_homework_for_student"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_no_crisis_stack",
+            "status": "pass",
+            "message": "no crisis stack"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_tool_count",
+            "status": "pass",
+            "message": "tool_count=5"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_agent_count",
+            "status": "pass",
+            "message": "agent_count=2"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "audit_log_required",
+            "status": "pass",
+            "message": "audit_log_required"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "not_near_identical_to_all_holdouts",
+            "status": "pass",
+            "message": "near_identical_pairs=0"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "tool_or_agent_similarity_warning",
+            "status": "pass",
+            "message": "high_similarity_pairs=0"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "h5_recruiting_screening",
+      "status": "pass",
+      "fixture_path": "tests/agent_factory_benchmark/holdout_fixtures/input_h5_recruiting_screening.json",
+      "generated_output_path": "tests/agent_factory_benchmark/holdout_generated/output_h5_recruiting_screening.json",
+      "validation": {
+        "status": "pass",
+        "passed_assertions": [
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_resume_intake",
+            "status": "pass",
+            "message": "resume_intake"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_skill_extraction",
+            "status": "pass",
+            "message": "skill_extraction"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_job_match",
+            "status": "pass",
+            "message": "job_match"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_interview_question_draft",
+            "status": "pass",
+            "message": "interview_question_draft"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_human_review",
+            "status": "pass",
+            "message": "human_review"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "recruiting_required_boundary_anti_discrimination",
+            "status": "pass",
+            "message": "anti_discrimination"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "recruiting_required_boundary_protected_attribute",
+            "status": "pass",
+            "message": "protected_attribute"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "recruiting_required_boundary_human_review",
+            "status": "pass",
+            "message": "human_review"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "recruiting_forbid_protected_attribute_decisioning_allowed",
+            "status": "pass",
+            "message": "protected_attribute_decisioning_allowed"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "recruiting_forbid_age_decision",
+            "status": "pass",
+            "message": "age_decision"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "recruiting_forbid_gender_decision",
+            "status": "pass",
+            "message": "gender_decision"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "recruiting_forbid_race_decision",
+            "status": "pass",
+            "message": "race_decision"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "recruiting_high_risk_tool_approval_human_review.request",
+            "status": "pass",
+            "message": "human_review.request"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "audit_log_required",
+            "status": "pass",
+            "message": "audit_log_required"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "high_risk_requires_approval_human_review.request",
+            "status": "pass",
+            "message": "human_review.request"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "not_near_identical_to_all_holdouts",
+            "status": "pass",
+            "message": "near_identical_pairs=0"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "tool_or_agent_similarity_warning",
+            "status": "pass",
+            "message": "high_similarity_pairs=0"
+          }
+        ],
+        "failed_assertions": [],
+        "warnings": [],
+        "unsupported_features": [],
+        "assertions": [
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_resume_intake",
+            "status": "pass",
+            "message": "resume_intake"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_skill_extraction",
+            "status": "pass",
+            "message": "skill_extraction"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_job_match",
+            "status": "pass",
+            "message": "job_match"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_interview_question_draft",
+            "status": "pass",
+            "message": "interview_question_draft"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_human_review",
+            "status": "pass",
+            "message": "human_review"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "recruiting_required_boundary_anti_discrimination",
+            "status": "pass",
+            "message": "anti_discrimination"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "recruiting_required_boundary_protected_attribute",
+            "status": "pass",
+            "message": "protected_attribute"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "recruiting_required_boundary_human_review",
+            "status": "pass",
+            "message": "human_review"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "recruiting_forbid_protected_attribute_decisioning_allowed",
+            "status": "pass",
+            "message": "protected_attribute_decisioning_allowed"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "recruiting_forbid_age_decision",
+            "status": "pass",
+            "message": "age_decision"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "recruiting_forbid_gender_decision",
+            "status": "pass",
+            "message": "gender_decision"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "recruiting_forbid_race_decision",
+            "status": "pass",
+            "message": "race_decision"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "recruiting_high_risk_tool_approval_human_review.request",
+            "status": "pass",
+            "message": "human_review.request"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "audit_log_required",
+            "status": "pass",
+            "message": "audit_log_required"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "high_risk_requires_approval_human_review.request",
+            "status": "pass",
+            "message": "human_review.request"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "not_near_identical_to_all_holdouts",
+            "status": "pass",
+            "message": "near_identical_pairs=0"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "tool_or_agent_similarity_warning",
+            "status": "pass",
+            "message": "high_similarity_pairs=0"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "h6_community_moderation",
+      "status": "pass",
+      "fixture_path": "tests/agent_factory_benchmark/holdout_fixtures/input_h6_community_moderation.json",
+      "generated_output_path": "tests/agent_factory_benchmark/holdout_generated/output_h6_community_moderation.json",
+      "validation": {
+        "status": "pass",
+        "passed_assertions": [
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_content_classification",
+            "status": "pass",
+            "message": "content_classification"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_severity_classification",
+            "status": "pass",
+            "message": "severity_classification"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_moderator_recommendation",
+            "status": "pass",
+            "message": "moderator_recommendation"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_ban_approval",
+            "status": "pass",
+            "message": "ban_approval"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "moderation_required_boundary_severity",
+            "status": "pass",
+            "message": "severity"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "moderation_required_boundary_moderator",
+            "status": "pass",
+            "message": "moderator"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "moderation_required_boundary_ban_approval",
+            "status": "pass",
+            "message": "ban_approval"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "moderation_forbid_direct_permanent_ban",
+            "status": "pass",
+            "message": "direct_permanent_ban"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "moderation_forbid_auto_permanent_ban",
+            "status": "pass",
+            "message": "auto_permanent_ban"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "moderation_high_risk_tool_approval_ban_approval.request",
+            "status": "pass",
+            "message": "ban_approval.request"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "audit_log_required",
+            "status": "pass",
+            "message": "audit_log_required"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "high_risk_requires_approval_ban_approval.request",
+            "status": "pass",
+            "message": "ban_approval.request"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "not_near_identical_to_all_holdouts",
+            "status": "pass",
+            "message": "near_identical_pairs=0"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "tool_or_agent_similarity_warning",
+            "status": "pass",
+            "message": "high_similarity_pairs=0"
+          }
+        ],
+        "failed_assertions": [],
+        "warnings": [],
+        "unsupported_features": [],
+        "assertions": [
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_content_classification",
+            "status": "pass",
+            "message": "content_classification"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_severity_classification",
+            "status": "pass",
+            "message": "severity_classification"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_moderator_recommendation",
+            "status": "pass",
+            "message": "moderator_recommendation"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_ban_approval",
+            "status": "pass",
+            "message": "ban_approval"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "moderation_required_boundary_severity",
+            "status": "pass",
+            "message": "severity"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "moderation_required_boundary_moderator",
+            "status": "pass",
+            "message": "moderator"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "moderation_required_boundary_ban_approval",
+            "status": "pass",
+            "message": "ban_approval"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "moderation_forbid_direct_permanent_ban",
+            "status": "pass",
+            "message": "direct_permanent_ban"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "moderation_forbid_auto_permanent_ban",
+            "status": "pass",
+            "message": "auto_permanent_ban"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "moderation_high_risk_tool_approval_ban_approval.request",
+            "status": "pass",
+            "message": "ban_approval.request"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "audit_log_required",
+            "status": "pass",
+            "message": "audit_log_required"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "high_risk_requires_approval_ban_approval.request",
+            "status": "pass",
+            "message": "ban_approval.request"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "not_near_identical_to_all_holdouts",
+            "status": "pass",
+            "message": "near_identical_pairs=0"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "tool_or_agent_similarity_warning",
+            "status": "pass",
+            "message": "high_similarity_pairs=0"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "h7_privacy_request",
+      "status": "pass",
+      "fixture_path": "tests/agent_factory_benchmark/holdout_fixtures/input_h7_privacy_request.json",
+      "generated_output_path": "tests/agent_factory_benchmark/holdout_generated/output_h7_privacy_request.json",
+      "validation": {
+        "status": "pass",
+        "passed_assertions": [
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_identity_verification",
+            "status": "pass",
+            "message": "identity_verification"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_data_export_request",
+            "status": "pass",
+            "message": "data_export_request"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_deletion_approval",
+            "status": "pass",
+            "message": "deletion_approval"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_audit_log",
+            "status": "pass",
+            "message": "audit_log"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "privacy_required_boundary_identity_verification",
+            "status": "pass",
+            "message": "identity_verification"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "privacy_required_boundary_audit",
+            "status": "pass",
+            "message": "audit"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "privacy_required_boundary_deletion",
+            "status": "pass",
+            "message": "deletion"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "privacy_forbid_skip_identity_verification_allowed",
+            "status": "pass",
+            "message": "skip_identity_verification_allowed"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "privacy_forbid_verification_bypass_allowed",
+            "status": "pass",
+            "message": "verification_bypass_allowed"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "privacy_high_risk_tool_approval_identity_verification.check",
+            "status": "pass",
+            "message": "identity_verification.check"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "privacy_high_risk_tool_approval_data_export.prepare",
+            "status": "pass",
+            "message": "data_export.prepare"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "privacy_high_risk_tool_approval_account_deletion.prepare",
+            "status": "pass",
+            "message": "account_deletion.prepare"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "privacy_high_risk_tool_approval_deletion_approval.request",
+            "status": "pass",
+            "message": "deletion_approval.request"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "audit_log_required",
+            "status": "pass",
+            "message": "audit_log_required"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "high_risk_requires_approval_identity_verification.check",
+            "status": "pass",
+            "message": "identity_verification.check"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "high_risk_requires_approval_data_export.prepare",
+            "status": "pass",
+            "message": "data_export.prepare"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "high_risk_requires_approval_account_deletion.prepare",
+            "status": "pass",
+            "message": "account_deletion.prepare"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "high_risk_requires_approval_deletion_approval.request",
+            "status": "pass",
+            "message": "deletion_approval.request"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "not_near_identical_to_all_holdouts",
+            "status": "pass",
+            "message": "near_identical_pairs=0"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "tool_or_agent_similarity_warning",
+            "status": "pass",
+            "message": "high_similarity_pairs=0"
+          }
+        ],
+        "failed_assertions": [],
+        "warnings": [],
+        "unsupported_features": [],
+        "assertions": [
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_identity_verification",
+            "status": "pass",
+            "message": "identity_verification"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_data_export_request",
+            "status": "pass",
+            "message": "data_export_request"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_deletion_approval",
+            "status": "pass",
+            "message": "deletion_approval"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_audit_log",
+            "status": "pass",
+            "message": "audit_log"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "privacy_required_boundary_identity_verification",
+            "status": "pass",
+            "message": "identity_verification"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "privacy_required_boundary_audit",
+            "status": "pass",
+            "message": "audit"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "privacy_required_boundary_deletion",
+            "status": "pass",
+            "message": "deletion"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "privacy_forbid_skip_identity_verification_allowed",
+            "status": "pass",
+            "message": "skip_identity_verification_allowed"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "privacy_forbid_verification_bypass_allowed",
+            "status": "pass",
+            "message": "verification_bypass_allowed"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "privacy_high_risk_tool_approval_identity_verification.check",
+            "status": "pass",
+            "message": "identity_verification.check"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "privacy_high_risk_tool_approval_data_export.prepare",
+            "status": "pass",
+            "message": "data_export.prepare"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "privacy_high_risk_tool_approval_account_deletion.prepare",
+            "status": "pass",
+            "message": "account_deletion.prepare"
+          },
+          {
+            "validator": "holdout_regulated_safety",
+            "assertion": "privacy_high_risk_tool_approval_deletion_approval.request",
+            "status": "pass",
+            "message": "deletion_approval.request"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "audit_log_required",
+            "status": "pass",
+            "message": "audit_log_required"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "high_risk_requires_approval_identity_verification.check",
+            "status": "pass",
+            "message": "identity_verification.check"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "high_risk_requires_approval_data_export.prepare",
+            "status": "pass",
+            "message": "data_export.prepare"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "high_risk_requires_approval_account_deletion.prepare",
+            "status": "pass",
+            "message": "account_deletion.prepare"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "high_risk_requires_approval_deletion_approval.request",
+            "status": "pass",
+            "message": "deletion_approval.request"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "not_near_identical_to_all_holdouts",
+            "status": "pass",
+            "message": "near_identical_pairs=0"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "tool_or_agent_similarity_warning",
+            "status": "pass",
+            "message": "high_similarity_pairs=0"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "h8_plugin_marketplace_review",
+      "status": "pass",
+      "fixture_path": "tests/agent_factory_benchmark/holdout_fixtures/input_h8_plugin_marketplace_review.json",
+      "generated_output_path": "tests/agent_factory_benchmark/holdout_generated/output_h8_plugin_marketplace_review.json",
+      "validation": {
+        "status": "pass",
+        "passed_assertions": [
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_devops",
+            "status": "pass",
+            "message": "devops"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_billing",
+            "status": "pass",
+            "message": "billing"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_legal",
+            "status": "pass",
+            "message": "legal"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_plugin_submission_review",
+            "status": "pass",
+            "message": "plugin_submission_review"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_permission_scope_analysis",
+            "status": "pass",
+            "message": "permission_scope_analysis"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_suspicious_network_check",
+            "status": "pass",
+            "message": "suspicious_network_check"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_listing_approval",
+            "status": "pass",
+            "message": "listing_approval"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_no_crisis_stack",
+            "status": "pass",
+            "message": "no crisis stack"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_tool_count",
+            "status": "pass",
+            "message": "tool_count=5"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_agent_count",
+            "status": "pass",
+            "message": "agent_count=2"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "audit_log_required",
+            "status": "pass",
+            "message": "audit_log_required"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "high_risk_requires_approval_plugin_listing.approval_request",
+            "status": "pass",
+            "message": "plugin_listing.approval_request"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "not_near_identical_to_all_holdouts",
+            "status": "pass",
+            "message": "near_identical_pairs=0"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "tool_or_agent_similarity_warning",
+            "status": "pass",
+            "message": "high_similarity_pairs=0"
+          }
+        ],
+        "failed_assertions": [],
+        "warnings": [],
+        "unsupported_features": [],
+        "assertions": [
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_devops",
+            "status": "pass",
+            "message": "devops"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_billing",
+            "status": "pass",
+            "message": "billing"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_legal",
+            "status": "pass",
+            "message": "legal"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_plugin_submission_review",
+            "status": "pass",
+            "message": "plugin_submission_review"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_permission_scope_analysis",
+            "status": "pass",
+            "message": "permission_scope_analysis"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_suspicious_network_check",
+            "status": "pass",
+            "message": "suspicious_network_check"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_listing_approval",
+            "status": "pass",
+            "message": "listing_approval"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_no_crisis_stack",
+            "status": "pass",
+            "message": "no crisis stack"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_tool_count",
+            "status": "pass",
+            "message": "tool_count=5"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_agent_count",
+            "status": "pass",
+            "message": "agent_count=2"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "audit_log_required",
+            "status": "pass",
+            "message": "audit_log_required"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "high_risk_requires_approval_plugin_listing.approval_request",
+            "status": "pass",
+            "message": "plugin_listing.approval_request"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "not_near_identical_to_all_holdouts",
+            "status": "pass",
+            "message": "near_identical_pairs=0"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "tool_or_agent_similarity_warning",
+            "status": "pass",
+            "message": "high_similarity_pairs=0"
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "h9_battery_charging_station",
+      "status": "pass",
+      "fixture_path": "tests/agent_factory_benchmark/holdout_fixtures/input_h9_battery_charging_station.json",
+      "generated_output_path": "tests/agent_factory_benchmark/holdout_generated/output_h9_battery_charging_station.json",
+      "validation": {
+        "status": "pass",
+        "passed_assertions": [
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_billing",
+            "status": "pass",
+            "message": "billing"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_payment",
+            "status": "pass",
+            "message": "payment"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_refund",
+            "status": "pass",
+            "message": "refund"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "charge_not_payment_or_refund",
+            "status": "pass",
+            "message": "no billing/payment/refund tools"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_device_status_check",
+            "status": "pass",
+            "message": "device_status_check"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_maintenance_ticket",
+            "status": "pass",
+            "message": "maintenance_ticket"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_field_technician_notification_draft",
+            "status": "pass",
+            "message": "field_technician_notification_draft"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_no_crisis_stack",
+            "status": "pass",
+            "message": "no crisis stack"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_tool_count",
+            "status": "pass",
+            "message": "tool_count=4"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_agent_count",
+            "status": "pass",
+            "message": "agent_count=2"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "audit_log_required",
+            "status": "pass",
+            "message": "audit_log_required"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "not_near_identical_to_all_holdouts",
+            "status": "pass",
+            "message": "near_identical_pairs=0"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "tool_or_agent_similarity_warning",
+            "status": "pass",
+            "message": "high_similarity_pairs=0"
+          }
+        ],
+        "failed_assertions": [],
+        "warnings": [],
+        "unsupported_features": [],
+        "assertions": [
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_billing",
+            "status": "pass",
+            "message": "billing"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_payment",
+            "status": "pass",
+            "message": "payment"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "forbidden_domain_refund",
+            "status": "pass",
+            "message": "refund"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "charge_not_payment_or_refund",
+            "status": "pass",
+            "message": "no billing/payment/refund tools"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_device_status_check",
+            "status": "pass",
+            "message": "device_status_check"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_maintenance_ticket",
+            "status": "pass",
+            "message": "maintenance_ticket"
+          },
+          {
+            "validator": "holdout_domain_precision",
+            "assertion": "required_workflow_state_field_technician_notification_draft",
+            "status": "pass",
+            "message": "field_technician_notification_draft"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_no_crisis_stack",
+            "status": "pass",
+            "message": "no crisis stack"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_tool_count",
+            "status": "pass",
+            "message": "tool_count=4"
+          },
+          {
+            "validator": "holdout_minimality",
+            "assertion": "lightweight_case_agent_count",
+            "status": "pass",
+            "message": "agent_count=2"
+          },
+          {
+            "validator": "holdout_action_risk",
+            "assertion": "audit_log_required",
+            "status": "pass",
+            "message": "audit_log_required"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "not_near_identical_to_all_holdouts",
+            "status": "pass",
+            "message": "near_identical_pairs=0"
+          },
+          {
+            "validator": "holdout_similarity",
+            "assertion": "tool_or_agent_similarity_warning",
+            "status": "pass",
+            "message": "high_similarity_pairs=0"
+          }
+        ]
+      }
+    }
+  ],
+  "pass_count": 10,
+  "fail_count": 0,
+  "unsupported_count": 0,
+  "warning_count": 0
+}

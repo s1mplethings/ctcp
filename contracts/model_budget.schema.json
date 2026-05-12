@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ctcp-model-budget-v1",
+  "title": "CTCP Model Budget",
+  "type": "object",
+  "required": ["schema_version", "tiers", "stage_choices", "escalation_rules"],
+  "properties": {
+    "schema_version": {
+      "const": "ctcp-model-budget-v1"
+    },
+    "tiers": {
+      "type": "object"
+    },
+    "stage_choices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["stage", "tier", "reason"],
+        "properties": {
+          "stage": {"type": "string"},
+          "tier": {"type": "string"},
+          "reason": {"type": "string"},
+          "path": {"type": "string"},
+          "attempt": {"type": "integer"},
+          "escalated": {"type": "boolean"}
+        }
+      }
+    },
+    "escalation_rules": {
+      "type": "array"
+    },
+    "call_limits": {
+      "type": "object"
+    }
+  }
+}

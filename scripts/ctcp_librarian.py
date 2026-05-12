@@ -12,14 +12,14 @@ LAST_RUN_POINTER = ROOT / "meta" / "run_pointers" / "LAST_RUN.txt"
 
 try:
     from tools.run_paths import get_repo_slug
-    from tools.librarian_context_pack import LibrarianContractError, build_context_pack, write_failure_doc
+    from tools.librarian_context_pack import LibrarianContractError, build_context_pack, build_librarian_context_pack, write_failure_doc
     from tools.run_manifest import update_librarian_context
 except ModuleNotFoundError:
     import sys
 
     sys.path.insert(0, str(ROOT))
     from tools.run_paths import get_repo_slug
-    from tools.librarian_context_pack import LibrarianContractError, build_context_pack, write_failure_doc
+    from tools.librarian_context_pack import LibrarianContractError, build_context_pack, build_librarian_context_pack, write_failure_doc
     from tools.run_manifest import update_librarian_context
 
 
@@ -67,6 +67,7 @@ def main() -> int:
     run_dir = _resolve_run_dir(args.run_dir)
     request_path = run_dir / "artifacts" / "file_request.json"
     out_path = run_dir / "artifacts" / "context_pack.json"
+    librarian_out_path = run_dir / "artifacts" / "librarian_context_pack.json"
     failure_path = run_dir / "artifacts" / "context_pack.failure.json"
     if failure_path.exists():
         try:
@@ -104,6 +105,7 @@ def main() -> int:
     try:
         context_pack = _build_context_pack(file_request)
         _write_json(out_path, context_pack)
+        _write_json(librarian_out_path, build_librarian_context_pack(context_pack))
         update_librarian_context(run_dir, success=True)
     except LibrarianContractError as exc:
         write_failure_doc(

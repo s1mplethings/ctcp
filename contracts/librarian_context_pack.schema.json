@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CTCP Librarian Context Pack",
+  "type": "object",
+  "required": ["schema_version", "query", "selected_context", "constraints_for_downstream_agents", "retrieval_trace"],
+  "properties": {
+    "schema_version": {"const": "ctcp-librarian-context-pack-v1"},
+    "query": {"type": "string"},
+    "intent": {"type": "string"},
+    "selected_context": {"type": "array"},
+    "constraints_for_downstream_agents": {"type": "array", "items": {"type": "string"}},
+    "missing_context": {"type": "array"},
+    "confidence": {"type": "number"},
+    "retrieval_trace": {"type": "object"}
+  },
+  "additionalProperties": true
+}

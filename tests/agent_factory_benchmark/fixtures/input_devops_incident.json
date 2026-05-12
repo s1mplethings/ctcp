@@ -1,0 +1,14 @@
+{
+  "case_id": "devops_incident",
+  "title": "DevOps Incident Response Agent",
+  "goal": "Create a DevOps Incident Response Agent. After a release, many users cannot log in. The CEO asks for immediate rollback, DevOps has not confirmed root cause, and the log query tool sometimes times out. The agent receives alerts, queries logs, metrics, and deployment history, estimates impact, proposes possible causes, drafts rollback advice without executing rollback, drafts Slack updates, builds an incident timeline, and creates a postmortem.",
+  "expected": [
+    "logs tool",
+    "metrics tool",
+    "deployment history tool",
+    "incident timeline memory",
+    "rollback requires approval",
+    "timeout retry handling",
+    "postmortem workflow"
+  ]
+}

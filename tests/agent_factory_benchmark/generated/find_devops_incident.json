@@ -1,0 +1,52 @@
+{
+  "schema_version": "ctcp-find-result-v1",
+  "generated_at": "2026-05-11T13:00:38",
+  "goal": "Create a DevOps Incident Response Agent. After a release, many users cannot log in. The CEO asks for immediate rollback, DevOps has not confirmed root cause, and the log query tool sometimes times out. The agent receives alerts, queries logs, metrics, and deployment history, estimates impact, proposes possible causes, drafts rollback advice without executing rollback, drafts Slack updates, builds an incident timeline, and creates a postmortem.",
+  "selected_workflow_id": "wf_project_generation_manifest",
+  "selected_version": "1.0.0",
+  "selected_path": "workflow_registry/wf_project_generation_manifest/recipe.yaml",
+  "candidates": [
+    {
+      "workflow_id": "wf_project_generation_manifest",
+      "version": "1.0.0",
+      "score": 222,
+      "why": "{\"tag_hits\": 0, \"dependency_level\": \"low\", \"history_score\": 64, \"project_bias\": 0, \"total_score\": 222}"
+    }
+  ],
+  "params_schema": {
+    "goal": "string",
+    "constraints": "object",
+    "repo_hints": "object"
+  },
+  "params": {
+    "goal": "Create a DevOps Incident Response Agent. After a release, many users cannot log in. The CEO asks for immediate rollback, DevOps has not confirmed root cause, and the log query tool sometimes times out. The agent receives alerts, queries logs, metrics, and deployment history, estimates impact, proposes possible causes, drafts rollback advice without executing rollback, drafts Slack updates, builds an incident timeline, and creates a postmortem.",
+    "constraints": {},
+    "repo_hints": {
+      "headless_default": true
+    }
+  },
+  "top_candidates": [
+    {
+      "id": "wf_project_generation_manifest",
+      "version": "1.0.0",
+      "score": 222,
+      "dependency_level": "low",
+      "path": "workflow_registry/wf_project_generation_manifest/recipe.yaml",
+      "detail": {
+        "tag_hits": 0,
+        "dependency_level": "low",
+        "history_score": 64,
+        "project_bias": 0,
+        "total_score": 222
+      }
+    }
+  ],
+  "decision": {
+    "reason": "prefer local workflow_registry + recent successful runs + low dependency",
+    "history_scores": {
+      "wf_project_generation_manifest": 64
+    },
+    "fallback_used": false,
+    "project_generation_goal": false
+  }
+}

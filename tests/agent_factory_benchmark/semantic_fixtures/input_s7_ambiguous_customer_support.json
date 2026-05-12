@@ -1,0 +1,15 @@
+{
+  "case_id": "s7_ambiguous_customer_support",
+  "title": "S7 Ambiguous customer support agent",
+  "goal": "创建一个 agent，帮我处理客户问题。没有更多信息。",
+  "semantic_expectations": {
+    "required_keywords": ["customer support", "assumptions", "clarification_needed", "safe_defaults"],
+    "forbidden_keywords": ["rollback", "refund execution", "legal admission"],
+    "required_tool_domains": ["customer_support"],
+    "forbidden_tool_domains": ["devops", "billing", "legal", "github", "ecommerce"],
+    "required_workflow_states": ["support_intake", "classify_request", "request_missing_info", "draft_response"],
+    "forbidden_workflow_states": ["incident_response", "refund", "rollback"],
+    "ambiguity_case": true,
+    "lightweight_case": true
+  }
+}

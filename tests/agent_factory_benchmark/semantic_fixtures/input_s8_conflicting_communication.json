@@ -1,0 +1,15 @@
+{
+  "case_id": "s8_conflicting_communication",
+  "title": "S8 Conflicting customer communication policy agent",
+  "goal": "创建一个 customer communication agent。要求：1. 所有回复必须非常快，不能等待人工审批。2. 所有涉及退款、赔偿、责任归属的内容都必须法务审批。3. 大客户消息必须由 account manager 审批。4. 普通 FAQ 可以自动回复。",
+  "semantic_expectations": {
+    "required_keywords": ["risk_based_routing", "legal approval", "account manager approval", "low risk FAQ"],
+    "forbidden_keywords": ["all messages auto send", "all messages manual approval"],
+    "required_tool_domains": ["customer_communication"],
+    "forbidden_tool_domains": ["devops"],
+    "required_workflow_states": ["classify_message_risk", "route_by_customer_tier", "faq_auto_reply", "legal_approval", "account_manager_approval"],
+    "forbidden_workflow_states": ["rollback"],
+    "conflict_case": true,
+    "security_case": true
+  }
+}

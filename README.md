@@ -79,6 +79,40 @@ python scripts\ctcp_orchestrate.py new-run --goal "your-goal"
 python scripts\ctcp_orchestrate.py advance --max-steps 8
 ```
 
+显式隔离的 agent manifest 生成模式：
+```powershell
+python scripts\ctcp_orchestrate.py agent-manifest --input tests\agent_factory_benchmark\fixtures\input_devops_incident.json --output out\agent_manifest.json
+```
+
+独立入口仍可用：
+```powershell
+python scripts\generate_agent_manifest.py --input tests\agent_factory_benchmark\fixtures\input_devops_incident.json --output out\agent_manifest.json
+```
+
+`agent-manifest` 是显式 subcommand，不会作为默认 project generation 路径触发；普通项目生成仍使用 `new-run/status/advance` 主链。更多说明见 `docs/agent_manifest_mode.md`。
+
+从 manifest 生成最小 dry-run scaffold：
+```powershell
+python scripts\ctcp_orchestrate.py agent-scaffold --manifest out\agent_manifest.json --output-dir out\agent_project
+python scripts\generate_agent_scaffold.py --manifest out\agent_manifest.json --output-dir out\agent_project
+```
+
+scaffold 不是完整 agent runtime；它会保留权限、guardrails、workflow 和 tests，并提供安全 dry-run：
+```powershell
+cd out\agent_project
+python run_agent.py --dry-run --input sample_input.json
+python -m unittest discover tests -v
+```
+
+`agent-scaffold` 也是显式 subcommand，不会影响普通项目生成。更多说明见 `docs/agent_scaffold_mode.md`。
+
+从需求到 manifest、scaffold、dry-run、scaffold tests 和 pipeline report 的完整显式管线：
+```powershell
+python scripts\ctcp_orchestrate.py agent-project --input tests\agent_factory_benchmark\fixtures\input_devops_incident.json --output-dir runs\agent_project_devops
+```
+
+`agent-project` 会生成 `manifest.json`、`scaffold/`、`pipeline_report.json` 和 `pipeline_report.md`。它不会默认触发普通项目生成；高风险 tools 只会在 dry-run 中列为 pending approval，不会执行。更多说明见 `docs/agent_project_pipeline.md`。
+
 验收入口（Windows，作为支撑验证，不是生成本身）：
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\verify_repo.ps1
