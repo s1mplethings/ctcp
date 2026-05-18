@@ -63,7 +63,13 @@ class AgentManifestConsumerTests(unittest.TestCase):
             "tests/test_permissions.py",
             "tests/test_workflows.py",
             "tests/test_dry_run.py",
+            "tests/test_runtime.py",
             "run_agent.py",
+            "runtime/runtime_engine.py",
+            "runtime/runtime_tools.py",
+            "runtime/runtime_permissions.py",
+            "runtime/runtime_state.py",
+            "runtime/runtime_audit.py",
         ):
             self.assertTrue((scaffold / rel).exists(), rel)
         self.assertGreater(len(list((scaffold / "agents").glob("*.json"))), 0)
@@ -85,12 +91,14 @@ class AgentManifestConsumerTests(unittest.TestCase):
         scaffold, _result, td = self._generate(DEVOPS_MANIFEST)
         self.addCleanup(td.cleanup)
         output = self._dry_run(scaffold)
-        self.assertEqual(output["mode"], "dry_run")
+        self.assertEqual(output["mode"], "dry-run")
         self.assertEqual(output["status"], "ok")
         self.assertIn("rollback", output["approval_required_actions"])
-        self.assertEqual(output["audit_log_path"], "audit/dry_run_audit.jsonl")
-        self.assertTrue((scaffold / "audit" / "dry_run_audit.jsonl").exists())
-        self.assertIn("audit_event", output)
+        self.assertIn("available_tools", output)
+        self.assertIn("blocked_tools", output)
+        self.assertIn("pending_approvals", output)
+        self.assertFalse((scaffold / "runtime_state.json").exists())
+        self.assertFalse((scaffold / "audit" / "events.jsonl").exists())
 
     def test_permission_attack_scaffold_preserves_approval_limits(self) -> None:
         scaffold, _result, td = self._generate(PERMISSION_ATTACK_MANIFEST)

@@ -1,0 +1,23 @@
+{
+  "benchmark_id": "matrix_simple_auth_api",
+  "project": "simple_auth_api",
+  "goal": "Generate a real runnable Simple Auth API concrete project. It must not be an agent manifest, agent scaffold, or dry-run-only project. It must include README, source code, generated tests, local HTTP runtime, password hashing, session tokens, and SQLite persistence.",
+  "project_requirements": {
+    "runtime": "Python 3.10+ stdlib only",
+    "storage": "SQLite database file with users and sessions",
+    "api": {
+      "required_endpoints": [
+        "POST /register",
+        "POST /login",
+        "GET /me",
+        "POST /logout"
+      ]
+    }
+  },
+  "acceptance_criteria": [
+    "Generated tests pass.",
+    "Login flow works through real HTTP.",
+    "Unauthorized access is rejected.",
+    "Session state persists in SQLite."
+  ]
+}

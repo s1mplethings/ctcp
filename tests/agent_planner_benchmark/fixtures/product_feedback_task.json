@@ -1,0 +1,11 @@
+{
+  "case_id": "product_feedback_task",
+  "title": "Product feedback planner task",
+  "goal": "Create a product feedback agent that collects product feedback, classifies product themes, summarizes trends, and writes a weekly report draft.",
+  "expected": [
+    "feedback collection",
+    "feedback classification",
+    "trend summary",
+    "weekly report draft"
+  ]
+}

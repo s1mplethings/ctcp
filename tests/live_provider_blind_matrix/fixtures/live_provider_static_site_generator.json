@@ -1,0 +1,6 @@
+{
+  "case": "static_site_generator",
+  "project": "live_provider_static_site_generator",
+  "startup": "site_generator.py",
+  "goal": "Generate live_provider_blind_candidate blind small project live_provider_static_site_generator. Build a Python stdlib static site generator CLI that reads markdown-like text files, outputs HTML files and an index page, avoids network/eval/exec, and includes generated tests."
+}

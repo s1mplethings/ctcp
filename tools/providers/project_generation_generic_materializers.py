@@ -4,6 +4,10 @@ import json
 import re
 import textwrap
 from typing import Any
+
+from tools.providers.project_generation_fast_path_materializers import try_fast_path_project_files
+
+
 def _goal_excerpt(goal: str) -> str:
     cleaned = re.sub(r"\s+", " ", str(goal or "")).strip()
     return cleaned[:220] if cleaned else "Goal-driven MVP project generation request"
@@ -56,7 +60,6 @@ def _launcher_script(*, package_name: str, startup_rel: str, mode_label: str) ->
     )
     return "\n".join(lines) + "\n"
 
-
 def _intent_seed(project_intent: dict[str, Any], project_spec: dict[str, Any]) -> str:
     return (
         "from __future__ import annotations\n"
@@ -64,7 +67,6 @@ def _intent_seed(project_intent: dict[str, Any], project_spec: dict[str, Any]) -
         f"DEFAULT_PROJECT_INTENT = json.loads(r'''{json.dumps(project_intent, ensure_ascii=False, indent=2)}''')\n"
         f"DEFAULT_PROJECT_SPEC = json.loads(r'''{json.dumps(project_spec, ensure_ascii=False, indent=2)}''')\n"
     )
-
 
 def _quickstart_command(*, startup_rel: str, package_name: str, project_name: str) -> str:
     if startup_rel.startswith("scripts/run_project_web.py"):
@@ -76,7 +78,6 @@ def _quickstart_command(*, startup_rel: str, package_name: str, project_name: st
         f"import sys; sys.path.insert(0, r'src'); from {package_name}.service import generate_project; "
         f"print(generate_project(goal='{project_name}', project_name='{project_name}', out_dir=Path('generated_output')))\""
     )
-
 
 def _seed_builder_module(*, module_name: str, extra_plan_logic: str) -> str:
     lines = [
@@ -96,7 +97,6 @@ def _seed_builder_module(*, module_name: str, extra_plan_logic: str) -> str:
     lines.extend(f"    {row}" for row in extra_plan_logic.strip().splitlines() if row.strip())
     lines.append("    return spec")
     return "\n".join(lines) + "\n"
-
 
 def _common_files(
     *,
@@ -223,13 +223,11 @@ def _common_files(
         )
     return files
 
-
 def _merge_file_maps(*maps: dict[str, str]) -> dict[str, str]:
     out: dict[str, str] = {}
     for mapping in maps:
         out.update(mapping)
     return out
-
 
 def _generic_pipeline_module_map(project_root: str, package_name: str) -> dict[str, str]:
     return {
@@ -239,7 +237,6 @@ def _generic_pipeline_module_map(project_root: str, package_name: str) -> dict[s
 
             from dataclasses import asdict, dataclass, field
             from typing import Any
-
 
             @dataclass
             class WorkflowStep:
@@ -268,7 +265,6 @@ def _generic_pipeline_module_map(project_root: str, package_name: str) -> dict[s
 
             from .models import WorkflowStep
 
-
             def build_plan(spec: dict[str, object]) -> list[WorkflowStep]:
                 scope = list(spec.get("mvp_scope", []))
                 return [
@@ -284,7 +280,6 @@ def _generic_pipeline_module_map(project_root: str, package_name: str) -> dict[s
 
             import json
             from pathlib import Path
-
 
             def export_bundle(*, spec: dict[str, object], workflow_plan: list[dict[str, object]], out_dir: Path) -> dict[str, str]:
                 out_dir.mkdir(parents=True, exist_ok=True)
@@ -325,7 +320,6 @@ def _generic_pipeline_module_map(project_root: str, package_name: str) -> dict[s
             from .planner import build_plan
             from .spec_builder import build_spec
 
-
             def generate_project(*, goal: str, project_name: str, out_dir: Path) -> dict[str, str]:
                 spec = build_spec(goal, project_name)
                 workflow_plan = [row.to_dict() for row in build_plan(spec)]
@@ -333,7 +327,6 @@ def _generic_pipeline_module_map(project_root: str, package_name: str) -> dict[s
             """
         ).lstrip(),
     }
-
 
 def _generic_pipeline_test_map(project_root: str, package_name: str) -> dict[str, str]:
     return {
@@ -354,7 +347,6 @@ def _generic_pipeline_test_map(project_root: str, package_name: str) -> dict[str
 
             from {package_name}.service import generate_project
 
-
             class GenericPipelineTests(unittest.TestCase):
                 def test_generate_project_exports_spec_and_acceptance(self) -> None:
                     with tempfile.TemporaryDirectory(prefix="generic_pipeline_") as td:
@@ -364,13 +356,11 @@ def _generic_pipeline_test_map(project_root: str, package_name: str) -> dict[str
                         self.assertTrue(Path(result["workflow_plan_json"]).exists())
                         self.assertTrue(Path(result["acceptance_report_json"]).exists())
 
-
             if __name__ == "__main__":
                 unittest.main()
             """
         ).lstrip()
     }
-
 
 def _cli_toolkit_module_map(project_root: str, package_name: str) -> dict[str, str]:
     return {
@@ -380,7 +370,6 @@ def _cli_toolkit_module_map(project_root: str, package_name: str) -> dict[str, s
 
             from dataclasses import asdict, dataclass, field
             from typing import Any
-
 
             @dataclass
             class CommandStep:
@@ -410,7 +399,6 @@ def _cli_toolkit_module_map(project_root: str, package_name: str) -> dict[str, s
 
             from .models import CommandStep
 
-
             def build_command_plan(spec: dict[str, object]) -> list[CommandStep]:
                 scope = list(spec.get("mvp_scope", []))
                 return [
@@ -426,7 +414,6 @@ def _cli_toolkit_module_map(project_root: str, package_name: str) -> dict[str, s
 
             import json
             from pathlib import Path
-
 
             def export_bundle(*, spec: dict[str, object], command_plan: list[dict[str, object]], out_dir: Path) -> dict[str, str]:
                 out_dir.mkdir(parents=True, exist_ok=True)
@@ -458,7 +445,6 @@ def _cli_toolkit_module_map(project_root: str, package_name: str) -> dict[str, s
             from .exporter import export_bundle
             from .spec_builder import build_spec
 
-
             def generate_project(*, goal: str, project_name: str, out_dir: Path) -> dict[str, str]:
                 spec = build_spec(goal, project_name)
                 command_plan = [row.to_dict() for row in build_command_plan(spec)]
@@ -466,7 +452,6 @@ def _cli_toolkit_module_map(project_root: str, package_name: str) -> dict[str, s
             """
         ).lstrip(),
     }
-
 
 def _cli_toolkit_test_map(project_root: str, package_name: str) -> dict[str, str]:
     return {
@@ -487,7 +472,6 @@ def _cli_toolkit_test_map(project_root: str, package_name: str) -> dict[str, str
 
             from {package_name}.service import generate_project
 
-
             class CliToolkitTests(unittest.TestCase):
                 def test_generate_project_exports_cli_plan(self) -> None:
                     with tempfile.TemporaryDirectory(prefix="cli_toolkit_") as td:
@@ -496,13 +480,11 @@ def _cli_toolkit_test_map(project_root: str, package_name: str) -> dict[str, str
                         self.assertTrue(plan_doc["command_plan"])
                         self.assertTrue(Path(result["operator_checklist_md"]).exists())
 
-
             if __name__ == "__main__":
                 unittest.main()
             """
         ).lstrip()
     }
-
 
 def _web_service_module_map(project_root: str, package_name: str) -> dict[str, str]:
     return {
@@ -512,7 +494,6 @@ def _web_service_module_map(project_root: str, package_name: str) -> dict[str, s
 
             from dataclasses import asdict, dataclass, field
             from typing import Any
-
 
             @dataclass
             class EndpointContract:
@@ -541,7 +522,6 @@ def _web_service_module_map(project_root: str, package_name: str) -> dict[str, s
 
             from .models import EndpointContract
 
-
             def build_contract(spec: dict[str, object]) -> list[EndpointContract]:
                 outputs = list(spec.get("required_outputs", []))
                 return [
@@ -556,7 +536,6 @@ def _web_service_module_map(project_root: str, package_name: str) -> dict[str, s
 
             from .service_contract import build_contract
             from .spec_builder import build_spec
-
 
             def health_payload() -> dict[str, object]:
                 return {"status": "ok", "archetype": "web_service"}
@@ -672,7 +651,6 @@ def _data_pipeline_module_map(project_root: str, package_name: str) -> dict[str,
 
             from dataclasses import asdict, dataclass, field
             from typing import Any
-
 
             @dataclass
             class TransformStep:
@@ -911,6 +889,16 @@ def _web_service_files(
     project_intent: dict[str, Any],
     project_spec: dict[str, Any],
 ) -> dict[str, str]:
+    fast_path_files = try_fast_path_project_files(
+        goal_text=goal_text,
+        project_id=project_id,
+        project_root=project_root,
+        workflow_doc_rel=workflow_doc_rel,
+        context_used=context_used,
+        project_archetype=project_archetype,
+    )
+    if fast_path_files is not None:
+        return fast_path_files
     return _merge_file_maps(
         _common_files(
             goal_text=goal_text,
@@ -974,7 +962,6 @@ def _team_task_pm_module_map(project_root: str, package_name: str) -> dict[str, 
 
             from dataclasses import asdict, dataclass, field
             from typing import Any
-
 
             @dataclass
             class User:
@@ -2263,6 +2250,16 @@ def materialize_generic_archetype_files(
     project_intent: dict[str, Any],
     project_spec: dict[str, Any],
 ) -> dict[str, str]:
+    fast_path_files = try_fast_path_project_files(
+        goal_text=goal_text,
+        project_id=project_id,
+        project_root=project_root,
+        workflow_doc_rel=workflow_doc_rel,
+        context_used=context_used,
+        project_archetype=project_archetype,
+    )
+    if fast_path_files is not None:
+        return fast_path_files
     if project_archetype == "indie_studio_hub_web":
         return _indie_studio_hub_files(
             goal_text=goal_text,

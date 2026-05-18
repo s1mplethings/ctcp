@@ -7,6 +7,20 @@
 
 | Date | Topic | File |
 |------|-------|------|
+| 2026-05-18 | Live Provider Blind Small Project Matrix | [->](archive/20260518-live-provider-blind-matrix.md) |
+| 2026-05-17 | Live Provider Full Small Project Candidate | [->](archive/20260517-live-provider-full-candidate.md) |
+| 2026-05-15 | Live Provider-Assisted Smoke Path | [->](archive/20260515-live-provider-assisted-smoke-path.md) |
+| 2026-05-14 | Provider-Assisted Generation Mode | [->](archive/20260514-provider-assisted-generation-mode.md) |
+| 2026-05-14 | Non-Web Project Matrix And Attribution Review Pack | [->](archive/20260514-non-web-project-matrix-attribution-review-pack.md) |
+| 2026-05-14 | Full-Stack Kanban Expansion With Local Cleanup | [->](archive/20260514-full-stack-kanban-expansion-cleanup.md) |
+| 2026-05-14 | Full-Stack Local App Generation Benchmark | [->](archive/20260514-full-stack-local-app-generation-benchmark.md) |
+| 2026-05-14 | Concrete Project Generalization Matrix | [->](archive/20260514-concrete-project-generalization-matrix.md) |
+| 2026-05-13 | Concrete Project Mainline Repair | [->](archive/20260513-concrete-project-mainline-repair.md) |
+| 2026-05-13 | Minimal Planner Agent Loop | [->](archive/20260513-minimal-planner-agent-loop.md) |
+| 2026-05-13 | Explicit Web Tool Capability | [->](archive/20260513-explicit-web-tool-capability.md) |
+| 2026-05-13 | Tool Runtime Contract Hardening | [->](archive/20260513-tool-runtime-contract-hardening.md) |
+| 2026-05-13 | Minimal Agent Runtime Loop | [->](archive/20260513-minimal-agent-runtime-loop.md) |
+| 2026-05-12 | Analysis Prompt Slimming / Fast Analysis Mode | [->](archive/20260512-analysis-prompt-slimming-fast-mode.md) |
 | 2026-05-12 | Concrete Project Generation Benchmark | [->](archive/20260512-concrete-project-generation-benchmark.md) |
 | 2026-05-11 | End-to-End Agent Project Pipeline Integration | [->](archive/20260511-agent-project-e2e-pipeline.md) |
 | 2026-05-11 | Agent Manifest Consumer Scaffold Generation | [->](archive/20260511-agent-manifest-consumer-scaffold.md) |

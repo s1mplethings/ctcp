@@ -1,0 +1,40 @@
+{
+  "schema_version": "ctcp-web-search-fixture-v1",
+  "search_index": [
+    {
+      "title": "Portable Air Purifier Buying Guide",
+      "url": "https://example.test/research/portable-air-purifier-guide",
+      "snippet": "Portable air purifiers are compared by CADR, HEPA filtration, noise level, room size, and filter cost.",
+      "text_excerpt": "Portable air purifier buyers should compare CADR, HEPA filter quality, noise, room coverage, energy use, and replacement filter cost."
+    },
+    {
+      "title": "HEPA Filter Maintenance Overview",
+      "url": "https://example.test/research/hepa-filter-maintenance",
+      "snippet": "HEPA filters usually need periodic replacement, and washable prefilters can reduce dust load.",
+      "text_excerpt": "HEPA maintenance depends on usage, dust load, and filter design. Replacement schedules should be checked before purchase."
+    },
+    {
+      "title": "Small Room Air Quality Product Notes",
+      "url": "https://example.test/research/small-room-air-quality",
+      "snippet": "Small rooms benefit from quiet low-speed operation, compact footprint, and clear filter replacement indicators.",
+      "text_excerpt": "Small room air quality devices should balance coverage, noise, footprint, and maintenance transparency."
+    }
+  ],
+  "pages": {
+    "https://example.test/research/portable-air-purifier-guide": {
+      "title": "Portable Air Purifier Buying Guide",
+      "text_excerpt": "Portable air purifier buyers should compare clean air delivery rate, true HEPA filtration, operating noise, room size match, energy use, warranty, and filter replacement cost before choosing a product category.",
+      "status_code": 200
+    },
+    "https://example.test/research/hepa-filter-maintenance": {
+      "title": "HEPA Filter Maintenance Overview",
+      "text_excerpt": "HEPA filter replacement intervals vary by use. Prefilters can extend main filter life, but buyers should verify replacement availability and cost.",
+      "status_code": 200
+    },
+    "https://example.test/research/small-room-air-quality": {
+      "title": "Small Room Air Quality Product Notes",
+      "text_excerpt": "Small rooms need appropriately sized air cleaning devices with quiet operation and clear maintenance indicators.",
+      "status_code": 200
+    }
+  }
+}

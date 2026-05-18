@@ -1,0 +1,24 @@
+{
+  "benchmark_id": "matrix_markdown_notes_api",
+  "project": "markdown_notes_api",
+  "goal": "Generate a real runnable Markdown Notes API concrete project. It must not be an agent manifest, agent scaffold, or dry-run-only project. It must include README, source code, generated tests, local HTTP runtime, and filesystem markdown persistence.",
+  "project_requirements": {
+    "runtime": "Python 3.10+ stdlib only",
+    "storage": "Markdown files written to local filesystem",
+    "api": {
+      "required_endpoints": [
+        "POST /notes",
+        "GET /notes",
+        "GET /notes/{id}",
+        "PATCH /notes/{id}",
+        "DELETE /notes/{id}",
+        "GET /search?q="
+      ]
+    }
+  },
+  "acceptance_criteria": [
+    "Generated tests pass.",
+    "Runtime can create, search, update, and delete notes through real HTTP.",
+    "Markdown content is preserved in files."
+  ]
+}

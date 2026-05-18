@@ -1,0 +1,36 @@
+{
+  "project": "local_kanban_board_app",
+  "goal": "Generate a more complex full-stack local Kanban board application. It must not be an agent manifest, agent scaffold, or dry-run-only project. It must include a static frontend, local HTTP API, generated tests, README, multiple board columns, cards CRUD, move-card behavior, and SQLite persistence.",
+  "project_requirements": {
+    "frontend": {
+      "type": "static_html_css_js",
+      "required_assets": [
+        "static/index.html",
+        "static/app.js",
+        "static/styles.css"
+      ],
+      "must_render": [
+        "board title",
+        "todo column",
+        "doing column",
+        "done column",
+        "cards"
+      ]
+    },
+    "api": {
+      "required_endpoints": [
+        "GET /",
+        "GET /static/app.js",
+        "GET /static/styles.css",
+        "POST /boards",
+        "GET /boards",
+        "POST /boards/{board_id}/cards",
+        "GET /boards/{board_id}/cards",
+        "PATCH /cards/{card_id}/move",
+        "PATCH /cards/{card_id}",
+        "DELETE /cards/{card_id}"
+      ]
+    },
+    "storage": "SQLite database file with boards and cards tables"
+  }
+}

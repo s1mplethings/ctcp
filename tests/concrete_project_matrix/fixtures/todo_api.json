@@ -1,0 +1,23 @@
+{
+  "benchmark_id": "matrix_todo_rest_api",
+  "project": "todo_rest_api",
+  "goal": "Generate a real runnable Todo REST API concrete project. It must not be an agent manifest, agent scaffold, or dry-run-only project. It must include README, source code, generated tests, local HTTP runtime, and SQLite persistence.",
+  "project_requirements": {
+    "runtime": "Python 3.10+ stdlib only",
+    "storage": "SQLite database file created locally",
+    "api": {
+      "required_endpoints": [
+        "POST /todos",
+        "GET /todos",
+        "GET /todos/{id}",
+        "PATCH /todos/{id}",
+        "DELETE /todos/{id}"
+      ]
+    }
+  },
+  "acceptance_criteria": [
+    "Generated tests pass.",
+    "Runtime can create, list, update, and delete todos through real HTTP.",
+    "SQLite persistence is detectable and validated."
+  ]
+}

@@ -1,22 +1,20 @@
 from __future__ import annotations
-
 import ast
 import json
 import re
 from pathlib import Path
 from typing import Any
-
 from contracts.schemas.project_intent import ProjectIntent
 from tools.providers.project_generation_domain_contract import (
     contamination_hits,
     preview_keywords,
     readme_required_sections,
 )
+from tools.providers.project_generation_concrete_validation import local_full_stack_validation
 from tools.providers.project_generation_generated_tests import generated_tests_validation
 from tools.providers.project_generation_import_validation import python_import_consistency_validation
 from tools.providers.project_generation_sample_metrics import narrative_sample_metrics
 from tools.providers.project_generation_signature_validation import python_signature_consistency_validation
-
 _SOURCE_SCAN_EXTS = {".py", ".js", ".jsx", ".ts", ".tsx", ".html", ".css"}
 _HIGH_INTERACTION_GROUP_RULES: dict[str, tuple[str, ...]] = {
     "image_workspace": (
@@ -121,7 +119,6 @@ def read_frontend_request(run_dir: Path | None) -> dict[str, Any]:
     except Exception:
         return {}
     return raw if isinstance(raw, dict) else {}
-
 def resolve_project_intent(goal: str, *, run_dir: Path | None, src: dict[str, Any]) -> dict[str, Any]:
     direct = src.get("project_intent")
     if isinstance(direct, dict):
@@ -134,7 +131,6 @@ def resolve_project_intent(goal: str, *, run_dir: Path | None, src: dict[str, An
     if not isinstance(constraints, dict):
         constraints = {}
     return ProjectIntent.minimal_from_goal(goal, constraints).to_payload()
-
 def resolve_project_spec(goal: str, *, run_dir: Path | None, src: dict[str, Any], project_intent: dict[str, Any]) -> dict[str, Any]:
     direct = src.get("project_spec")
     if isinstance(direct, dict) and direct:
@@ -161,7 +157,6 @@ def resolve_project_spec(goal: str, *, run_dir: Path | None, src: dict[str, Any]
         "acceptance_criteria": list(intent.acceptance_criteria),
         "constraint_snapshot": dict(constraints),
     }
-
 def pipeline_contract(*, project_root: str, startup_entrypoint: str, startup_readme: str, business_files: list[str], acceptance_files: list[str]) -> dict[str, Any]:
     core_feature_files = sorted(set(business_files))
     return {
@@ -222,7 +217,6 @@ def _python_syntax_validation(*, run_dir: Path, generated_business_files: list[s
         "syntax_errors": syntax_errors,
         "passed": not syntax_errors,
     }
-
 def generic_validation(
     *,
     run_dir: Path,
@@ -299,8 +293,6 @@ def generic_validation(
             "passed": smoke_passed,
         },
     }
-
-
 def readme_quality_validation(
     *,
     run_dir: Path,
@@ -322,7 +314,6 @@ def readme_quality_validation(
             "goal_dump_detected": False,
             "reasons": ["README missing"],
         }
-
     text = readme_path.read_text(encoding="utf-8", errors="replace")
     text_lower = text.lower()
     escaped_literal_hits = [token for token in ("\\n", "\\t", "\\r") if token in text]
@@ -337,7 +328,6 @@ def readme_quality_validation(
             present_sections.append(section)
         else:
             missing_sections.append(section)
-
     goal_lines = [line.strip() for line in str(goal or "").splitlines() if line.strip()]
     normalized_goal = " ".join(goal_lines).strip().lower()
     body_lines = [line.strip() for line in text.splitlines() if line.strip()]
@@ -364,7 +354,6 @@ def readme_quality_validation(
         "goal_dump_detected": goal_dump_detected,
         "reasons": reasons,
     }
-
 
 def _normalized_paths(rows: list[str]) -> list[str]:
     out: list[str] = []
@@ -453,6 +442,9 @@ def product_validation(
     generated_files: list[str],
     run_dir: Path,
 ) -> dict[str, Any]:
+    full_stack_result = local_full_stack_validation(generated_files, run_dir, _scan_source_texts, _capability_hits)
+    if full_stack_result is not None:
+        return full_stack_result
     if str(project_type or "").strip() == "indie_studio_hub" or str(project_archetype or "").strip() == "indie_studio_hub_web":
         source_texts = _scan_source_texts(run_dir=run_dir, rel_paths=generated_files)
         capability_hits = {
@@ -497,7 +489,6 @@ def product_validation(
             "detected_groups": sorted(capability_hits.keys()),
             "evidence": capability_hits,
         }
-
     profile = classify_product_profile(goal=goal, project_intent=project_intent, project_spec=project_spec)
     if not bool(profile.get("required", False)):
         return {
@@ -511,7 +502,6 @@ def product_validation(
             "detected_groups": list(profile.get("detected_groups", [])),
             "evidence": {},
         }
-
     source_texts = _scan_source_texts(run_dir=run_dir, rel_paths=generated_files)
     capability_hits = {
         name: _capability_hits(source_texts=source_texts, keywords=keywords)

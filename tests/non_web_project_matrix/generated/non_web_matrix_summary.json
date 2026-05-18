@@ -1,0 +1,1322 @@
+{
+  "matrix_total": 4,
+  "passed": 4,
+  "failed": 0,
+  "unsupported": 0,
+  "projects": [
+    {
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635",
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py new-run --goal Generate a CSV Expense Analyzer CLI. It must be a non-web ordinary concrete project, not an agent manifest or scaffold. It must support --input, --output, sample_expenses.csv, category totals, monthly totals, JSON report output, and generated tests. Use the ordinary CTCP project generation mainline and write project_output artifacts, generated tests, provenance, attribution, and runnable local validation files. --run-id non-web-csv_expense_analyzer-1779091635",
+          "exit_code": 0,
+          "duration_seconds": 1.136,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635",
+          "exit_code": 0,
+          "duration_seconds": 0.72,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for analysis.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/analysis.md\n[ctcp_orchestrate] reason=waiting for analysis.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 11.903,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.366\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635",
+          "exit_code": 0,
+          "duration_seconds": 0.708,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.366\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 9.513,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.366\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635",
+          "exit_code": 0,
+          "duration_seconds": 0.715,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.366\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 6.611,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.366\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635",
+          "exit_code": 0,
+          "duration_seconds": 0.658,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.366\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 1.257,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.366\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635",
+          "exit_code": 0,
+          "duration_seconds": 0.734,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.366\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 38.942,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.366\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635",
+          "exit_code": 0,
+          "duration_seconds": 0.763,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.366\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 12.131,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.366\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635",
+          "exit_code": 0,
+          "duration_seconds": 0.697,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.366\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 13.096,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.366\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635",
+          "exit_code": 0,
+          "duration_seconds": 0.695,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.366\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 25.59,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.366\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635",
+          "exit_code": 0,
+          "duration_seconds": 0.662,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.366\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 12.416,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.366\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635",
+          "exit_code": 0,
+          "duration_seconds": 0.602,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.366\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 2.796,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.366\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635",
+          "exit_code": 0,
+          "duration_seconds": 0.601,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.366\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        }
+      ],
+      "project": "csv_expense_analyzer",
+      "status": "passed",
+      "project_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\\project_output\\csv_expense_analyzer",
+      "generated_tests_passed": true,
+      "runtime_validation": {
+        "passed": true,
+        "cli": {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe expense_analyzer.py --input sample_expenses.csv --output C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\\project_output\\csv_expense_analyzer\\benchmark_report.json",
+          "exit_code": 0,
+          "duration_seconds": 0.155,
+          "stdout": "",
+          "stderr": "",
+          "timed_out": false
+        },
+        "output_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\\project_output\\csv_expense_analyzer\\benchmark_report.json",
+        "report": {
+          "category_totals": {
+            "Food": 20.0,
+            "Travel": 20.0
+          },
+          "monthly_totals": {
+            "2026-01": 32.5,
+            "2026-02": 7.5
+          },
+          "row_count": 3
+        }
+      },
+      "persistence_validation": {
+        "passed": true,
+        "cli": {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe expense_analyzer.py --input sample_expenses.csv --output C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\\project_output\\csv_expense_analyzer\\benchmark_report.json",
+          "exit_code": 0,
+          "duration_seconds": 0.155,
+          "stdout": "",
+          "stderr": "",
+          "timed_out": false
+        },
+        "output_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\\project_output\\csv_expense_analyzer\\benchmark_report.json",
+        "report": {
+          "category_totals": {
+            "Food": 20.0,
+            "Travel": 20.0
+          },
+          "monthly_totals": {
+            "2026-01": 32.5,
+            "2026-02": 7.5
+          },
+          "row_count": 3
+        }
+      },
+      "provenance": {
+        "generation_mode": "concrete_fast_path",
+        "project_type": "csv_expense_analyzer",
+        "provider_authorship": "not_claimed",
+        "local_materializer_used": true,
+        "repair_attempts": 0,
+        "reason": "bounded non-web concrete project matrix fast path"
+      },
+      "provenance_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\\artifacts\\project_generation_provenance.json",
+      "attribution": {
+        "ordinary_mainline": true,
+        "entrypoint": "new-run/status/advance",
+        "used_agent_project": false,
+        "used_agent_scaffold": false,
+        "used_local_agent_runtime": false,
+        "used_local_materializer": true,
+        "local_materializer_name": "csv_expense_analyzer",
+        "used_provider_agent": false,
+        "provider_name": "local_deterministic_materializer",
+        "provider_authorship": "not_claimed",
+        "generation_mode": "concrete_fast_path",
+        "live_provider_used": false,
+        "provider_request_count": 0,
+        "provider_fragment_count": 0,
+        "provider_project_candidate_count": 0,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "provider_candidate_outcome": "",
+        "provider_candidate_accepted": false,
+        "provider_candidate_repaired": false,
+        "provider_repair_attempt_count": 0,
+        "provider_repair_sections": [],
+        "repair_validation_passed": false,
+        "fallback_triggered": false,
+        "unsupported_reason": null,
+        "validation_failures": [],
+        "provider_candidate_validation": {
+          "manifest_valid": true,
+          "paths_safe": true,
+          "safety_scan_passed": true,
+          "syntax_valid": true,
+          "import_valid": true,
+          "generated_tests_passed": true,
+          "runtime_validation_passed": true
+        },
+        "provider_assisted_sections": [],
+        "provider_generated_files": [],
+        "total_project_files": 0,
+        "provider_authored_file_ratio": 0.0,
+        "provider_fallbacks": [],
+        "fallback_reason": "",
+        "runtime_validation_passed": false,
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false
+        },
+        "provider_model": "",
+        "provider_timeout_seconds": 0,
+        "deterministic_sections": [],
+        "source_generation_report_path": "artifacts/source_generation_report.json",
+        "project_output_path": "project_output/csv_expense_analyzer",
+        "analysis_path": "artifacts/analysis.md",
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635"
+      },
+      "attribution_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\\artifacts\\generation_attribution.json",
+      "analysis_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\\artifacts\\analysis.md",
+      "source_generation_report_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-csv_expense_analyzer-1779091635\\artifacts\\source_generation_report.json",
+      "no_agent_scaffold": true,
+      "ordinary_mainline": true,
+      "passed": true
+    },
+    {
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778",
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py new-run --goal Generate a Log Analyzer CLI. It must be a non-web ordinary concrete project, not an agent manifest or scaffold. It must parse log lines, count INFO/WARN/ERROR, extract top error messages, support --input, --output, sample.log, and generated tests. Use the ordinary CTCP project generation mainline and write project_output artifacts, generated tests, provenance, attribution, and runnable local validation files. --run-id non-web-log_analyzer_cli-1779091778",
+          "exit_code": 0,
+          "duration_seconds": 0.762,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778",
+          "exit_code": 0,
+          "duration_seconds": 0.48,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for analysis.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/analysis.md\n[ctcp_orchestrate] reason=waiting for analysis.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 10.73,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.641\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778",
+          "exit_code": 0,
+          "duration_seconds": 0.408,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.641\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 3.443,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.641\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778",
+          "exit_code": 0,
+          "duration_seconds": 0.449,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.641\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 7.145,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.641\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778",
+          "exit_code": 0,
+          "duration_seconds": 0.392,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.641\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 0.771,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.641\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778",
+          "exit_code": 0,
+          "duration_seconds": 0.394,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.641\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 70.917,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.641\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778",
+          "exit_code": 0,
+          "duration_seconds": 0.378,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.641\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 195.144,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.641\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778",
+          "exit_code": 0,
+          "duration_seconds": 0.39,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.641\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 9.45,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.641\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778",
+          "exit_code": 0,
+          "duration_seconds": 0.37,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.641\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 23.142,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.641\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778",
+          "exit_code": 0,
+          "duration_seconds": 0.365,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.641\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 15.119,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.641\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778",
+          "exit_code": 0,
+          "duration_seconds": 0.361,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.641\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 2.342,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.641\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778",
+          "exit_code": 0,
+          "duration_seconds": 0.368,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.641\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        }
+      ],
+      "project": "log_analyzer_cli",
+      "status": "passed",
+      "project_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\\project_output\\log_analyzer_cli",
+      "generated_tests_passed": true,
+      "runtime_validation": {
+        "passed": true,
+        "cli": {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe log_analyzer.py --input sample.log --output C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\\project_output\\log_analyzer_cli\\summary.json",
+          "exit_code": 0,
+          "duration_seconds": 0.128,
+          "stdout": "",
+          "stderr": "",
+          "timed_out": false
+        },
+        "output_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\\project_output\\log_analyzer_cli\\summary.json",
+        "summary": {
+          "level_counts": {
+            "INFO": 1,
+            "WARN": 1,
+            "ERROR": 2
+          },
+          "top_errors": [
+            {
+              "message": "disk full",
+              "count": 2
+            }
+          ]
+        }
+      },
+      "persistence_validation": {
+        "passed": true,
+        "cli": {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe log_analyzer.py --input sample.log --output C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\\project_output\\log_analyzer_cli\\summary.json",
+          "exit_code": 0,
+          "duration_seconds": 0.128,
+          "stdout": "",
+          "stderr": "",
+          "timed_out": false
+        },
+        "output_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\\project_output\\log_analyzer_cli\\summary.json",
+        "summary": {
+          "level_counts": {
+            "INFO": 1,
+            "WARN": 1,
+            "ERROR": 2
+          },
+          "top_errors": [
+            {
+              "message": "disk full",
+              "count": 2
+            }
+          ]
+        }
+      },
+      "provenance": {
+        "generation_mode": "concrete_fast_path",
+        "project_type": "log_analyzer_cli",
+        "provider_authorship": "not_claimed",
+        "local_materializer_used": true,
+        "repair_attempts": 0,
+        "reason": "bounded non-web concrete project matrix fast path"
+      },
+      "provenance_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\\artifacts\\project_generation_provenance.json",
+      "attribution": {
+        "ordinary_mainline": true,
+        "entrypoint": "new-run/status/advance",
+        "used_agent_project": false,
+        "used_agent_scaffold": false,
+        "used_local_agent_runtime": false,
+        "used_local_materializer": true,
+        "local_materializer_name": "log_analyzer_cli",
+        "used_provider_agent": false,
+        "provider_name": "local_deterministic_materializer",
+        "provider_authorship": "not_claimed",
+        "generation_mode": "concrete_fast_path",
+        "live_provider_used": false,
+        "provider_request_count": 0,
+        "provider_fragment_count": 0,
+        "provider_project_candidate_count": 0,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "provider_candidate_outcome": "",
+        "provider_candidate_accepted": false,
+        "provider_candidate_repaired": false,
+        "provider_repair_attempt_count": 0,
+        "provider_repair_sections": [],
+        "repair_validation_passed": false,
+        "fallback_triggered": false,
+        "unsupported_reason": null,
+        "validation_failures": [],
+        "provider_candidate_validation": {
+          "manifest_valid": true,
+          "paths_safe": true,
+          "safety_scan_passed": true,
+          "syntax_valid": true,
+          "import_valid": true,
+          "generated_tests_passed": true,
+          "runtime_validation_passed": true
+        },
+        "provider_assisted_sections": [],
+        "provider_generated_files": [],
+        "total_project_files": 0,
+        "provider_authored_file_ratio": 0.0,
+        "provider_fallbacks": [],
+        "fallback_reason": "",
+        "runtime_validation_passed": false,
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false
+        },
+        "provider_model": "",
+        "provider_timeout_seconds": 0,
+        "deterministic_sections": [],
+        "source_generation_report_path": "artifacts/source_generation_report.json",
+        "project_output_path": "project_output/log_analyzer_cli",
+        "analysis_path": "artifacts/analysis.md",
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778"
+      },
+      "attribution_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\\artifacts\\generation_attribution.json",
+      "analysis_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\\artifacts\\analysis.md",
+      "source_generation_report_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-log_analyzer_cli-1779091778\\artifacts\\source_generation_report.json",
+      "no_agent_scaffold": true,
+      "ordinary_mainline": true,
+      "passed": true
+    },
+    {
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122",
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py new-run --goal Generate a Text Utilities Python Package. It must be a non-web ordinary concrete project, not an agent manifest or scaffold. It must be an importable python package with slugify, word_count, extract_keywords, normalize_whitespace, README usage example, and generated tests. Use the ordinary CTCP project generation mainline and write project_output artifacts, generated tests, provenance, attribution, and runnable local validation files. --run-id non-web-text_utils_package-1779092122",
+          "exit_code": 0,
+          "duration_seconds": 0.644,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122",
+          "exit_code": 0,
+          "duration_seconds": 0.396,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for analysis.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/analysis.md\n[ctcp_orchestrate] reason=waiting for analysis.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 10.061,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.091\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122",
+          "exit_code": 0,
+          "duration_seconds": 0.391,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.091\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 3.244,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.091\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122",
+          "exit_code": 0,
+          "duration_seconds": 0.361,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.091\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 7.446,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.091\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122",
+          "exit_code": 0,
+          "duration_seconds": 0.376,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.091\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 0.744,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.091\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122",
+          "exit_code": 0,
+          "duration_seconds": 0.355,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.091\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 42.923,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.091\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122",
+          "exit_code": 0,
+          "duration_seconds": 0.36,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.091\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 16.04,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.091\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122",
+          "exit_code": 0,
+          "duration_seconds": 0.393,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.091\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 8.414,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.091\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122",
+          "exit_code": 0,
+          "duration_seconds": 0.38,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.091\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 60.867,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.091\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122",
+          "exit_code": 0,
+          "duration_seconds": 0.387,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.091\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 39.34,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.091\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122",
+          "exit_code": 0,
+          "duration_seconds": 0.369,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.091\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 2.165,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.091\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122",
+          "exit_code": 0,
+          "duration_seconds": 0.379,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=9.091\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        }
+      ],
+      "project": "text_utils_package",
+      "status": "passed",
+      "project_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\\project_output\\text_utils_package",
+      "generated_tests_passed": true,
+      "runtime_validation": {
+        "passed": true,
+        "import_result": {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe -c import json; from text_utils import slugify, word_count, extract_keywords, normalize_whitespace; print(json.dumps({'slug': slugify('Hello, CTCP World!'), 'words': word_count('one two two'), 'keywords': extract_keywords('The quick brown fox jumps quick'), 'norm': normalize_whitespace('  a\\n b\\t c  ')}))",
+          "exit_code": 0,
+          "duration_seconds": 0.145,
+          "stdout": "{\"slug\": \"hello-ctcp-world\", \"words\": 3, \"keywords\": [\"quick\", \"brown\", \"fox\", \"jumps\"], \"norm\": \"a b c\"}\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        "payload": {
+          "slug": "hello-ctcp-world",
+          "words": 3,
+          "keywords": [
+            "quick",
+            "brown",
+            "fox",
+            "jumps"
+          ],
+          "norm": "a b c"
+        }
+      },
+      "persistence_validation": {
+        "passed": true,
+        "import_result": {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe -c import json; from text_utils import slugify, word_count, extract_keywords, normalize_whitespace; print(json.dumps({'slug': slugify('Hello, CTCP World!'), 'words': word_count('one two two'), 'keywords': extract_keywords('The quick brown fox jumps quick'), 'norm': normalize_whitespace('  a\\n b\\t c  ')}))",
+          "exit_code": 0,
+          "duration_seconds": 0.145,
+          "stdout": "{\"slug\": \"hello-ctcp-world\", \"words\": 3, \"keywords\": [\"quick\", \"brown\", \"fox\", \"jumps\"], \"norm\": \"a b c\"}\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        "payload": {
+          "slug": "hello-ctcp-world",
+          "words": 3,
+          "keywords": [
+            "quick",
+            "brown",
+            "fox",
+            "jumps"
+          ],
+          "norm": "a b c"
+        }
+      },
+      "provenance": {
+        "generation_mode": "concrete_fast_path",
+        "project_type": "text_utils_package",
+        "provider_authorship": "not_claimed",
+        "local_materializer_used": true,
+        "repair_attempts": 0,
+        "reason": "bounded non-web concrete project matrix fast path"
+      },
+      "provenance_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\\artifacts\\project_generation_provenance.json",
+      "attribution": {
+        "ordinary_mainline": true,
+        "entrypoint": "new-run/status/advance",
+        "used_agent_project": false,
+        "used_agent_scaffold": false,
+        "used_local_agent_runtime": false,
+        "used_local_materializer": true,
+        "local_materializer_name": "text_utils_package",
+        "used_provider_agent": false,
+        "provider_name": "local_deterministic_materializer",
+        "provider_authorship": "not_claimed",
+        "generation_mode": "concrete_fast_path",
+        "live_provider_used": false,
+        "provider_request_count": 0,
+        "provider_fragment_count": 0,
+        "provider_project_candidate_count": 0,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "provider_candidate_outcome": "",
+        "provider_candidate_accepted": false,
+        "provider_candidate_repaired": false,
+        "provider_repair_attempt_count": 0,
+        "provider_repair_sections": [],
+        "repair_validation_passed": false,
+        "fallback_triggered": false,
+        "unsupported_reason": null,
+        "validation_failures": [],
+        "provider_candidate_validation": {
+          "manifest_valid": true,
+          "paths_safe": true,
+          "safety_scan_passed": true,
+          "syntax_valid": true,
+          "import_valid": true,
+          "generated_tests_passed": true,
+          "runtime_validation_passed": true
+        },
+        "provider_assisted_sections": [],
+        "provider_generated_files": [],
+        "total_project_files": 0,
+        "provider_authored_file_ratio": 0.0,
+        "provider_fallbacks": [],
+        "fallback_reason": "",
+        "runtime_validation_passed": false,
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false
+        },
+        "provider_model": "",
+        "provider_timeout_seconds": 0,
+        "deterministic_sections": [],
+        "source_generation_report_path": "artifacts/source_generation_report.json",
+        "project_output_path": "project_output/text_utils_package",
+        "analysis_path": "artifacts/analysis.md",
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122"
+      },
+      "attribution_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\\artifacts\\generation_attribution.json",
+      "analysis_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\\artifacts\\analysis.md",
+      "source_generation_report_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-text_utils_package-1779092122\\artifacts\\source_generation_report.json",
+      "no_agent_scaffold": true,
+      "ordinary_mainline": true,
+      "passed": true
+    },
+    {
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318",
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py new-run --goal Generate a Terminal Quiz Game. It must be a non-web ordinary concrete project, not an agent manifest or scaffold. It must load questions from sample_questions.json, support --questions, --test-mode, --answers, calculate scoring, and generated tests. Use the ordinary CTCP project generation mainline and write project_output artifacts, generated tests, provenance, attribution, and runnable local validation files. --run-id non-web-terminal_quiz_game-1779092318",
+          "exit_code": 0,
+          "duration_seconds": 0.695,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318",
+          "exit_code": 0,
+          "duration_seconds": 0.385,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for analysis.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/analysis.md\n[ctcp_orchestrate] reason=waiting for analysis.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 12.443,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=11.536\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318",
+          "exit_code": 0,
+          "duration_seconds": 0.37,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=11.536\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 3.255,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=11.536\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318",
+          "exit_code": 0,
+          "duration_seconds": 0.381,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=11.536\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 3.938,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=11.536\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318",
+          "exit_code": 0,
+          "duration_seconds": 0.378,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=11.536\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 0.76,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=11.536\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318",
+          "exit_code": 0,
+          "duration_seconds": 0.38,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=11.536\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 21.891,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=11.536\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318",
+          "exit_code": 0,
+          "duration_seconds": 0.373,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=11.536\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 15.592,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=11.536\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318",
+          "exit_code": 0,
+          "duration_seconds": 0.384,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=11.536\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 12.443,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=11.536\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318",
+          "exit_code": 0,
+          "duration_seconds": 0.379,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=11.536\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 23.099,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=11.536\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318",
+          "exit_code": 0,
+          "duration_seconds": 0.378,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=11.536\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 11.241,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=11.536\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318",
+          "exit_code": 0,
+          "duration_seconds": 0.395,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=11.536\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 2.322,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=11.536\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318",
+          "exit_code": 0,
+          "duration_seconds": 0.37,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=11.536\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        }
+      ],
+      "project": "terminal_quiz_game",
+      "status": "passed",
+      "project_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\\project_output\\terminal_quiz_game",
+      "generated_tests_passed": true,
+      "runtime_validation": {
+        "passed": true,
+        "cli": {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe quiz_game.py --questions sample_questions.json --test-mode --answers B,A",
+          "exit_code": 0,
+          "duration_seconds": 0.131,
+          "stdout": "{\"details\": [{\"answer\": \"B\", \"correct\": true, \"expected\": \"B\", \"question\": 1}, {\"answer\": \"A\", \"correct\": true, \"expected\": \"A\", \"question\": 2}], \"score\": 2, \"total\": 2}\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        "payload": {
+          "details": [
+            {
+              "answer": "B",
+              "correct": true,
+              "expected": "B",
+              "question": 1
+            },
+            {
+              "answer": "A",
+              "correct": true,
+              "expected": "A",
+              "question": 2
+            }
+          ],
+          "score": 2,
+          "total": 2
+        }
+      },
+      "persistence_validation": {
+        "passed": true,
+        "cli": {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe quiz_game.py --questions sample_questions.json --test-mode --answers B,A",
+          "exit_code": 0,
+          "duration_seconds": 0.131,
+          "stdout": "{\"details\": [{\"answer\": \"B\", \"correct\": true, \"expected\": \"B\", \"question\": 1}, {\"answer\": \"A\", \"correct\": true, \"expected\": \"A\", \"question\": 2}], \"score\": 2, \"total\": 2}\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        "payload": {
+          "details": [
+            {
+              "answer": "B",
+              "correct": true,
+              "expected": "B",
+              "question": 1
+            },
+            {
+              "answer": "A",
+              "correct": true,
+              "expected": "A",
+              "question": 2
+            }
+          ],
+          "score": 2,
+          "total": 2
+        }
+      },
+      "provenance": {
+        "generation_mode": "concrete_fast_path",
+        "project_type": "terminal_quiz_game",
+        "provider_authorship": "not_claimed",
+        "local_materializer_used": true,
+        "repair_attempts": 0,
+        "reason": "bounded non-web concrete project matrix fast path"
+      },
+      "provenance_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\\artifacts\\project_generation_provenance.json",
+      "attribution": {
+        "ordinary_mainline": true,
+        "entrypoint": "new-run/status/advance",
+        "used_agent_project": false,
+        "used_agent_scaffold": false,
+        "used_local_agent_runtime": false,
+        "used_local_materializer": true,
+        "local_materializer_name": "terminal_quiz_game",
+        "used_provider_agent": false,
+        "provider_name": "local_deterministic_materializer",
+        "provider_authorship": "not_claimed",
+        "generation_mode": "concrete_fast_path",
+        "live_provider_used": false,
+        "provider_request_count": 0,
+        "provider_fragment_count": 0,
+        "provider_project_candidate_count": 0,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "provider_candidate_outcome": "",
+        "provider_candidate_accepted": false,
+        "provider_candidate_repaired": false,
+        "provider_repair_attempt_count": 0,
+        "provider_repair_sections": [],
+        "repair_validation_passed": false,
+        "fallback_triggered": false,
+        "unsupported_reason": null,
+        "validation_failures": [],
+        "provider_candidate_validation": {
+          "manifest_valid": true,
+          "paths_safe": true,
+          "safety_scan_passed": true,
+          "syntax_valid": true,
+          "import_valid": true,
+          "generated_tests_passed": true,
+          "runtime_validation_passed": true
+        },
+        "provider_assisted_sections": [],
+        "provider_generated_files": [],
+        "total_project_files": 0,
+        "provider_authored_file_ratio": 0.0,
+        "provider_fallbacks": [],
+        "fallback_reason": "",
+        "runtime_validation_passed": false,
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false
+        },
+        "provider_model": "",
+        "provider_timeout_seconds": 0,
+        "deterministic_sections": [],
+        "source_generation_report_path": "artifacts/source_generation_report.json",
+        "project_output_path": "project_output/terminal_quiz_game",
+        "analysis_path": "artifacts/analysis.md",
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318"
+      },
+      "attribution_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\\artifacts\\generation_attribution.json",
+      "analysis_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\\artifacts\\analysis.md",
+      "source_generation_report_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_non_web_project_matrix_runs\\ctcp\\non-web-terminal_quiz_game-1779092318\\artifacts\\source_generation_report.json",
+      "no_agent_scaffold": true,
+      "ordinary_mainline": true,
+      "passed": true
+    }
+  ],
+  "attribution_summary": [
+    {
+      "project": "csv_expense_analyzer",
+      "used_agent_project": false,
+      "used_agent_scaffold": false,
+      "used_local_agent_runtime": false,
+      "used_local_materializer": true,
+      "provider_authorship": "not_claimed"
+    },
+    {
+      "project": "log_analyzer_cli",
+      "used_agent_project": false,
+      "used_agent_scaffold": false,
+      "used_local_agent_runtime": false,
+      "used_local_materializer": true,
+      "provider_authorship": "not_claimed"
+    },
+    {
+      "project": "text_utils_package",
+      "used_agent_project": false,
+      "used_agent_scaffold": false,
+      "used_local_agent_runtime": false,
+      "used_local_materializer": true,
+      "provider_authorship": "not_claimed"
+    },
+    {
+      "project": "terminal_quiz_game",
+      "used_agent_project": false,
+      "used_agent_scaffold": false,
+      "used_local_agent_runtime": false,
+      "used_local_materializer": true,
+      "provider_authorship": "not_claimed"
+    }
+  ],
+  "report": "D:\\.c_projects\\adc\\ctcp\\tests\\non_web_project_matrix\\benchmark_report.md",
+  "review_pack": "D:\\.c_projects\\adc\\ctcp\\meta\\reports\\REVIEW_PACK.md"
+}

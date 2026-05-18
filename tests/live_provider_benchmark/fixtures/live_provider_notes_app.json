@@ -1,0 +1,5 @@
+{
+  "case": "live_provider_notes_app",
+  "project": "markdown_notes_api",
+  "goal": "Create a live-provider-assisted Markdown Notes API with local markdown note storage and endpoints POST /notes, GET /notes, GET /notes/{id}, PATCH /notes/{id}, DELETE /notes/{id}, GET /search?q=. The live provider may generate only a small pure metadata helper or documentation fragment."
+}

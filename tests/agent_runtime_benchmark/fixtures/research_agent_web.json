@@ -1,0 +1,12 @@
+{
+  "case_id": "research_agent_web",
+  "title": "Research Agent Web Tool Fixture",
+  "goal": "Create a Research Agent that can search public web information about a product category, fetch selected sources, summarize findings, and return citations. The agent must use explicit web_search and fetch_url tools only when the manifest authorizes them, and only research_agent may call web tools.",
+  "expected": [
+    "web_search explicit tool",
+    "fetch_url explicit tool",
+    "sources required",
+    "citations required",
+    "only research_agent may call web tools"
+  ]
+}

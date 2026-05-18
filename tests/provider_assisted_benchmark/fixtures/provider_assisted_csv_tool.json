@@ -1,0 +1,5 @@
+{
+  "case": "provider_assisted_csv_tool",
+  "project": "csv_expense_analyzer",
+  "goal": "Create a provider-assisted CSV Expense Analyzer CLI using --input, --output, sample_expenses.csv, category totals, monthly totals, JSON report output, and generated unittest tests. Provider-assisted fragments may add safe formatting helpers only."
+}

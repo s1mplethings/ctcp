@@ -1,0 +1,11 @@
+{
+  "project": "terminal_quiz_game",
+  "goal": "Generate a Terminal Quiz Game. It must be a non-web ordinary concrete project, not an agent manifest or scaffold. It must load questions from sample_questions.json, support --questions, --test-mode, --answers, calculate scoring, and generated tests.",
+  "project_requirements": {
+    "runtime": "cli_interactive",
+    "sample_input": "sample_questions.json",
+    "commands": [
+      "python quiz_game.py --questions sample_questions.json --test-mode --answers B,A"
+    ]
+  }
+}

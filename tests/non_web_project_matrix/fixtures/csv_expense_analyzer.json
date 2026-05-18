@@ -1,0 +1,11 @@
+{
+  "project": "csv_expense_analyzer",
+  "goal": "Generate a CSV Expense Analyzer CLI. It must be a non-web ordinary concrete project, not an agent manifest or scaffold. It must support --input, --output, sample_expenses.csv, category totals, monthly totals, JSON report output, and generated tests.",
+  "project_requirements": {
+    "runtime": "cli",
+    "sample_input": "sample_expenses.csv",
+    "commands": [
+      "python expense_analyzer.py --input sample_expenses.csv --output report.json"
+    ]
+  }
+}

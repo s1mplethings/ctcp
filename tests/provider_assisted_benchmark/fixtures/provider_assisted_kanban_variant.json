@@ -1,0 +1,5 @@
+{
+  "case": "provider_assisted_kanban_variant",
+  "project": "local_kanban_board_app",
+  "goal": "Create a provider-assisted local Kanban board app with POST /boards, GET /boards, POST /boards/{board_id}/cards, GET /boards/{board_id}/cards, PATCH /cards/{card_id}/move, PATCH /cards/{card_id}, DELETE /cards/{card_id}, static frontend, fetch logic, SQLite persistence, and safe frontend helper variation."
+}

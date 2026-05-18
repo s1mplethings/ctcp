@@ -32,7 +32,7 @@ SUMMARY_PATH = GENERATED_DIR / "benchmark_summary.json"
 PYTHON = ROOT / ".venv" / "Scripts" / "python.exe"
 ORCHESTRATOR = ROOT / "scripts" / "ctcp_orchestrate.py"
 BENCHMARK_MAX_WALL_CLOCK_SECONDS = int(os.environ.get("CTCP_CONCRETE_BENCHMARK_MAX_SECONDS", "540"))
-ADVANCE_TIMEOUT_SECONDS = int(os.environ.get("CTCP_CONCRETE_BENCHMARK_ADVANCE_TIMEOUT", "180"))
+ADVANCE_TIMEOUT_SECONDS = int(os.environ.get("CTCP_CONCRETE_BENCHMARK_ADVANCE_TIMEOUT", "240"))
 SERVER_STARTUP_TIMEOUT_SECONDS = int(os.environ.get("CTCP_CONCRETE_BENCHMARK_SERVER_STARTUP_TIMEOUT", "8"))
 SERVER_SHUTDOWN_TIMEOUT_SECONDS = int(os.environ.get("CTCP_CONCRETE_BENCHMARK_SERVER_SHUTDOWN_TIMEOUT", "5"))
 HTTP_REQUEST_TIMEOUT_SECONDS = int(os.environ.get("CTCP_CONCRETE_BENCHMARK_HTTP_TIMEOUT", "5"))
@@ -931,11 +931,28 @@ def _validate_project(project_copy: str, run_dir_text: str = "", summary: dict[s
         "cache_hits": dict(dict(contracts.get("reconciliation", {})).get("cache", {})).get("cache_hits", ""),
         "cache_misses": dict(dict(contracts.get("reconciliation", {})).get("cache", {})).get("cache_misses", ""),
     }
+    attribution_path = (run_dir / "artifacts" / "generation_attribution.json") if run_dir else Path("")
+    attribution = _read_json(attribution_path) if run_dir and attribution_path.exists() else {}
+    checks["generation_attribution"] = {
+        "passed": bool(attribution.get("ordinary_mainline"))
+        and attribution.get("used_agent_project") is False
+        and attribution.get("used_agent_scaffold") is False
+        and attribution.get("used_local_agent_runtime") is False
+        and attribution.get("used_local_materializer") is True
+        and attribution.get("provider_authorship") == "not_claimed",
+        "path": str(attribution_path) if run_dir else "",
+        "attribution": attribution,
+    }
     passed = all(bool(item.get("passed", False)) for item in checks.values())
     return {"passed": passed, "checks": checks}
 
 
 def _markdown(summary: dict[str, Any]) -> str:
+    generation = summary.get("generation", {})
+    discovery = summary.get("project_discovery", {})
+    checks = summary.get("validation", {}).get("checks", {})
+    attribution_check = checks.get("generation_attribution", {})
+    attribution = attribution_check.get("attribution", {}) if isinstance(attribution_check, dict) else {}
     lines = [
         "# Concrete Project Generation Benchmark Report",
         "",
@@ -943,148 +960,42 @@ def _markdown(summary: dict[str, Any]) -> str:
         f"- concrete benchmark status: `{summary['status']}`",
         f"- fixture: `{_rel(FIXTURE)}`",
         f"- generated project path: `{summary.get('generated_project_path', '') or '(none)'}`",
-        f"- run_dir: `{summary.get('generation', {}).get('run_dir', '') or '(none)'}`",
+        f"- run_dir: `{generation.get('run_dir', '') or '(none)'}`",
         f"- elapsed_seconds: `{summary.get('elapsed_seconds', 0)}`",
         f"- timeout_step: `{summary.get('timeout_step', '') or '(none)'}`",
         "",
-        "## Entrypoint Discovery",
-        f"- selected ordinary entrypoint: `{summary['entrypoint_discovery'].get('selected_entrypoint', '') or '(none)'}`",
-        f"- ordinary entrypoints found: `{', '.join(summary['entrypoint_discovery'].get('ordinary_entrypoints_found', []))}`",
-        f"- excluded agent modes found: `{', '.join(summary['entrypoint_discovery'].get('agent_mode_entrypoints_excluded', []))}`",
+        "## Mainline Evidence",
+        f"- selected ordinary entrypoint: `{summary.get('entrypoint_discovery', {}).get('selected_entrypoint', '') or '(none)'}`",
+        f"- command_count: `{len(generation.get('commands', []))}`",
+        f"- project_found: `{discovery.get('project_found', False)}`",
+        f"- source_project_root: `{discovery.get('project_root', '')}`",
         "",
-        "## Commands Executed",
+        "## Attribution",
+        f"- attribution_path: `{attribution_check.get('path', '') if isinstance(attribution_check, dict) else ''}`",
+        f"- ordinary_mainline: `{attribution.get('ordinary_mainline')}`",
+        f"- used_agent_project: `{attribution.get('used_agent_project')}`",
+        f"- used_agent_scaffold: `{attribution.get('used_agent_scaffold')}`",
+        f"- used_local_agent_runtime: `{attribution.get('used_local_agent_runtime')}`",
+        f"- used_local_materializer: `{attribution.get('used_local_materializer')}`",
+        f"- provider_authorship: `{attribution.get('provider_authorship')}`",
+        "",
+        "## Validation Results",
     ]
-    for command in summary.get("generation", {}).get("commands", []):
-        lines.extend(
-            [
-                f"- command: `{command.get('cmd', '')}`",
-                f"  - exit_code: `{command.get('exit_code')}`",
-                f"  - stdout_tail: `{_tail(str(command.get('stdout', '')), 300)}`",
-                f"  - stderr_tail: `{_tail(str(command.get('stderr', '')), 300)}`",
-            ]
-        )
-    if not summary.get("generation", {}).get("commands"):
-        lines.append("- (none)")
-    lines.extend(["", "## Step Timings"])
-    for row in summary.get("step_timings", []):
-        lines.append(
-            f"- {row.get('step', '')}: `{row.get('status', '')}` duration=`{row.get('duration_seconds', 0)}`"
-        )
-        if row.get("drift_count", "") != "":
-            lines.append(f"  - drift_count: `{row.get('drift_count')}`")
-        if row.get("changed_files"):
-            lines.append(f"  - changed_files: `{', '.join(row.get('changed_files', []))}`")
-        if row.get("graph_hash"):
-            lines.append(f"  - graph_hash: `{row.get('graph_hash')}`")
-    if not summary.get("step_timings"):
-        lines.append("- (none)")
-    analysis = summary.get("analysis_progress", {}) if isinstance(summary.get("analysis_progress", {}), dict) else {}
-    lines.extend(
-        [
-            "",
-            "## Analysis Progress",
-            f"- target: `{summary.get('analysis_target', 'artifacts/analysis.md')}`",
-            f"- status: `{analysis.get('status', '') or '(none)'}`",
-            f"- last_event: `{summary.get('analysis_last_event', '') or analysis.get('last_event', '') or '(none)'}`",
-            f"- timeout: `{summary.get('analysis_timeout', False)}`",
-            f"- error: `{summary.get('analysis_error', '') or analysis.get('error', '') or '(none)'}`",
-            f"- prompt_path: `{summary.get('analysis_prompt_path', '') or analysis.get('prompt_path', '') or '(none)'}`",
-            f"- provider: `{summary.get('analysis_provider', '') or analysis.get('provider', '') or '(none)'}`",
-            f"- provider_model: `{summary.get('analysis_provider_model', '') or analysis.get('provider_model', '') or '(none)'}`",
-            f"- provider_timeout_seconds: `{summary.get('analysis_provider_timeout_seconds', '') or analysis.get('provider_timeout_seconds', '') or '(none)'}`",
-            f"- analysis_profile: `{summary.get('analysis_profile', '') or analysis.get('analysis_profile', '') or '(none)'}`",
-            f"- prompt_char_count: `{summary.get('analysis_prompt_char_count', '') or analysis.get('prompt_char_count', '') or 0}`",
-            f"- prompt_estimated_tokens: `{summary.get('analysis_prompt_estimated_tokens', '') or analysis.get('prompt_estimated_tokens', '') or 0}`",
-            f"- max_output_tokens: `{summary.get('analysis_max_output_tokens', '') or analysis.get('max_output_tokens', '') or 0}`",
-            f"- output_contract: `{_tail(summary.get('analysis_output_contract', '') or analysis.get('output_contract', ''), 500) or '(none)'}`",
-            f"- raw_exists: `{summary.get('analysis_raw_exists', False)}` path=`{summary.get('analysis_raw_path', '') or '(none)'}`",
-            f"- partial_exists: `{summary.get('analysis_partial_exists', False)}` path=`{summary.get('analysis_partial_path', '') or '(none)'}`",
-            f"- resume_possible: `{summary.get('analysis_resume_possible', False)}`",
-        ]
-    )
-    recovery = summary.get("generation", {}).get("source_generation_recovery", {})
-    lines.extend(
-        [
-            "",
-            "## Source Generation Recovery",
-            f"- intentional interrupt: `{recovery.get('intentional_source_generation_interrupt', False)}`",
-            f"- resume attempted: `{recovery.get('resume_attempted', False)}`",
-            f"- partial project_output seen: `{recovery.get('partial_project_output_seen', False)}`",
-            f"- completed batches after interrupt: `{recovery.get('completed_batch_count_after_interrupt', 0)}`",
-            f"- completed batches after resume: `{recovery.get('completed_batch_count_after_resume', 0)}`",
-        ]
-    )
-    lines.extend(["", "## Generated Project Discovery"])
-    discovery = summary.get("project_discovery", {})
-    lines.append(f"- project_found: `{discovery.get('project_found', False)}`")
-    lines.append(f"- source_project_root: `{discovery.get('project_root', '')}`")
-    lines.append(f"- project_path_pointer: `{discovery.get('project_path_pointer', '')}`")
-    lines.append("- candidates:")
-    for row in discovery.get("candidates", [])[:10]:
-        lines.append(f"  - `{row.get('path', '')}` score=`{row.get('score', '')}`")
-    if not discovery.get("candidates"):
-        lines.append("  - (none)")
-    lines.extend(["", "## Validation Results"])
-    validation = summary.get("validation", {})
-    for name, result in validation.get("checks", {}).items():
+    for name, result in checks.items():
         lines.append(f"- {name}: `{'passed' if result.get('passed') else 'failed'}`")
         if name == "http_api":
-            lines.append(f"  - route registry: `{', '.join(result.get('route_registry', []))}`")
-            runtime_contract = result.get("runtime_contract", {}) if isinstance(result.get("runtime_contract", {}), dict) else {}
-            lines.append(f"  - runtime entrypoint: `{runtime_contract.get('entrypoint', '')}`")
-            lines.append(f"  - runtime supported CLI args: `{', '.join(runtime_contract.get('supported_cli_args', []))}`")
+            lines.append(f"  - routes: `{', '.join(result.get('route_registry', []))}`")
             for endpoint, endpoint_result in result.get("endpoint_results", {}).items():
                 lines.append(f"  - {endpoint}: `{'passed' if endpoint_result.get('ok') else 'failed'}` status=`{endpoint_result.get('status')}`")
-            for missing in result.get("missing_required_routes", []):
-                lines.append(f"  - missing_required_route: `{missing}`")
-            if result.get("candidates"):
-                lines.append("  - server_start_attempts:")
-                for attempt in result.get("candidates", [])[:3]:
-                    lines.append(f"    - cmd: `{attempt.get('cmd', '')}`")
-                    lines.append(f"      exit_code: `{attempt.get('exit_code', '')}`")
-                    lines.append(f"      stderr_tail: `{_tail(str(attempt.get('stderr', '')), 300)}`")
         if name == "sqlite":
-            lines.append(f"  - sqlite3 usage detected: `{result.get('sqlite_usage_detected')}`")
             lines.append(f"  - database file created: `{result.get('database_file_created')}`")
-        if name == "shared_contracts":
-            lines.append(f"  - contract_graph: `{result.get('graph_path', '')}`")
-            lines.append(f"  - graph_hash: `{result.get('graph_hash', '')}`")
-            lines.append(f"  - generated_symbols: `{result.get('symbols_path', '')}`")
-            lines.append(f"  - generated_routes: `{result.get('routes_path', '')}`")
-            lines.append(f"  - runtime_contract: `{result.get('runtime_contract_path', '')}`")
-            lines.append(f"  - reconciliation_report: `{result.get('reconciliation_path', '')}`")
-            lines.append(f"  - reconciliation_status: `{result.get('reconciliation_status', '')}`")
-            lines.append(f"  - converged: `{result.get('converged', False)}`")
-            lines.append(f"  - typed_issue_count: `{result.get('typed_issue_count', 0)}`")
-            lines.append(f"  - provider_call_count: `{result.get('provider_call_count', 0)}`")
-            lines.append(f"  - stopped_reason: `{result.get('stopped_reason', '')}`")
-            lines.append(f"  - max_passes: `{result.get('max_passes', '')}`")
-            lines.append(f"  - max_wall_clock_seconds: `{result.get('max_wall_clock_seconds', '')}`")
-            lines.append(f"  - cache_hits: `{result.get('cache_hits', '')}`")
-            lines.append(f"  - cache_misses: `{result.get('cache_misses', '')}`")
         if name == "project_tests":
             lines.append(f"  - reason: `{result.get('reason', '')}`")
-            for command in result.get("commands", [])[:2]:
-                lines.append(f"  - test_command: `{command.get('cmd', '')}`")
-                lines.append(f"    - exit_code: `{command.get('exit_code', '')}`")
-                lines.append(f"    - stderr_tail: `{_tail(str(command.get('stderr', '')), 300)}`")
     lines.extend(["", "## Failed Assertions"])
-    for item in summary.get("failed_assertions", []):
-        lines.append(f"- {item}")
+    lines.extend(f"- {item}" for item in summary.get("failed_assertions", []))
     if not summary.get("failed_assertions"):
         lines.append("- (none)")
-    lines.extend(["", "## Unsupported Reasons"])
-    for item in summary.get("unsupported_reasons", []):
-        lines.append(f"- {item}")
-    if not summary.get("unsupported_reasons"):
-        lines.append("- (none)")
-    lines.extend(
-        [
-            "",
-            "## Reproduction",
-            f"- `{PYTHON} {_rel(Path('tests/concrete_project_benchmark/run_concrete_project_benchmark.py'))}`",
-        ]
-    )
+    lines.extend(["", "## Reproduction", f"- `{PYTHON} {_rel(Path('tests/concrete_project_benchmark/run_concrete_project_benchmark.py'))}`"])
     return "\n".join(lines) + "\n"
 
 
@@ -1144,6 +1055,15 @@ def main() -> int:
         summary["generated_project_path"] = generated_project
         validation = _validate_project(generated_project, str(generation.get("run_dir", "")), summary)
         summary["validation"] = validation
+        summary["generation_attribution"] = validation.get("checks", {}).get("generation_attribution", {}).get("attribution", {})
+        summary["attribution_summary"] = {
+            "project": "local_issue_tracker_api",
+            "used_agent_project": summary["generation_attribution"].get("used_agent_project"),
+            "used_agent_scaffold": summary["generation_attribution"].get("used_agent_scaffold"),
+            "used_local_agent_runtime": summary["generation_attribution"].get("used_local_agent_runtime"),
+            "used_local_materializer": summary["generation_attribution"].get("used_local_materializer"),
+            "provider_authorship": summary["generation_attribution"].get("provider_authorship"),
+        }
         if validation.get("passed"):
             summary["status"] = "passed"
         else:

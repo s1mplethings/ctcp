@@ -5,7 +5,7 @@
 It is separate from `agent-manifest`:
 
 - `agent-manifest`: turns requirements into `manifest.json`.
-- `agent-scaffold`: turns `manifest.json` into scaffold files, tests, and a safe dry-run runner.
+- `agent-scaffold`: turns `manifest.json` into scaffold files, tests, a safe dry-run runner, and a minimal local runtime loop.
 - `agent-project`: runs the end-to-end requirement -> manifest -> scaffold -> dry-run -> scaffold tests pipeline.
 
 It is not the default CTCP project-generation flow. Ordinary CTCP project generation still uses `new-run`, `status`, and `advance`.
@@ -48,7 +48,18 @@ agent_project/
     test_permissions.py
     test_workflows.py
     test_dry_run.py
-  audit/dry_run_audit.jsonl
+    test_runtime.py
+  runtime/
+    runtime_engine.py
+    runtime_planner.py
+    runtime_tools.py
+    runtime_permissions.py
+    runtime_tool_registry.py
+    runtime_tool_executor.py
+    runtime_tool_result.py
+    runtime_tool_policy.py
+    runtime_state.py
+    runtime_audit.py
   sample_input.json
   run_agent.py
 ```
@@ -57,7 +68,7 @@ The original manifest is copied to `manifest.json` and remains the source of tru
 
 ## Dry Run
 
-The scaffold is not a full LLM agent runtime. `run_agent.py` supports only dry-run inspection:
+`run_agent.py` still supports side-effect-free dry-run inspection:
 
 ```powershell
 python run_agent.py --dry-run --input sample_input.json
@@ -66,14 +77,119 @@ python run_agent.py --dry-run --input sample_input.json
 Dry-run output includes:
 
 - selected agent
-- workflow start state
+- workflow entry state
 - low-risk tools available for dry-run
-- approval-required actions
-- high-risk tools listed as pending approval
+- blocked tools
+- pending approvals
 - active guardrails
-- audit event and `audit/dry_run_audit.jsonl`
 
-High-risk tools are not executed. Tools with `requires_approval=true` are reported as pending approval only.
+Dry-run does not execute tools, does not write `runtime_state.json`, and does not append `audit/events.jsonl`.
+
+## Minimal Runtime
+
+Real run is explicit:
+
+```powershell
+python run_agent.py --input sample_input.json
+```
+
+The runtime is a local deterministic subset with a bounded planner loop. It:
+
+- loads `manifest.json`
+- loads or creates `runtime_state.json`
+- selects an agent and workflow state
+- runs a deterministic planner by default
+- lets the planner choose the next tool action from the manifest, task, and observed ToolResult rows
+- normalizes manifest tools through `runtime_tool_registry.py`
+- checks each tool through `runtime_tool_policy.py`
+- executes allowed adapters through `runtime_tool_executor.py`
+- executes only deterministic low-risk local tools
+- blocks high-risk, forbidden, caller-denied, and unsupported tools
+- creates pending approvals for `requires_approval=true`
+- appends audit events to `audit/events.jsonl`
+- returns every tool decision as a ToolResult object
+- writes `planner_trace.json`
+- returns a `final_answer` object with sources, pending approvals, blocked tools, and executed tools
+- updates workflow state and emits a structured JSON result
+
+The planner never grants permissions. Every planner-selected tool still goes through the generated policy layer, executor, ToolResult schema, and audit event contract.
+
+Normalized tool contracts use safe defaults. Missing `side_effect_level` becomes `high`, missing `requires_approval` becomes `true`, missing `audit_log_required` becomes `true`, and missing adapter metadata becomes `unsupported`.
+
+ToolResult records include:
+
+- `tool_name`
+- `status`
+- `reason`
+- `side_effect_level`
+- `requires_approval`
+- `output`
+- `audit_event_id`
+- `duration_ms`
+
+Deterministic local tools are:
+
+- `classify_input`
+- `extract_fields`
+- `summarize_text`
+- `create_draft`
+- `write_audit_event`
+- `noop_response`
+
+## Planner Loop
+
+Real run uses `CTCP_AGENT_PLANNER=deterministic` by default. The deterministic planner supports small, bounded task patterns:
+
+- research tasks call manifest-authorized web tools, then local summary/draft tools, and final answers include sources
+- support or feedback tasks call local classify/extract/summary/draft tools
+- devops incident tasks execute safe draft/summary tools and leave high-risk actions blocked or pending approval
+- permission-attack inputs may cause the planner to ask for dangerous tools, but policy still blocks them and the final answer does not claim execution
+
+Planner steps are written to `planner_trace.json`:
+
+```json
+{
+  "step_index": 1,
+  "planner_mode": "deterministic",
+  "decision": "call_tool",
+  "tool_name": "classify_input",
+  "reason": "deterministic_action",
+  "input": {},
+  "observed_result_status": "executed"
+}
+```
+
+The loop is bounded by `CTCP_AGENT_MAX_STEPS` and defaults to `5`. If the planner cannot finish within the bound, the run fails with `reason=planner_max_steps_exceeded`.
+
+`CTCP_AGENT_PLANNER=provider` is only an interface path in this phase. Without a configured provider implementation it returns a clear failed result with `reason=provider_planner_unavailable`; it does not fabricate success or call an external API.
+
+## Explicit Web Tools
+
+Web access is not a default scaffold capability. A generated agent may use web tooling only when its manifest explicitly declares exact `web_search` or `fetch_url` tools with:
+
+- `runtime_adapter` set to `web_search` or `fetch_url`
+- `side_effect_level` set to `none`
+- `requires_approval` set to `false`
+- `audit_log_required` set to `true`
+- the selected agent listed in `allowed_callers`
+
+If any condition fails, the runtime blocks the decision with `web_permission_denied`. Unknown or near-match web-like tools remain unsupported and are not guessed into execution.
+
+The scaffold currently implements a deterministic fixture provider for tests:
+
+```powershell
+$env:CTCP_AGENT_WEB_PROVIDER='fixture'
+$env:CTCP_AGENT_WEB_FIXTURE_PATH='tests\fixtures\web_search_fixture.json'
+python run_agent.py --input sample_input.json
+```
+
+If no provider is configured, web tools return a failed ToolResult with `reason=web_provider_unavailable`. This is still audited and does not crash the runtime. No real internet provider or production web search integration is implemented by this scaffold phase.
+
+Web-derived ToolResult outputs include citation metadata. `web_search` returns `results` and `sources`; `fetch_url` returns a `source`. A web-derived result without sources fails with `reason=missing_sources`. Audit events record web queries, fetched URLs, and sources.
+
+External, unknown, near-match, and high-risk tools are not guessed into execution. High-risk tools are never executed in this phase.
+
+Every tool decision writes a `tool_decision` audit event, including executed, blocked, pending approval, and unsupported decisions. `runtime_state.json` records `executed_tools`, `blocked_tools`, `pending_approvals`, `unsupported_tools`, and `last_tool_results`.
 
 ## Scaffold Tests
 
@@ -83,7 +199,7 @@ Run generated scaffold tests from the scaffold root:
 python -m unittest discover tests -v
 ```
 
-The tests validate manifest structure, high-risk approval requirements, audit-log requirements, and workflow flow fields.
+The tests validate manifest structure, high-risk approval requirements, audit-log requirements, workflow flow fields, dry-run behavior, and minimal runtime state/audit behavior.
 
 ## End-to-End Mode
 
@@ -100,7 +216,8 @@ See `docs/agent_project_pipeline.md` for the full pipeline output and report con
 
 ## Current Limits
 
-- The scaffold is a contract/testing harness, not a production agent runtime.
-- It does not call LLMs or external tools.
+- The scaffold is a minimal deterministic runtime, not a production LLM agent runtime.
+- It does not call LLMs, provider planners, or external side-effect tools.
+- Web access is explicit manifest-only and currently has only the deterministic fixture provider; real internet access is not implemented.
 - It preserves manifest permissions but does not implement human approval UI.
-- It is intended for review, dry-run, and regression testing before a real runtime is implemented.
+- Approval-required tools are queued as pending approvals and remain blocked until a future approved approval-processing layer exists.

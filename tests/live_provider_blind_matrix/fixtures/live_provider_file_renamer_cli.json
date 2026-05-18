@@ -1,0 +1,6 @@
+{
+  "case": "file_renamer_cli",
+  "project": "live_provider_file_renamer_cli",
+  "startup": "file_renamer.py",
+  "goal": "Generate live_provider_blind_candidate blind small project live_provider_file_renamer_cli. Build a Python stdlib file renamer CLI with prefix/suffix, required dry-run mode, safe temp-directory behavior, parent traversal rejection, and generated tests."
+}

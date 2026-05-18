@@ -39,17 +39,14 @@ PROHIBITED_ACTIONS = {
     "auto_publish_plugin": "Plugin publication or listing is prohibited without recorded human approval.",
 }
 
-
 def load_request(path: Path) -> dict[str, Any]:
     raw = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(raw, dict):
         return raw
     return {"goal": str(raw)}
 
-
 def generate_manifest_from_file(input_path: Path) -> dict[str, Any]:
     return generate_manifest(load_request(input_path))
-
 
 def generate_manifest(request: dict[str, Any]) -> dict[str, Any]:
     text = _request_text(request)
@@ -97,7 +94,6 @@ def generate_manifest(request: dict[str, Any]) -> dict[str, Any]:
     }
     _attach_agent_refs(manifest)
     return sanitize_permissions(manifest)
-
 
 def sanitize_permissions(manifest: dict[str, Any]) -> dict[str, Any]:
     permissions = manifest.setdefault("permissions", {})
@@ -150,11 +146,9 @@ def sanitize_permissions(manifest: dict[str, Any]) -> dict[str, Any]:
         agent.setdefault("failure_handling", ["fail closed on missing approval", "record audit event for every denied high-risk action"])
     return manifest
 
-
 def write_manifest(path: Path, manifest: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
 
 def _request_text(request: dict[str, Any]) -> str:
     parts = []
@@ -167,7 +161,6 @@ def _request_text(request: dict[str, Any]) -> str:
         if isinstance(value, list):
             parts.extend(str(item) for item in value)
     return "\n".join(parts)
-
 
 def _domain_signals(text: str) -> set[str]:
     lower = text.lower()
@@ -218,6 +211,7 @@ def _domain_signals(text: str) -> set[str]:
         "devops": ("devops", "incident", "rollback", "logs", "metrics", "deployment"),
         "ecommerce": ("shopify", "ecommerce", "orders", "product page", "marketing", "campaign"),
         "knowledge_base": ("knowledge", "markdown", "pdf", "citation", "retrieval", "sources"),
+        "web_research": ("public web", "web search", "fetch url", "fetch_url", "web information", "product category", "return citations"),
         "billing": ("refund", "billing", "duplicate charge", "重复扣款", "扣款", "退款"),
         "legal": ("legal", "liability", "admission", "compensation"),
         "approval": ("approval", "human confirmation", "human approval", "审批", "confirm"),
@@ -265,12 +259,13 @@ def _domain_signals(text: str) -> set[str]:
         signals.discard("devops")
     if "contract_review" in signals:
         signals.add("legal")
+    if "web_research" in signals:
+        signals.add("knowledge_base")
     if "customer_communication" in signals:
         signals.add("customer_support")
     if "prompt_injection" in signals or "cross_agent_bypass" in signals:
         signals.add("approval")
     return signals
-
 
 def _system_name(request: dict[str, Any], signals: set[str]) -> str:
     title = str(request.get("title", "")).strip()
@@ -286,6 +281,8 @@ def _system_name(request: dict[str, Any], signals: set[str]) -> str:
         return "DevOps Incident Response Agent System"
     if "ecommerce" in signals:
         return "Shopify Growth Agent System"
+    if "web_research" in signals:
+        return "Explicit Web Research Agent System"
     if "knowledge_base" in signals:
         return "Knowledge Research Agent System"
     if "product_feedback" in signals:
@@ -320,13 +317,11 @@ def _system_name(request: dict[str, Any], signals: set[str]) -> str:
         return "Product Launch Coordination System"
     return "General Agent System"
 
-
 def _clean_name(text: str) -> str:
     words = re.findall(r"[A-Za-z0-9]+", text)
     if not words:
         return "General Agent System"
     return " ".join(words[:8])
-
 
 def _agent(name: str, role: str, goal: str, tools: list[str], memory: list[str], scope: list[str], out_of_scope: list[str]) -> dict[str, Any]:
     return {
@@ -344,7 +339,6 @@ def _agent(name: str, role: str, goal: str, tools: list[str], memory: list[str],
         "escalation_rules": [],
         "failure_handling": [],
     }
-
 
 def _agents(signals: set[str]) -> list[dict[str, Any]]:
     agents = [
@@ -370,7 +364,9 @@ def _agents(signals: set[str]) -> list[dict[str, Any]]:
             _agent("CampaignStrategistAgent", "campaign strategist", "Recommend promotions and approval-gated campaigns.", ["campaign.plan", "marketing.email.draft"], ["campaign_history"], ["recommendation"], ["send marketing campaign without approval"]),
             _agent("CopywritingAgent", "copywriting", "Draft product-title and email copy for review.", ["copy.draft"], ["copy_versions"], ["copywriting"], ["publish product page without approval"]),
         ])
-    if "knowledge_base" in signals:
+    if "web_research" in signals:
+        agents.append(_agent("research_agent", "web research", "Search explicitly authorized public web fixtures, fetch selected sources, summarize findings, and return citations.", ["web_search", "fetch_url", "source_summary", "citation_builder"], ["topic_index", "source_registry"], ["fixture-backed web search", "source fetching", "cited summaries"], ["web access without manifest authorization", "answer without sources"]))
+    elif "knowledge_base" in signals:
         agents.append(_agent("ResearchAgent", "knowledge research", "Ingest documents, retrieve sources, answer with citations, and say unknown when evidence is absent.", ["document.ingest", "retrieval.search", "citation.format"], ["topic_index", "source_registry"], ["document ingestion", "retrieval", "cited answers"], ["answer without source"]))
     if "product_feedback" in signals:
         agents.append(_agent("ProductFeedbackAgent", "product feedback analyst", "Collect product feedback, classify themes, summarize trends, and produce a weekly report.", ["feedback.collect", "feedback.classify", "feedback.trend.summarize", "weekly_report.write"], ["feedback_items", "feedback_trends"], ["feedback ingestion", "classification", "trend summarization", "weekly report"], ["billing refunds", "production rollback", "legal commitments"]))
@@ -416,7 +412,6 @@ def _agents(signals: set[str]) -> list[dict[str, Any]]:
         agents.append(_agent("TaskSpecialistAgent", "task specialist", "Handle the domain-specific analysis while preserving safety rules.", ["structured_output.write"], ["task_history"], ["analysis", "recommendation"], ["high-risk execution"]))
     return agents
 
-
 def _tool(name: str, description: str, side_effect_level: str = "low", requires_approval: bool = False) -> dict[str, Any]:
     return {
         "tool_name": name,
@@ -432,6 +427,13 @@ def _tool(name: str, description: str, side_effect_level: str = "low", requires_
         "audit_log_required": True,
     }
 
+def _web_tool(name: str, description: str, input_schema: dict[str, Any], output_schema: dict[str, Any]) -> dict[str, Any]:
+    tool = _tool(name, description, "none", False)
+    tool["input_schema"] = input_schema
+    tool["output_schema"] = output_schema
+    tool["runtime_adapter"] = name
+    tool["rate_limit"] = "10 calls/minute"
+    return tool
 
 def _tools(signals: set[str]) -> list[dict[str, Any]]:
     tools = [_tool("audit_log.write", "Append immutable audit event for decisions, tool calls, approvals, and denials.")]
@@ -465,7 +467,14 @@ def _tools(signals: set[str]) -> list[dict[str, Any]]:
             _tool("marketing.campaign.send.request", "Prepare campaign send request for approval.", "high", True),
             _tool("customer.email.send.request", "Prepare customer email request for approval.", "high", True),
         ])
-    if "knowledge_base" in signals:
+    if "web_research" in signals:
+        tools.extend([
+            _web_tool("web_search", "Search public web documents for relevant information.", {"query": "string", "max_results": "integer"}, {"results": "array", "sources": "array"}),
+            _web_tool("fetch_url", "Fetch a public URL and return text summary metadata.", {"url": "string", "timeout_seconds": "integer"}, {"url": "string", "title": "string", "text_excerpt": "string", "status_code": "integer"}),
+            _tool("source_summary", "Summarize fetched source excerpts with source identifiers."),
+            _tool("citation_builder", "Build citation list from source metadata."),
+        ])
+    elif "knowledge_base" in signals:
         tools.extend([
             _tool("document.ingest", "Ingest markdown, PDF metadata, web excerpts, and notes."),
             _tool("retrieval.search", "Search indexed sources before answering."),
@@ -518,7 +527,6 @@ def _tools(signals: set[str]) -> list[dict[str, Any]]:
         tools.append(_tool("executive.approval.record", "Record executive review without bypassing tool-level approval and audit requirements.", "medium", True))
     tools.extend(_holdout_tools(signals))
     return tools
-
 
 def _holdout_tools(signals: set[str]) -> list[dict[str, Any]]:
     tools: list[dict[str, Any]] = []
@@ -601,7 +609,6 @@ def _holdout_tools(signals: set[str]) -> list[dict[str, Any]]:
         ])
     return tools
 
-
 def _memory(signals: set[str]) -> list[dict[str, Any]]:
     keys = ["audit_log"]
     if "agent_factory" in signals:
@@ -614,6 +621,8 @@ def _memory(signals: set[str]) -> list[dict[str, Any]]:
         keys.extend(["growth_metrics", "campaign_history", "copy_versions"])
     if "knowledge_base" in signals:
         keys.extend(["topic_index", "source_registry"])
+    if "web_research" in signals:
+        keys.extend(["web_query_log", "source_registry"])
     if "product_feedback" in signals:
         keys.extend(["feedback_items", "feedback_trends"])
     if "billing" in signals:
@@ -660,7 +669,6 @@ def _memory(signals: set[str]) -> list[dict[str, Any]]:
         for key in keys
     ]
 
-
 def _workflow(state_name: str, trigger: str, responsible_agent: str, actions: list[str], tools_called: list[str], outputs: list[str], next_states: list[str], high_risk: bool = False) -> dict[str, Any]:
     return {
         "state_name": state_name,
@@ -674,7 +682,6 @@ def _workflow(state_name: str, trigger: str, responsible_agent: str, actions: li
         "failure_paths": ["tool_timeout", "missing_required_input", "validation_failed"],
         "human_approval_required": bool(high_risk),
     }
-
 
 def _workflows(signals: set[str], agents: list[dict[str, Any]], tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
     del tools
@@ -694,7 +701,9 @@ def _workflows(signals: set[str], agents: list[dict[str, Any]], tools: list[dict
     if "DataAnalystAgent" in agent_names:
         workflows.insert(2, _workflow("growth_analysis", "weekly growth review", "DataAnalystAgent", ["analyze orders", "analyze traffic", "identify sales decline causes"], ["shopify.orders.read", "analytics.traffic.read"], ["growth analysis"], ["campaign_strategy"]))
         workflows.insert(3, _workflow("campaign_strategy", "growth analysis ready", "CampaignStrategistAgent", ["recommend promotions", "draft campaign", "draft product title changes"], ["marketing.email.draft", "product_page.modify.request", "marketing.campaign.send.request"], ["weekly growth report", "campaign draft"], ["approval_review"], True))
-    if "ResearchAgent" in agent_names:
+    if "research_agent" in agent_names:
+        workflows.insert(2, _workflow("web_research", "public web research request", "research_agent", ["classify research query", "search public web", "fetch selected source", "summarize findings with citations"], ["web_search", "fetch_url", "source_summary", "citation_builder"], ["cited web research summary"], ["finalize"]))
+    elif "ResearchAgent" in agent_names:
         workflows.insert(2, _workflow("knowledge_research", "knowledge question or ingestion request", "ResearchAgent", ["ingest documents", "build topic index", "retrieve before answering", "cite sources", "return unknown when unsupported"], ["document.ingest", "retrieval.search", "citation.format"], ["cited answer", "unknown answer"], ["finalize"]))
     if "ProductFeedbackAgent" in agent_names:
         workflows.insert(2, _workflow("ingest_feedback", "daily feedback collection", "ProductFeedbackAgent", ["collect feedback", "normalize feedback records"], ["feedback.collect"], ["feedback batch"], ["classify_feedback"]))
@@ -785,7 +794,6 @@ def _workflows(signals: set[str], agents: list[dict[str, Any]], tools: list[dict
         workflows.insert(8, _workflow("launch_approval", "launch materials ready", "LaunchCoordinationAgent", ["request responsible owner approval before publish"], ["launch_publish.approval_request", "audit_log.write"], ["launch approval"], ["finalize"], True))
     return workflows
 
-
 def _permissions(signals: set[str], tools: list[dict[str, Any]]) -> dict[str, Any]:
     del signals, tools
     return {
@@ -795,7 +803,6 @@ def _permissions(signals: set[str], tools: list[dict[str, Any]]) -> dict[str, An
         "approval_bypass_allowed": False,
         "prohibited_actions": dict(PROHIBITED_ACTIONS),
     }
-
 
 def _guardrails(signals: set[str]) -> list[str]:
     rules = [
@@ -807,6 +814,8 @@ def _guardrails(signals: set[str]) -> list[str]:
     ]
     if "knowledge_base" in signals:
         rules.extend(["Answers require citations.", "If retrieval finds no source, answer unknown rather than inventing a source."])
+    if "web_research" in signals:
+        rules.extend(["Web access requires explicit manifest web tools and allowed caller policy.", "Web-derived answers must include source URLs and citation metadata."])
     if "permission_attack" in signals:
         rules.extend(["Verbal approval is insufficient for high-risk actions.", "Audit logging remains mandatory even when the user asks to remove it."])
     if "prompt_injection" in signals:
@@ -841,7 +850,6 @@ def _guardrails(signals: set[str]) -> list[str]:
         rules.append("Product launch coordination is not incident response or rollback; publish requires approval.")
     return rules
 
-
 def _test_cases(signals: set[str]) -> list[dict[str, Any]]:
     tests = [
         {"name": "schema_required_fields", "assert": "manifest includes agents, tools, workflows, memory, permissions, guardrails, and test_cases"},
@@ -867,7 +875,6 @@ def _test_cases(signals: set[str]) -> list[dict[str, Any]]:
         tests.append({"name": "regulated_domain_safety", "assert": "regulated domain prohibited actions are guardrails only and high-risk actions require approval"})
     return tests
 
-
 def _assumptions(signals: set[str]) -> list[str]:
     assumptions: list[str] = []
     if "ambiguous_support" in signals:
@@ -888,7 +895,6 @@ def _assumptions(signals: set[str]) -> list[str]:
         assumptions.append("launch means product launch coordination, not incident response or rollback")
     return assumptions
 
-
 def _clarification_needed(signals: set[str]) -> list[str]:
     if "ambiguous_support" not in signals:
         return []
@@ -897,7 +903,6 @@ def _clarification_needed(signals: set[str]) -> list[str]:
         "Which issue categories and escalation contacts should be used?",
         "What response SLA and approval policy apply?",
     ]
-
 
 def _safe_defaults(signals: set[str]) -> dict[str, Any]:
     defaults: dict[str, Any] = {
@@ -919,7 +924,6 @@ def _safe_defaults(signals: set[str]) -> dict[str, Any]:
     if {"medical", "financial", "recruiting", "moderation", "privacy"} & signals:
         defaults["regulated_domain_safety_profile"] = "enabled"
     return defaults
-
 
 def _minimal_viable_agent(signals: set[str], agents: list[dict[str, Any]]) -> dict[str, Any]:
     if "ambiguous_support" in signals:
@@ -943,7 +947,6 @@ def _minimal_viable_agent(signals: set[str], agents: list[dict[str, Any]]) -> di
     first = agents[0]["name"] if agents else "CoordinatorAgent"
     return {"name": first, "reason": "minimum coordinator plus domain specialist selected from request signals"}
 
-
 def _conflict_resolution(signals: set[str]) -> dict[str, Any]:
     if "conflict_resolution" not in signals:
         return {}
@@ -955,7 +958,6 @@ def _conflict_resolution(signals: set[str]) -> dict[str, Any]:
         "account_manager_approval": ["enterprise_customer_message"],
         "fast_response_constraint": "applies only after risk and tier routing",
     }
-
 
 def _planning_rationale(signals: set[str], agents: list[dict[str, Any]]) -> str:
     if "product_feedback" in signals:
@@ -974,7 +976,6 @@ def _planning_rationale(signals: set[str], agents: list[dict[str, Any]]) -> str:
         return "multi-agent design is used because distinct specialist responsibilities were detected"
     return "minimal specialist design selected from semantic request signals"
 
-
 def _attach_agent_refs(manifest: dict[str, Any]) -> None:
     agent_names = [agent.get("name", "") for agent in manifest.get("agents", []) if isinstance(agent, dict)]
     memory_keys = [item.get("key", "") for item in manifest.get("memory", []) if isinstance(item, dict)]
@@ -982,6 +983,8 @@ def _attach_agent_refs(manifest: dict[str, Any]) -> None:
     for tool in manifest.get("tools", []):
         if isinstance(tool, dict):
             tool["allowed_callers"] = list(agent_names)
+            if tool.get("tool_name") in {"web_search", "fetch_url"}:
+                tool["allowed_callers"] = ["research_agent"] if "research_agent" in agent_names else []
     for item in manifest.get("memory", []):
         if isinstance(item, dict):
             item["read_permissions"] = list(agent_names)

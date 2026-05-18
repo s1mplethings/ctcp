@@ -19,6 +19,19 @@ from tools.providers.project_generation_extended_evidence import (
     _materialize_high_quality_team_task_evidence,
 )
 from tools.providers.project_generation_import_validation import provider_interface_contract
+from tools.providers.project_generation_attribution import write_generation_attribution
+from tools.providers.project_generation_fast_path_registry import fast_path_provenance
+from tools.providers.project_generation_provider_assisted import (
+    apply_provider_assistance,
+    merge_provider_assisted_provenance,
+)
+from tools.providers.project_generation_live_full_candidate import (
+    BLIND_CANDIDATE_PROJECTS,
+    FULL_CANDIDATE_PROJECTS,
+    MEDIUM_CANDIDATE_PROJECTS,
+    apply_live_full_candidate,
+    merge_live_full_candidate_provenance,
+)
 from tools.providers.project_generation_library_first import (
     prepare_library_first_artifacts,
     verify_and_write_library_usage,
@@ -162,7 +175,40 @@ def _blocked_source_generation_report(
 
 
 def _production_local_templates_disabled(inputs: dict[str, Any]) -> bool:
+    lists = inputs.get("lists", {})
+    if isinstance(lists, dict) and str(lists.get("generation_mode", "")).strip() in {"concrete_fast_path", "provider_assisted", "live_provider_assisted", "live_provider_full_candidate", "live_provider_blind_candidate", "live_provider_medium_candidate"}:
+        return False
     return str(inputs["lists"].get("execution_mode", PRODUCTION_MODE)).strip() == PRODUCTION_MODE
+
+
+def _source_generation_provider_rows(inputs: dict[str, Any], rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    lists = inputs.get("lists", {})
+    mode = str(lists.get("generation_mode", "")).strip() if isinstance(lists, dict) else ""
+    if isinstance(lists, dict) and mode in {"concrete_fast_path", "provider_assisted", "live_provider_assisted", "live_provider_full_candidate", "live_provider_blind_candidate", "live_provider_medium_candidate"}:
+        project_id = str(lists.get("project_id", "")).strip()
+        provenance = fast_path_provenance(project_id)
+        if mode in {"live_provider_full_candidate", "live_provider_blind_candidate", "live_provider_medium_candidate"} and project_id in {**FULL_CANDIDATE_PROJECTS, **BLIND_CANDIDATE_PROJECTS, **MEDIUM_CANDIDATE_PROJECTS}:
+            provider_result = apply_live_full_candidate(
+                goal_text=str(inputs.get("goal_text", "")),
+                project_id=project_id,
+                project_root=str(lists.get("project_root", "")),
+                deterministic_files={},
+                project_archetype=str(lists.get("project_archetype", "cli_toolkit")),
+            )
+            inputs["provider_assisted_metadata"] = dict(provider_result.metadata)
+            provenance = merge_live_full_candidate_provenance(provenance, provider_result.metadata)
+        elif mode in {"provider_assisted", "live_provider_assisted"}:
+            provider_result = apply_provider_assistance(
+                goal_text=str(inputs.get("goal_text", "")),
+                project_id=project_id,
+                project_root=str(lists.get("project_root", "")),
+                deterministic_files={},
+            )
+            inputs["provider_assisted_metadata"] = dict(provider_result.metadata)
+            provenance = merge_provider_assisted_provenance(provenance, provider_result.metadata)
+        inputs["concrete_fast_path_provenance"] = provenance
+        return []
+    return rows
 
 
 def _blocked_local_templates_disabled_report(*, inputs: dict[str, Any], run_dir: Path) -> dict[str, Any]:
@@ -574,6 +620,74 @@ def _build_source_generation_report(
         report["extended_coverage_ledger_path"] = "artifacts/extended_coverage_ledger.json"
     report["materialize_capabilities"] = current_materialize
     attach_source_generation_provenance(report, run_dir, inputs, business_generated, current_materialize)
+    if isinstance(inputs.get("concrete_fast_path_provenance"), dict):
+        provenance = dict(inputs["concrete_fast_path_provenance"])
+        report["concrete_fast_path_provenance"] = provenance
+        _write_json(run_dir / "artifacts" / "project_generation_provenance.json", provenance)
+        if provenance.get("used_provider_agent"):
+            provider_metadata = {
+                key: provenance.get(key)
+                for key in (
+                    "used_provider_agent",
+                    "provider_name",
+                    "provider_authorship",
+                    "provider_assisted_sections",
+                    "provider_generated_files",
+                    "provider_fallbacks",
+                    "provider_validation",
+                    "live_provider_used",
+                    "provider_request_count",
+                    "provider_fragment_count",
+                    "provider_model",
+                    "provider_timeout_seconds",
+                    "provider_project_candidate_count",
+                    "provider_plan_requested",
+                    "provider_plan_valid",
+                    "provider_manifest_valid",
+                    "provider_manifest_file_count",
+                    "provider_batch_count",
+                    "provider_batch_success_count",
+                    "provider_batch_retry_count",
+                    "provider_batch_errors",
+                    "provider_raw_response_paths",
+                    "normalized_manifest_path",
+                    "validation_failure_path",
+                    "repair_report_path",
+                    "provider_candidate_accepted",
+                    "provider_candidate_repaired",
+                    "provider_candidate_outcome",
+                    "provider_repair_attempt_count",
+                    "provider_repair_sections",
+                    "repair_validation_passed",
+                    "fallback_triggered",
+                    "blind_case",
+                    "blind_case_name",
+                    "medium_case",
+                    "medium_case_name",
+                    "unsupported_reason",
+                    "validation_failures",
+                    "provider_candidate_validation",
+                    "fallback_reason",
+                    "runtime_validation_passed",
+                    "total_project_files",
+                    "provider_authored_file_ratio",
+                    "candidate_project",
+                    "deterministic_sections",
+                    "provider_participation_model",
+                    "safety_filters",
+                )
+            }
+            _write_json(run_dir / "artifacts" / "provider_assisted_generation.json", provider_metadata)
+            report["provider_assisted_generation_path"] = "artifacts/provider_assisted_generation.json"
+            report["provider_assisted_generation"] = provider_metadata
+        attribution = write_generation_attribution(
+            run_dir=run_dir,
+            project_id=str(lists.get("project_id", "")),
+            project_root=str(lists.get("project_root", "")),
+            provenance=provenance,
+        )
+        report["generation_attribution"] = attribution
+        report["generation_attribution_path"] = "artifacts/generation_attribution.json"
     for key in ("generic_validation", "domain_validation", "readme_quality", "ux_validation", "product_validation"):
         report[key] = validation[key]
     if _blocked_by_validation(report, validation, scaffold):
@@ -605,7 +719,7 @@ def normalize_source_generation_stage(
 
     lists = inputs["lists"]
     _write_source_planning_artifacts(inputs=inputs, run_dir=run_dir)
-    provider_file_rows = _provider_source_file_rows(inputs)
+    provider_file_rows = _source_generation_provider_rows(inputs, _provider_source_file_rows(inputs))
     library_first = prepare_library_first_artifacts(run_dir=run_dir, inputs=inputs, provider_rows=provider_file_rows)
     inputs.update(library_first)
     model_budget = write_model_budget_artifact(run_dir=run_dir, file_tasks=list(inputs.get("file_tasks", [])))

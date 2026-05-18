@@ -1,0 +1,6 @@
+{
+  "case": "json_config_validator",
+  "project": "live_provider_json_config_validator",
+  "startup": "config_validator/__init__.py",
+  "goal": "Generate live_provider_blind_candidate blind small project live_provider_json_config_validator. Build a Python stdlib importable package for JSON config validation with required fields, type checks, default values, explainable errors, and generated tests."
+}

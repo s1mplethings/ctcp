@@ -1,0 +1,6 @@
+{
+  "case": "markdown_table_formatter",
+  "project": "live_provider_markdown_table_formatter",
+  "startup": "markdown_table_formatter.py",
+  "goal": "Generate live_provider_blind_candidate blind small project live_provider_markdown_table_formatter. Build a Python stdlib CSV-to-markdown table formatter with aligned columns, CLI input/output, and generated tests."
+}

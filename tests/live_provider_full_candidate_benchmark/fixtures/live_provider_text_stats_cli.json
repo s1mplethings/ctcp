@@ -1,0 +1,6 @@
+{
+  "case": "live_provider_text_stats_cli",
+  "project": "live_provider_text_stats_cli",
+  "goal": "Create a live_provider_full_candidate live_provider_text_stats_cli project. It must be a stdlib argparse text statistics CLI with generated unittest tests."
+}
+

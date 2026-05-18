@@ -72,7 +72,8 @@ class AgentProjectOrchestratorE2ETests(unittest.TestCase):
         self.assertEqual(report["status"], "passed")
         self.assertTrue((out / "manifest.json").exists())
         self.assertTrue((out / "scaffold" / "run_agent.py").exists())
-        self.assertTrue((out / "scaffold" / "audit" / "dry_run_audit.jsonl").exists())
+        self.assertTrue((out / "scaffold" / "runtime_state.json").exists())
+        self.assertTrue((out / "scaffold" / "audit" / "events.jsonl").exists())
 
     def test_permission_attack_through_agent_project_keeps_approval(self) -> None:
         out, _report, td = self._run_agent_project(FIXTURES / "input_permission_attack.json")

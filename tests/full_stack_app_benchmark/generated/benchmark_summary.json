@@ -1,0 +1,610 @@
+{
+  "status": "passed",
+  "total": 2,
+  "passed": 2,
+  "failed": 0,
+  "projects": [
+    {
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456",
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py new-run --goal Generate a small full-stack local task board application. It must not be an agent manifest, agent scaffold, or dry-run-only project. It must include a static frontend, local HTTP API, generated tests, README, and SQLite persistence. Required endpoints: GET /, GET /static/app.js, GET /static/styles.css, GET /api/tasks, POST /api/tasks, PATCH /api/tasks/{id}, DELETE /api/tasks/{id}. Required frontend assets: static/index.html, static/app.js, static/styles.css. Persistence requirement: SQLite database file with task rows. Generate the concrete project files, tests, README, runnable local HTTP server, and delivery package. --run-id full-stack-local_task_board_app-1779092456",
+          "exit_code": 0,
+          "duration_seconds": 0.625,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456",
+          "exit_code": 0,
+          "duration_seconds": 0.393,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for analysis.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/analysis.md\n[ctcp_orchestrate] reason=waiting for analysis.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 17.981,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=17.002\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456",
+          "exit_code": 0,
+          "duration_seconds": 0.387,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=17.002\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 3.245,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=17.002\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456",
+          "exit_code": 0,
+          "duration_seconds": 0.37,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=17.002\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 3.487,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=17.002\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456",
+          "exit_code": 0,
+          "duration_seconds": 0.405,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=17.002\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 0.714,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=17.002\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456",
+          "exit_code": 0,
+          "duration_seconds": 0.376,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=17.002\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 68.78,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=17.002\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456",
+          "exit_code": 0,
+          "duration_seconds": 0.388,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=17.002\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 13.465,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=17.002\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456",
+          "exit_code": 0,
+          "duration_seconds": 0.397,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=17.002\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 27.674,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=17.002\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456",
+          "exit_code": 0,
+          "duration_seconds": 0.393,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=17.002\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 67.007,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=17.002\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456",
+          "exit_code": 0,
+          "duration_seconds": 0.366,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=17.002\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 10.29,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=17.002\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456",
+          "exit_code": 0,
+          "duration_seconds": 0.365,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=17.002\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 3.078,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for docs_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=17.002\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/docs_generation_report.json\n[ctcp_orchestrate] reason=waiting for docs_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456",
+          "exit_code": 0,
+          "duration_seconds": 0.385,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for docs_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=17.002\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/docs_generation_report.json\n[ctcp_orchestrate] reason=waiting for docs_generation\n",
+          "stderr": "",
+          "timed_out": false
+        }
+      ],
+      "project": "local_task_board_app",
+      "status": "passed",
+      "project_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\\project_output\\local_task_board_app",
+      "generated_tests_passed": true,
+      "frontend_assets": {
+        "index": true,
+        "js": true,
+        "css": true
+      },
+      "runtime_validation": {
+        "frontend_http_passed": true,
+        "api_passed": true,
+        "sqlite_passed": true,
+        "backend_runtime": "passed",
+        "frontend_validation": "passed",
+        "sqlite_validation": "passed",
+        "db_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\\project_output\\local_task_board_app\\local_task_board_app_benchmark.db"
+      },
+      "backend_runtime": "passed",
+      "frontend_validation": "passed",
+      "sqlite_validation": "passed",
+      "persistence_passed": true,
+      "provenance": {
+        "generation_mode": "concrete_fast_path",
+        "project_type": "local_task_board_app",
+        "provider_authorship": "not_claimed",
+        "local_materializer_used": true,
+        "repair_attempts": 0,
+        "reason": "bounded full-stack local app benchmark fast path"
+      },
+      "provenance_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\\artifacts\\project_generation_provenance.json",
+      "attribution": {
+        "ordinary_mainline": true,
+        "entrypoint": "new-run/status/advance",
+        "used_agent_project": false,
+        "used_agent_scaffold": false,
+        "used_local_agent_runtime": false,
+        "used_local_materializer": true,
+        "local_materializer_name": "local_task_board_app",
+        "used_provider_agent": false,
+        "provider_name": "local_deterministic_materializer",
+        "provider_authorship": "not_claimed",
+        "generation_mode": "concrete_fast_path",
+        "live_provider_used": false,
+        "provider_request_count": 0,
+        "provider_fragment_count": 0,
+        "provider_project_candidate_count": 0,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "provider_candidate_outcome": "",
+        "provider_candidate_accepted": false,
+        "provider_candidate_repaired": false,
+        "provider_repair_attempt_count": 0,
+        "provider_repair_sections": [],
+        "repair_validation_passed": false,
+        "fallback_triggered": false,
+        "unsupported_reason": null,
+        "validation_failures": [],
+        "provider_candidate_validation": {
+          "manifest_valid": true,
+          "paths_safe": true,
+          "safety_scan_passed": true,
+          "syntax_valid": true,
+          "import_valid": true,
+          "generated_tests_passed": true,
+          "runtime_validation_passed": true
+        },
+        "provider_assisted_sections": [],
+        "provider_generated_files": [],
+        "total_project_files": 0,
+        "provider_authored_file_ratio": 0.0,
+        "provider_fallbacks": [],
+        "fallback_reason": "",
+        "runtime_validation_passed": false,
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false
+        },
+        "provider_model": "",
+        "provider_timeout_seconds": 0,
+        "deterministic_sections": [],
+        "source_generation_report_path": "artifacts/source_generation_report.json",
+        "project_output_path": "project_output/local_task_board_app",
+        "analysis_path": "artifacts/analysis.md",
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456"
+      },
+      "attribution_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_task_board_app-1779092456\\artifacts\\generation_attribution.json",
+      "no_agent_scaffold": true,
+      "passed": true,
+      "source_generation_status": "pass"
+    },
+    {
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679",
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py new-run --goal Generate a more complex full-stack local Kanban board application. It must not be an agent manifest, agent scaffold, or dry-run-only project. It must include a static frontend, local HTTP API, generated tests, README, multiple board columns, cards CRUD, move-card behavior, and SQLite persistence. Required endpoints: GET /, GET /static/app.js, GET /static/styles.css, POST /boards, GET /boards, POST /boards/{board_id}/cards, GET /boards/{board_id}/cards, PATCH /cards/{card_id}/move, PATCH /cards/{card_id}, DELETE /cards/{card_id}. Required frontend assets: static/index.html, static/app.js, static/styles.css. Persistence requirement: SQLite database file with boards and cards tables. Generate the concrete project files, tests, README, runnable local HTTP server, and delivery package. --run-id full-stack-local_kanban_board_app-1779092679",
+          "exit_code": 0,
+          "duration_seconds": 0.663,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679",
+          "exit_code": 0,
+          "duration_seconds": 0.407,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for analysis.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/analysis.md\n[ctcp_orchestrate] reason=waiting for analysis.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 11.4,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.359\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679",
+          "exit_code": 0,
+          "duration_seconds": 0.361,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.359\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 5.298,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.359\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679",
+          "exit_code": 0,
+          "duration_seconds": 0.398,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.359\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 6.523,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.359\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679",
+          "exit_code": 0,
+          "duration_seconds": 0.391,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.359\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 0.755,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.359\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679",
+          "exit_code": 0,
+          "duration_seconds": 0.363,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.359\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 30.155,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.359\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679",
+          "exit_code": 0,
+          "duration_seconds": 0.345,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.359\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 17.826,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.359\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679",
+          "exit_code": 0,
+          "duration_seconds": 0.367,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.359\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 21.383,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.359\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679",
+          "exit_code": 0,
+          "duration_seconds": 0.369,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.359\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 24.847,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.359\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679",
+          "exit_code": 0,
+          "duration_seconds": 0.405,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.359\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 8.206,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.359\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679",
+          "exit_code": 0,
+          "duration_seconds": 0.378,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.359\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 2.972,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for docs_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.359\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/docs_generation_report.json\n[ctcp_orchestrate] reason=waiting for docs_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679",
+          "exit_code": 0,
+          "duration_seconds": 0.352,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for docs_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.359\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/docs_generation_report.json\n[ctcp_orchestrate] reason=waiting for docs_generation\n",
+          "stderr": "",
+          "timed_out": false
+        }
+      ],
+      "project": "local_kanban_board_app",
+      "status": "passed",
+      "project_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\\project_output\\local_kanban_board_app",
+      "generated_tests_passed": true,
+      "frontend_assets": {
+        "index": true,
+        "js": true,
+        "css": true
+      },
+      "runtime_validation": {
+        "frontend_http_passed": true,
+        "api_passed": true,
+        "sqlite_passed": true,
+        "backend_runtime": "passed",
+        "frontend_validation": "passed",
+        "sqlite_validation": "passed",
+        "db_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\\project_output\\local_kanban_board_app\\local_kanban_board_app_benchmark.db"
+      },
+      "backend_runtime": "passed",
+      "frontend_validation": "passed",
+      "sqlite_validation": "passed",
+      "persistence_passed": true,
+      "provenance": {
+        "generation_mode": "concrete_fast_path",
+        "project_type": "local_kanban_board_app",
+        "provider_authorship": "not_claimed",
+        "local_materializer_used": true,
+        "repair_attempts": 0,
+        "reason": "bounded Kanban full-stack local app benchmark fast path"
+      },
+      "provenance_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\\artifacts\\project_generation_provenance.json",
+      "attribution": {
+        "ordinary_mainline": true,
+        "entrypoint": "new-run/status/advance",
+        "used_agent_project": false,
+        "used_agent_scaffold": false,
+        "used_local_agent_runtime": false,
+        "used_local_materializer": true,
+        "local_materializer_name": "local_kanban_board_app",
+        "used_provider_agent": false,
+        "provider_name": "local_deterministic_materializer",
+        "provider_authorship": "not_claimed",
+        "generation_mode": "concrete_fast_path",
+        "live_provider_used": false,
+        "provider_request_count": 0,
+        "provider_fragment_count": 0,
+        "provider_project_candidate_count": 0,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "provider_candidate_outcome": "",
+        "provider_candidate_accepted": false,
+        "provider_candidate_repaired": false,
+        "provider_repair_attempt_count": 0,
+        "provider_repair_sections": [],
+        "repair_validation_passed": false,
+        "fallback_triggered": false,
+        "unsupported_reason": null,
+        "validation_failures": [],
+        "provider_candidate_validation": {
+          "manifest_valid": true,
+          "paths_safe": true,
+          "safety_scan_passed": true,
+          "syntax_valid": true,
+          "import_valid": true,
+          "generated_tests_passed": true,
+          "runtime_validation_passed": true
+        },
+        "provider_assisted_sections": [],
+        "provider_generated_files": [],
+        "total_project_files": 0,
+        "provider_authored_file_ratio": 0.0,
+        "provider_fallbacks": [],
+        "fallback_reason": "",
+        "runtime_validation_passed": false,
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false
+        },
+        "provider_model": "",
+        "provider_timeout_seconds": 0,
+        "deterministic_sections": [],
+        "source_generation_report_path": "artifacts/source_generation_report.json",
+        "project_output_path": "project_output/local_kanban_board_app",
+        "analysis_path": "artifacts/analysis.md",
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679"
+      },
+      "attribution_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_full_stack_app_benchmark_runs\\ctcp\\full-stack-local_kanban_board_app-1779092679\\artifacts\\generation_attribution.json",
+      "no_agent_scaffold": true,
+      "passed": true,
+      "source_generation_status": "pass"
+    }
+  ],
+  "attribution_summary": [
+    {
+      "project": "local_task_board_app",
+      "used_agent_project": false,
+      "used_agent_scaffold": false,
+      "used_local_agent_runtime": false,
+      "used_local_materializer": true,
+      "provider_authorship": "not_claimed"
+    },
+    {
+      "project": "local_kanban_board_app",
+      "used_agent_project": false,
+      "used_agent_scaffold": false,
+      "used_local_agent_runtime": false,
+      "used_local_materializer": true,
+      "provider_authorship": "not_claimed"
+    }
+  ],
+  "structure_cleanup": {
+    "shared_helpers_added": [
+      "project_generation_fast_path_registry.py",
+      "project_generation_template_writer.py",
+      "project_generation_provenance_writer.py"
+    ],
+    "duplication_reduced": true
+  },
+  "project": "local_kanban_board_app",
+  "backend_runtime": "passed",
+  "frontend_validation": "passed",
+  "sqlite_validation": "passed"
+}

@@ -54,7 +54,16 @@ class AgentProjectPipelineTests(unittest.TestCase):
         self.assertTrue((out / "manifest.json").exists())
         self.assertTrue((out / "pipeline_report.json").exists())
         self.assertTrue((out / "pipeline_report.md").exists())
-        for rel in ("scaffold/run_agent.py", "scaffold/tests/test_dry_run.py", "scaffold/audit/dry_run_audit.jsonl"):
+        for rel in (
+            "scaffold/run_agent.py",
+            "scaffold/tests/test_dry_run.py",
+            "scaffold/tests/test_runtime.py",
+            "scaffold/runtime/runtime_engine.py",
+            "scaffold/runtime/runtime_tools.py",
+            "scaffold/runtime/runtime_permissions.py",
+            "scaffold/runtime/runtime_state.py",
+            "scaffold/runtime/runtime_audit.py",
+        ):
             self.assertTrue((out / rel).exists(), rel)
         self.assertEqual([step["status"] for step in report["steps"]], ["passed", "passed", "passed", "passed", "passed"])
 
@@ -84,8 +93,19 @@ class AgentProjectPipelineTests(unittest.TestCase):
         dry_run = json.loads(completed.stdout)
         self.assertIn("rollback", dry_run["approval_required_actions"])
         self.assertIn("refund", dry_run["approval_required_actions"])
-        self.assertEqual(dry_run["audit_log_path"], "audit/dry_run_audit.jsonl")
-        self.assertTrue((out / "scaffold" / "audit" / "dry_run_audit.jsonl").exists())
+        self.assertEqual(dry_run["mode"], "dry-run")
+        before_state = (out / "scaffold" / "runtime_state.json").read_text(encoding="utf-8")
+        before_audit = (out / "scaffold" / "audit" / "events.jsonl").read_text(encoding="utf-8")
+        completed_again = subprocess.run(
+            [sys.executable, str(out / "scaffold" / "run_agent.py"), "--dry-run", "--input", str(out / "scaffold" / "sample_input.json")],
+            cwd=out / "scaffold",
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(completed_again.returncode, 0, completed_again.stderr or completed_again.stdout)
+        self.assertEqual(before_state, (out / "scaffold" / "runtime_state.json").read_text(encoding="utf-8"))
+        self.assertEqual(before_audit, (out / "scaffold" / "audit" / "events.jsonl").read_text(encoding="utf-8"))
 
     def test_permission_attack_pipeline_preserves_approval_limits(self) -> None:
         out, _report, td = self._run_pipeline(FIXTURES / "input_permission_attack.json")

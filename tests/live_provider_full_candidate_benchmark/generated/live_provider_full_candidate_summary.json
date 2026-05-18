@@ -1,0 +1,1688 @@
+{
+  "status": "failed",
+  "total": 3,
+  "passed": 2,
+  "failed": 1,
+  "cases": [
+    {
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py new-run --goal Create a live_provider_full_candidate live_provider_text_stats_cli project. It must be a stdlib argparse text statistics CLI with generated unittest tests. Use ordinary CTCP new-run/status/advance and source_generation; do not use agent scaffold. --run-id live-full-live_provider_text_stats_cli-1779110235-efb566",
+          "exit_code": 0,
+          "duration_seconds": 0.646,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566",
+          "exit_code": 0,
+          "duration_seconds": 0.403,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for analysis.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/analysis.md\n[ctcp_orchestrate] reason=waiting for analysis.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 0.652,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 3.406,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 20.379,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 0.757,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 15.466,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 14.769,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 14.57,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 20.923,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 17.57,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 34.175,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566",
+          "exit_code": 0,
+          "duration_seconds": 0.402,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        }
+      ],
+      "case": "live_provider_text_stats_cli",
+      "project": "live_provider_text_stats_cli",
+      "status": "passed",
+      "project_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566\\project_output\\live_provider_text_stats_cli",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566",
+      "generated_tests_passed": true,
+      "runtime_validation": {
+        "passed": true,
+        "cli": {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe text_stats.py --input sample.txt --output C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566\\project_output\\live_provider_text_stats_cli\\live_provider_stats.json",
+          "exit_code": 0,
+          "duration_seconds": 0.127,
+          "stdout": "",
+          "stderr": "",
+          "timed_out": false
+        },
+        "output": {
+          "characters": 103,
+          "words": 18,
+          "lines": 4,
+          "unique_words": 12,
+          "top_words": [
+            {
+              "word": "hello",
+              "count": 2
+            },
+            {
+              "word": "world",
+              "count": 2
+            },
+            {
+              "word": "this",
+              "count": 2
+            },
+            {
+              "word": "is",
+              "count": 2
+            },
+            {
+              "word": "text",
+              "count": 2
+            }
+          ]
+        }
+      },
+      "ordinary_mainline": true,
+      "no_agent_scaffold": true,
+      "attribution": {
+        "ordinary_mainline": true,
+        "entrypoint": "new-run/status/advance",
+        "used_agent_project": false,
+        "used_agent_scaffold": false,
+        "used_local_agent_runtime": false,
+        "used_local_materializer": true,
+        "local_materializer_name": "live_provider_text_stats_cli",
+        "used_provider_agent": true,
+        "provider_name": "live_provider",
+        "provider_authorship": "provider_candidate_authored",
+        "generation_mode": "live_provider_full_candidate",
+        "live_provider_used": true,
+        "provider_request_count": 1,
+        "provider_fragment_count": 0,
+        "provider_project_candidate_count": 1,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "medium_project_contract_path": "",
+        "provider_candidate_outcome": "accepted",
+        "provider_candidate_accepted": true,
+        "provider_candidate_repaired": false,
+        "provider_repair_attempt_count": 0,
+        "provider_repair_sections": [],
+        "repair_validation_passed": false,
+        "fallback_triggered": false,
+        "unsupported_reason": null,
+        "validation_failures": [],
+        "provider_candidate_validation": {
+          "manifest_valid": true,
+          "paths_safe": true,
+          "safety_scan_passed": true,
+          "syntax_valid": true,
+          "import_valid": true,
+          "generated_tests_passed": true,
+          "runtime_validation_passed": true
+        },
+        "provider_assisted_sections": [],
+        "provider_generated_files": [
+          "project_output/live_provider_text_stats_cli/README.md",
+          "project_output/live_provider_text_stats_cli/sample.txt",
+          "project_output/live_provider_text_stats_cli/tests/__init__.py",
+          "project_output/live_provider_text_stats_cli/tests/test_text_stats.py",
+          "project_output/live_provider_text_stats_cli/text_stats.py"
+        ],
+        "total_project_files": 4,
+        "provider_authored_file_ratio": 1.0,
+        "provider_fallbacks": [],
+        "fallback_reason": "",
+        "runtime_validation_passed": true,
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false
+        },
+        "provider_model": "gpt-4.1-mini",
+        "provider_timeout_seconds": 45,
+        "deterministic_sections": [
+          "candidate validation",
+          "fallback materializer",
+          "benchmark/runtime validator"
+        ],
+        "source_generation_report_path": "artifacts/source_generation_report.json",
+        "project_output_path": "project_output/live_provider_text_stats_cli",
+        "analysis_path": "artifacts/analysis.md",
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566"
+      },
+      "attribution_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566\\artifacts\\generation_attribution.json",
+      "provenance": {
+        "generation_mode": "live_provider_full_candidate",
+        "project_type": "live_provider_text_stats_cli",
+        "provider_authorship": "provider_candidate_authored",
+        "local_materializer_used": true,
+        "repair_attempts": 0,
+        "reason": "bounded live_provider_full_candidate with deterministic validation, repair, and fallback",
+        "used_provider_agent": true,
+        "provider_name": "live_provider",
+        "live_provider_used": true,
+        "provider_request_count": 1,
+        "provider_project_candidate_count": 1,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "provider_candidate_accepted": true,
+        "provider_candidate_repaired": false,
+        "provider_candidate_outcome": "accepted",
+        "provider_repair_attempt_count": 0,
+        "provider_repair_sections": [],
+        "repair_validation_passed": false,
+        "fallback_triggered": false,
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "unsupported_reason": null,
+        "validation_failures": [],
+        "provider_candidate_validation": {
+          "manifest_valid": true,
+          "paths_safe": true,
+          "safety_scan_passed": true,
+          "syntax_valid": true,
+          "import_valid": true,
+          "generated_tests_passed": true,
+          "runtime_validation_passed": true,
+          "manifest_errors": [],
+          "safety": {
+            "passed": true,
+            "rows": [
+              {
+                "path": "README.md",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "sample.txt",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "tests/__init__.py",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "tests/test_text_stats.py",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "text_stats.py",
+                "passed": true,
+                "reason": "ok"
+              }
+            ]
+          },
+          "syntax": {
+            "passed": true,
+            "rows": [
+              {
+                "path": "tests/__init__.py",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "tests/test_text_stats.py",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "text_stats.py",
+                "passed": true,
+                "reason": "ok"
+              }
+            ]
+          },
+          "runtime": {
+            "import_valid": true,
+            "generated_tests_passed": true,
+            "runtime_validation_passed": true,
+            "tests": {
+              "exit_code": 0,
+              "stdout": "",
+              "stderr": "test_cli_output_file (tests.test_text_stats.TestCli.test_cli_output_file) ... ok\ntest_empty_text (tests.test_text_stats.TestComputeTextStats.test_empty_text) ... ok\ntest_multiline_text (tests.test_text_stats.TestComputeTextStats.test_multiline_text) ... ok\ntest_simple_text (tests.test_text_stats.TestComputeTextStats.test_simple_text) ... ok\n\n----------------------------------------------------------------------\nRan 4 tests in 0.012s\n\nOK\n"
+            },
+            "runtime": {
+              "exit_code": 0,
+              "stdout": "",
+              "stderr": ""
+            }
+          },
+          "validation_failures": []
+        },
+        "provider_generated_files": [
+          "project_output/live_provider_text_stats_cli/README.md",
+          "project_output/live_provider_text_stats_cli/sample.txt",
+          "project_output/live_provider_text_stats_cli/tests/__init__.py",
+          "project_output/live_provider_text_stats_cli/tests/test_text_stats.py",
+          "project_output/live_provider_text_stats_cli/text_stats.py"
+        ],
+        "total_project_files": 4,
+        "provider_authored_file_ratio": 1.0,
+        "provider_fallbacks": [],
+        "fallback_reason": "",
+        "runtime_validation_passed": true,
+        "deterministic_sections": [
+          "candidate validation",
+          "fallback materializer",
+          "benchmark/runtime validator"
+        ],
+        "provider_participation_model": "bounded_full_small_project_candidate",
+        "provider_model": "gpt-4.1-mini",
+        "provider_timeout_seconds": 45,
+        "candidate_project": "live_provider_text_stats_cli"
+      },
+      "provenance_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566\\artifacts\\project_generation_provenance.json",
+      "provider_full_candidate_report": {
+        "used_provider_agent": true,
+        "provider_name": "live_provider",
+        "provider_authorship": "provider_candidate_authored",
+        "generation_mode": "live_provider_full_candidate",
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "live_provider_used": true,
+        "provider_request_count": 1,
+        "provider_project_candidate_count": 1,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "provider_candidate_outcome": "accepted",
+        "provider_candidate_accepted": true,
+        "provider_candidate_repaired": false,
+        "provider_repair_attempt_count": 0,
+        "provider_repair_sections": [],
+        "repair_validation_passed": false,
+        "provider_candidate_repairs": [],
+        "fallback_triggered": false,
+        "unsupported_reason": null,
+        "validation_failures": [],
+        "provider_candidate_validation": {
+          "manifest_valid": true,
+          "paths_safe": true,
+          "safety_scan_passed": true,
+          "syntax_valid": true,
+          "import_valid": true,
+          "generated_tests_passed": true,
+          "runtime_validation_passed": true,
+          "manifest_errors": [],
+          "safety": {
+            "passed": true,
+            "rows": [
+              {
+                "path": "README.md",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "sample.txt",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "tests/__init__.py",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "tests/test_text_stats.py",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "text_stats.py",
+                "passed": true,
+                "reason": "ok"
+              }
+            ]
+          },
+          "syntax": {
+            "passed": true,
+            "rows": [
+              {
+                "path": "tests/__init__.py",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "tests/test_text_stats.py",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "text_stats.py",
+                "passed": true,
+                "reason": "ok"
+              }
+            ]
+          },
+          "runtime": {
+            "import_valid": true,
+            "generated_tests_passed": true,
+            "runtime_validation_passed": true,
+            "tests": {
+              "exit_code": 0,
+              "stdout": "",
+              "stderr": "test_cli_output_file (tests.test_text_stats.TestCli.test_cli_output_file) ... ok\ntest_empty_text (tests.test_text_stats.TestComputeTextStats.test_empty_text) ... ok\ntest_multiline_text (tests.test_text_stats.TestComputeTextStats.test_multiline_text) ... ok\ntest_simple_text (tests.test_text_stats.TestComputeTextStats.test_simple_text) ... ok\n\n----------------------------------------------------------------------\nRan 4 tests in 0.012s\n\nOK\n"
+            },
+            "runtime": {
+              "exit_code": 0,
+              "stdout": "",
+              "stderr": ""
+            }
+          },
+          "validation_failures": []
+        },
+        "provider_generated_files": [
+          "project_output/live_provider_text_stats_cli/README.md",
+          "project_output/live_provider_text_stats_cli/sample.txt",
+          "project_output/live_provider_text_stats_cli/tests/__init__.py",
+          "project_output/live_provider_text_stats_cli/tests/test_text_stats.py",
+          "project_output/live_provider_text_stats_cli/text_stats.py"
+        ],
+        "total_project_files": 4,
+        "provider_authored_file_ratio": 1.0,
+        "provider_fallbacks": [],
+        "fallback_reason": "",
+        "runtime_validation_passed": true,
+        "deterministic_sections": [
+          "candidate validation",
+          "fallback materializer",
+          "benchmark/runtime validator"
+        ],
+        "provider_participation_model": "bounded_full_small_project_candidate",
+        "provider_model": "gpt-4.1-mini",
+        "provider_timeout_seconds": 45,
+        "candidate_project": "live_provider_text_stats_cli"
+      },
+      "provider_full_candidate_report_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566\\project_output\\live_provider_text_stats_cli\\provider_full_candidate_report.json",
+      "provider_ok": true,
+      "passed": true
+    },
+    {
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py new-run --goal Create a live_provider_full_candidate live_provider_password_policy_package project. It must be a stdlib importable password policy package with generated unittest tests. Use ordinary CTCP new-run/status/advance and source_generation; do not use agent scaffold. --run-id live-full-live_provider_password_policy_package-1779110380-35811b",
+          "exit_code": 0,
+          "duration_seconds": 0.663,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b",
+          "exit_code": 0,
+          "duration_seconds": 0.423,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for analysis.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/analysis.md\n[ctcp_orchestrate] reason=waiting for analysis.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 0.682,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 3.852,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 4.537,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 0.749,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 17.113,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 14.853,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 10.896,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 17.0,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 15.859,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 67.27,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b",
+          "exit_code": 0,
+          "duration_seconds": 0.394,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        }
+      ],
+      "case": "live_provider_password_policy_package",
+      "project": "live_provider_password_policy_package",
+      "status": "failed",
+      "project_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b\\project_output\\live_provider_password_policy_package",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b",
+      "generated_tests_passed": true,
+      "runtime_validation": {
+        "passed": true,
+        "import_check": {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe -c from password_policy import validate_password, password_score, explain_password\nassert validate_password('StrongPass1!')['valid'] is True\nassert validate_password('weak')['valid'] is False\nassert password_score('StrongPass1!') > password_score('weak')\nassert explain_password('weak')\n",
+          "exit_code": 0,
+          "duration_seconds": 0.13,
+          "stdout": "",
+          "stderr": "",
+          "timed_out": false
+        }
+      },
+      "ordinary_mainline": true,
+      "no_agent_scaffold": true,
+      "attribution": {
+        "ordinary_mainline": true,
+        "entrypoint": "new-run/status/advance",
+        "used_agent_project": false,
+        "used_agent_scaffold": false,
+        "used_local_agent_runtime": false,
+        "used_local_materializer": true,
+        "local_materializer_name": "live_provider_password_policy_package",
+        "used_provider_agent": true,
+        "provider_name": "live_provider",
+        "provider_authorship": "provider_candidate_authored",
+        "generation_mode": "live_provider_full_candidate",
+        "live_provider_used": true,
+        "provider_request_count": 1,
+        "provider_fragment_count": 0,
+        "provider_project_candidate_count": 1,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "medium_project_contract_path": "",
+        "provider_candidate_outcome": "repaired",
+        "provider_candidate_accepted": false,
+        "provider_candidate_repaired": true,
+        "provider_repair_attempt_count": 1,
+        "provider_repair_sections": [
+          {
+            "path": "README.md",
+            "reason": "runtime_or_import_validation_failed"
+          },
+          {
+            "path": "password_policy/__init__.py",
+            "reason": "runtime_or_import_validation_failed"
+          },
+          {
+            "path": "password_policy/policy.py",
+            "reason": "runtime_or_import_validation_failed"
+          },
+          {
+            "path": "tests/__init__.py",
+            "reason": "runtime_or_import_validation_failed"
+          },
+          {
+            "path": "tests/test_policy.py",
+            "reason": "runtime_or_import_validation_failed"
+          }
+        ],
+        "repair_validation_passed": true,
+        "fallback_triggered": false,
+        "unsupported_reason": null,
+        "validation_failures": [],
+        "provider_candidate_validation": {
+          "manifest_valid": true,
+          "paths_safe": true,
+          "safety_scan_passed": true,
+          "syntax_valid": true,
+          "import_valid": true,
+          "generated_tests_passed": true,
+          "runtime_validation_passed": true
+        },
+        "provider_assisted_sections": [],
+        "provider_generated_files": [],
+        "total_project_files": 4,
+        "provider_authored_file_ratio": 0.0,
+        "provider_fallbacks": [],
+        "fallback_reason": "",
+        "runtime_validation_passed": true,
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false
+        },
+        "provider_model": "gpt-4.1-mini",
+        "provider_timeout_seconds": 45,
+        "deterministic_sections": [
+          "candidate validation",
+          "fallback materializer",
+          "benchmark/runtime validator"
+        ],
+        "source_generation_report_path": "artifacts/source_generation_report.json",
+        "project_output_path": "project_output/live_provider_password_policy_package",
+        "analysis_path": "artifacts/analysis.md",
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b"
+      },
+      "attribution_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b\\artifacts\\generation_attribution.json",
+      "provenance": {
+        "generation_mode": "live_provider_full_candidate",
+        "project_type": "live_provider_password_policy_package",
+        "provider_authorship": "provider_candidate_authored",
+        "local_materializer_used": true,
+        "repair_attempts": 0,
+        "reason": "bounded live_provider_full_candidate with deterministic validation, repair, and fallback",
+        "used_provider_agent": true,
+        "provider_name": "live_provider",
+        "live_provider_used": true,
+        "provider_request_count": 1,
+        "provider_project_candidate_count": 1,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "provider_candidate_accepted": false,
+        "provider_candidate_repaired": true,
+        "provider_candidate_outcome": "repaired",
+        "provider_repair_attempt_count": 1,
+        "provider_repair_sections": [
+          {
+            "path": "README.md",
+            "reason": "runtime_or_import_validation_failed"
+          },
+          {
+            "path": "password_policy/__init__.py",
+            "reason": "runtime_or_import_validation_failed"
+          },
+          {
+            "path": "password_policy/policy.py",
+            "reason": "runtime_or_import_validation_failed"
+          },
+          {
+            "path": "tests/__init__.py",
+            "reason": "runtime_or_import_validation_failed"
+          },
+          {
+            "path": "tests/test_policy.py",
+            "reason": "runtime_or_import_validation_failed"
+          }
+        ],
+        "repair_validation_passed": true,
+        "fallback_triggered": false,
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "unsupported_reason": null,
+        "validation_failures": [],
+        "provider_candidate_validation": {
+          "manifest_valid": true,
+          "paths_safe": true,
+          "safety_scan_passed": true,
+          "syntax_valid": true,
+          "import_valid": true,
+          "generated_tests_passed": true,
+          "runtime_validation_passed": true,
+          "manifest_errors": [],
+          "safety": {
+            "passed": true,
+            "rows": [
+              {
+                "path": "README.md",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "password_policy/__init__.py",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "password_policy/policy.py",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "tests/__init__.py",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "tests/test_policy.py",
+                "passed": true,
+                "reason": "ok"
+              }
+            ]
+          },
+          "syntax": {
+            "passed": true,
+            "rows": [
+              {
+                "path": "password_policy/__init__.py",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "password_policy/policy.py",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "tests/__init__.py",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "tests/test_policy.py",
+                "passed": true,
+                "reason": "ok"
+              }
+            ]
+          },
+          "runtime": {
+            "import_valid": true,
+            "generated_tests_passed": true,
+            "runtime_validation_passed": true,
+            "tests": {
+              "exit_code": 0,
+              "stdout": "",
+              "stderr": "test_score_orders_strength (tests.test_policy.PasswordPolicyTests.test_score_orders_strength) ... ok\ntest_valid_password (tests.test_policy.PasswordPolicyTests.test_valid_password) ... ok\ntest_weak_password (tests.test_policy.PasswordPolicyTests.test_weak_password) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nOK\n"
+            },
+            "runtime": {
+              "exit_code": 0,
+              "stdout": "",
+              "stderr": ""
+            }
+          },
+          "validation_failures": []
+        },
+        "provider_generated_files": [],
+        "total_project_files": 4,
+        "provider_authored_file_ratio": 0.0,
+        "provider_fallbacks": [],
+        "fallback_reason": "",
+        "runtime_validation_passed": true,
+        "deterministic_sections": [
+          "candidate validation",
+          "fallback materializer",
+          "benchmark/runtime validator"
+        ],
+        "provider_participation_model": "bounded_full_small_project_candidate",
+        "provider_model": "gpt-4.1-mini",
+        "provider_timeout_seconds": 45,
+        "candidate_project": "live_provider_password_policy_package"
+      },
+      "provenance_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b\\artifacts\\project_generation_provenance.json",
+      "provider_full_candidate_report": {
+        "used_provider_agent": true,
+        "provider_name": "live_provider",
+        "provider_authorship": "provider_candidate_authored",
+        "generation_mode": "live_provider_full_candidate",
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "live_provider_used": true,
+        "provider_request_count": 1,
+        "provider_project_candidate_count": 1,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "provider_candidate_outcome": "repaired",
+        "provider_candidate_accepted": false,
+        "provider_candidate_repaired": true,
+        "provider_repair_attempt_count": 1,
+        "provider_repair_sections": [
+          {
+            "path": "README.md",
+            "reason": "runtime_or_import_validation_failed"
+          },
+          {
+            "path": "password_policy/__init__.py",
+            "reason": "runtime_or_import_validation_failed"
+          },
+          {
+            "path": "password_policy/policy.py",
+            "reason": "runtime_or_import_validation_failed"
+          },
+          {
+            "path": "tests/__init__.py",
+            "reason": "runtime_or_import_validation_failed"
+          },
+          {
+            "path": "tests/test_policy.py",
+            "reason": "runtime_or_import_validation_failed"
+          }
+        ],
+        "repair_validation_passed": true,
+        "provider_candidate_repairs": [
+          {
+            "path": "README.md",
+            "reason": "runtime_or_import_validation_failed"
+          },
+          {
+            "path": "password_policy/__init__.py",
+            "reason": "runtime_or_import_validation_failed"
+          },
+          {
+            "path": "password_policy/policy.py",
+            "reason": "runtime_or_import_validation_failed"
+          },
+          {
+            "path": "tests/__init__.py",
+            "reason": "runtime_or_import_validation_failed"
+          },
+          {
+            "path": "tests/test_policy.py",
+            "reason": "runtime_or_import_validation_failed"
+          }
+        ],
+        "fallback_triggered": false,
+        "unsupported_reason": null,
+        "validation_failures": [],
+        "provider_candidate_validation": {
+          "manifest_valid": true,
+          "paths_safe": true,
+          "safety_scan_passed": true,
+          "syntax_valid": true,
+          "import_valid": true,
+          "generated_tests_passed": true,
+          "runtime_validation_passed": true,
+          "manifest_errors": [],
+          "safety": {
+            "passed": true,
+            "rows": [
+              {
+                "path": "README.md",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "password_policy/__init__.py",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "password_policy/policy.py",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "tests/__init__.py",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "tests/test_policy.py",
+                "passed": true,
+                "reason": "ok"
+              }
+            ]
+          },
+          "syntax": {
+            "passed": true,
+            "rows": [
+              {
+                "path": "password_policy/__init__.py",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "password_policy/policy.py",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "tests/__init__.py",
+                "passed": true,
+                "reason": "ok"
+              },
+              {
+                "path": "tests/test_policy.py",
+                "passed": true,
+                "reason": "ok"
+              }
+            ]
+          },
+          "runtime": {
+            "import_valid": true,
+            "generated_tests_passed": true,
+            "runtime_validation_passed": true,
+            "tests": {
+              "exit_code": 0,
+              "stdout": "",
+              "stderr": "test_score_orders_strength (tests.test_policy.PasswordPolicyTests.test_score_orders_strength) ... ok\ntest_valid_password (tests.test_policy.PasswordPolicyTests.test_valid_password) ... ok\ntest_weak_password (tests.test_policy.PasswordPolicyTests.test_weak_password) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nOK\n"
+            },
+            "runtime": {
+              "exit_code": 0,
+              "stdout": "",
+              "stderr": ""
+            }
+          },
+          "validation_failures": []
+        },
+        "provider_generated_files": [],
+        "total_project_files": 4,
+        "provider_authored_file_ratio": 0.0,
+        "provider_fallbacks": [],
+        "fallback_reason": "",
+        "runtime_validation_passed": true,
+        "deterministic_sections": [
+          "candidate validation",
+          "fallback materializer",
+          "benchmark/runtime validator"
+        ],
+        "provider_participation_model": "bounded_full_small_project_candidate",
+        "provider_model": "gpt-4.1-mini",
+        "provider_timeout_seconds": 45,
+        "candidate_project": "live_provider_password_policy_package"
+      },
+      "provider_full_candidate_report_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b\\project_output\\live_provider_password_policy_package\\provider_full_candidate_report.json",
+      "provider_ok": false,
+      "passed": false
+    },
+    {
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py new-run --goal Create a live_provider_full_candidate live_provider_text_stats_cli project, but force an invalid provider candidate so deterministic fallback is validated. Use ordinary CTCP new-run/status/advance and source_generation; do not use agent scaffold. --run-id live-full-invalid_provider_candidate_fallback-1779110535-934d24",
+          "exit_code": 0,
+          "duration_seconds": 0.773,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24",
+          "exit_code": 0,
+          "duration_seconds": 0.479,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for analysis.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/analysis.md\n[ctcp_orchestrate] reason=waiting for analysis.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 0.799,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 4.14,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 7.616,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 0.833,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 16.39,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 12.668,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 9.573,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 21.356,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 6.928,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 2.407,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: capability_validation.passed must be true\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=capability_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24",
+          "exit_code": 0,
+          "duration_seconds": 0.481,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: capability_validation.passed must be true\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=capability_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        }
+      ],
+      "case": "invalid_provider_candidate_fallback",
+      "project": "live_provider_text_stats_cli",
+      "status": "passed",
+      "project_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24\\project_output\\live_provider_text_stats_cli",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24",
+      "generated_tests_passed": true,
+      "runtime_validation": {
+        "passed": true,
+        "cli": {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe text_stats.py --input sample.txt --output C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24\\project_output\\live_provider_text_stats_cli\\live_provider_stats.json",
+          "exit_code": 0,
+          "duration_seconds": 0.129,
+          "stdout": "",
+          "stderr": "",
+          "timed_out": false
+        },
+        "output": {
+          "characters": 53,
+          "words": 10,
+          "lines": 2,
+          "unique_words": 9,
+          "top_words": [
+            [
+              "hello",
+              2
+            ],
+            [
+              "world",
+              1
+            ],
+            [
+              "this",
+              1
+            ],
+            [
+              "is",
+              1
+            ],
+            [
+              "a",
+              1
+            ]
+          ]
+        }
+      },
+      "ordinary_mainline": true,
+      "no_agent_scaffold": true,
+      "attribution": {
+        "ordinary_mainline": true,
+        "entrypoint": "new-run/status/advance",
+        "used_agent_project": false,
+        "used_agent_scaffold": false,
+        "used_local_agent_runtime": false,
+        "used_local_materializer": true,
+        "local_materializer_name": "live_provider_text_stats_cli",
+        "used_provider_agent": true,
+        "provider_name": "live_provider",
+        "provider_authorship": "provider_candidate_authored",
+        "generation_mode": "live_provider_full_candidate",
+        "live_provider_used": true,
+        "provider_request_count": 1,
+        "provider_fragment_count": 0,
+        "provider_project_candidate_count": 1,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "medium_project_contract_path": "",
+        "provider_candidate_outcome": "fallback",
+        "provider_candidate_accepted": false,
+        "provider_candidate_repaired": false,
+        "provider_repair_attempt_count": 0,
+        "provider_repair_sections": [],
+        "repair_validation_passed": false,
+        "fallback_triggered": true,
+        "unsupported_reason": null,
+        "validation_failures": [
+          "manifest_valid",
+          "paths_safe",
+          "safety_scan_passed",
+          "import_valid",
+          "generated_tests_passed",
+          "runtime_validation_passed"
+        ],
+        "provider_candidate_validation": {
+          "manifest_valid": false,
+          "paths_safe": false,
+          "safety_scan_passed": false,
+          "syntax_valid": true,
+          "import_valid": false,
+          "generated_tests_passed": false,
+          "runtime_validation_passed": false
+        },
+        "provider_assisted_sections": [],
+        "provider_generated_files": [],
+        "total_project_files": 4,
+        "provider_authored_file_ratio": 0.0,
+        "provider_fallbacks": [
+          {
+            "reason": "provider_candidate_validation_failed",
+            "fallback_materializer": "deterministic_live_provider_text_stats_cli",
+            "validation": {
+              "manifest_valid": false,
+              "paths_safe": false,
+              "safety_scan_passed": false,
+              "syntax_valid": true,
+              "import_valid": false,
+              "generated_tests_passed": false,
+              "runtime_validation_passed": false,
+              "manifest_errors": [
+                "provider_response_missing_or_invalid_manifest"
+              ],
+              "safety": {
+                "passed": false,
+                "rows": [
+                  {
+                    "path": "text_stats.py",
+                    "passed": false,
+                    "reason": "forbidden_token:eval("
+                  }
+                ]
+              },
+              "syntax": {
+                "passed": true,
+                "rows": [
+                  {
+                    "path": "text_stats.py",
+                    "passed": true,
+                    "reason": "ok"
+                  }
+                ]
+              },
+              "runtime": {
+                "import_valid": false,
+                "generated_tests_passed": false,
+                "runtime_validation_passed": false
+              },
+              "validation_failures": [
+                "manifest_valid",
+                "paths_safe",
+                "safety_scan_passed",
+                "import_valid",
+                "generated_tests_passed",
+                "runtime_validation_passed"
+              ]
+            }
+          }
+        ],
+        "fallback_reason": "provider_candidate_validation_failed",
+        "runtime_validation_passed": false,
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false
+        },
+        "provider_model": "forced-invalid",
+        "provider_timeout_seconds": 0,
+        "deterministic_sections": [
+          "candidate validation",
+          "fallback materializer",
+          "benchmark/runtime validator"
+        ],
+        "source_generation_report_path": "artifacts/source_generation_report.json",
+        "project_output_path": "project_output/live_provider_text_stats_cli",
+        "analysis_path": "artifacts/analysis.md",
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24"
+      },
+      "attribution_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24\\artifacts\\generation_attribution.json",
+      "provenance": {
+        "generation_mode": "live_provider_full_candidate",
+        "project_type": "live_provider_text_stats_cli",
+        "provider_authorship": "provider_candidate_authored",
+        "local_materializer_used": true,
+        "repair_attempts": 0,
+        "reason": "bounded live_provider_full_candidate with deterministic validation, repair, and fallback",
+        "used_provider_agent": true,
+        "provider_name": "live_provider",
+        "live_provider_used": true,
+        "provider_request_count": 1,
+        "provider_project_candidate_count": 1,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "provider_candidate_accepted": false,
+        "provider_candidate_repaired": false,
+        "provider_candidate_outcome": "fallback",
+        "provider_repair_attempt_count": 0,
+        "provider_repair_sections": [],
+        "repair_validation_passed": false,
+        "fallback_triggered": true,
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "unsupported_reason": null,
+        "validation_failures": [
+          "manifest_valid",
+          "paths_safe",
+          "safety_scan_passed",
+          "import_valid",
+          "generated_tests_passed",
+          "runtime_validation_passed"
+        ],
+        "provider_candidate_validation": {
+          "manifest_valid": false,
+          "paths_safe": false,
+          "safety_scan_passed": false,
+          "syntax_valid": true,
+          "import_valid": false,
+          "generated_tests_passed": false,
+          "runtime_validation_passed": false,
+          "manifest_errors": [
+            "provider_response_missing_or_invalid_manifest"
+          ],
+          "safety": {
+            "passed": false,
+            "rows": [
+              {
+                "path": "text_stats.py",
+                "passed": false,
+                "reason": "forbidden_token:eval("
+              }
+            ]
+          },
+          "syntax": {
+            "passed": true,
+            "rows": [
+              {
+                "path": "text_stats.py",
+                "passed": true,
+                "reason": "ok"
+              }
+            ]
+          },
+          "runtime": {
+            "import_valid": false,
+            "generated_tests_passed": false,
+            "runtime_validation_passed": false
+          },
+          "validation_failures": [
+            "manifest_valid",
+            "paths_safe",
+            "safety_scan_passed",
+            "import_valid",
+            "generated_tests_passed",
+            "runtime_validation_passed"
+          ]
+        },
+        "provider_generated_files": [],
+        "total_project_files": 4,
+        "provider_authored_file_ratio": 0.0,
+        "provider_fallbacks": [
+          {
+            "reason": "provider_candidate_validation_failed",
+            "fallback_materializer": "deterministic_live_provider_text_stats_cli",
+            "validation": {
+              "manifest_valid": false,
+              "paths_safe": false,
+              "safety_scan_passed": false,
+              "syntax_valid": true,
+              "import_valid": false,
+              "generated_tests_passed": false,
+              "runtime_validation_passed": false,
+              "manifest_errors": [
+                "provider_response_missing_or_invalid_manifest"
+              ],
+              "safety": {
+                "passed": false,
+                "rows": [
+                  {
+                    "path": "text_stats.py",
+                    "passed": false,
+                    "reason": "forbidden_token:eval("
+                  }
+                ]
+              },
+              "syntax": {
+                "passed": true,
+                "rows": [
+                  {
+                    "path": "text_stats.py",
+                    "passed": true,
+                    "reason": "ok"
+                  }
+                ]
+              },
+              "runtime": {
+                "import_valid": false,
+                "generated_tests_passed": false,
+                "runtime_validation_passed": false
+              },
+              "validation_failures": [
+                "manifest_valid",
+                "paths_safe",
+                "safety_scan_passed",
+                "import_valid",
+                "generated_tests_passed",
+                "runtime_validation_passed"
+              ]
+            }
+          }
+        ],
+        "fallback_reason": "provider_candidate_validation_failed",
+        "runtime_validation_passed": false,
+        "deterministic_sections": [
+          "candidate validation",
+          "fallback materializer",
+          "benchmark/runtime validator"
+        ],
+        "provider_participation_model": "bounded_full_small_project_candidate",
+        "provider_model": "forced-invalid",
+        "provider_timeout_seconds": 0,
+        "candidate_project": "live_provider_text_stats_cli"
+      },
+      "provenance_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24\\artifacts\\project_generation_provenance.json",
+      "provider_full_candidate_report": {
+        "used_provider_agent": true,
+        "provider_name": "live_provider",
+        "provider_authorship": "provider_candidate_authored",
+        "generation_mode": "live_provider_full_candidate",
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "live_provider_used": true,
+        "provider_request_count": 1,
+        "provider_project_candidate_count": 1,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "provider_candidate_outcome": "fallback",
+        "provider_candidate_accepted": false,
+        "provider_candidate_repaired": false,
+        "provider_repair_attempt_count": 0,
+        "provider_repair_sections": [],
+        "repair_validation_passed": false,
+        "provider_candidate_repairs": [],
+        "fallback_triggered": true,
+        "unsupported_reason": null,
+        "validation_failures": [
+          "manifest_valid",
+          "paths_safe",
+          "safety_scan_passed",
+          "import_valid",
+          "generated_tests_passed",
+          "runtime_validation_passed"
+        ],
+        "provider_candidate_validation": {
+          "manifest_valid": false,
+          "paths_safe": false,
+          "safety_scan_passed": false,
+          "syntax_valid": true,
+          "import_valid": false,
+          "generated_tests_passed": false,
+          "runtime_validation_passed": false,
+          "manifest_errors": [
+            "provider_response_missing_or_invalid_manifest"
+          ],
+          "safety": {
+            "passed": false,
+            "rows": [
+              {
+                "path": "text_stats.py",
+                "passed": false,
+                "reason": "forbidden_token:eval("
+              }
+            ]
+          },
+          "syntax": {
+            "passed": true,
+            "rows": [
+              {
+                "path": "text_stats.py",
+                "passed": true,
+                "reason": "ok"
+              }
+            ]
+          },
+          "runtime": {
+            "import_valid": false,
+            "generated_tests_passed": false,
+            "runtime_validation_passed": false
+          },
+          "validation_failures": [
+            "manifest_valid",
+            "paths_safe",
+            "safety_scan_passed",
+            "import_valid",
+            "generated_tests_passed",
+            "runtime_validation_passed"
+          ]
+        },
+        "provider_generated_files": [],
+        "total_project_files": 4,
+        "provider_authored_file_ratio": 0.0,
+        "provider_fallbacks": [
+          {
+            "reason": "provider_candidate_validation_failed",
+            "fallback_materializer": "deterministic_live_provider_text_stats_cli",
+            "validation": {
+              "manifest_valid": false,
+              "paths_safe": false,
+              "safety_scan_passed": false,
+              "syntax_valid": true,
+              "import_valid": false,
+              "generated_tests_passed": false,
+              "runtime_validation_passed": false,
+              "manifest_errors": [
+                "provider_response_missing_or_invalid_manifest"
+              ],
+              "safety": {
+                "passed": false,
+                "rows": [
+                  {
+                    "path": "text_stats.py",
+                    "passed": false,
+                    "reason": "forbidden_token:eval("
+                  }
+                ]
+              },
+              "syntax": {
+                "passed": true,
+                "rows": [
+                  {
+                    "path": "text_stats.py",
+                    "passed": true,
+                    "reason": "ok"
+                  }
+                ]
+              },
+              "runtime": {
+                "import_valid": false,
+                "generated_tests_passed": false,
+                "runtime_validation_passed": false
+              },
+              "validation_failures": [
+                "manifest_valid",
+                "paths_safe",
+                "safety_scan_passed",
+                "import_valid",
+                "generated_tests_passed",
+                "runtime_validation_passed"
+              ]
+            }
+          }
+        ],
+        "fallback_reason": "provider_candidate_validation_failed",
+        "runtime_validation_passed": false,
+        "deterministic_sections": [
+          "candidate validation",
+          "fallback materializer",
+          "benchmark/runtime validator"
+        ],
+        "provider_participation_model": "bounded_full_small_project_candidate",
+        "provider_model": "forced-invalid",
+        "provider_timeout_seconds": 0,
+        "candidate_project": "live_provider_text_stats_cli"
+      },
+      "provider_full_candidate_report_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24\\project_output\\live_provider_text_stats_cli\\provider_full_candidate_report.json",
+      "provider_ok": true,
+      "passed": true
+    }
+  ],
+  "provider_request_count": 3,
+  "provider_project_candidate_count": 3,
+  "provider_candidate_accepted_count": 1,
+  "fallback_count": 1,
+  "attribution_paths": [
+    "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566\\artifacts\\generation_attribution.json",
+    "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b\\artifacts\\generation_attribution.json",
+    "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24\\artifacts\\generation_attribution.json"
+  ],
+  "project_output_paths": [
+    "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_text_stats_cli-1779110235-efb566\\project_output\\live_provider_text_stats_cli",
+    "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-live_provider_password_policy_package-1779110380-35811b\\project_output\\live_provider_password_policy_package",
+    "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_live_provider_full_candidate_runs\\ctcp\\live-full-invalid_provider_candidate_fallback-1779110535-934d24\\project_output\\live_provider_text_stats_cli"
+  ],
+  "report": "D:\\.c_projects\\adc\\ctcp\\tests\\live_provider_full_candidate_benchmark\\benchmark_report.md",
+  "summary": "D:\\.c_projects\\adc\\ctcp\\tests\\live_provider_full_candidate_benchmark\\generated\\live_provider_full_candidate_summary.json",
+  "review_pack": "D:\\.c_projects\\adc\\ctcp\\meta\\reports\\REVIEW_PACK.md"
+}

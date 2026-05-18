@@ -1,0 +1,8 @@
+{
+  "project": "text_utils_package",
+  "goal": "Generate a Text Utilities Python Package. It must be a non-web ordinary concrete project, not an agent manifest or scaffold. It must be an importable python package with slugify, word_count, extract_keywords, normalize_whitespace, README usage example, and generated tests.",
+  "project_requirements": {
+    "runtime": "python_package",
+    "functions": ["slugify", "word_count", "extract_keywords", "normalize_whitespace"]
+  }
+}

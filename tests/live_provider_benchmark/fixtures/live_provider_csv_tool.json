@@ -1,0 +1,5 @@
+{
+  "case": "live_provider_csv_tool",
+  "project": "csv_expense_analyzer",
+  "goal": "Create a live-provider-assisted CSV Expense Analyzer CLI using --input, --output, sample_expenses.csv, category totals, monthly totals, JSON report output, and generated unittest tests. The live provider may generate only pure formatting helpers or documentation fragments."
+}

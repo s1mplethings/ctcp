@@ -1,0 +1,6 @@
+{
+  "case": "live_provider_knowledge_base_app",
+  "project": "live_provider_knowledge_base_app",
+  "startup": "app.py",
+  "goal": "Generate live_provider_medium_candidate medium project live_provider_knowledge_base_app. Build a Python stdlib local knowledge base app with persistence, HTTP API, static frontend, generated tests, article CRUD, search endpoint, tags endpoint, and app.py --host/--port."
+}

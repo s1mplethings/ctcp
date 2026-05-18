@@ -1,0 +1,6 @@
+{
+  "case": "live_provider_invoice_manager_app",
+  "project": "live_provider_invoice_manager_app",
+  "startup": "app.py",
+  "goal": "Generate live_provider_medium_candidate medium project live_provider_invoice_manager_app. Build a Python stdlib local full-stack invoice manager app with SQLite persistence, HTTP API, static frontend, generated tests, client creation/listing, invoice creation/listing/detail, invoice items with total recalculation, status update, summary endpoint, and app.py --host/--port."
+}

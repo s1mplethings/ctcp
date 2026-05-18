@@ -1,0 +1,884 @@
+{
+  "matrix_total": 3,
+  "passed": 3,
+  "failed": 0,
+  "unsupported": 0,
+  "projects": [
+    {
+      "project": "todo_rest_api",
+      "status": "passed",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827",
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py new-run --goal Generate a real runnable Todo REST API concrete project. It must not be an agent manifest, agent scaffold, or dry-run-only project. It must include README, source code, generated tests, local HTTP runtime, and SQLite persistence. Required endpoints: POST /todos, GET /todos, GET /todos/{id}, PATCH /todos/{id}, DELETE /todos/{id}. Persistence requirement: SQLite database file created locally. Generate the concrete project files, tests, README, runnable local HTTP server, and delivery package. --run-id matrix-todo_rest_api-1779092827",
+          "exit_code": 0,
+          "duration_seconds": 0.604,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827",
+          "exit_code": 0,
+          "duration_seconds": 0.403,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for analysis.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/analysis.md\n[ctcp_orchestrate] reason=waiting for analysis.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 12.01,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.926\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827",
+          "exit_code": 0,
+          "duration_seconds": 0.363,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.926\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 3.236,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.926\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827",
+          "exit_code": 0,
+          "duration_seconds": 0.372,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.926\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 4.796,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.926\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827",
+          "exit_code": 0,
+          "duration_seconds": 0.403,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.926\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 0.758,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.926\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827",
+          "exit_code": 0,
+          "duration_seconds": 0.384,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.926\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 19.816,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.926\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827",
+          "exit_code": 0,
+          "duration_seconds": 0.404,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.926\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 12.475,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.926\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827",
+          "exit_code": 0,
+          "duration_seconds": 0.385,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.926\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 16.595,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.926\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827",
+          "exit_code": 0,
+          "duration_seconds": 0.357,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.926\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 48.313,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.926\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827",
+          "exit_code": 0,
+          "duration_seconds": 0.395,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.926\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 33.404,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.926\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827",
+          "exit_code": 0,
+          "duration_seconds": 0.402,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.926\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 4.89,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.926\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827",
+          "exit_code": 0,
+          "duration_seconds": 0.368,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=10.926\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        }
+      ],
+      "project_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\\project_output\\todo_rest_api",
+      "generated_tests_passed": true,
+      "runtime_validation": {
+        "passed": true,
+        "db_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\\project_output\\todo_rest_api\\matrix_todo_rest_api.db"
+      },
+      "persistence_passed": true,
+      "provenance": {
+        "generation_mode": "concrete_fast_path",
+        "project_type": "todo_rest_api",
+        "provider_authorship": "not_claimed",
+        "local_materializer_used": true,
+        "repair_attempts": 0,
+        "reason": "bounded concrete project generalization matrix fast path"
+      },
+      "provenance_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\\artifacts\\project_generation_provenance.json",
+      "attribution": {
+        "ordinary_mainline": true,
+        "entrypoint": "new-run/status/advance",
+        "used_agent_project": false,
+        "used_agent_scaffold": false,
+        "used_local_agent_runtime": false,
+        "used_local_materializer": true,
+        "local_materializer_name": "todo_rest_api",
+        "used_provider_agent": false,
+        "provider_name": "local_deterministic_materializer",
+        "provider_authorship": "not_claimed",
+        "generation_mode": "concrete_fast_path",
+        "live_provider_used": false,
+        "provider_request_count": 0,
+        "provider_fragment_count": 0,
+        "provider_project_candidate_count": 0,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "provider_candidate_outcome": "",
+        "provider_candidate_accepted": false,
+        "provider_candidate_repaired": false,
+        "provider_repair_attempt_count": 0,
+        "provider_repair_sections": [],
+        "repair_validation_passed": false,
+        "fallback_triggered": false,
+        "unsupported_reason": null,
+        "validation_failures": [],
+        "provider_candidate_validation": {
+          "manifest_valid": true,
+          "paths_safe": true,
+          "safety_scan_passed": true,
+          "syntax_valid": true,
+          "import_valid": true,
+          "generated_tests_passed": true,
+          "runtime_validation_passed": true
+        },
+        "provider_assisted_sections": [],
+        "provider_generated_files": [],
+        "total_project_files": 0,
+        "provider_authored_file_ratio": 0.0,
+        "provider_fallbacks": [],
+        "fallback_reason": "",
+        "runtime_validation_passed": false,
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false
+        },
+        "provider_model": "",
+        "provider_timeout_seconds": 0,
+        "deterministic_sections": [],
+        "source_generation_report_path": "artifacts/source_generation_report.json",
+        "project_output_path": "project_output/todo_rest_api",
+        "analysis_path": "artifacts/analysis.md",
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827"
+      },
+      "attribution_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-todo_rest_api-1779092827\\artifacts\\generation_attribution.json",
+      "no_agent_scaffold": true,
+      "passed": true
+    },
+    {
+      "project": "markdown_notes_api",
+      "status": "passed",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991",
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py new-run --goal Generate a real runnable Markdown Notes API concrete project. It must not be an agent manifest, agent scaffold, or dry-run-only project. It must include README, source code, generated tests, local HTTP runtime, and filesystem markdown persistence. Required endpoints: POST /notes, GET /notes, GET /notes/{id}, PATCH /notes/{id}, DELETE /notes/{id}, GET /search?q=. Persistence requirement: Markdown files written to local filesystem. Generate the concrete project files, tests, README, runnable local HTTP server, and delivery package. --run-id matrix-markdown_notes_api-1779092991",
+          "exit_code": 0,
+          "duration_seconds": 0.592,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991",
+          "exit_code": 0,
+          "duration_seconds": 0.356,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for analysis.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/analysis.md\n[ctcp_orchestrate] reason=waiting for analysis.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 13.771,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991",
+          "exit_code": 0,
+          "duration_seconds": 0.396,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 3.379,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991",
+          "exit_code": 0,
+          "duration_seconds": 0.392,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 222.04,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991",
+          "exit_code": 0,
+          "duration_seconds": 0.391,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 0.848,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991",
+          "exit_code": 0,
+          "duration_seconds": 0.427,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991 --max-steps 1",
+          "exit_code": 124,
+          "duration_seconds": 240.03,
+          "stdout": "",
+          "stderr": "",
+          "timed_out": true
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991",
+          "exit_code": 0,
+          "duration_seconds": 0.38,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 71.909,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991",
+          "exit_code": 0,
+          "duration_seconds": 0.377,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 11.874,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991",
+          "exit_code": 0,
+          "duration_seconds": 0.377,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 18.52,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991",
+          "exit_code": 0,
+          "duration_seconds": 0.394,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991 --max-steps 1",
+          "exit_code": 124,
+          "duration_seconds": 240.058,
+          "stdout": "",
+          "stderr": "",
+          "timed_out": true
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991",
+          "exit_code": 0,
+          "duration_seconds": 0.369,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 203.834,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991",
+          "exit_code": 0,
+          "duration_seconds": 0.41,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 7.504,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991",
+          "exit_code": 0,
+          "duration_seconds": 0.362,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 4.978,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991",
+          "exit_code": 0,
+          "duration_seconds": 0.363,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=12.771\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        }
+      ],
+      "project_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\\project_output\\markdown_notes_api",
+      "generated_tests_passed": true,
+      "runtime_validation": {
+        "passed": true,
+        "notes_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\\project_output\\markdown_notes_api\\matrix_markdown_notes_api",
+        "file_count": 1
+      },
+      "persistence_passed": true,
+      "provenance": {
+        "generation_mode": "concrete_fast_path",
+        "project_type": "markdown_notes_api",
+        "provider_authorship": "not_claimed",
+        "local_materializer_used": true,
+        "repair_attempts": 0,
+        "reason": "bounded concrete project generalization matrix fast path"
+      },
+      "provenance_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\\artifacts\\project_generation_provenance.json",
+      "attribution": {
+        "ordinary_mainline": true,
+        "entrypoint": "new-run/status/advance",
+        "used_agent_project": false,
+        "used_agent_scaffold": false,
+        "used_local_agent_runtime": false,
+        "used_local_materializer": true,
+        "local_materializer_name": "markdown_notes_api",
+        "used_provider_agent": false,
+        "provider_name": "local_deterministic_materializer",
+        "provider_authorship": "not_claimed",
+        "generation_mode": "concrete_fast_path",
+        "live_provider_used": false,
+        "provider_request_count": 0,
+        "provider_fragment_count": 0,
+        "provider_project_candidate_count": 0,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "provider_candidate_outcome": "",
+        "provider_candidate_accepted": false,
+        "provider_candidate_repaired": false,
+        "provider_repair_attempt_count": 0,
+        "provider_repair_sections": [],
+        "repair_validation_passed": false,
+        "fallback_triggered": false,
+        "unsupported_reason": null,
+        "validation_failures": [],
+        "provider_candidate_validation": {
+          "manifest_valid": true,
+          "paths_safe": true,
+          "safety_scan_passed": true,
+          "syntax_valid": true,
+          "import_valid": true,
+          "generated_tests_passed": true,
+          "runtime_validation_passed": true
+        },
+        "provider_assisted_sections": [],
+        "provider_generated_files": [],
+        "total_project_files": 0,
+        "provider_authored_file_ratio": 0.0,
+        "provider_fallbacks": [],
+        "fallback_reason": "",
+        "runtime_validation_passed": false,
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false
+        },
+        "provider_model": "",
+        "provider_timeout_seconds": 0,
+        "deterministic_sections": [],
+        "source_generation_report_path": "artifacts/source_generation_report.json",
+        "project_output_path": "project_output/markdown_notes_api",
+        "analysis_path": "artifacts/analysis.md",
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991"
+      },
+      "attribution_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-markdown_notes_api-1779092991\\artifacts\\generation_attribution.json",
+      "no_agent_scaffold": true,
+      "passed": true
+    },
+    {
+      "project": "simple_auth_api",
+      "status": "passed",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037",
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py new-run --goal Generate a real runnable Simple Auth API concrete project. It must not be an agent manifest, agent scaffold, or dry-run-only project. It must include README, source code, generated tests, local HTTP runtime, password hashing, session tokens, and SQLite persistence. Required endpoints: POST /register, POST /login, GET /me, POST /logout. Persistence requirement: SQLite database file with users and sessions. Generate the concrete project files, tests, README, runnable local HTTP server, and delivery package. --run-id matrix-simple_auth_api-1779094037",
+          "exit_code": 0,
+          "duration_seconds": 0.655,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037",
+          "exit_code": 0,
+          "duration_seconds": 0.387,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for analysis.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/analysis.md\n[ctcp_orchestrate] reason=waiting for analysis.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 16.217,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=15.316\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037",
+          "exit_code": 0,
+          "duration_seconds": 0.385,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=15.316\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 3.321,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=15.316\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037",
+          "exit_code": 0,
+          "duration_seconds": 0.408,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=15.316\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 4.598,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=15.316\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037",
+          "exit_code": 0,
+          "duration_seconds": 0.366,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=15.316\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 0.668,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=15.316\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037",
+          "exit_code": 0,
+          "duration_seconds": 0.364,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=15.316\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 30.567,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=15.316\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037",
+          "exit_code": 0,
+          "duration_seconds": 0.404,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=15.316\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 10.716,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=15.316\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037",
+          "exit_code": 0,
+          "duration_seconds": 0.372,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=15.316\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 9.293,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=15.316\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037",
+          "exit_code": 0,
+          "duration_seconds": 0.405,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=15.316\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 48.48,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=15.316\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037",
+          "exit_code": 0,
+          "duration_seconds": 0.401,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=15.316\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 43.695,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=15.316\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037",
+          "exit_code": 0,
+          "duration_seconds": 0.375,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=15.316\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 5.553,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=15.316\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037",
+          "exit_code": 0,
+          "duration_seconds": 0.36,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] analysis_progress status=completed last_event=artifact_write_completed duration_seconds=15.316\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        }
+      ],
+      "project_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\\project_output\\simple_auth_api",
+      "generated_tests_passed": true,
+      "runtime_validation": {
+        "passed": true,
+        "db_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\\project_output\\simple_auth_api\\matrix_simple_auth_api.db"
+      },
+      "persistence_passed": true,
+      "provenance": {
+        "generation_mode": "concrete_fast_path",
+        "project_type": "simple_auth_api",
+        "provider_authorship": "not_claimed",
+        "local_materializer_used": true,
+        "repair_attempts": 0,
+        "reason": "bounded concrete project generalization matrix fast path"
+      },
+      "provenance_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\\artifacts\\project_generation_provenance.json",
+      "attribution": {
+        "ordinary_mainline": true,
+        "entrypoint": "new-run/status/advance",
+        "used_agent_project": false,
+        "used_agent_scaffold": false,
+        "used_local_agent_runtime": false,
+        "used_local_materializer": true,
+        "local_materializer_name": "simple_auth_api",
+        "used_provider_agent": false,
+        "provider_name": "local_deterministic_materializer",
+        "provider_authorship": "not_claimed",
+        "generation_mode": "concrete_fast_path",
+        "live_provider_used": false,
+        "provider_request_count": 0,
+        "provider_fragment_count": 0,
+        "provider_project_candidate_count": 0,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "provider_candidate_outcome": "",
+        "provider_candidate_accepted": false,
+        "provider_candidate_repaired": false,
+        "provider_repair_attempt_count": 0,
+        "provider_repair_sections": [],
+        "repair_validation_passed": false,
+        "fallback_triggered": false,
+        "unsupported_reason": null,
+        "validation_failures": [],
+        "provider_candidate_validation": {
+          "manifest_valid": true,
+          "paths_safe": true,
+          "safety_scan_passed": true,
+          "syntax_valid": true,
+          "import_valid": true,
+          "generated_tests_passed": true,
+          "runtime_validation_passed": true
+        },
+        "provider_assisted_sections": [],
+        "provider_generated_files": [],
+        "total_project_files": 0,
+        "provider_authored_file_ratio": 0.0,
+        "provider_fallbacks": [],
+        "fallback_reason": "",
+        "runtime_validation_passed": false,
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false
+        },
+        "provider_model": "",
+        "provider_timeout_seconds": 0,
+        "deterministic_sections": [],
+        "source_generation_report_path": "artifacts/source_generation_report.json",
+        "project_output_path": "project_output/simple_auth_api",
+        "analysis_path": "artifacts/analysis.md",
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037"
+      },
+      "attribution_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_concrete_project_matrix_runs\\ctcp\\matrix-simple_auth_api-1779094037\\artifacts\\generation_attribution.json",
+      "no_agent_scaffold": true,
+      "passed": true
+    }
+  ],
+  "attribution_summary": [
+    {
+      "project": "todo_rest_api",
+      "used_agent_project": false,
+      "used_agent_scaffold": false,
+      "used_local_agent_runtime": false,
+      "used_local_materializer": true,
+      "provider_authorship": "not_claimed"
+    },
+    {
+      "project": "markdown_notes_api",
+      "used_agent_project": false,
+      "used_agent_scaffold": false,
+      "used_local_agent_runtime": false,
+      "used_local_materializer": true,
+      "provider_authorship": "not_claimed"
+    },
+    {
+      "project": "simple_auth_api",
+      "used_agent_project": false,
+      "used_agent_scaffold": false,
+      "used_local_agent_runtime": false,
+      "used_local_materializer": true,
+      "provider_authorship": "not_claimed"
+    }
+  ],
+  "report": "D:\\.c_projects\\adc\\ctcp\\tests\\concrete_project_matrix\\benchmark_report.md"
+}

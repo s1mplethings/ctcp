@@ -1,11 +1,9 @@
 from __future__ import annotations
-
 import json
 import re
 import zipfile
 from pathlib import Path
 from typing import Any
-
 from tools.providers.project_generation_decisions import (
     BENCHMARK_MODE,
     CLI_SHAPE,
@@ -38,24 +36,24 @@ from tools.providers.project_generation_runtime_support import (
     _stage_report,
 )
 from tools.providers.project_generation_goal_detection import is_project_generation_goal_text
-
+from tools.providers.project_generation_fast_path_registry import (
+    detect_fast_path,
+    fast_path_defaults,
+)
+from tools.providers.project_generation_provider_assisted import provider_assisted_generation_mode
 def _slug(text: str) -> str:
     from tools.providers.project_generation_goal_slug import semantic_project_slug
-
     return semantic_project_slug(text)
-
 def _read_json_file(path: Path) -> dict[str, Any]:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return {}
     return raw if isinstance(raw, dict) else {}
-
 def _load_frontend_request_doc(run_dir: Path | None) -> dict[str, Any]:
     if run_dir is None:
         return {}
     return _read_json_file(run_dir / "artifacts" / "frontend_request.json")
-
 def _normalize_project_queue_items(rows: list[Any]) -> list[dict[str, Any]]:
     normalized: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -93,7 +91,6 @@ def _normalize_project_queue_items(rows: list[Any]) -> list[dict[str, Any]]:
             }
         )
     return normalized
-
 def _parse_project_queue_from_goal(goal: str) -> list[dict[str, Any]]:
     rows: list[str] = []
     for line in str(goal or "").splitlines():
@@ -101,7 +98,6 @@ def _parse_project_queue_from_goal(goal: str) -> list[dict[str, Any]]:
         if cleaned and len(cleaned) >= 12:
             rows.append(cleaned)
     return _normalize_project_queue_items(rows) if len(rows) >= 2 else []
-
 def _extract_project_queue(
     doc: dict[str, Any] | None,
     *,
@@ -128,7 +124,6 @@ def _extract_project_queue(
     if normalized:
         return normalized
     return _parse_project_queue_from_goal(goal)
-
 def _portfolio_output_contract(goal_text: str, *, src: dict[str, Any], run_dir: Path | None, project_queue: list[dict[str, Any]]) -> dict[str, Any]:
     project_id = default_project_id(f"portfolio-{_slug(goal_text)[:48]}", "generic_copilot", PRODUCTION_MODE)
     package_name = default_package_name(project_id, "generic_copilot", PRODUCTION_MODE, "")
@@ -178,7 +173,6 @@ def _portfolio_output_contract(goal_text: str, *, src: dict[str, Any], run_dir: 
     lists["doc_files"] = _normalize_rel_list(list(lists.get("doc_files", [])) + [summary_md])
     lists["target_files"] = sorted(set(list(lists.get("target_files", [])) + [summary_json, summary_md]))
     lists["acceptance_files"] = _normalize_rel_list(list(lists.get("acceptance_files", [])) + [summary_json, summary_md])
-
     project_intent = {
         "goal_summary": f"Process a portfolio queue of {len(project_queue)} rough-goal projects into auditable delivery bundles",
         "target_user": "operator who wants multiple CTCP-generated projects processed end-to-end in one serial run",
@@ -338,11 +332,8 @@ def _portfolio_output_contract(goal_text: str, *, src: dict[str, Any], run_dir: 
         "portfolio_summary_json_path": summary_json,
         "portfolio_summary_md_path": summary_md,
     }
-
-
 def is_project_generation_goal(goal: str) -> bool:
     return is_project_generation_goal_text(goal)
-
 def build_default_context_request(goal: str) -> dict[str, Any]:
     if not is_project_generation_goal(goal):
         return {
@@ -350,7 +341,6 @@ def build_default_context_request(goal: str) -> dict[str, Any]:
             "budget": {"max_files": 6, "max_total_bytes": 48000},
             "reason": "chair file request for downstream context pack",
         }
-
     return {
         "needs": [
             {"path": "AGENTS.md", "mode": "snippets", "line_ranges": [[1, 140]]},
@@ -371,11 +361,8 @@ def build_default_context_request(goal: str) -> dict[str, Any]:
         "budget": {"max_files": 20, "max_total_bytes": 250000},
         "reason": "project-generation repo context for business code materialization",
     }
-
-
 def _project_slug(goal: str, project_type: str = "generic_copilot") -> str:
     return default_project_id(_slug(goal), project_type, PRODUCTION_MODE)
-
 def _normalize_rel_list(rows: list[str]) -> list[str]:
     out: list[str] = []
     seen: set[str] = set()
@@ -386,8 +373,6 @@ def _normalize_rel_list(rows: list[str]) -> list[str]:
         seen.add(value)
         out.append(value)
     return out
-
-
 def _build_final_project_bundle(run_dir: Path, project_root: str) -> str:
     rel = "artifacts/final_project_bundle.zip"
     root_text = str(project_root or "").strip().replace("\\", "/").strip("/")
@@ -409,8 +394,6 @@ def _build_final_project_bundle(run_dir: Path, project_root: str) -> str:
                 continue
             zf.write(item, item.relative_to(root_path).as_posix())
     return rel if out_path.exists() else ""
-
-
 def build_intermediate_evidence_bundle(run_dir: Path) -> str:
     rel = "artifacts/intermediate_evidence_bundle.zip"
     out_path = run_dir / rel
@@ -491,20 +474,16 @@ def build_intermediate_evidence_bundle(run_dir: Path) -> str:
         }
         zf.writestr("EVIDENCE_MANIFEST.json", json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
     return rel if out_path.exists() else ""
-
-
 def normalize_patch_payload(raw_text: str) -> tuple[str, str]:
     text = str(raw_text or "")
     if not text.strip():
         return "", "patch output is empty"
-
     fenced_blocks = re.findall(r"```(?:diff|patch)?\s*([\s\S]*?)```", text, flags=re.IGNORECASE)
     if fenced_blocks:
         for block in fenced_blocks:
             if "diff --git " in block:
                 text = block
                 break
-
     lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
     start_idx = -1
     for idx, line in enumerate(lines):
@@ -513,20 +492,15 @@ def normalize_patch_payload(raw_text: str) -> tuple[str, str]:
             break
     if start_idx < 0:
         return "", "patch output must contain diff --git header"
-
     normalized_lines = [line for line in lines[start_idx:] if line.strip()]
     if not normalized_lines:
         return "", "patch output has no non-empty diff lines"
     if not normalized_lines[0].startswith("diff --git "):
         return "", "patch output must start with diff --git"
     return "\n".join(normalized_lines).rstrip() + "\n", ""
-
-
 def _prefixed(project_root: str, rels: list[str]) -> list[str]:
     root = str(project_root or "").strip().replace("\\", "/").strip("/")
     return [f"{root}/{rel}".replace("//", "/") for rel in rels]
-
-
 def _benchmark_narrative_defaults() -> dict[str, Any]:
     return {
         "source_rel": [
@@ -572,8 +546,6 @@ def _benchmark_narrative_defaults() -> dict[str, Any]:
         "project_profile": "narrative_copilot_benchmark",
         "generation_mode": "benchmark_narrative_business_deliverable_first",
     }
-
-
 def _narrative_production_defaults(package_name: str) -> dict[str, Any]:
     return {
         "source_rel": [
@@ -639,8 +611,6 @@ def _narrative_production_defaults(package_name: str) -> dict[str, Any]:
         "project_profile": "narrative_gui_editor",
         "generation_mode": "production_narrative_editor_deliverable_first",
     }
-
-
 def _web_service_defaults(package_name: str) -> dict[str, Any]:
     return {
         "source_rel": [
@@ -674,8 +644,6 @@ def _web_service_defaults(package_name: str) -> dict[str, Any]:
         "project_profile": "web_service_copilot",
         "generation_mode": "production_web_service_deliverable_first",
     }
-
-
 def _team_task_pm_defaults(package_name: str) -> dict[str, Any]:
     return {
         "source_rel": [
@@ -717,8 +685,6 @@ def _team_task_pm_defaults(package_name: str) -> dict[str, Any]:
         "project_profile": "team_task_pm",
         "generation_mode": "production_team_task_pm_deliverable_first",
     }
-
-
 def _data_pipeline_defaults(package_name: str) -> dict[str, Any]:
     return {
         "source_rel": [
@@ -751,7 +717,6 @@ def _data_pipeline_defaults(package_name: str) -> dict[str, Any]:
         "project_profile": "data_pipeline_copilot",
         "generation_mode": "production_data_pipeline_deliverable_first",
     }
-
 
 def _cli_toolkit_defaults(package_name: str) -> dict[str, Any]:
     return {
@@ -979,12 +944,51 @@ def _default_project_file_lists(
     src: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     decision = decide_project_generation(goal, run_dir=run_dir, context_files=context_files, src=src)
+    detection_goal = goal
+    if run_dir is not None:
+        trace = Path(run_dir) / "TRACE.md"
+        if trace.exists():
+            for line in trace.read_text(encoding="utf-8", errors="replace").splitlines()[:20]:
+                if line.startswith("- Goal:"):
+                    detection_goal = f"{goal}\n{line}"
+                    break
     execution_mode = str(decision["execution_mode"])
     benchmark_case = str(decision["benchmark_case"])
     project_domain = str(decision.get("project_domain", "generic_software_project"))
     scaffold_family = str(decision.get("scaffold_family", "generic_copilot"))
     project_type = str(decision["project_type"])
     project_archetype = str(decision.get("project_archetype", "generic_copilot"))
+    fast_path_match = detect_fast_path(detection_goal)
+    if fast_path_match:
+        decision = dict(decision)
+        decision["delivery_shape"] = CLI_SHAPE
+        project_id = fast_path_match.project_id
+        decision["shape_decision_source"] = f"concrete_fast_path:{project_id}"
+        decision["visual_evidence_required"] = False
+        decision["screenshot_required"] = False
+        decision["visual_evidence_status"] = "not_requested"
+        package_name = project_id
+        project_root = f"project_output/{project_id}"
+        defaults = fast_path_defaults(project_id)
+        assisted_mode = provider_assisted_generation_mode(detection_goal)
+        if assisted_mode != "concrete_fast_path":
+            defaults = dict(defaults)
+            defaults["generation_mode"] = assisted_mode
+        project_domain = "generic_software_project"
+        scaffold_family = "generic_copilot"
+        project_type = "generic_copilot"
+        project_archetype = str(defaults.get("project_archetype", "web_service"))
+        return _assemble_project_file_lists(
+            project_root=project_root,
+            project_id=project_id,
+            project_domain=project_domain,
+            scaffold_family=scaffold_family,
+            project_type=project_type,
+            package_name=package_name,
+            project_archetype=project_archetype,
+            decision=decision,
+            defaults=defaults,
+        )
     project_id = default_project_id(_slug(goal), project_type, execution_mode)
     package_name = default_package_name(project_id, project_type, execution_mode, benchmark_case)
     project_root = f"project_output/{project_id}"
@@ -1068,9 +1072,13 @@ def normalize_output_contract_freeze(doc: dict[str, Any] | None, *, goal: str, r
     project_archetype = str(defaults.get("project_archetype", "generic_copilot"))
     package_name = str(defaults["package_name"])
     project_profile = str(defaults["project_profile"])
-    team_pm_requested = project_domain == "team_task_management" or _contains_any(
+    full_stack_fast_path_project = project_id in {"local_task_board_app", "local_kanban_board_app"}
+    team_pm_requested = (
+        not full_stack_fast_path_project
+        and (project_domain == "team_task_management" or _contains_any(
         " ".join([goal_text, json.dumps(project_intent, ensure_ascii=False)]),
         TEAM_PM_KEYWORDS,
+        ))
     )
     indie_hub_requested = is_indie_studio_hub_signal(
         goal_text,

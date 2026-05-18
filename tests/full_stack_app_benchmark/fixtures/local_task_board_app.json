@@ -1,0 +1,26 @@
+{
+  "project": "local_task_board_app",
+  "goal": "Generate a small full-stack local task board application. It must not be an agent manifest, agent scaffold, or dry-run-only project. It must include a static frontend, local HTTP API, generated tests, README, and SQLite persistence.",
+  "project_requirements": {
+    "frontend": {
+      "type": "static_html_css_js",
+      "required_assets": [
+        "static/index.html",
+        "static/app.js",
+        "static/styles.css"
+      ]
+    },
+    "api": {
+      "required_endpoints": [
+        "GET /",
+        "GET /static/app.js",
+        "GET /static/styles.css",
+        "GET /api/tasks",
+        "POST /api/tasks",
+        "PATCH /api/tasks/{id}",
+        "DELETE /api/tasks/{id}"
+      ]
+    },
+    "storage": "SQLite database file with task rows"
+  }
+}

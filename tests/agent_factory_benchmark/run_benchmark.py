@@ -469,7 +469,12 @@ def run_phase4_e2e_pipeline() -> list[dict[str, Any]]:
             "scaffold/tests/test_permissions.py",
             "scaffold/tests/test_workflows.py",
             "scaffold/tests/test_dry_run.py",
-            "scaffold/audit/dry_run_audit.jsonl",
+            "scaffold/tests/test_runtime.py",
+            "scaffold/runtime/runtime_engine.py",
+            "scaffold/runtime/runtime_tools.py",
+            "scaffold/runtime/runtime_permissions.py",
+            "scaffold/runtime/runtime_state.py",
+            "scaffold/runtime/runtime_audit.py",
             "pipeline_report.json",
             "pipeline_report.md",
         ):

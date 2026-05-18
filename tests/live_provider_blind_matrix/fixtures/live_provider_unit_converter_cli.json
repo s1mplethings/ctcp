@@ -1,0 +1,6 @@
+{
+  "case": "unit_converter_cli",
+  "project": "live_provider_unit_converter_cli",
+  "startup": "unit_converter.py",
+  "goal": "Generate live_provider_blind_candidate blind small project live_provider_unit_converter_cli. Build a Python stdlib unit converter CLI with argparse, km/miles, celsius/fahrenheit, kg/lb, JSON output, and generated tests."
+}

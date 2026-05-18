@@ -1,0 +1,1394 @@
+{
+  "status": "passed",
+  "total": 3,
+  "passed": 3,
+  "failed": 0,
+  "projects": [
+    {
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py new-run --goal Create a provider-assisted Markdown Notes API with local markdown note storage and endpoints POST /notes, GET /notes, GET /notes/{id}, PATCH /notes/{id}, DELETE /notes/{id}, GET /search?q=. Provider-assisted fragments may add safe note helper code only. Use ordinary CTCP new-run/status/advance and source_generation; do not use agent scaffold. --run-id provider-assisted-provider_assisted_notes_app-1779091150-d83dcf",
+          "exit_code": 0,
+          "duration_seconds": 0.693,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf",
+          "exit_code": 0,
+          "duration_seconds": 0.526,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for analysis.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/analysis.md\n[ctcp_orchestrate] reason=waiting for analysis.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 0.824,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf",
+          "exit_code": 0,
+          "duration_seconds": 0.461,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 5.465,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf",
+          "exit_code": 0,
+          "duration_seconds": 0.637,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 5.659,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf",
+          "exit_code": 0,
+          "duration_seconds": 0.644,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 1.115,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf",
+          "exit_code": 0,
+          "duration_seconds": 0.646,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 18.277,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf",
+          "exit_code": 0,
+          "duration_seconds": 0.647,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 11.226,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf",
+          "exit_code": 0,
+          "duration_seconds": 0.619,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 7.333,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf",
+          "exit_code": 0,
+          "duration_seconds": 0.629,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 47.154,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf",
+          "exit_code": 0,
+          "duration_seconds": 0.717,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 19.1,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf",
+          "exit_code": 0,
+          "duration_seconds": 0.683,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 7.419,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf",
+          "exit_code": 0,
+          "duration_seconds": 0.701,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        }
+      ],
+      "case": "provider_assisted_notes_app",
+      "project": "markdown_notes_api",
+      "status": "passed",
+      "project_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\\project_output\\markdown_notes_api",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf",
+      "generated_tests_passed": true,
+      "runtime_validation": {
+        "passed": true,
+        "helper_exists": true,
+        "markdown_files": [
+          "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\\project_output\\markdown_notes_api\\provider_notes\\1-provider-notes.md"
+        ],
+        "fetched": {
+          "id": "1",
+          "title": "Provider Notes",
+          "path": "1-provider-notes.md",
+          "created_at": "2026-05-18T08:01:23.736366+00:00",
+          "updated_at": "2026-05-18T08:01:23.736366+00:00",
+          "markdown": "# Heading\nProvider assisted body"
+        }
+      },
+      "ordinary_mainline": true,
+      "no_agent_scaffold": true,
+      "attribution": {
+        "ordinary_mainline": true,
+        "entrypoint": "new-run/status/advance",
+        "used_agent_project": false,
+        "used_agent_scaffold": false,
+        "used_local_agent_runtime": false,
+        "used_local_materializer": true,
+        "local_materializer_name": "markdown_notes_api",
+        "used_provider_agent": true,
+        "provider_name": "local_fixture_provider",
+        "provider_authorship": "provider_assisted",
+        "generation_mode": "provider_assisted",
+        "live_provider_used": false,
+        "provider_request_count": 0,
+        "provider_fragment_count": 2,
+        "provider_project_candidate_count": 0,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "provider_candidate_outcome": "",
+        "provider_candidate_accepted": false,
+        "provider_candidate_repaired": false,
+        "provider_repair_attempt_count": 0,
+        "provider_repair_sections": [],
+        "repair_validation_passed": false,
+        "fallback_triggered": false,
+        "unsupported_reason": null,
+        "validation_failures": [],
+        "provider_candidate_validation": {
+          "manifest_valid": true,
+          "paths_safe": true,
+          "safety_scan_passed": true,
+          "syntax_valid": true,
+          "import_valid": true,
+          "generated_tests_passed": true,
+          "runtime_validation_passed": true
+        },
+        "provider_assisted_sections": [
+          "safe_helper_generation",
+          "README/provider documentation variation"
+        ],
+        "provider_generated_files": [
+          "project_output/markdown_notes_api/provider_note_helpers.py",
+          "project_output/markdown_notes_api/docs/provider_assisted.md"
+        ],
+        "total_project_files": 0,
+        "provider_authored_file_ratio": 0.0,
+        "provider_fallbacks": [],
+        "fallback_reason": "",
+        "runtime_validation_passed": false,
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false
+        },
+        "provider_model": "",
+        "provider_timeout_seconds": 0,
+        "deterministic_sections": [
+          "core project structure",
+          "runtime validation contract",
+          "persistence guarantee",
+          "generated tests"
+        ],
+        "source_generation_report_path": "artifacts/source_generation_report.json",
+        "project_output_path": "project_output/markdown_notes_api",
+        "analysis_path": "artifacts/analysis.md",
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf"
+      },
+      "attribution_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\\artifacts\\generation_attribution.json",
+      "provenance": {
+        "generation_mode": "provider_assisted",
+        "project_type": "markdown_notes_api",
+        "provider_authorship": "provider_assisted",
+        "local_materializer_used": true,
+        "repair_attempts": 0,
+        "reason": "bounded concrete project generalization matrix fast path",
+        "used_provider_agent": true,
+        "provider_name": "local_fixture_provider",
+        "live_provider_used": false,
+        "provider_request_count": 0,
+        "provider_fragment_count": 2,
+        "provider_assisted_sections": [
+          "safe_helper_generation",
+          "README/provider documentation variation"
+        ],
+        "provider_generated_files": [
+          "project_output/markdown_notes_api/provider_note_helpers.py",
+          "project_output/markdown_notes_api/docs/provider_assisted.md"
+        ],
+        "provider_fallbacks": [],
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false,
+          "rows": [
+            {
+              "path": "docs/provider_assisted.md",
+              "valid": true,
+              "reason": "ok"
+            },
+            {
+              "path": "provider_note_helpers.py",
+              "valid": true,
+              "reason": "ok"
+            }
+          ]
+        },
+        "deterministic_sections": [
+          "core project structure",
+          "runtime validation contract",
+          "persistence guarantee",
+          "generated tests"
+        ],
+        "provider_participation_model": "bounded_low_risk_fragments",
+        "safety_filters": {
+          "forbidden_tokens": [
+            "subprocess",
+            "socket",
+            "requests",
+            "urllib",
+            "os.system",
+            "eval(",
+            "exec(",
+            "__import__",
+            "open(",
+            "Path(",
+            "shutil",
+            "fetch(",
+            "xmlhttprequest",
+            "websocket",
+            "localstorage",
+            "sessionstorage",
+            "ctcp_orchestrate",
+            "benchmark_report"
+          ],
+          "max_fragment_bytes": 16000
+        },
+        "provider_model": "",
+        "provider_timeout_seconds": 0
+      },
+      "provenance_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\\artifacts\\project_generation_provenance.json",
+      "provider_assisted_generation": {
+        "used_provider_agent": true,
+        "provider_name": "local_fixture_provider",
+        "provider_authorship": "provider_assisted",
+        "provider_assisted_sections": [
+          "safe_helper_generation",
+          "README/provider documentation variation"
+        ],
+        "provider_generated_files": [
+          "project_output/markdown_notes_api/provider_note_helpers.py",
+          "project_output/markdown_notes_api/docs/provider_assisted.md"
+        ],
+        "provider_fallbacks": [],
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false,
+          "rows": [
+            {
+              "path": "docs/provider_assisted.md",
+              "valid": true,
+              "reason": "ok"
+            },
+            {
+              "path": "provider_note_helpers.py",
+              "valid": true,
+              "reason": "ok"
+            }
+          ]
+        },
+        "live_provider_used": false,
+        "provider_request_count": 0,
+        "provider_fragment_count": 2,
+        "provider_model": "",
+        "provider_timeout_seconds": 0,
+        "provider_project_candidate_count": null,
+        "provider_plan_requested": null,
+        "provider_plan_valid": null,
+        "provider_manifest_valid": null,
+        "provider_manifest_file_count": null,
+        "provider_batch_count": null,
+        "provider_batch_success_count": null,
+        "provider_batch_retry_count": null,
+        "provider_batch_errors": null,
+        "provider_raw_response_paths": null,
+        "normalized_manifest_path": null,
+        "validation_failure_path": null,
+        "repair_report_path": null,
+        "provider_candidate_accepted": null,
+        "provider_candidate_repaired": null,
+        "provider_candidate_outcome": null,
+        "provider_repair_attempt_count": null,
+        "provider_repair_sections": null,
+        "repair_validation_passed": null,
+        "fallback_triggered": null,
+        "blind_case": null,
+        "blind_case_name": null,
+        "medium_case": null,
+        "medium_case_name": null,
+        "unsupported_reason": null,
+        "validation_failures": null,
+        "provider_candidate_validation": null,
+        "fallback_reason": null,
+        "runtime_validation_passed": null,
+        "total_project_files": null,
+        "provider_authored_file_ratio": null,
+        "candidate_project": null,
+        "deterministic_sections": [
+          "core project structure",
+          "runtime validation contract",
+          "persistence guarantee",
+          "generated tests"
+        ],
+        "provider_participation_model": "bounded_low_risk_fragments",
+        "safety_filters": {
+          "forbidden_tokens": [
+            "subprocess",
+            "socket",
+            "requests",
+            "urllib",
+            "os.system",
+            "eval(",
+            "exec(",
+            "__import__",
+            "open(",
+            "Path(",
+            "shutil",
+            "fetch(",
+            "xmlhttprequest",
+            "websocket",
+            "localstorage",
+            "sessionstorage",
+            "ctcp_orchestrate",
+            "benchmark_report"
+          ],
+          "max_fragment_bytes": 16000
+        }
+      },
+      "provider_assisted_generation_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_notes_app-1779091150-d83dcf\\artifacts\\provider_assisted_generation.json",
+      "provider_ok": true,
+      "passed": true
+    },
+    {
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py new-run --goal Create a provider-assisted CSV Expense Analyzer CLI using --input, --output, sample_expenses.csv, category totals, monthly totals, JSON report output, and generated unittest tests. Provider-assisted fragments may add safe formatting helpers only. Use ordinary CTCP new-run/status/advance and source_generation; do not use agent scaffold. --run-id provider-assisted-provider_assisted_csv_tool-1779091283-15b841",
+          "exit_code": 0,
+          "duration_seconds": 1.087,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841",
+          "exit_code": 0,
+          "duration_seconds": 0.672,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for analysis.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/analysis.md\n[ctcp_orchestrate] reason=waiting for analysis.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 1.145,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841",
+          "exit_code": 0,
+          "duration_seconds": 0.696,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 9.04,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841",
+          "exit_code": 0,
+          "duration_seconds": 0.666,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 6.613,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841",
+          "exit_code": 0,
+          "duration_seconds": 0.649,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 1.323,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841",
+          "exit_code": 0,
+          "duration_seconds": 0.651,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 17.357,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841",
+          "exit_code": 0,
+          "duration_seconds": 0.738,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 14.786,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841",
+          "exit_code": 0,
+          "duration_seconds": 0.688,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 11.154,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841",
+          "exit_code": 0,
+          "duration_seconds": 0.777,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 25.456,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841",
+          "exit_code": 0,
+          "duration_seconds": 0.681,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 31.933,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841",
+          "exit_code": 0,
+          "duration_seconds": 0.695,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841 --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 4.13,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841",
+          "exit_code": 0,
+          "duration_seconds": 0.659,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: generic_validation.passed must be true\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=generic_validation.passed must be true\n",
+          "stderr": "",
+          "timed_out": false
+        }
+      ],
+      "case": "provider_assisted_csv_tool",
+      "project": "csv_expense_analyzer",
+      "status": "passed",
+      "project_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\\project_output\\csv_expense_analyzer",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841",
+      "generated_tests_passed": true,
+      "runtime_validation": {
+        "passed": true,
+        "cli": {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe expense_analyzer.py --input sample_expenses.csv --output C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\\project_output\\csv_expense_analyzer\\provider_assisted_report.json",
+          "exit_code": 0,
+          "duration_seconds": 0.233,
+          "stdout": "",
+          "stderr": "",
+          "timed_out": false
+        },
+        "helper_exists": true,
+        "report": {
+          "category_totals": {
+            "Food": 20.0,
+            "Travel": 20.0
+          },
+          "monthly_totals": {
+            "2026-01": 32.5,
+            "2026-02": 7.5
+          },
+          "row_count": 3
+        }
+      },
+      "ordinary_mainline": true,
+      "no_agent_scaffold": true,
+      "attribution": {
+        "ordinary_mainline": true,
+        "entrypoint": "new-run/status/advance",
+        "used_agent_project": false,
+        "used_agent_scaffold": false,
+        "used_local_agent_runtime": false,
+        "used_local_materializer": true,
+        "local_materializer_name": "csv_expense_analyzer",
+        "used_provider_agent": true,
+        "provider_name": "local_fixture_provider",
+        "provider_authorship": "provider_assisted",
+        "generation_mode": "provider_assisted",
+        "live_provider_used": false,
+        "provider_request_count": 0,
+        "provider_fragment_count": 2,
+        "provider_project_candidate_count": 0,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "provider_candidate_outcome": "",
+        "provider_candidate_accepted": false,
+        "provider_candidate_repaired": false,
+        "provider_repair_attempt_count": 0,
+        "provider_repair_sections": [],
+        "repair_validation_passed": false,
+        "fallback_triggered": false,
+        "unsupported_reason": null,
+        "validation_failures": [],
+        "provider_candidate_validation": {
+          "manifest_valid": true,
+          "paths_safe": true,
+          "safety_scan_passed": true,
+          "syntax_valid": true,
+          "import_valid": true,
+          "generated_tests_passed": true,
+          "runtime_validation_passed": true
+        },
+        "provider_assisted_sections": [
+          "safe_helper_generation",
+          "README/provider documentation variation"
+        ],
+        "provider_generated_files": [
+          "project_output/csv_expense_analyzer/provider_assisted_helper.py",
+          "project_output/csv_expense_analyzer/docs/provider_assisted.md"
+        ],
+        "total_project_files": 0,
+        "provider_authored_file_ratio": 0.0,
+        "provider_fallbacks": [],
+        "fallback_reason": "",
+        "runtime_validation_passed": false,
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false
+        },
+        "provider_model": "",
+        "provider_timeout_seconds": 0,
+        "deterministic_sections": [
+          "core project structure",
+          "runtime validation contract",
+          "persistence guarantee",
+          "generated tests"
+        ],
+        "source_generation_report_path": "artifacts/source_generation_report.json",
+        "project_output_path": "project_output/csv_expense_analyzer",
+        "analysis_path": "artifacts/analysis.md",
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841"
+      },
+      "attribution_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\\artifacts\\generation_attribution.json",
+      "provenance": {
+        "generation_mode": "provider_assisted",
+        "project_type": "csv_expense_analyzer",
+        "provider_authorship": "provider_assisted",
+        "local_materializer_used": true,
+        "repair_attempts": 0,
+        "reason": "bounded non-web concrete project matrix fast path",
+        "used_provider_agent": true,
+        "provider_name": "local_fixture_provider",
+        "live_provider_used": false,
+        "provider_request_count": 0,
+        "provider_fragment_count": 2,
+        "provider_assisted_sections": [
+          "safe_helper_generation",
+          "README/provider documentation variation"
+        ],
+        "provider_generated_files": [
+          "project_output/csv_expense_analyzer/provider_assisted_helper.py",
+          "project_output/csv_expense_analyzer/docs/provider_assisted.md"
+        ],
+        "provider_fallbacks": [],
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false,
+          "rows": [
+            {
+              "path": "docs/provider_assisted.md",
+              "valid": true,
+              "reason": "ok"
+            },
+            {
+              "path": "provider_assisted_helper.py",
+              "valid": true,
+              "reason": "ok"
+            }
+          ]
+        },
+        "deterministic_sections": [
+          "core project structure",
+          "runtime validation contract",
+          "persistence guarantee",
+          "generated tests"
+        ],
+        "provider_participation_model": "bounded_low_risk_fragments",
+        "safety_filters": {
+          "forbidden_tokens": [
+            "subprocess",
+            "socket",
+            "requests",
+            "urllib",
+            "os.system",
+            "eval(",
+            "exec(",
+            "__import__",
+            "open(",
+            "Path(",
+            "shutil",
+            "fetch(",
+            "xmlhttprequest",
+            "websocket",
+            "localstorage",
+            "sessionstorage",
+            "ctcp_orchestrate",
+            "benchmark_report"
+          ],
+          "max_fragment_bytes": 16000
+        },
+        "provider_model": "",
+        "provider_timeout_seconds": 0
+      },
+      "provenance_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\\artifacts\\project_generation_provenance.json",
+      "provider_assisted_generation": {
+        "used_provider_agent": true,
+        "provider_name": "local_fixture_provider",
+        "provider_authorship": "provider_assisted",
+        "provider_assisted_sections": [
+          "safe_helper_generation",
+          "README/provider documentation variation"
+        ],
+        "provider_generated_files": [
+          "project_output/csv_expense_analyzer/provider_assisted_helper.py",
+          "project_output/csv_expense_analyzer/docs/provider_assisted.md"
+        ],
+        "provider_fallbacks": [],
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false,
+          "rows": [
+            {
+              "path": "docs/provider_assisted.md",
+              "valid": true,
+              "reason": "ok"
+            },
+            {
+              "path": "provider_assisted_helper.py",
+              "valid": true,
+              "reason": "ok"
+            }
+          ]
+        },
+        "live_provider_used": false,
+        "provider_request_count": 0,
+        "provider_fragment_count": 2,
+        "provider_model": "",
+        "provider_timeout_seconds": 0,
+        "provider_project_candidate_count": null,
+        "provider_plan_requested": null,
+        "provider_plan_valid": null,
+        "provider_manifest_valid": null,
+        "provider_manifest_file_count": null,
+        "provider_batch_count": null,
+        "provider_batch_success_count": null,
+        "provider_batch_retry_count": null,
+        "provider_batch_errors": null,
+        "provider_raw_response_paths": null,
+        "normalized_manifest_path": null,
+        "validation_failure_path": null,
+        "repair_report_path": null,
+        "provider_candidate_accepted": null,
+        "provider_candidate_repaired": null,
+        "provider_candidate_outcome": null,
+        "provider_repair_attempt_count": null,
+        "provider_repair_sections": null,
+        "repair_validation_passed": null,
+        "fallback_triggered": null,
+        "blind_case": null,
+        "blind_case_name": null,
+        "medium_case": null,
+        "medium_case_name": null,
+        "unsupported_reason": null,
+        "validation_failures": null,
+        "provider_candidate_validation": null,
+        "fallback_reason": null,
+        "runtime_validation_passed": null,
+        "total_project_files": null,
+        "provider_authored_file_ratio": null,
+        "candidate_project": null,
+        "deterministic_sections": [
+          "core project structure",
+          "runtime validation contract",
+          "persistence guarantee",
+          "generated tests"
+        ],
+        "provider_participation_model": "bounded_low_risk_fragments",
+        "safety_filters": {
+          "forbidden_tokens": [
+            "subprocess",
+            "socket",
+            "requests",
+            "urllib",
+            "os.system",
+            "eval(",
+            "exec(",
+            "__import__",
+            "open(",
+            "Path(",
+            "shutil",
+            "fetch(",
+            "xmlhttprequest",
+            "websocket",
+            "localstorage",
+            "sessionstorage",
+            "ctcp_orchestrate",
+            "benchmark_report"
+          ],
+          "max_fragment_bytes": 16000
+        }
+      },
+      "provider_assisted_generation_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_csv_tool-1779091283-15b841\\artifacts\\provider_assisted_generation.json",
+      "provider_ok": true,
+      "passed": true
+    },
+    {
+      "commands": [
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py new-run --goal Create a provider-assisted local Kanban board app with POST /boards, GET /boards, POST /boards/{board_id}/cards, GET /boards/{board_id}/cards, PATCH /cards/{card_id}/move, PATCH /cards/{card_id}, DELETE /cards/{card_id}, static frontend, fetch logic, SQLite persistence, and safe frontend helper variation. Use ordinary CTCP new-run/status/advance and source_generation; do not use agent scaffold. --run-id provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd",
+          "exit_code": 0,
+          "duration_seconds": 1.087,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd",
+          "exit_code": 0,
+          "duration_seconds": 0.701,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for analysis.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/analysis.md\n[ctcp_orchestrate] reason=waiting for analysis.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 1.096,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd",
+          "exit_code": 0,
+          "duration_seconds": 0.713,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] next=resolve_find_local\n[ctcp_orchestrate] owner=Local Orchestrator\n[ctcp_orchestrate] path=artifacts/find_result.json\n[ctcp_orchestrate] reason=run local resolver\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 9.358,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd",
+          "exit_code": 0,
+          "duration_seconds": 0.695,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for file_request.json\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/file_request.json\n[ctcp_orchestrate] reason=waiting for file_request.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 23.89,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd",
+          "exit_code": 0,
+          "duration_seconds": 0.69,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for context_pack.json\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Local Librarian\n[ctcp_orchestrate] path=artifacts/context_pack.json\n[ctcp_orchestrate] reason=waiting for context_pack.json\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 1.355,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd",
+          "exit_code": 0,
+          "duration_seconds": 0.696,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for PLAN_draft.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN_draft.md\n[ctcp_orchestrate] reason=waiting for PLAN_draft.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 24.553,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd",
+          "exit_code": 0,
+          "duration_seconds": 0.723,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_contract.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Contract Guardian\n[ctcp_orchestrate] path=reviews/review_contract.md\n[ctcp_orchestrate] reason=waiting for review_contract.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 19.955,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd",
+          "exit_code": 0,
+          "duration_seconds": 0.69,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for review_cost.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Cost Controller\n[ctcp_orchestrate] path=reviews/review_cost.md\n[ctcp_orchestrate] reason=waiting for review_cost.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 48.236,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd",
+          "exit_code": 0,
+          "duration_seconds": 0.736,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=guardrails.md)\n[ctcp_orchestrate] blocked: waiting for signed PLAN.md\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/PLAN.md\n[ctcp_orchestrate] reason=waiting for signed PLAN.md\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 23.764,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd",
+          "exit_code": 0,
+          "duration_seconds": 0.682,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for output_contract_freeze\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/output_contract_freeze.json\n[ctcp_orchestrate] reason=waiting for output_contract_freeze\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 30.24,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd",
+          "exit_code": 0,
+          "duration_seconds": 0.728,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for source_generation\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/source_generation_report.json\n[ctcp_orchestrate] reason=waiting for source_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py advance --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd --max-steps 1",
+          "exit_code": 0,
+          "duration_seconds": 4.957,
+          "stdout": "[ctcp_orchestrate] reached max-steps=1\n[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for docs_generation\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/docs_generation_report.json\n[ctcp_orchestrate] reason=waiting for docs_generation\n",
+          "stderr": "",
+          "timed_out": false
+        },
+        {
+          "cmd": "D:\\.c_projects\\adc\\ctcp\\.venv\\Scripts\\python.exe D:\\.c_projects\\adc\\ctcp\\scripts\\ctcp_orchestrate.py status --run-dir C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd",
+          "exit_code": 0,
+          "duration_seconds": 0.669,
+          "stdout": "[ctcp_orchestrate] run_dir=C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\n[ctcp_orchestrate] run_status=running\n[ctcp_orchestrate] iterations=0/3 (source=PLAN.md)\n[ctcp_orchestrate] blocked: waiting for docs_generation\n[ctcp_orchestrate] next=blocked\n[ctcp_orchestrate] owner=Chair/Planner\n[ctcp_orchestrate] path=artifacts/docs_generation_report.json\n[ctcp_orchestrate] reason=waiting for docs_generation\n",
+          "stderr": "",
+          "timed_out": false
+        }
+      ],
+      "case": "provider_assisted_kanban_variant",
+      "project": "local_kanban_board_app",
+      "status": "passed",
+      "project_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\\project_output\\local_kanban_board_app",
+      "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd",
+      "generated_tests_passed": true,
+      "runtime_validation": {
+        "passed": true,
+        "frontend": "passed",
+        "sqlite": "passed",
+        "moved": {
+          "id": 1,
+          "board_id": 1,
+          "title": "Provider card",
+          "description": "variant",
+          "column": "doing",
+          "position": 1,
+          "created_at": "2026-05-18T08:06:55.093382+00:00",
+          "updated_at": "2026-05-18T08:06:55.111693+00:00"
+        }
+      },
+      "ordinary_mainline": true,
+      "no_agent_scaffold": true,
+      "attribution": {
+        "ordinary_mainline": true,
+        "entrypoint": "new-run/status/advance",
+        "used_agent_project": false,
+        "used_agent_scaffold": false,
+        "used_local_agent_runtime": false,
+        "used_local_materializer": true,
+        "local_materializer_name": "local_kanban_board_app",
+        "used_provider_agent": true,
+        "provider_name": "local_fixture_provider",
+        "provider_authorship": "provider_assisted",
+        "generation_mode": "provider_assisted",
+        "live_provider_used": false,
+        "provider_request_count": 0,
+        "provider_fragment_count": 2,
+        "provider_project_candidate_count": 0,
+        "provider_plan_requested": false,
+        "provider_plan_valid": false,
+        "provider_manifest_valid": false,
+        "provider_manifest_file_count": 0,
+        "provider_batch_count": 0,
+        "provider_batch_success_count": 0,
+        "provider_batch_retry_count": 0,
+        "provider_batch_errors": [],
+        "provider_raw_response_paths": [],
+        "normalized_manifest_path": "",
+        "validation_failure_path": "",
+        "repair_report_path": "",
+        "blind_case": false,
+        "blind_case_name": "",
+        "medium_case": false,
+        "medium_case_name": "",
+        "provider_candidate_outcome": "",
+        "provider_candidate_accepted": false,
+        "provider_candidate_repaired": false,
+        "provider_repair_attempt_count": 0,
+        "provider_repair_sections": [],
+        "repair_validation_passed": false,
+        "fallback_triggered": false,
+        "unsupported_reason": null,
+        "validation_failures": [],
+        "provider_candidate_validation": {
+          "manifest_valid": true,
+          "paths_safe": true,
+          "safety_scan_passed": true,
+          "syntax_valid": true,
+          "import_valid": true,
+          "generated_tests_passed": true,
+          "runtime_validation_passed": true
+        },
+        "provider_assisted_sections": [
+          "safe_helper_generation",
+          "README/provider documentation variation"
+        ],
+        "provider_generated_files": [
+          "project_output/local_kanban_board_app/static/provider_enhancements.js",
+          "project_output/local_kanban_board_app/docs/provider_assisted.md"
+        ],
+        "total_project_files": 0,
+        "provider_authored_file_ratio": 0.0,
+        "provider_fallbacks": [],
+        "fallback_reason": "",
+        "runtime_validation_passed": false,
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false
+        },
+        "provider_model": "",
+        "provider_timeout_seconds": 0,
+        "deterministic_sections": [
+          "core project structure",
+          "runtime validation contract",
+          "persistence guarantee",
+          "generated tests"
+        ],
+        "source_generation_report_path": "artifacts/source_generation_report.json",
+        "project_output_path": "project_output/local_kanban_board_app",
+        "analysis_path": "artifacts/analysis.md",
+        "run_dir": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd"
+      },
+      "attribution_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\\artifacts\\generation_attribution.json",
+      "provenance": {
+        "generation_mode": "provider_assisted",
+        "project_type": "local_kanban_board_app",
+        "provider_authorship": "provider_assisted",
+        "local_materializer_used": true,
+        "repair_attempts": 0,
+        "reason": "bounded Kanban full-stack local app benchmark fast path",
+        "used_provider_agent": true,
+        "provider_name": "local_fixture_provider",
+        "live_provider_used": false,
+        "provider_request_count": 0,
+        "provider_fragment_count": 2,
+        "provider_assisted_sections": [
+          "safe_helper_generation",
+          "README/provider documentation variation"
+        ],
+        "provider_generated_files": [
+          "project_output/local_kanban_board_app/static/provider_enhancements.js",
+          "project_output/local_kanban_board_app/docs/provider_assisted.md"
+        ],
+        "provider_fallbacks": [],
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false,
+          "rows": [
+            {
+              "path": "docs/provider_assisted.md",
+              "valid": true,
+              "reason": "ok"
+            },
+            {
+              "path": "static/provider_enhancements.js",
+              "valid": true,
+              "reason": "ok"
+            }
+          ]
+        },
+        "deterministic_sections": [
+          "core project structure",
+          "runtime validation contract",
+          "persistence guarantee",
+          "generated tests"
+        ],
+        "provider_participation_model": "bounded_low_risk_fragments",
+        "safety_filters": {
+          "forbidden_tokens": [
+            "subprocess",
+            "socket",
+            "requests",
+            "urllib",
+            "os.system",
+            "eval(",
+            "exec(",
+            "__import__",
+            "open(",
+            "Path(",
+            "shutil",
+            "fetch(",
+            "xmlhttprequest",
+            "websocket",
+            "localstorage",
+            "sessionstorage",
+            "ctcp_orchestrate",
+            "benchmark_report"
+          ],
+          "max_fragment_bytes": 16000
+        },
+        "provider_model": "",
+        "provider_timeout_seconds": 0
+      },
+      "provenance_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\\artifacts\\project_generation_provenance.json",
+      "provider_assisted_generation": {
+        "used_provider_agent": true,
+        "provider_name": "local_fixture_provider",
+        "provider_authorship": "provider_assisted",
+        "provider_assisted_sections": [
+          "safe_helper_generation",
+          "README/provider documentation variation"
+        ],
+        "provider_generated_files": [
+          "project_output/local_kanban_board_app/static/provider_enhancements.js",
+          "project_output/local_kanban_board_app/docs/provider_assisted.md"
+        ],
+        "provider_fallbacks": [],
+        "provider_validation": {
+          "syntax_valid": true,
+          "runtime_valid": true,
+          "fallback_triggered": false,
+          "rows": [
+            {
+              "path": "docs/provider_assisted.md",
+              "valid": true,
+              "reason": "ok"
+            },
+            {
+              "path": "static/provider_enhancements.js",
+              "valid": true,
+              "reason": "ok"
+            }
+          ]
+        },
+        "live_provider_used": false,
+        "provider_request_count": 0,
+        "provider_fragment_count": 2,
+        "provider_model": "",
+        "provider_timeout_seconds": 0,
+        "provider_project_candidate_count": null,
+        "provider_plan_requested": null,
+        "provider_plan_valid": null,
+        "provider_manifest_valid": null,
+        "provider_manifest_file_count": null,
+        "provider_batch_count": null,
+        "provider_batch_success_count": null,
+        "provider_batch_retry_count": null,
+        "provider_batch_errors": null,
+        "provider_raw_response_paths": null,
+        "normalized_manifest_path": null,
+        "validation_failure_path": null,
+        "repair_report_path": null,
+        "provider_candidate_accepted": null,
+        "provider_candidate_repaired": null,
+        "provider_candidate_outcome": null,
+        "provider_repair_attempt_count": null,
+        "provider_repair_sections": null,
+        "repair_validation_passed": null,
+        "fallback_triggered": null,
+        "blind_case": null,
+        "blind_case_name": null,
+        "medium_case": null,
+        "medium_case_name": null,
+        "unsupported_reason": null,
+        "validation_failures": null,
+        "provider_candidate_validation": null,
+        "fallback_reason": null,
+        "runtime_validation_passed": null,
+        "total_project_files": null,
+        "provider_authored_file_ratio": null,
+        "candidate_project": null,
+        "deterministic_sections": [
+          "core project structure",
+          "runtime validation contract",
+          "persistence guarantee",
+          "generated tests"
+        ],
+        "provider_participation_model": "bounded_low_risk_fragments",
+        "safety_filters": {
+          "forbidden_tokens": [
+            "subprocess",
+            "socket",
+            "requests",
+            "urllib",
+            "os.system",
+            "eval(",
+            "exec(",
+            "__import__",
+            "open(",
+            "Path(",
+            "shutil",
+            "fetch(",
+            "xmlhttprequest",
+            "websocket",
+            "localstorage",
+            "sessionstorage",
+            "ctcp_orchestrate",
+            "benchmark_report"
+          ],
+          "max_fragment_bytes": 16000
+        }
+      },
+      "provider_assisted_generation_path": "C:\\Users\\sunom\\AppData\\Local\\Temp\\ctcp_provider_assisted_benchmark_runs\\ctcp\\provider-assisted-provider_assisted_kanban_variant-1779091416-2d24dd\\artifacts\\provider_assisted_generation.json",
+      "provider_ok": true,
+      "passed": true
+    }
+  ],
+  "provider_assisted_output_differs": true,
+  "report": "D:\\.c_projects\\adc\\ctcp\\tests\\provider_assisted_benchmark\\benchmark_report.md",
+  "summary": "D:\\.c_projects\\adc\\ctcp\\tests\\provider_assisted_benchmark\\generated\\provider_assisted_summary.json",
+  "review_pack": "D:\\.c_projects\\adc\\ctcp\\meta\\reports\\REVIEW_PACK.md"
+}

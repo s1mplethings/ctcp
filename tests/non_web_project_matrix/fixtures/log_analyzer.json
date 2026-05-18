@@ -1,0 +1,11 @@
+{
+  "project": "log_analyzer_cli",
+  "goal": "Generate a Log Analyzer CLI. It must be a non-web ordinary concrete project, not an agent manifest or scaffold. It must parse log lines, count INFO/WARN/ERROR, extract top error messages, support --input, --output, sample.log, and generated tests.",
+  "project_requirements": {
+    "runtime": "cli",
+    "sample_input": "sample.log",
+    "commands": [
+      "python log_analyzer.py --input sample.log --output summary.json"
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "case": "live_provider_event_booking_app",
+  "project": "live_provider_event_booking_app",
+  "startup": "app.py",
+  "goal": "Generate live_provider_medium_candidate medium project live_provider_event_booking_app. Build a Python stdlib local full-stack event booking app with SQLite persistence, HTTP API, static frontend, generated tests, event CRUD, booking creation/listing, capacity enforcement, availability endpoint, and app.py --host/--port."
+}

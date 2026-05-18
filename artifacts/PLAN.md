@@ -4,7 +4,7 @@ Status: SIGNED
 Scope-Allow: AGENTS.md, README.md, agents, ai, ai_context, artifacts, contracts, ctcp_adapters, docs, frontend, issue_memory, llm_core, meta, scripts, simlab, specs, tests, tools, web, workflow_registry
 Scope-Deny: src, include, CMakeLists.txt
 Gates: workflow_gate, plan_check, patch_check, behavior_catalog_check, lite
-Budgets: max_iterations=8, max_files=220, max_total_bytes=2500000
+Budgets: max_iterations=8, max_files=240, max_total_bytes=2500000
 Stop: no_new_truth_layer=yes, single_responsibility_surface=yes, canonical_verify=run_to_conclusion
 Behaviors: B002, B003, B004, B005, B010
 Results: R301, R302, R303, R304

@@ -357,8 +357,8 @@
 
 ### devops_incident
 - input path: `tests/agent_factory_benchmark/fixtures/input_devops_incident.json`
-- manifest path: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_devops_incident_yllgnabs/agent_project/manifest.json`
-- scaffold output dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_devops_incident_yllgnabs/agent_project/scaffold`
+- manifest path: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_devops_incident_zefhc_fg/agent_project/manifest.json`
+- scaffold output dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_devops_incident_zefhc_fg/agent_project/scaffold`
 - pipeline report generated: True
 - pipeline report status: passed
 - manifest generated: True
@@ -372,8 +372,8 @@
 
 ### permission_attack
 - input path: `tests/agent_factory_benchmark/fixtures/input_permission_attack.json`
-- manifest path: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_permission_attack_gafzo308/agent_project/manifest.json`
-- scaffold output dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_permission_attack_gafzo308/agent_project/scaffold`
+- manifest path: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_permission_attack_dryvtmju/agent_project/manifest.json`
+- scaffold output dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_permission_attack_dryvtmju/agent_project/scaffold`
 - pipeline report generated: True
 - pipeline report status: passed
 - manifest generated: True
@@ -387,8 +387,8 @@
 
 ### holdout_h1_personal_productivity
 - input path: `tests/agent_factory_benchmark/holdout_fixtures/input_h1_personal_productivity.json`
-- manifest path: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h1_personal_productivity_b7jabp0a/agent_project/manifest.json`
-- scaffold output dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h1_personal_productivity_b7jabp0a/agent_project/scaffold`
+- manifest path: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h1_personal_productivity_ho2os15c/agent_project/manifest.json`
+- scaffold output dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h1_personal_productivity_ho2os15c/agent_project/scaffold`
 - pipeline report generated: True
 - pipeline report status: passed
 - manifest generated: True
@@ -402,8 +402,8 @@
 
 ### holdout_h2_patient_intake
 - input path: `tests/agent_factory_benchmark/holdout_fixtures/input_h2_patient_intake.json`
-- manifest path: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h2_patient_intake_9hs3as7y/agent_project/manifest.json`
-- scaffold output dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h2_patient_intake_9hs3as7y/agent_project/scaffold`
+- manifest path: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h2_patient_intake_iyq8lk1n/agent_project/manifest.json`
+- scaffold output dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h2_patient_intake_iyq8lk1n/agent_project/scaffold`
 - pipeline report generated: True
 - pipeline report status: passed
 - manifest generated: True
@@ -417,8 +417,8 @@
 
 ### holdout_h9_battery_charging
 - input path: `tests/agent_factory_benchmark/holdout_fixtures/input_h9_battery_charging_station.json`
-- manifest path: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h9_battery_charging_crq43q9k/agent_project/manifest.json`
-- scaffold output dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h9_battery_charging_crq43q9k/agent_project/scaffold`
+- manifest path: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h9_battery_charging_pba72m69/agent_project/manifest.json`
+- scaffold output dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h9_battery_charging_pba72m69/agent_project/scaffold`
 - pipeline report generated: True
 - pipeline report status: passed
 - manifest generated: True
@@ -432,8 +432,8 @@
 
 ### holdout_h10_product_launch
 - input path: `tests/agent_factory_benchmark/holdout_fixtures/input_h10_product_launch_coordination.json`
-- manifest path: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h10_product_launch_85brjtb9/agent_project/manifest.json`
-- scaffold output dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h10_product_launch_85brjtb9/agent_project/scaffold`
+- manifest path: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h10_product_launch_18ucwv67/agent_project/manifest.json`
+- scaffold output dir: `C:/Users/sunom/AppData/Local/Temp/ctcp_phase4_holdout_h10_product_launch_18ucwv67/agent_project/scaffold`
 - pipeline report generated: True
 - pipeline report status: passed
 - manifest generated: True
