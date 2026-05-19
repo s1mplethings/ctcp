@@ -21,6 +21,15 @@ def _local_mainline_override_allowed() -> bool:
     return str(os.environ.get("CTCP_ALLOW_LOCAL_MAINLINE_PROVIDER", "")).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _configured_role_provider(config: dict[str, Any], role_name: str) -> str:
+    role_providers = config.get("role_providers", {})
+    if not isinstance(role_providers, dict):
+        return ""
+    if role_name not in role_providers:
+        return ""
+    return normalize_provider(str(role_providers.get(role_name, "")))
+
+
 def resolve_provider(
     config: dict[str, Any],
     role: str,
@@ -36,6 +45,18 @@ def resolve_provider(
     locked_roles = {str(k).strip().lower(): normalize_provider(str(v)) for k, v in dict(hard_role_providers or {}).items()}
     hard_provider = locked_roles.get(role_name, "")
     mode_norm = str(config.get("mode", "")).strip().lower()
+    configured_for_role = _configured_role_provider(config, role_name)
+
+    # SimLab and contract tests use mode=mock_agent with explicit per-role providers
+    # such as manual_outbox. A global CTCP_FORCE_PROVIDER must not mutate those
+    # scenario contracts; otherwise a missing Contract Guardian review can be
+    # materialized by mock_agent and the run incorrectly advances to Cost Controller.
+    if forced and mode_norm == "mock_agent" and configured_for_role:
+        return configured_for_role, (
+            f"ignored CTCP_FORCE_PROVIDER={forced} for mock_agent scenario role={role_name}; "
+            f"using configured provider={configured_for_role}"
+        )
+
     if forced:
         if forced == "ollama_agent" and _local_mainline_override_allowed() and not formal_api_only:
             return forced, f"local-only override forced provider={forced} for role={role_name}"
